@@ -168,6 +168,8 @@ jobs:
 
           docker compose -f docker-compose.infra.yml up -d
           docker compose pull
+          docker tag "$IMAGE_API_TAG" btn-hrms-api:latest
+          docker tag "$IMAGE_WEB_TAG" btn-hrms-web:latest
           docker compose up -d --no-build --wait
           docker compose restart caddy
           docker image prune -f
