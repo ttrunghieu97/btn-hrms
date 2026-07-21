@@ -1,0 +1,25 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+allowBuilds:
+  '@scarf/scarf': true
+  '@sentry/cli': true
+  '@swc/core': true
+  bcrypt: true
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - '@sentry/cli'
+  - '@swc/core'
+  - bcrypt
+  - esbuild
+  - msgpackr-extract
+  - protobufjs
+  - sharp
+  - unrs-resolver

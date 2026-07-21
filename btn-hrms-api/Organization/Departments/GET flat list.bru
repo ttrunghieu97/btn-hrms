@@ -1,0 +1,14 @@
+meta {
+  name: GET flat list
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/departments/list
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

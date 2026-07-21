@@ -1,0 +1,14 @@
+meta {
+  name: GET data integrity
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/admin/data-integrity
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

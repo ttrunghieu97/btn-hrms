@@ -1,0 +1,14 @@
+meta {
+  name: POST restore
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

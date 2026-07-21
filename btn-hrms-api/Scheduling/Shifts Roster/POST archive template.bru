@@ -1,0 +1,14 @@
+meta {
+  name: POST archive template
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/templates/{{id}}/archive
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,18 @@
+/* Import Coral theme */
+@import './themes/coral.css';
+
+body {
+  @apply overscroll-none;
+}
+
+:root {
+  --header-height: calc(var(--spacing, 0.25rem) * 12 + 1px);
+}
+
+/* Apply theme fonts to body for all themes */
+[data-theme] body {
+  --font-sans: initial;
+  --font-mono: initial;
+  --font-serif: initial;
+  font-family: var(--font-sans);
+}

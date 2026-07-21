@@ -1,0 +1,18 @@
+meta {
+  name: POST cancel
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/leave-requests/{{id}}/cancel
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"reason":"Changed"}
+}

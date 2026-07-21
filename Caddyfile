@@ -1,0 +1,57 @@
+# ============================================================
+# BTN HRMS — Caddy Configuration
+# ============================================================
+# Production: Let's Encrypt TLS via Caddy's automatic HTTPS.
+# Dev: uses .certs/ mounted into /etc/caddy/certs/.
+# ============================================================
+
+# Global options
+{
+    auto_https off
+}
+
+# ── Production: HTTP internal routing ──────────────────────
+http://btn.hieutt.id.vn {
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    # Proxy API requests to NestJS
+    reverse_proxy /api/v1/* btn-hrms-api:3001 {
+        header_up X-Forwarded-Proto "https"
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # Proxy all other requests to Next.js
+    reverse_proxy * btn-hrms-web:8080 {
+        header_up X-Forwarded-Proto "https"
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+# ── Development: Local IPs with self-signed certs ──────────
+localhost, 10.8.1.84, 10.10.3.231, 10.139.143.90 {
+    tls /etc/caddy/certs/dev-cert.pem /etc/caddy/certs/dev-key.pem
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy /api/v1/* btn-hrms-api:3001 {
+        header_up X-Forwarded-Proto "https"
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    reverse_proxy * btn-hrms-web:8080 {
+        header_up X-Forwarded-Proto "https"
+        header_up X-Forwarded-For {remote_host}
+    }
+}

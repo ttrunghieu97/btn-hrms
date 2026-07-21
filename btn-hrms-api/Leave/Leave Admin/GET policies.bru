@@ -1,0 +1,14 @@
+meta {
+  name: GET policies
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/leave-admin/policies
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,18 @@
+meta {
+  name: POST create
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"title":"Task","assigneeId":"{{eid}}"}
+}

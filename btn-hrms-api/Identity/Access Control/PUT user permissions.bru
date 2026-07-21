@@ -1,0 +1,18 @@
+meta {
+  name: PUT user permissions
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/{{userId}}/permissions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"permissionCodes":[]}
+}

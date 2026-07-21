@@ -1,0 +1,18 @@
+meta {
+  name: POST rehire
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/rehire
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"effectiveDate":"2026-07-01"}
+}

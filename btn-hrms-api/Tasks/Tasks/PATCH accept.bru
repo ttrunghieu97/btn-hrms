@@ -1,0 +1,14 @@
+meta {
+  name: PATCH accept
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/tasks/{{id}}/accept
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

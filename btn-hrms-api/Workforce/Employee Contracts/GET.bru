@@ -1,0 +1,14 @@
+meta {
+  name: GET
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/employees/{{eid}}/contract
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

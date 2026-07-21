@@ -1,0 +1,14 @@
+meta {
+  name: GET exceptions
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/exceptions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

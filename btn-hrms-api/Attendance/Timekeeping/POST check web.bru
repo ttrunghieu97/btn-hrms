@@ -1,0 +1,18 @@
+meta {
+  name: POST check web
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/check
+  body: multipart-form
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:multipart-form {
+  date: 2026-07-05\n  session: morning\n  type: checkin
+}

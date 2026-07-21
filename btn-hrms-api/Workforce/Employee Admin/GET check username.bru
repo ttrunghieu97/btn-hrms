@@ -1,0 +1,14 @@
+meta {
+  name: GET check username
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/employees/check-username?username={{u}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

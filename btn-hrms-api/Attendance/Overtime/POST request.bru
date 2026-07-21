@@ -1,0 +1,18 @@
+meta {
+  name: POST request
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/overtime/request
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"date":"2026-07-05"}
+}

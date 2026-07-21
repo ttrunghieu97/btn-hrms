@@ -1,0 +1,20 @@
+{
+  "breakpoints": {
+    "1280": {
+      "name": "overview-dashboard",
+      "viewportWidth": 1232,
+      "width": 1232,
+      "height": 500,
+      "bones": [
+        [
+          0,
+          0,
+          100,
+          500,
+          8
+        ]
+      ]
+    }
+  },
+  "_hash": "a3546fcb1270f8f05b73cff06e24a4ef"
+}

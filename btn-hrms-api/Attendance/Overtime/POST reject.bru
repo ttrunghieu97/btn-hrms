@@ -1,0 +1,18 @@
+meta {
+  name: POST reject
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/overtime/{{id}}/reject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"reason":"no"}
+}

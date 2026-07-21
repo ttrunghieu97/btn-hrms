@@ -1,0 +1,14 @@
+meta {
+  name: POST cancel assignment
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/assignments/{{id}}/cancel
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

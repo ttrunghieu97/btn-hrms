@@ -1,0 +1,14 @@
+meta {
+  name: POST generate
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/payroll-runs/{{id}}/generate
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

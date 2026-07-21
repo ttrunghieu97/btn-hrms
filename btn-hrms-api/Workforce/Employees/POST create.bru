@@ -1,0 +1,18 @@
+meta {
+  name: POST create
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees
+  body: multipart-form
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:multipart-form {
+  fullName: {{name}}\n  email: {{email}}\n  employeeCode: {{code}}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: PATCH mark read
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/tasks/notifications/{{id}}/read
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

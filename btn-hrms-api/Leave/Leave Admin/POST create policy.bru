@@ -1,0 +1,18 @@
+meta {
+  name: POST create policy
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/leave-admin/policies
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"name":"Annual","code":"annual"}
+}

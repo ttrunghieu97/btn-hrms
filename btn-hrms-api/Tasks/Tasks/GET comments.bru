@@ -1,0 +1,14 @@
+meta {
+  name: GET comments
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/{{id}}/comments
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

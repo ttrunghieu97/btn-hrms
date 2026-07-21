@@ -1,0 +1,18 @@
+meta {
+  name: POST create template
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/platform-notifications/templates
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"name":"Leave App","channels":["in_app"]}
+}

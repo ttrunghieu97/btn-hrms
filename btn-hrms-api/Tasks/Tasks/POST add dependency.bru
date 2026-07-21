@@ -1,0 +1,18 @@
+meta {
+  name: POST add dependency
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/{{id}}/dependencies
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"dependsOnTaskId":"{{did}}"}
+}

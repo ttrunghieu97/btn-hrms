@@ -1,0 +1,14 @@
+meta {
+  name: POST publish
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}/publish
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

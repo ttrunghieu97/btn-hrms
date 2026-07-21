@@ -1,0 +1,18 @@
+meta {
+  name: POST reassign
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/{{id}}/reassign
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"assigneeId":"{{aid}}"}
+}

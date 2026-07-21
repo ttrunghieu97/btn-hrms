@@ -1,0 +1,18 @@
+meta {
+  name: POST return
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/{{id}}/return
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"reason":"Revise"}
+}
