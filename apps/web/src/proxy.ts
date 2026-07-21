@@ -58,11 +58,11 @@ export default function middleware(req: NextRequest) {
 
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-eval' 'unsafe-inline' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https: http:`,
     `font-src 'self' data:`,
-    `connect-src 'self' ${apiBaseUrl.startsWith('/') ? '' : apiBaseUrl} ${sentryDsn ? new URL(sentryDsn).origin : ''}`,
+    `connect-src 'self' https://static.cloudflareinsights.com ${apiBaseUrl.startsWith('/') ? '' : apiBaseUrl} ${sentryDsn ? new URL(sentryDsn).origin : ''}`,
     `frame-ancestors 'none'`,
     "base-uri 'self'",
     "form-action 'self'",
