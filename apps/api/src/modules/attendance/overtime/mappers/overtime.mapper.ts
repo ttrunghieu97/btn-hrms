@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class OvertimeMapper {
-  static toDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  static toDto(row: any  ) {
     if (!row) return null;
     return {
       id: row.id,

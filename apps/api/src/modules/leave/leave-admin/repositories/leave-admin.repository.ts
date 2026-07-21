@@ -20,13 +20,13 @@ export class LeaveAdminRepository extends BaseRepository<unknown, any, unknown> 
     });
   }
 
-  async findMany(options?: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  async findMany(options?: any  ) {
     if (options?.target === "types")
       return this.listLeaveTypes(options).then((r) => r.rows);
     return this.listLeavePolicies(options).then((r) => r.rows);
   }
 
-  async create(data: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  async create(data: any  ) {
     if (data.target === "type") {
       const [row] = await this.db
         .insert(schema.leaveTypes)
@@ -41,7 +41,7 @@ export class LeaveAdminRepository extends BaseRepository<unknown, any, unknown> 
     return row ?? null;
   }
 
-  async update(id: string, data: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  async update(id: string, data: any  ) {
     if (data.target === "type") {
       const [row] = await this.db
         .update(schema.leaveTypes)

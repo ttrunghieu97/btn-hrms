@@ -6,7 +6,7 @@ import { StorageService } from "../../../../infrastructure/storage/storage.servi
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 
-function errorMessage(error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): string {
+function errorMessage(error: any  ): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -55,7 +55,7 @@ export class DeleteEmployeeUseCase {
     // Archive all storage objects owned by this employee — keyed by employeeId (UUID), never username
     try {
       await this.storage.archiveOwnerFiles("employee", employee.id);
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       this.logger.error({
         event: "file.archive.delete_employee_fail",
         employeeId: employee.id,

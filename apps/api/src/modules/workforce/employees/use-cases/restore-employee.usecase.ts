@@ -6,7 +6,7 @@ import { StorageService } from "../../../../infrastructure/storage/storage.servi
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 
-function errorMessage(error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): string {
+function errorMessage(error: any  ): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -50,7 +50,7 @@ export class RestoreEmployeeUseCase {
 
     try {
       await this.storage.restoreOwnerFiles("employee", employee.id);
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       this.logger.error({
         event: "file.restore.fail",
         employeeId: employee.id,

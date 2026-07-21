@@ -3,7 +3,7 @@ import { type TaskResponseDto } from "../dto/task-response.dto";
 import { type UpdateTaskDto } from "../dto/update-task.dto";
 
 export class TaskMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskResponseDto {
+  static toResponseDto(row: any  ): TaskResponseDto {
     const assignee = row?.assignee;
     let checklist: { text: string; done?: boolean }[] | null | undefined =
       undefined;
@@ -57,7 +57,7 @@ export class TaskMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskResponseDto[] {
     return rows.map((r) => TaskMapper.toResponseDto(r));
   }
 

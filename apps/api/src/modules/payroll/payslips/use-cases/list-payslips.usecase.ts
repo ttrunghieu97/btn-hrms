@@ -18,7 +18,7 @@ export class ListPayslipsUseCase {
 
   async execute(query: PayslipQueryDto, scope?: DataScope) {
     const result = await this.payslipsRepo.list(query, scope);
-    return { ...result, rows: PayslipMapper.toResponseDtos(result.rows as any /* eslint-disable-line @typescript-eslint/no-explicit-any */) };
+    return { ...result, rows: PayslipMapper.toResponseDtos(result.rows as any  ) };
   }
 }
 

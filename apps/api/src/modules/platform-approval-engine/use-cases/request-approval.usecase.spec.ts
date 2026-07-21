@@ -30,7 +30,7 @@ describe("RequestApprovalUseCase", () => {
       return cb({});
     });
     const uc = new RequestApprovalUseCase(repo as any, makeOutbox() as any);
-    const result = await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "dup" } as any);
+    const result = await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "dup" });
     expect(result).toEqual({ id: "existing" });
   });
 
@@ -44,7 +44,7 @@ describe("RequestApprovalUseCase", () => {
       return cb({});
     });
     const uc = new RequestApprovalUseCase(repo as any, outbox as any);
-    await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "s-1", requestedByUserId: "user-1" } as any);
+    await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "s-1", requestedByUserId: "user-1" });
     expect(repo.insertSteps).toHaveBeenCalled();
     expect(outbox.stage).toHaveBeenCalled();
   });

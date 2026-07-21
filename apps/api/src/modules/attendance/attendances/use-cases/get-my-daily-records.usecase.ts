@@ -19,7 +19,7 @@ export class GetMyDailyRecordsUseCase {
       employeeId,
       month,
     );
-    return groupEventsToDailyRecords(events as any /* eslint-disable-line @typescript-eslint/no-explicit-any */[]);
+    return groupEventsToDailyRecords(events as any  []);
   }
 }
 

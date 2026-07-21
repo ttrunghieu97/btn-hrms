@@ -15,7 +15,7 @@ describe("UpdateNotificationTemplateUseCase", () => {
     repo.findTemplateById.mockResolvedValue({ id: "t-1" });
     repo.updateTemplate.mockResolvedValue({ id: "t-1", name: "updated" });
     const uc = new UpdateNotificationTemplateUseCase(repo as any);
-    const result = await uc.execute("t-1", { name: "updated" } as any);
+    const result = await uc.execute("t-1", { name: "updated" });
     expect(result.name).toBe("updated");
     expect(repo.updateTemplate).toHaveBeenCalledWith("t-1", { name: "updated" });
   });

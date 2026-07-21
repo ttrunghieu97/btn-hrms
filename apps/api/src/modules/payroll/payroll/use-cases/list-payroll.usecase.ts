@@ -19,7 +19,7 @@ export class ListPayrollUseCase {
   async execute(query: PayrollQueryDto) {
     const { rows, total, page, limit } = await this.payrollRepo.list(query);
     return buildPaginatedResponse(
-      PayrollMapper.toResponseDtos(rows as any /* eslint-disable-line @typescript-eslint/no-explicit-any */),
+      PayrollMapper.toResponseDtos(rows as any  ),
       total,
       page,
       limit,

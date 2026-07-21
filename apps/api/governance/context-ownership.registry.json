@@ -1,6 +1,20 @@
 {
   "contexts": [
     {
+      "context": "platform-navigation",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "platform-navigation"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
       "context": "asset-management",
       "ownerTeam": "platform",
       "onCall": "platform-oncall",

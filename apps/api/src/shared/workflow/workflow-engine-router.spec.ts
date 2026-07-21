@@ -78,3 +78,4 @@ describe("WorkflowEngineRouter", () => {
     expect(legacy.startWorkflow).toHaveBeenCalled();
     expect(result).toBeDefined();
   });
+});

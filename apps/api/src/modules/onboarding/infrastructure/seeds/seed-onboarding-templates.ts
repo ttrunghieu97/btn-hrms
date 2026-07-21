@@ -126,7 +126,7 @@ async function seed() {
         .limit(1);
 
       if (existing.length > 0) {
-        // eslint-disable-next-line no-console
+         
         console.log(`  Skipped (exists): ${tmpl.name}`);
         skipped++;
         continue;
@@ -159,7 +159,7 @@ async function seed() {
       );
 
       created++;
-      // eslint-disable-next-line no-console
+       
       console.log(`  Created: ${tmpl.name}`);
     }
 

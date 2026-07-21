@@ -56,7 +56,7 @@ export class CreateLocationUseCase {
       }
     }
 
-    const result = await this.locationsRepo.create(data as any /* eslint-disable-line @typescript-eslint/no-explicit-any */);
+    const result = await this.locationsRepo.create(data as any  );
     if (!result) {
       throwConflict(
         "Failed to create location",

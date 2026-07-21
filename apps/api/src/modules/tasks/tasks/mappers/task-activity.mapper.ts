@@ -1,7 +1,7 @@
 import { type TaskActivityResponseDto } from "../dto/task-activity-response.dto";
 
 export class TaskActivityMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskActivityResponseDto {
+  static toResponseDto(row: any  ): TaskActivityResponseDto {
     const actor = row?.actor;
 
     return {
@@ -23,7 +23,7 @@ export class TaskActivityMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskActivityResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskActivityResponseDto[] {
     return rows.map((row) => TaskActivityMapper.toResponseDto(row));
   }
 }

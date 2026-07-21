@@ -19,7 +19,7 @@ describe("SendMessageUseCase", () => {
     };
     const ctx = { get: () => ({ requestId: "r" }) };
     const uc = new SendMessageUseCase(repo as any, ctx as any);
-    const result = await uc.execute("conv-1", { content: "hello" } as any, mockUser as any);
+    const result = await uc.execute("conv-1", { content: "hello" }, mockUser as any);
     expect(repo.createMessage).toHaveBeenCalledWith({
       conversationId: "conv-1", senderUserId: "user-1", content: "hello", type: "text",
     });

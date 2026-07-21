@@ -148,6 +148,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
     "transformIgnorePatterns": [
       "node_modules/(?!(uuid)/)"
     ],

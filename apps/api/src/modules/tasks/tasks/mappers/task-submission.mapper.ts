@@ -11,7 +11,7 @@ function normalizeChecklist(value: any) {
 }
 
 export class TaskSubmissionMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskSubmissionResponseDto {
+  static toResponseDto(row: any  ): TaskSubmissionResponseDto {
     const submittedBy = row?.submittedBy;
     return {
       id: row.id,
@@ -31,7 +31,7 @@ export class TaskSubmissionMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskSubmissionResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskSubmissionResponseDto[] {
     return rows.map((row) => TaskSubmissionMapper.toResponseDto(row));
   }
 }

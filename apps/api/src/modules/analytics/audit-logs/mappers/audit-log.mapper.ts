@@ -3,7 +3,7 @@ import { type CreateAuditLogDto } from "../dto/create-audit-log.dto";
 import { type UpdateAuditLogDto } from "../dto/update-audit-log.dto";
 
 export class AuditLogMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): AuditLogResponseDto {
+  static toResponseDto(row: any  ): AuditLogResponseDto {
     if (!row) {
       throw new Error(
         "Cannot map a null or undefined row to AuditLogResponseDto",
@@ -31,7 +31,7 @@ export class AuditLogMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): AuditLogResponseDto[] {
+  static toResponseDtos(rows: any[]  ): AuditLogResponseDto[] {
     return (rows || [])
       .filter((row) => row != null)
       .map((row) => this.toResponseDto(row));

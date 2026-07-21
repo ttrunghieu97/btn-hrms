@@ -53,7 +53,7 @@ export class UpsertPayrollUseCase {
         tx,
       );
 
-      return PayrollMapper.toResponseDto(loaded as any /* eslint-disable-line @typescript-eslint/no-explicit-any */);
+      return PayrollMapper.toResponseDto(loaded as any  );
     });
   }
 }

@@ -1,7 +1,7 @@
 import { type TaskAttachmentResponseDto } from "../dto/task-attachment-response.dto";
 
 export class TaskAttachmentMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskAttachmentResponseDto {
+  static toResponseDto(row: any  ): TaskAttachmentResponseDto {
     const uploadedBy = row?.uploadedBy;
     return {
       id: row.id,
@@ -22,7 +22,7 @@ export class TaskAttachmentMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskAttachmentResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskAttachmentResponseDto[] {
     return rows.map((row) => TaskAttachmentMapper.toResponseDto(row));
   }
 }

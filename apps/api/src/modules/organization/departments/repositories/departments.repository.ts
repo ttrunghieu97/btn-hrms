@@ -73,8 +73,8 @@ export class DepartmentsRepository extends BaseRepository<
   async getTree(tx?: PostgresJsDatabase<typeof schema>) {
     const db = tx ?? this.db;
     const allDepts = await db.select().from(departments);
-    const map = new Map<string, typeof schema.departments.$inferSelect & { children: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }>();
-    const roots: (typeof schema.departments.$inferSelect & { children: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ })[] = [];
+    const map = new Map<string, typeof schema.departments.$inferSelect & { children: any[]   }>();
+    const roots: (typeof schema.departments.$inferSelect & { children: any[]   })[] = [];
 
     allDepts.forEach((dept) => {
       map.set(dept.id, { ...dept, children: [] });

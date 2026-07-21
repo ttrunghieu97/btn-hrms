@@ -1,6 +1,6 @@
 /** Application timezone. Hardcoded to Asia/Ho_Chi_Minh for single-tenant VN deployment. */
 export const APP_TIMEZONE =
-  (process.env.APP_TIMEZONE as string | undefined) ?? "Asia/Ho_Chi_Minh";
+  (process.env.APP_TIMEZONE) ?? "Asia/Ho_Chi_Minh";
 
 /**
  * Parses DD/MM/YYYY → YYYY-MM-DD string. Returns null on invalid input.

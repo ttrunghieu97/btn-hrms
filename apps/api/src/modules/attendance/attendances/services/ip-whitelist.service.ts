@@ -36,7 +36,7 @@ export class IpWhitelistService {
       try {
         const [rangeAddr, prefix] = ipaddr.parseCIDR(cidr);
         if (rangeAddr.kind() !== addr.kind()) continue;
-        if ((addr as any /* eslint-disable-line @typescript-eslint/no-explicit-any */).match(rangeAddr, prefix)) {
+        if ((addr as any  ).match(rangeAddr, prefix)) {
           return true;
         }
       } catch {

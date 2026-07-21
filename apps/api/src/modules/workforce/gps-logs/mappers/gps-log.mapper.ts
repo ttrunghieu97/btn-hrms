@@ -1,7 +1,7 @@
 import { type GPSLogResponseDto } from "../dto/gps-log-response.dto";
 
 export class GPSLogMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): GPSLogResponseDto | null {
+  static toResponseDto(row: any  ): GPSLogResponseDto | null {
     if (!row) return null;
     return {
       id: row.id,
@@ -12,7 +12,7 @@ export class GPSLogMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): GPSLogResponseDto[] {
+  static toResponseDtos(rows: any[]  ): GPSLogResponseDto[] {
     if (!rows) return [];
     return rows
       .map((row) => this.toResponseDto(row))

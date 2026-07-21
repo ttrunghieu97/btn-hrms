@@ -5,7 +5,7 @@ import { FieldSelectableQueryDto } from "../../../../shared/dto/pagination.dto";
 
 const EMPLOYEE_TABS = ["active", "official", "probation", "terminated", "deleted"] as const;
 
-function normalizeQueryArray(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): string[] | undefined {
+function normalizeQueryArray(value: any  ): string[] | undefined {
   if (value === undefined || value === null || value === "") return undefined;
 
   const raw = Array.isArray(value) ? value : [value];

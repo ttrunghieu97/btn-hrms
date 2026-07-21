@@ -142,7 +142,7 @@ export class UpdateEmployeeUseCase {
 
         },
       });
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       if (isUniqueViolation(err)) {
         const field = extractUniqueField(err) ?? "";
         if (field.includes("username")) {

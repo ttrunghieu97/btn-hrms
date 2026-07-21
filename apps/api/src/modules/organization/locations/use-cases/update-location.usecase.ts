@@ -25,7 +25,7 @@ export class UpdateLocationUseCase {
       });
     }
 
-    const result = await this.locationsRepo.update(id, data as any /* eslint-disable-line @typescript-eslint/no-explicit-any */);
+    const result = await this.locationsRepo.update(id, data as any  );
     return LocationMapper.toResponseDto(result);
   }
 }

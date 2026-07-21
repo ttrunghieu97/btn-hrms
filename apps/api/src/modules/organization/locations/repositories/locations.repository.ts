@@ -83,7 +83,7 @@ export class LocationsRepository extends BaseRepository<
   async findPaginated(
     query: LocationQueryDto,
     tx?: PostgresJsDatabase<typeof schema>,
-  ): Promise<{ rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */; total: number; page: number; limit: number }> {
+  ): Promise<{ rows: any[]  ; total: number; page: number; limit: number }> {
     const db = tx ?? this.db;
     const {
       page = 1,
@@ -126,7 +126,7 @@ export class LocationsRepository extends BaseRepository<
     return { rows, total: Number(totalResult?.value ?? 0), page, limit };
   }
 
-  async findById(id: string, query?: any /* eslint-disable-line @typescript-eslint/no-explicit-any */, tx?: PostgresJsDatabase<typeof schema>): Promise<any | null> {
+  async findById(id: string, query?: any  , tx?: PostgresJsDatabase<typeof schema>): Promise<any | null> {
     const db = tx ?? this.db;
     const columns = parseFields(query?.fields, "id", LOCATION_FIELDS);
     const withRelations = parseInclude(query?.include, LOCATION_RELATIONS);

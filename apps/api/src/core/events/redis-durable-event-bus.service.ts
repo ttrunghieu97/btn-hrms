@@ -119,9 +119,9 @@ export class RedisDurableEventBus
       `${this.streamKey}:dlq`;
     this.consumerGroup =
       String(config.get("EVENT_BUS_CONSUMER_GROUP") || "").trim() || "hrms-api";
-    this.maxRetries = 5;
-    this.reclaimIdleMs = 60_000;
-    this.reclaimCount = 20;
+    this.maxRetries = Number(config.get("EVENT_BUS_MAX_RETRIES") || 5);
+    this.reclaimIdleMs = Number(config.get("EVENT_BUS_RECLAIM_IDLE_MS") || 60_000);
+    this.reclaimCount = Number(config.get("EVENT_BUS_RECLAIM_COUNT") || 20);
     this.consumerName = `${hostname()}-${process.pid}`;
   }
 

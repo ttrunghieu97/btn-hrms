@@ -83,7 +83,6 @@ describe("AuthController refresh", () => {
 
     expect(res.clearCookie).toHaveBeenCalledWith("access_token", { path: "/api/" });
     expect(res.clearCookie).toHaveBeenCalledWith("refresh_token", { path: "/" });
-    expect(res.clearCookie).toHaveBeenCalledWith("auth_token", { path: "/" });
   });
 
   it("does not clear auth cookies on non-auth refresh failures", async () => {

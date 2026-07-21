@@ -3,7 +3,7 @@ import { DATABASE_CONNECTION } from "../../../../infrastructure/database/databas
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../../../../infrastructure/database/schema";
 import { SQL, and, count, desc, eq } from "drizzle-orm";
-import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
+import { BaseRepository, type FindOptions } from "../../../../infrastructure/repositories/base.repository";
 import { SalaryStructureQueryDto } from "../dto/salary-structure-query.dto";
 
 type SalaryStructureWithEmployee = typeof schema.salaryStructures.$inferSelect & {
@@ -16,7 +16,7 @@ export class SalaryStructuresRepository extends BaseRepository<
   typeof schema.salaryStructures.$inferInsert,
   Partial<typeof schema.salaryStructures.$inferInsert>,
   string,
-  import("../../../../infrastructure/repositories/base.repository").FindOptions<typeof schema.salaryStructures.$inferSelect>,
+  FindOptions<typeof schema.salaryStructures.$inferSelect>,
   SalaryStructureWithEmployee
 > {
   constructor(

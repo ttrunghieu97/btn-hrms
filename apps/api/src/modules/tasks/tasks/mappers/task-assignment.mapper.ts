@@ -1,7 +1,7 @@
 import { type TaskAssignmentResponseDto } from "../dto/task-assignment-response.dto";
 
 export class TaskAssignmentMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskAssignmentResponseDto {
+  static toResponseDto(row: any  ): TaskAssignmentResponseDto {
     const employee = row?.employee;
     const assignedBy = row?.assignedBy;
 
@@ -32,7 +32,7 @@ export class TaskAssignmentMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskAssignmentResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskAssignmentResponseDto[] {
     return rows.map((row) => TaskAssignmentMapper.toResponseDto(row));
   }
 }

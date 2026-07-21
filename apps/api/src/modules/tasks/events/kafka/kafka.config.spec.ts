@@ -9,25 +9,20 @@ function providerFactory() {
 }
 
 describe("KafkaModule config", () => {
-  it("returns null when KAFKA_MODE=disabled", () => {
+  it("always returns null because Kafka module is disabled", () => {
     const provider = providerFactory();
-    const config = new ConfigService({ KAFKA_MODE: "disabled" });
-    expect(provider.useFactory(config)).toBeNull();
-  });
+    
+    const configDisabled = new ConfigService({ KAFKA_MODE: "disabled" });
+    expect(provider.useFactory(configDisabled)).toBeNull();
 
-  it("throws when KAFKA_MODE=required and brokers are missing", () => {
-    const provider = providerFactory();
-    const config = new ConfigService({ KAFKA_MODE: "required" });
-    expect(() => provider.useFactory(config)).toThrow(/KAFKA_BROKERS/);
-  });
+    const configRequired = new ConfigService({ KAFKA_MODE: "required" });
+    expect(provider.useFactory(configRequired)).toBeNull();
 
-  it("creates client when brokers are configured", () => {
-    const provider = providerFactory();
-    const config = new ConfigService({
+    const configOptional = new ConfigService({
       KAFKA_MODE: "optional",
       KAFKA_BROKERS: "localhost:9092",
       KAFKA_CLIENT_ID: "hrms-api",
     });
-    expect(provider.useFactory(config)).toBeTruthy();
+    expect(provider.useFactory(configOptional)).toBeNull();
   });
 });

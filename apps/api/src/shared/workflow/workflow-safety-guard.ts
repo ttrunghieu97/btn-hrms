@@ -82,7 +82,7 @@ export class WorkflowSafetyGuard {
       throw new GuardBudgetExceededError(instanceId, this.config.maxGuardEvaluations);
     }
 
-    const startTime = Date.now(); // eslint-disable-line @typescript-eslint/no-unused-vars
+    const startTime = Date.now();  
     return {
       done: () => {},
       fail: () => {},

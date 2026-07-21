@@ -6,7 +6,7 @@ import { throwBadRequest } from "../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { normalizeDdMmYyyyToIsoDate } from "../../../shared/utils/date-format";
 
-function isRecord(value: any  ): value is Record<string, any> /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+function isRecord(value: any  ): value is Record<string, any>   {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -26,7 +26,7 @@ export class EmployeeDataPipe implements PipeTransform {
     }
   }
 
-  private parseIntentField<T>(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */, fieldName: string): T | undefined {
+  private parseIntentField<T>(value: any  , fieldName: string): T | undefined {
     if (typeof value === "string") {
       const trimmed = value.trim();
       if (!trimmed || trimmed === "null" || trimmed === "undefined")
@@ -36,10 +36,10 @@ export class EmployeeDataPipe implements PipeTransform {
     return value as T;
   }
 
-  async transform(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */, metadata: ArgumentMetadata) {
+  async transform(value: any  , metadata: ArgumentMetadata) {
     if (!value) return value;
 
-    const data: Record<string, any> /* eslint-disable-line @typescript-eslint/no-explicit-any */ = isRecord(value) ? { ...value } : {};
+    const data: Record<string, any>   = isRecord(value) ? { ...value } : {};
 
     if ("email" in data) {
       const trimmed = String(data.email ?? "").trim();

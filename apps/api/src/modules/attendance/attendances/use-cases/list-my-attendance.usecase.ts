@@ -85,7 +85,7 @@ export class ListMyAttendanceUseCase {
     };
 
     const paginated = buildPaginatedResponse(
-      AttendanceMapper.toResponseDtos(rows as any /* eslint-disable-line @typescript-eslint/no-explicit-any */),
+      AttendanceMapper.toResponseDtos(rows as any  ),
       total,
       page,
       limit,

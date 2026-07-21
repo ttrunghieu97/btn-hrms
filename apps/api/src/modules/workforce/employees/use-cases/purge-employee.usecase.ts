@@ -10,7 +10,7 @@ import {
   type IdentityAdminPort,
 } from "../../../../contracts/ports/identity-admin.port";
 
-function errorMessage(error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): string {
+function errorMessage(error: any  ): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -70,7 +70,7 @@ export class PurgeEmployeeUseCase {
     // logged on failure, matching the existing pattern.
     try {
       await this.storage.purgeOwnerFiles("employee", employeeId);
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       this.logger.error({
         event: "file.purge.fail",
         employeeId,

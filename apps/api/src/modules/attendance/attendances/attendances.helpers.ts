@@ -1,4 +1,4 @@
-export function groupEventsToDailyRecords(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+export function groupEventsToDailyRecords(rows: any[]  ) {
   const map = new Map<string, unknown>();
 
   for (const row of rows) {
@@ -15,7 +15,7 @@ export function groupEventsToDailyRecords(rows: any[] /* eslint-disable-line @ty
         morning: {},
         noon: {},
         afternoon: {},
-      } as any /* eslint-disable-line @typescript-eslint/no-explicit-any */);
+      } as any  );
 
     const session: "morning" | "noon" | "afternoon" =
       row.session ||

@@ -243,26 +243,26 @@ export class CreateEmployeeDto {
   identityCard?: string;
 }
 
-function parseJsonTransportValue(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): unknown {
+function parseJsonTransportValue(value: any  ): unknown {
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
   if (!trimmed || trimmed === "null" || trimmed === "undefined") return undefined;
   return JSON.parse(trimmed)  ;
 }
 
-function parseAttachmentIntent(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): unknown {
+function parseAttachmentIntent(value: any  ): unknown {
   const parsed = parseJsonTransportValue(value);
   return parsed == null ? parsed : plainToInstance(AttachmentIntentDto, parsed);
 }
 
-function parseDocumentIntents(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): unknown {
+function parseDocumentIntents(value: any  ): unknown {
   const parsed = parseJsonTransportValue(value);
   return Array.isArray(parsed)
     ? parsed.map((item) => plainToInstance(EmployeeDocumentIntentDto, item))
     : parsed;
 }
 
-function parseCertificationIntents(value: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): unknown {
+function parseCertificationIntents(value: any  ): unknown {
   const parsed = parseJsonTransportValue(value);
   return Array.isArray(parsed)
     ? parsed.map((item) => plainToInstance(EmployeeCertificationIntentDto, item))

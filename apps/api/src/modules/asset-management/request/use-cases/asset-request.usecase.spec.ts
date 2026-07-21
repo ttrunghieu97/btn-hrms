@@ -6,6 +6,7 @@ import { CancelRequestUseCase } from "./cancel-request.usecase";
 import { AssetRequestRepository } from "../repositories/asset-request.repository";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
+import { TransactionRunner } from "../../../../infrastructure/database/transaction-runner";
 
 describe("Asset request use-cases", () => {
   let repo: jest.Mocked<AssetRequestRepository>;
@@ -30,6 +31,9 @@ describe("Asset request use-cases", () => {
     const requestContext = {
       get: jest.fn().mockReturnValue({ userId: "user-1", employeeId: "emp-1" }),
     } as any;
+    const txRunner = {
+      run: jest.fn().mockImplementation(async (fn) => fn({})),
+    } as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +44,7 @@ describe("Asset request use-cases", () => {
         { provide: AssetRequestRepository, useValue: repo },
         { provide: EventOutboxService, useValue: eventOutbox },
         { provide: RequestContextService, useValue: requestContext },
+        { provide: TransactionRunner, useValue: txRunner },
       ],
     }).compile();
 
@@ -125,6 +130,7 @@ describe("Asset request use-cases", () => {
     expect(repo.updateStatus).toHaveBeenCalledWith(
       "req-1",
       expect.objectContaining({ status: "cancelled" }),
+      expect.anything(),
     );
   });
 

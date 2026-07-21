@@ -24,7 +24,7 @@ export interface AttendanceComputationResult {
     invalidSequence: boolean;
     offShift: boolean;
   };
-  sourceData: Record<string, any> /* eslint-disable-line @typescript-eslint/no-explicit-any */;
+  sourceData: Record<string, any>  ;
 }
 
 @Injectable()

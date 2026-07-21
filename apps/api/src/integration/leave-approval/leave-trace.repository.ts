@@ -218,7 +218,6 @@ function outboxToTrace(evt: OutboxRow): TraceEvent | null {
     "leave.approved.v1": { type: "LEAVE_FINAL_APPROVED", label: "Phê duyệt hoàn tất (event)" },
     "leave.rejected.v1": { type: "LEAVE_FINAL_REJECTED", label: "Từ chối hoàn tất (event)" },
   };
-  // eslint-disable-next-line drizzle/enforce-name-conventions
   const baseType = evt.eventType.replace(/\.\d+$/, "").replace(/\.v\d+$/, "");
   const def = EVENT_MAP[evt.eventType] ?? EVENT_MAP[baseType];
   if (!def) return null;

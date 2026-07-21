@@ -90,7 +90,7 @@ export class UpdateDepartmentUseCase {
         );
       }
       return DepartmentMapper.toResponseDto(result);
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       if (isUniqueViolation(err)) {
         const field = extractUniqueField(err) ?? "";
         if (field.includes("name")) {

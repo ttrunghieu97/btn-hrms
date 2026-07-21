@@ -24,12 +24,12 @@ export class GetCheckedInTodayUseCase {
       await this.attendancesRepo.findByDateWithEmployee(targetDate);
 
     const byEmployee = new Map<string, any>();
-    for (const e of events as any /* eslint-disable-line @typescript-eslint/no-explicit-any */[]) {
+    for (const e of events as any  []) {
       if (!byEmployee.has(e.employeeId)) byEmployee.set(e.employeeId, []);
       byEmployee.get(e.employeeId)!.push(e);
     }
 
-    const result: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ = [];
+    const result: any[]   = [];
     for (const rows of byEmployee.values()) {
       const daily = groupEventsToDailyRecords(rows)[0];
       if (!daily) continue;

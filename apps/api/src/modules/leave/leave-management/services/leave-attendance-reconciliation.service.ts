@@ -107,7 +107,7 @@ export class LeaveAttendanceReconciliationService {
     return `${request.id}:${mode}:${version}`;
   }
 
-  private isAlreadyApplied(sourceData: any /* eslint-disable-line @typescript-eslint/no-explicit-any */, key: string) {
+  private isAlreadyApplied(sourceData: any  , key: string) {
     const source = this.toObject(sourceData);
     const reconciliation = source?.leaveReconciliation as
       | { key?: string }

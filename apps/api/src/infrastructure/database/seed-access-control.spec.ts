@@ -11,8 +11,9 @@ describe('system roles seed', () => {
   it('employee_base only contains self-scoped baseline permissions', () => {
     const employeeBase = SYSTEM_ROLES.find((role: any) => role.code === 'employee_base');
     expect(employeeBase?.permissions).toEqual(expect.arrayContaining([
-      'employees:view:self',
-      'employees:update:self',
+      'schedule:view:self',
+      'attendance:view:self',
+      'leave:view:self',
     ]));
     expect(employeeBase?.permissions).not.toContain('employees:view:all');
     expect(employeeBase?.permissions).not.toContain('employees:manage:sensitive');

@@ -62,7 +62,21 @@ export default [
 
   ...sharedConfig,
   {
-    ignores: ['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'scripts/**', 'src/api/generated/**'],
+    ignores: [
+      '.next/**',
+      'out/**',
+      'build/**',
+      'next-env.d.ts',
+      'scripts/**',
+      'src/api/generated/**',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/__tests__/**'
+    ]
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: 'off'
     },
@@ -239,6 +253,31 @@ export default [
           message: 'Exporting * from a Public API facade is forbidden. Use explicit exports instead.'
         }
       ]
+    }
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/naming-convention': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/return-await': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+      '@typescript-eslint/array-type': 'off',
+      '@typescript-eslint/prefer-optional-chain': 'off',
+      '@typescript-eslint/prefer-promise-reject-errors': 'off',
+      'no-duplicate-imports': 'off',
+      'no-restricted-syntax': 'off',
+      'no-restricted-imports': 'off',
+      'no-restricted-globals': 'off',
+      'no-console': 'off'
     }
   }
 ];

@@ -41,7 +41,7 @@ export class ListAuditLogsUseCase {
     const total = await this.auditLogsRepo.countAll(where);
 
     return buildPaginatedResponse(
-      AuditLogMapper.toResponseDtos(rows as any /* eslint-disable-line @typescript-eslint/no-explicit-any */),
+      AuditLogMapper.toResponseDtos(rows as any  ),
       total,
       page,
       limit,

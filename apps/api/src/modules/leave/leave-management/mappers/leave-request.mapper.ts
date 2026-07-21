@@ -4,7 +4,7 @@ import { type LeaveRequestResponseDto } from "../dto/leave-request-response.dto"
 import { type LeaveBalanceResponseDto } from "../dto/leave-balance-response.dto";
 
 export class LeaveRequestMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): LeaveRequestResponseDto {
+  static toResponseDto(row: any  ): LeaveRequestResponseDto {
     return {
       id: row.id,
       employeeId: row.employeeId,
@@ -54,7 +54,7 @@ export class LeaveRequestMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): LeaveRequestResponseDto[] {
+  static toResponseDtos(rows: any[]  ): LeaveRequestResponseDto[] {
     return rows.map((row) => this.toResponseDto(row));
   }
 
@@ -64,7 +64,7 @@ export class LeaveRequestMapper {
     return status;
   }
 
-  static toBalanceDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): LeaveBalanceResponseDto {
+  static toBalanceDto(row: any  ): LeaveBalanceResponseDto {
     return {
       id: row.id,
       employeeId: row.employeeId,
@@ -86,7 +86,7 @@ export class LeaveRequestMapper {
     };
   }
 
-  static toBalanceDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): LeaveBalanceResponseDto[] {
+  static toBalanceDtos(rows: any[]  ): LeaveBalanceResponseDto[] {
     return rows.map((row) => this.toBalanceDto(row));
   }
 

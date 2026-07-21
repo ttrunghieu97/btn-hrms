@@ -1,7 +1,7 @@
 import { type TaskCommentResponseDto } from "../dto/task-comment-response.dto";
 
 export class TaskCommentMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskCommentResponseDto {
+  static toResponseDto(row: any  ): TaskCommentResponseDto {
     const author = row?.author;
     const employee = author?.employee;
     const department = employee?.department;
@@ -24,7 +24,7 @@ export class TaskCommentMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): TaskCommentResponseDto[] {
+  static toResponseDtos(rows: any[]  ): TaskCommentResponseDto[] {
     return rows.map((row) => TaskCommentMapper.toResponseDto(row));
   }
 }

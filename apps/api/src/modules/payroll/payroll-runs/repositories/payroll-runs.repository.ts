@@ -3,7 +3,7 @@ import { SQL, and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import * as schema from "../../../../infrastructure/database/schema";
-import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
+import { BaseRepository, type FindOptions } from "../../../../infrastructure/repositories/base.repository";
 import { PayrollRunQueryDto } from "../dto/payroll-run-query.dto";
 
 type PayrollRunWithPeriod = typeof schema.payrollRuns.$inferSelect & {
@@ -21,7 +21,7 @@ export class PayrollRunsRepository extends BaseRepository<
   typeof schema.payrollRuns.$inferInsert,
   Partial<typeof schema.payrollRuns.$inferInsert>,
   string,
-  import("../../../../infrastructure/repositories/base.repository").FindOptions<typeof schema.payrollRuns.$inferSelect>,
+  FindOptions<typeof schema.payrollRuns.$inferSelect>,
   PayrollRunWithPeriod
 > {
   constructor(

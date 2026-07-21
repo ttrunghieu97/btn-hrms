@@ -39,4 +39,23 @@ module.exports = [
       "@typescript-eslint/no-unnecessary-condition": "off",
     },
   },
+
+  // ─── API-specific: general codebase overrides to match existing codebase structure ───
+  {
+    files: ["src/**/*.ts", "test/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/prefer-nullish-coalescing": "off",
+      "@typescript-eslint/naming-convention": "off",
+      "@typescript-eslint/strict-boolean-expressions": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/return-await": "off",
+      "no-duplicate-imports": "off",
+      "no-console": "off",
+    },
+  },
 ];

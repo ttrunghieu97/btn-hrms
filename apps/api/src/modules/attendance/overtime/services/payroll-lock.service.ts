@@ -12,7 +12,7 @@ export class PayrollLockService {
     const dateStr =
       typeof workDate === "string"
         ? workDate
-        : formatDateISO(workDate)!;
+        : formatDateISO(workDate);
 
     const lockedPeriod = await this.payrollLockRepo.findLockedPayrollPeriod(dateStr);
 

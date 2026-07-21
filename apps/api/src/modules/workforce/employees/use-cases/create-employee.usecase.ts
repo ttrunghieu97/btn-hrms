@@ -41,7 +41,7 @@ function deriveContractStatus(status?: CreateEmployeeDto["status"]) {
 }
 
 
-function errorMessage(error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): string {
+function errorMessage(error: any  ): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -190,7 +190,7 @@ export class CreateEmployeeUseCase {
 
         return { employeeId: employee.id, userId: user.id };
       }));
-    } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+    } catch (err: any  ) {
       if (isUniqueViolation(err)) {
         const field = extractUniqueField(err) ?? "";
         if (field.includes("username")) {

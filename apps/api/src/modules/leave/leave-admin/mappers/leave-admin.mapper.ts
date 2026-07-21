@@ -1,5 +1,5 @@
 export class LeaveAdminMapper {
-  static toLeavePolicyDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  static toLeavePolicyDto(row: any  ) {
     return {
       id: row.id,
       branchId: row.branchId ?? null,
@@ -14,7 +14,7 @@ export class LeaveAdminMapper {
     };
   }
 
-  static toLeaveTypeDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  static toLeaveTypeDto(row: any  ) {
     return {
       id: row.id,
       policyId: row.policyId ?? null,
@@ -33,7 +33,7 @@ export class LeaveAdminMapper {
     };
   }
 
-  static toLeavePolicyEntity(dto: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  static toLeavePolicyEntity(dto: any  ) {
     return {
       ...(dto.branchId !== undefined ? { branchId: dto.branchId } : {}),
       ...(dto.code !== undefined ? { code: dto.code } : {}),
@@ -51,7 +51,7 @@ export class LeaveAdminMapper {
     };
   }
 
-  static toLeaveTypeEntity(dto: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
+  static toLeaveTypeEntity(dto: any  ) {
     return {
       ...(dto.policyId !== undefined ? { policyId: dto.policyId } : {}),
       ...(dto.code !== undefined ? { code: dto.code } : {}),

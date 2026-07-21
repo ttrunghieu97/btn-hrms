@@ -1,7 +1,7 @@
 import { type LocationResponseDto } from "../dto/location-response.dto";
 
 export class LocationMapper {
-  static toResponseDto(row: any /* eslint-disable-line @typescript-eslint/no-explicit-any */): LocationResponseDto | null {
+  static toResponseDto(row: any  ): LocationResponseDto | null {
     if (!row) return null;
 
     const childrenDtos = row.children
@@ -31,7 +31,7 @@ export class LocationMapper {
     };
   }
 
-  static toResponseDtos(rows: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */): LocationResponseDto[] {
+  static toResponseDtos(rows: any[]  ): LocationResponseDto[] {
     if (!rows) return [];
     return rows
       .map((row) => this.toResponseDto(row))
