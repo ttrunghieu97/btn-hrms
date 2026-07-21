@@ -21,7 +21,7 @@ const groups = [
   },
   {
     name: "api",
-    file: "apps/api/.env.example",
+    file: "backend/.env.example",
     vars: [
       "NODE_ENV",
       "PORT",
@@ -41,7 +41,7 @@ const groups = [
   },
   {
     name: "web",
-    file: "apps/web/.env.example",
+    file: "frontend/.env.example",
     vars: [
       "NODE_ENV",
       "PORT",

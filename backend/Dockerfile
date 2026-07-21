@@ -14,15 +14,15 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 WORKDIR /usr/src/app
 COPY --from=build --chown=nodejs:nodejs /usr/src/app/node_modules ./node_modules
-COPY --from=build --chown=nodejs:nodejs /usr/src/app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/backend/node_modules ./backend/node_modules
 COPY --from=build --chown=nodejs:nodejs /usr/src/app/package.json ./
-COPY --from=build --chown=nodejs:nodejs /usr/src/app/apps/api/package.json ./apps/api/package.json
-COPY --from=build --chown=nodejs:nodejs /usr/src/app/apps/api/dist ./apps/api/dist
-COPY --from=build --chown=nodejs:nodejs /usr/src/app/apps/api/config ./apps/api/config
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/backend/package.json ./backend/package.json
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/backend/dist ./backend/dist
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/backend/config ./backend/config
 
 EXPOSE 3001
 ENV PORT=3001
 ENV NODE_ENV=production
-WORKDIR /usr/src/app/apps/api
+WORKDIR /usr/src/app/backend
 USER nodejs
 CMD ["node", "dist/main.js"]

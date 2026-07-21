@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "hrms-api",
-      cwd: "./apps/api",
+      cwd: "./backend",
       script: "dist/main.js",
       instances: 1,
       exec_mode: "fork",
@@ -22,7 +22,7 @@ module.exports = {
     },
     {
       name: "hrms-web",
-      cwd: "./apps/web",
+      cwd: "./frontend",
       script: "node_modules/next/dist/bin/next",
       args: "start --port 8080",
       instances: 1,

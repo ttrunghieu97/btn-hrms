@@ -24,7 +24,7 @@ function normalizeEol(value) {
 function readManifest() {
   assert(
     fs.existsSync(manifestPath),
-    'Missing error contract manifest. Run `npm --prefix apps/api run error-contracts:json ../web/error-contracts.manifest.json`.',
+    'Missing error contract manifest. Run `npm --prefix backend run error-contracts:json ../web/error-contracts.manifest.json`.',
   );
 
   const manifest = JSON.parse(read(manifestPath));
@@ -51,7 +51,7 @@ function serializeContracts(manifest) {
 
   const lines = [
     '/**',
-    ' * Auto-generated from apps/api/src/shared/constants/error-contracts.ts.',
+    ' * Auto-generated from backend/src/shared/constants/error-contracts.ts.',
     ' * Do not edit manually.',
     ' */',
     '',

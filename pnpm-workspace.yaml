@@ -1,5 +1,6 @@
 packages:
-  - 'apps/*'
+  - 'backend'
+  - 'frontend'
   - 'packages/*'
 
 allowBuilds:
@@ -23,3 +24,12 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
+
+overrides:
+  multer: 2.2.0
+  brace-expansion: 2.1.2
+  "@opentelemetry/otlp-transformer>protobufjs": 8.6.6
+  "@grpc/proto-loader>protobufjs": 7.6.5
+  postcss: 8.5.10
+  "@opentelemetry/core": 2.8.0
+  js-yaml: 4.3.0

@@ -81,7 +81,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/api/Dockerfile
+          file: backend/Dockerfile
           push: true
           tags: |
             ${{ env.IMAGE_API }}:${{ github.sha }}
@@ -93,7 +93,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/web/Dockerfile
+          file: frontend/Dockerfile
           push: true
           tags: |
             ${{ env.IMAGE_WEB }}:${{ github.sha }}

@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
-apps/api/node_modules/
-apps/web/node_modules/
+backend/node_modules/
+frontend/node_modules/
 
 # Logs
 logs/
@@ -16,29 +16,29 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
-apps/api/.env
-apps/web/.env
+backend/env
+frontend/env
 
 # Build output
 dist/
 dist-ssr/
 build/
 coverage/
-apps/api/dist/
-apps/api/coverage/
-apps/web/.next/
-apps/web/out/
-apps/web/build/
-apps/web/coverage/
-apps/web/.vercel/
+backend/dist/
+backend/coverage/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/coverage/
+frontend/.vercel/
 
 # Caches
 .turbo/
 .cache/
 .swc/
-apps/web/.swc/
+frontend/.swc/
 *.tsbuildinfo
-apps/web/next-env.d.ts
+frontend/next-env.d.ts
 
 # Package manager
 package-lock.json
@@ -78,15 +78,15 @@ archive/
 *.old
 
 # App-local generated temp files
-apps/web/openapi.tmp.json
-apps/web/.env.sentry-build-plugin
-apps/web/.clerk/
+frontend/openapi.tmp.json
+frontend/env.sentry-build-plugin
+frontend/.clerk/
 
 # Build diagnostics
-apps/api/build-*.txt
-apps/api/lint-*.json
-apps/web/web-build-error.txt
-apps/web/web-lint-report.json
+backend/build-*.txt
+backend/lint-*.json
+frontend/web-build-error.txt
+frontend/web-lint-report.json
 
 # Cloudflare Tunnel credentials
 .cloudflared/credentials.json

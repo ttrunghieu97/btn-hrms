@@ -82,7 +82,7 @@ jobs:
         run: pnpm --filter frontend exec playwright install chromium
       - name: Start API server
         run: |
-          cd apps/api && node dist/main.js &
+          cd backend && node dist/main.js &
           sleep 5
         env:
           DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
@@ -90,7 +90,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
       - name: Start Web server
         run: |
-          cd apps/web && npx next start &
+          cd frontend && npx next start &
           sleep 5
         env:
           DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
@@ -101,5 +101,5 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: apps/web/playwright-report/
+          path: frontend/playwright-report/
           retention-days: 7

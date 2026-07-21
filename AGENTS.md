@@ -18,15 +18,15 @@ Enterprise HRMS for one Vietnamese company. Single-tenant, dev-stage, not prod. 
 - No temp shims, duplicate paths, silent fallbacks, or compat hacks without concrete ops reason.
 - Breaking internal/API changes are acceptable during dev-stage; update callers, tests, and generated clients immediately.
 - DB default: `db:push`. Use `db:migrate` only if requested or production-required.
-- Drizzle migration files (`apps/api/drizzle/`) are **not generated** unless a `db:migrate` workflow is actively in use.
+- Drizzle migration files (`backend/drizzle/`) are **not generated** unless a `db:migrate` workflow is actively in use.
 - Edit env files directly when needed. Do not create extra `env.example` / `.env.example` files unless explicitly requested.
 
 ## Commands
 Root: `pnpm dev` (FE+BE), `dev:api`, `dev:web`, `build`, `lint`, `test`, `client:generate`, `client:verify`.
-API (`apps/api`): `pnpm --filter @project/api dev`, `dev:bootstrap`, `test`, `test:watch`, `test:cov`, `test:e2e`, `db:push`, `db:generate`, `db:migrate`, `db:seed`, `db:reset`, `openapi:json <out>`, `arch:check`.
-Web (`apps/web`): `pnpm --filter frontend dev`, `lint`, `client:generate`, `typecheck`.
+API (`backend`): `pnpm --filter @project/api dev`, `dev:bootstrap`, `test`, `test:watch`, `test:cov`, `test:e2e`, `db:push`, `db:generate`, `db:migrate`, `db:seed`, `db:reset`, `openapi:json <out>`, `arch:check`.
+Web (`frontend`): `pnpm --filter frontend dev`, `lint`, `client:generate`, `typecheck`.
 
-## Backend Architecture (`apps/api/src`)
+## Backend Architecture (`backend/src`)
 Layer stack:
 1. `Controller` - HTTP routing, Swagger, auth decorators; delegates to one use-case.
 2. `UseCase` - one operation, `execute()`, constructor DI, owns business flow and tx boundary.
@@ -67,7 +67,7 @@ Events/jobs:
 - Cross-context integration uses `src/contracts` ports; inject token, not foreign repo.
 
 DB/storage:
-- Drizzle + PostgreSQL. Schema: `src/infrastructure/database/schema/tables.ts`. Config: `apps/api/drizzle.config.ts`.
+- Drizzle + PostgreSQL. Schema: `src/infrastructure/database/schema/tables.ts`. Config: `backend/drizzle.config.ts`.
 - Uploads: temp upload → `StorageService.finalizeUpload()` after DB commit.
 - S3-compatible; MinIO dev. `PendingFinalizeService` queues file tokens for retry.
 
@@ -75,7 +75,7 @@ Architecture checks:
 - `pnpm --filter @project/api arch:check` enforces no direct DB outside repos, no cross-context repo imports, all contexts registered.
 - Run before major module restructuring.
 
-## Frontend Architecture (`apps/web/src`)
+## Frontend Architecture (`frontend/src`)
 > **Architecture Vision:**
 > *The architecture exists to reduce cognitive load, accelerate delivery, and preserve quality as the system grows.*
 > *This statement is not an aspiration—it is validated through architecture audits, automated enforcement, and measurable engineering metrics.*

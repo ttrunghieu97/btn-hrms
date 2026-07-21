@@ -32,7 +32,7 @@ Apply frontend enterprise rules from this repo before calling work done.
    - if backend contract changed, run `contract-sync`
    - then run `npm run client:verify` or web `typecheck`
 6. Enforce verification:
-   - run `npm --prefix apps/web run typecheck`
+   - run `npm --prefix frontend run typecheck`
    - for UI changes, start dev server and verify golden path plus nearby regressions
 
 ## Guardrails

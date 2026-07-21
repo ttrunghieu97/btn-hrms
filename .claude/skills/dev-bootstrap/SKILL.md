@@ -7,14 +7,14 @@ Bootstrap local dev flow with repo scripts.
 
 ## Steps
 1. Check whether user needs API, web, or both.
-2. For API startup, prefer `npm --prefix apps/api run dev:bootstrap`.
-3. For web startup, use `npm --prefix apps/web run dev`.
+2. For API startup, prefer `npm --prefix backend run dev:bootstrap`.
+3. For web startup, use `npm --prefix frontend run dev`.
 4. For combined startup, run API bootstrap first, then web dev server.
 5. Report expected ports and required env assumptions from `CLAUDE.md`.
 
 ## Smoke checks
 - API should expose app on backend port used by repo env.
-- Web should start on port 8080 per `apps/web/package.json`.
+- Web should start on port 8080 per `frontend/package.json`.
 - If API contract was changed before startup, run `contract-sync` first.
 
 ## Guardrails

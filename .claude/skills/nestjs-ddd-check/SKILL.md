@@ -34,7 +34,7 @@ Apply NestJS DDD discipline before calling backend architecture sound.
 - guards/policies/decorators handled at controller boundary, not buried in repository logic
 
 ## Verification
-- Run `npm --prefix apps/api run arch:check` after architectural changes.
+- Run `npm --prefix backend run arch:check` after architectural changes.
 - If contract changes, follow with `contract-sync`.
 - If DB shape changes, use repo DB rule: default `db:push` unless migrations explicitly requested.
 

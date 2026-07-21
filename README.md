@@ -8,8 +8,8 @@ Enterprise Human Resource Management System (HRMS) for single-tenant development
 - **Infrastructure**: Redis, MinIO (S3-compatible storage), Caddy (reverse proxy with HTTPS), Cloudflare Tunnel.
 
 ## Monorepo Structure
-- `apps/api`: NestJS backend.
-- `apps/web`: Next.js frontend.
+- `backend`: NestJS backend.
+- `frontend`: Next.js frontend.
 - `packages/eslint-config`: Shared ESLint configurations.
 
 ## Development Setup

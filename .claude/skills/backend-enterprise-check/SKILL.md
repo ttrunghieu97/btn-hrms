@@ -34,7 +34,7 @@ Apply backend enterprise rules from this repo before calling work done.
    - normal dev schema change -> `db:push`
    - migrations only when explicitly requested
 7. Enforce verification:
-   - `npm --prefix apps/api run arch:check`
+   - `npm --prefix backend run arch:check`
    - add `npm run client:generate` / `npm run client:verify` if API contract changed
    - run targeted API tests for changed surface
 
