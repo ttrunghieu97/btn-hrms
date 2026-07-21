@@ -15,6 +15,7 @@ import { employeeUiCopy } from '@/lib/app-copy';
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { useQuery } from '@tanstack/react-query';
 import { assetIssueControllerHoldings } from '@/api/generated/endpoints';
+import { unwrapData } from '@/lib/api-extract';
 import { Icons } from '@/components/icons';
 import { useEmployeeTimelineQuery } from '../../queries/employee-queries';
 import type { TimelineEventDto } from '../../api/timeline';
@@ -185,7 +186,8 @@ function AssetsSummaryCard({ employee }: { employee: EmployeeResponseDto }) {
     queryKey: ['asset-holdings', employee.id],
     queryFn: () => assetIssueControllerHoldings(employee.id),
   });
-  const handovers = data?.data ?? [];
+  const result = unwrapData<{ employeeId: string; holdings: any[] }>(data);
+  const handovers = result?.holdings ?? [];
   const recentItems = handovers.slice(0, 3);
 
   return (
