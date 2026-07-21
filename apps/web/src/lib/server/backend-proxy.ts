@@ -1,8 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { unwrapData } from '@/lib/api-extract';
-import { envClient } from '../env.client';
 
-const BACKEND_URL = envClient.apiBaseUrl.replace(/\/+$/, '');
+const BACKEND_URL = (() => {
+  const runtime = process.env.API_URL;
+  if (runtime) return runtime.replace(/\/+$/, '') + '/api/v1';
+  return 'http://btn-hrms-api:3001/api/v1';
+})();
 
 export function buildBackendUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
