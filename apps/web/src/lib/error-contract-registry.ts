@@ -35,6 +35,7 @@ export type ErrorContractDomain =
   | 'task'
   | 'notification'
   | 'onboarding'
+  | 'offboarding'
   | 'approval'
   | 'role'
   | 'integration'

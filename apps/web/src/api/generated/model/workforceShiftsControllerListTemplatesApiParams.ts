@@ -5,11 +5,12 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 import type { WorkforceShiftsControllerListTemplatesApiStatus } from './workforceShiftsControllerListTemplatesApiStatus';
 
 export type WorkforceShiftsControllerListTemplatesApiParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 status?: "draft" | "published" | "archived";
 };

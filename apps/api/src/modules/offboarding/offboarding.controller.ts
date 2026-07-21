@@ -2,7 +2,7 @@ import {
   Body, Controller, Get, Param, Patch, Post, Query, Req,
 } from "@nestjs/common";
 import type { Request as ExpressRequest } from "express";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../core/security/decorators/check-policy.decorator";
 import { OffboardingPolicies } from "../../core/security/policies/offboarding.policy";
 import { AuditLog } from "../../shared/decorators/audit-log.decorator";
@@ -96,6 +96,8 @@ export class OffboardingController {
   @CheckPolicy(OffboardingPolicies.edit)
   @AuditLog({ action: "offboarding_clearance_decide", entity: "offboarding" })
   @ApiOperation({ summary: "Decide a departmental clearance (approve/reject)" })
+  @ApiParam({ name: "id", type: "string" })
+  @ApiParam({ name: "department", type: "string", enum: ["it", "hr", "finance", "manager", "security"] })
   async decideClearance(
     @Param("id") id: string,
     @Param("department") department: ClearanceDepartment,

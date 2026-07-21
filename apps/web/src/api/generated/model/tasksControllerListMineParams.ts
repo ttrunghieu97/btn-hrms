@@ -5,13 +5,14 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 import type { TasksControllerListMinePriority } from './tasksControllerListMinePriority';
 import type { TasksControllerListMineSortOrder } from './tasksControllerListMineSortOrder';
 import type { TasksControllerListMineStatus } from './tasksControllerListMineStatus';
 
 export type TasksControllerListMineParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 status?: "created" | "assigned" | "in_progress" | "declined" | "submitted" | "revision" | "completed" | "cancelled";
 assigneeId?: string;

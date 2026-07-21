@@ -5,11 +5,12 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 import type { RequisitionsControllerListStatus } from './requisitionsControllerListStatus';
 
 export type RequisitionsControllerListParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 departmentId?: string;
 status?: "draft" | "pending_approval" | "approved" | "rejected" | "closed";

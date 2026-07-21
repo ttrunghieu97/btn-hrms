@@ -7,10 +7,11 @@
  */
 import type { DepartmentEmployeesControllerListByDepartmentExpiryStatus } from './departmentEmployeesControllerListByDepartmentExpiryStatus';
 import type { DepartmentEmployeesControllerListByDepartmentTab } from './departmentEmployeesControllerListByDepartmentTab';
+import type { Object } from './object';
 
 export type DepartmentEmployeesControllerListByDepartmentParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 sort?: string;
 include?: string;

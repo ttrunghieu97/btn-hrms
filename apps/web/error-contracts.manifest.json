@@ -1,6 +1,24 @@
 {
   "schemaVersion": 1,
   "contracts": {
+    "ALLOWANCE_INVALID_TYPE": {
+      "code": "ALLOWANCE_INVALID_TYPE",
+      "httpStatus": 400,
+      "domain": "employee",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ALLOWANCE_NOT_FOUND": {
+      "code": "ALLOWANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
     "APPROVAL_POLICY_EMPTY_STEPS": {
       "code": "APPROVAL_POLICY_EMPTY_STEPS",
       "httpStatus": 400,
@@ -622,6 +640,78 @@
       "retryable": false,
       "action": "review"
     },
+    "OFFBOARDING_CLEARANCE_ALREADY_DECIDED": {
+      "code": "OFFBOARDING_CLEARANCE_ALREADY_DECIDED",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_CLEARANCE_NOT_FOUND": {
+      "code": "OFFBOARDING_CLEARANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "offboarding",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_COMPLETION_BLOCKED": {
+      "code": "OFFBOARDING_COMPLETION_BLOCKED",
+      "httpStatus": 400,
+      "domain": "offboarding",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "OFFBOARDING_EXIT_INTERVIEW_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_EXIT_INTERVIEW_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_PROCESS_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_PROCESS_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_PROCESS_NOT_FOUND": {
+      "code": "OFFBOARDING_PROCESS_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "offboarding",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_REJECT_REQUIRES_NOTE": {
+      "code": "OFFBOARDING_REJECT_REQUIRES_NOTE",
+      "httpStatus": 400,
+      "domain": "offboarding",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "OFFBOARDING_SETTLEMENT_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_SETTLEMENT_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
     "ONBOARDING_PROCESS_ALREADY_EXISTS": {
       "code": "ONBOARDING_PROCESS_ALREADY_EXISTS",
       "httpStatus": 409,
@@ -972,6 +1062,24 @@
       "apiCode": "VALIDATION",
       "retryable": false,
       "action": "review"
+    },
+    "SOCIAL_INSURANCE_CONFLICT": {
+      "code": "SOCIAL_INSURANCE_CONFLICT",
+      "httpStatus": 409,
+      "domain": "employee",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "SOCIAL_INSURANCE_NOT_FOUND": {
+      "code": "SOCIAL_INSURANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
     },
     "TASK_BLOCKED_BY_DEPENDENCIES": {
       "code": "TASK_BLOCKED_BY_DEPENDENCIES",

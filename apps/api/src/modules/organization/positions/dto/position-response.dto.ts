@@ -17,7 +17,7 @@ export class PositionListItemDto {
   @ApiProperty()
   employeeCount: number;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   jobCategory?: string | null;
 }
 

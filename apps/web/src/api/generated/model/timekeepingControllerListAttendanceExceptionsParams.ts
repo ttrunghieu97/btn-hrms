@@ -5,11 +5,12 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 import type { TimekeepingControllerListAttendanceExceptionsStatus } from './timekeepingControllerListAttendanceExceptionsStatus';
 
 export type TimekeepingControllerListAttendanceExceptionsParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 employeeId?: string;
 departmentId?: string;
 from?: string;

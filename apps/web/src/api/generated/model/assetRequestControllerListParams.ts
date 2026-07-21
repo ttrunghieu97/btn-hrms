@@ -6,10 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 import type { AssetRequestControllerListStatus } from './assetRequestControllerListStatus';
+import type { Object } from './object';
 
 export type AssetRequestControllerListParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 requesterEmployeeId?: string;
 status?: "draft" | "pending_approval" | "approved" | "rejected" | "cancelled" | "fulfilled";

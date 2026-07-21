@@ -6,10 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 import type { AssetCatalogControllerListAssetUnitsStatus } from './assetCatalogControllerListAssetUnitsStatus';
+import type { Object } from './object';
 
 export type AssetCatalogControllerListAssetUnitsParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 assetTypeId?: string;
 status?: "available" | "assigned" | "maintenance" | "retired" | "lost";

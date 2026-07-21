@@ -5,10 +5,11 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 
 export type WorkflowInstanceControllerListParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 status?: string;
 definitionId?: string;
 subjectType?: string;

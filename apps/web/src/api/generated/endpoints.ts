@@ -64,6 +64,7 @@ import type {
   AttendanceQueryControllerGetPresenceSummaryParams,
   AttendanceSummariesControllerListParams,
   AuditLogsControllerFindAllParams,
+  BoardingProcessControllerFindAllParams,
   BulkAssignTaskDto,
   CancelEmployeeShiftAssignmentDto,
   CandidatesControllerListParams,
@@ -77,6 +78,7 @@ import type {
   ContractHistoryItemDto,
   ContractsControllerFindAllParams,
   CreateAccessGrantRequestDto,
+  CreateAllowanceDto,
   CreateApprovalPolicyDto,
   CreateAssetTypeDto,
   CreateAttendanceDto,
@@ -115,6 +117,7 @@ import type {
   CreateRoleRequestDto,
   CreateScheduleRequestDto,
   CreateSessionDto,
+  CreateSocialInsuranceDto,
   CreateTaskCommentDto,
   CreateTaskDelegationDto,
   CreateTaskDto,
@@ -150,6 +153,8 @@ import type {
   InboxDecisionDto,
   IssueAssetDto,
   IssueCertificateDto,
+  LaborReportControllerExportDocxParams,
+  LaborReportControllerExportParams,
   LeaveAdminControllerListPoliciesParams,
   LeaveAdminControllerListTypesParams,
   LeaveManagementControllerListParams,
@@ -161,6 +166,7 @@ import type {
   MultipartCompleteResponseDto,
   MultipartInitBodyDto,
   MultipartInitResponseDto,
+  NavResponseDto,
   OffboardingControllerFindAllParams,
   OffboardingProcessDetailDto,
   OffersControllerListParams,
@@ -229,6 +235,7 @@ import type {
   TodayAttendanceEnvelopeDto,
   TransitionTaskDto,
   TransitionWorkflowInstanceDto,
+  UpdateAllowanceDto,
   UpdateApprovalPolicyDto,
   UpdateAssetDto,
   UpdateAssetTypeDto,
@@ -253,6 +260,7 @@ import type {
   UpdateRequestDto,
   UpdateRequisitionDto,
   UpdateRoleRequestDto,
+  UpdateSocialInsuranceDto,
   UpdateTaskDto,
   UpdateTaskTemplateDto,
   UpdateUserAccessControlRequestDto,
@@ -20676,6 +20684,1272 @@ export function useEmployeeTimelineControllerFindAll<TData = Awaited<ReturnType<
 
 
 /**
+ * @summary List allowances of an employee
+ */
+export type employeeAllowancesControllerFindAllResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeAllowancesControllerFindAllResponseSuccess = (employeeAllowancesControllerFindAllResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeAllowancesControllerFindAllResponse = (employeeAllowancesControllerFindAllResponseSuccess)
+
+export const getEmployeeAllowancesControllerFindAllUrl = (employeeId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/allowances`
+}
+
+export const employeeAllowancesControllerFindAll = async (employeeId: string, options?: RequestInit): Promise<employeeAllowancesControllerFindAllResponse> => {
+
+  return customFetch<employeeAllowancesControllerFindAllResponse>(getEmployeeAllowancesControllerFindAllUrl(employeeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getEmployeeAllowancesControllerFindAllInfiniteQueryKey = (employeeId: string,) => {
+    return [
+    'infinite', `/api/v1/employees/${employeeId}/allowances`
+    ] as const;
+    }
+
+export const getEmployeeAllowancesControllerFindAllQueryKey = (employeeId: string,) => {
+    return [
+    `/api/v1/employees/${employeeId}/allowances`
+    ] as const;
+    }
+
+
+export const getEmployeeAllowancesControllerFindAllInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>, TError = unknown>(employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEmployeeAllowancesControllerFindAllInfiniteQueryKey(employeeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>> = ({ signal }) => employeeAllowancesControllerFindAll(employeeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(employeeId), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EmployeeAllowancesControllerFindAllInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>
+export type EmployeeAllowancesControllerFindAllInfiniteQueryError = unknown
+
+
+export function useEmployeeAllowancesControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeAllowancesControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeAllowancesControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List allowances of an employee
+ */
+
+export function useEmployeeAllowancesControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEmployeeAllowancesControllerFindAllInfiniteQueryOptions(employeeId,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getEmployeeAllowancesControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError = unknown>(employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEmployeeAllowancesControllerFindAllQueryKey(employeeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>> = ({ signal }) => employeeAllowancesControllerFindAll(employeeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(employeeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EmployeeAllowancesControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>>
+export type EmployeeAllowancesControllerFindAllQueryError = unknown
+
+
+export function useEmployeeAllowancesControllerFindAll<TData = Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError = unknown>(
+ employeeId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeAllowancesControllerFindAll<TData = Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeAllowancesControllerFindAll<TData = Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List allowances of an employee
+ */
+
+export function useEmployeeAllowancesControllerFindAll<TData = Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeAllowancesControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEmployeeAllowancesControllerFindAllQueryOptions(employeeId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * @summary Add an allowance to employee
+ */
+export type employeeAllowancesControllerCreateResponse201 = {
+  data: void
+  status: 201
+}
+
+export type employeeAllowancesControllerCreateResponseSuccess = (employeeAllowancesControllerCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type employeeAllowancesControllerCreateResponse = (employeeAllowancesControllerCreateResponseSuccess)
+
+export const getEmployeeAllowancesControllerCreateUrl = (employeeId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/allowances`
+}
+
+export const employeeAllowancesControllerCreate = async (employeeId: string,
+    createAllowanceDto: CreateAllowanceDto, options?: RequestInit): Promise<employeeAllowancesControllerCreateResponse> => {
+
+  return customFetch<employeeAllowancesControllerCreateResponse>(getEmployeeAllowancesControllerCreateUrl(employeeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAllowanceDto,)
+  }
+);}
+
+
+
+
+export const getEmployeeAllowancesControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>, TError,{employeeId: string;data: CreateAllowanceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>, TError,{employeeId: string;data: CreateAllowanceDto}, TContext> => {
+
+const mutationKey = ['employeeAllowancesControllerCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>, {employeeId: string;data: CreateAllowanceDto}> = (props) => {
+          const {employeeId,data} = props ?? {};
+
+          return  employeeAllowancesControllerCreate(employeeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeAllowancesControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>>
+    export type EmployeeAllowancesControllerCreateMutationBody = CreateAllowanceDto
+    export type EmployeeAllowancesControllerCreateMutationError = unknown
+
+    /**
+ * @summary Add an allowance to employee
+ */
+export const useEmployeeAllowancesControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>, TError,{employeeId: string;data: CreateAllowanceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeAllowancesControllerCreate>>,
+        TError,
+        {employeeId: string;data: CreateAllowanceDto},
+        TContext
+      > => {
+      return useMutation(getEmployeeAllowancesControllerCreateMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Update an allowance
+ */
+export type employeeAllowancesControllerUpdateResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeAllowancesControllerUpdateResponseSuccess = (employeeAllowancesControllerUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeAllowancesControllerUpdateResponse = (employeeAllowancesControllerUpdateResponseSuccess)
+
+export const getEmployeeAllowancesControllerUpdateUrl = (employeeId: string,
+    allowanceId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/allowances/${allowanceId}`
+}
+
+export const employeeAllowancesControllerUpdate = async (employeeId: string,
+    allowanceId: string,
+    updateAllowanceDto: UpdateAllowanceDto, options?: RequestInit): Promise<employeeAllowancesControllerUpdateResponse> => {
+
+  return customFetch<employeeAllowancesControllerUpdateResponse>(getEmployeeAllowancesControllerUpdateUrl(employeeId,allowanceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateAllowanceDto,)
+  }
+);}
+
+
+
+
+export const getEmployeeAllowancesControllerUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>, TError,{employeeId: string;allowanceId: string;data: UpdateAllowanceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>, TError,{employeeId: string;allowanceId: string;data: UpdateAllowanceDto}, TContext> => {
+
+const mutationKey = ['employeeAllowancesControllerUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>, {employeeId: string;allowanceId: string;data: UpdateAllowanceDto}> = (props) => {
+          const {employeeId,allowanceId,data} = props ?? {};
+
+          return  employeeAllowancesControllerUpdate(employeeId,allowanceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeAllowancesControllerUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>>
+    export type EmployeeAllowancesControllerUpdateMutationBody = UpdateAllowanceDto
+    export type EmployeeAllowancesControllerUpdateMutationError = unknown
+
+    /**
+ * @summary Update an allowance
+ */
+export const useEmployeeAllowancesControllerUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>, TError,{employeeId: string;allowanceId: string;data: UpdateAllowanceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeAllowancesControllerUpdate>>,
+        TError,
+        {employeeId: string;allowanceId: string;data: UpdateAllowanceDto},
+        TContext
+      > => {
+      return useMutation(getEmployeeAllowancesControllerUpdateMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Delete an allowance
+ */
+export type employeeAllowancesControllerRemoveResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeAllowancesControllerRemoveResponseSuccess = (employeeAllowancesControllerRemoveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeAllowancesControllerRemoveResponse = (employeeAllowancesControllerRemoveResponseSuccess)
+
+export const getEmployeeAllowancesControllerRemoveUrl = (employeeId: string,
+    allowanceId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/allowances/${allowanceId}`
+}
+
+export const employeeAllowancesControllerRemove = async (employeeId: string,
+    allowanceId: string, options?: RequestInit): Promise<employeeAllowancesControllerRemoveResponse> => {
+
+  return customFetch<employeeAllowancesControllerRemoveResponse>(getEmployeeAllowancesControllerRemoveUrl(employeeId,allowanceId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getEmployeeAllowancesControllerRemoveMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>, TError,{employeeId: string;allowanceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>, TError,{employeeId: string;allowanceId: string}, TContext> => {
+
+const mutationKey = ['employeeAllowancesControllerRemove'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>, {employeeId: string;allowanceId: string}> = (props) => {
+          const {employeeId,allowanceId} = props ?? {};
+
+          return  employeeAllowancesControllerRemove(employeeId,allowanceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeAllowancesControllerRemoveMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>>
+
+    export type EmployeeAllowancesControllerRemoveMutationError = unknown
+
+    /**
+ * @summary Delete an allowance
+ */
+export const useEmployeeAllowancesControllerRemove = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>, TError,{employeeId: string;allowanceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeAllowancesControllerRemove>>,
+        TError,
+        {employeeId: string;allowanceId: string},
+        TContext
+      > => {
+      return useMutation(getEmployeeAllowancesControllerRemoveMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary List social insurance enrollments of an employee
+ */
+export type employeeSocialInsuranceControllerFindAllResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeSocialInsuranceControllerFindAllResponseSuccess = (employeeSocialInsuranceControllerFindAllResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeSocialInsuranceControllerFindAllResponse = (employeeSocialInsuranceControllerFindAllResponseSuccess)
+
+export const getEmployeeSocialInsuranceControllerFindAllUrl = (employeeId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/social-insurance`
+}
+
+export const employeeSocialInsuranceControllerFindAll = async (employeeId: string, options?: RequestInit): Promise<employeeSocialInsuranceControllerFindAllResponse> => {
+
+  return customFetch<employeeSocialInsuranceControllerFindAllResponse>(getEmployeeSocialInsuranceControllerFindAllUrl(employeeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getEmployeeSocialInsuranceControllerFindAllInfiniteQueryKey = (employeeId: string,) => {
+    return [
+    'infinite', `/api/v1/employees/${employeeId}/social-insurance`
+    ] as const;
+    }
+
+export const getEmployeeSocialInsuranceControllerFindAllQueryKey = (employeeId: string,) => {
+    return [
+    `/api/v1/employees/${employeeId}/social-insurance`
+    ] as const;
+    }
+
+
+export const getEmployeeSocialInsuranceControllerFindAllInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>, TError = unknown>(employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEmployeeSocialInsuranceControllerFindAllInfiniteQueryKey(employeeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>> = ({ signal }) => employeeSocialInsuranceControllerFindAll(employeeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(employeeId), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EmployeeSocialInsuranceControllerFindAllInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>
+export type EmployeeSocialInsuranceControllerFindAllInfiniteQueryError = unknown
+
+
+export function useEmployeeSocialInsuranceControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeSocialInsuranceControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeSocialInsuranceControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List social insurance enrollments of an employee
+ */
+
+export function useEmployeeSocialInsuranceControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEmployeeSocialInsuranceControllerFindAllInfiniteQueryOptions(employeeId,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getEmployeeSocialInsuranceControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError = unknown>(employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEmployeeSocialInsuranceControllerFindAllQueryKey(employeeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>> = ({ signal }) => employeeSocialInsuranceControllerFindAll(employeeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(employeeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EmployeeSocialInsuranceControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>>
+export type EmployeeSocialInsuranceControllerFindAllQueryError = unknown
+
+
+export function useEmployeeSocialInsuranceControllerFindAll<TData = Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError = unknown>(
+ employeeId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeSocialInsuranceControllerFindAll<TData = Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEmployeeSocialInsuranceControllerFindAll<TData = Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List social insurance enrollments of an employee
+ */
+
+export function useEmployeeSocialInsuranceControllerFindAll<TData = Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError = unknown>(
+ employeeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEmployeeSocialInsuranceControllerFindAllQueryOptions(employeeId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * @summary Create a social insurance enrollment
+ */
+export type employeeSocialInsuranceControllerCreateResponse201 = {
+  data: void
+  status: 201
+}
+
+export type employeeSocialInsuranceControllerCreateResponseSuccess = (employeeSocialInsuranceControllerCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type employeeSocialInsuranceControllerCreateResponse = (employeeSocialInsuranceControllerCreateResponseSuccess)
+
+export const getEmployeeSocialInsuranceControllerCreateUrl = (employeeId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/social-insurance`
+}
+
+export const employeeSocialInsuranceControllerCreate = async (employeeId: string,
+    createSocialInsuranceDto: CreateSocialInsuranceDto, options?: RequestInit): Promise<employeeSocialInsuranceControllerCreateResponse> => {
+
+  return customFetch<employeeSocialInsuranceControllerCreateResponse>(getEmployeeSocialInsuranceControllerCreateUrl(employeeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createSocialInsuranceDto,)
+  }
+);}
+
+
+
+
+export const getEmployeeSocialInsuranceControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>, TError,{employeeId: string;data: CreateSocialInsuranceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>, TError,{employeeId: string;data: CreateSocialInsuranceDto}, TContext> => {
+
+const mutationKey = ['employeeSocialInsuranceControllerCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>, {employeeId: string;data: CreateSocialInsuranceDto}> = (props) => {
+          const {employeeId,data} = props ?? {};
+
+          return  employeeSocialInsuranceControllerCreate(employeeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeSocialInsuranceControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>>
+    export type EmployeeSocialInsuranceControllerCreateMutationBody = CreateSocialInsuranceDto
+    export type EmployeeSocialInsuranceControllerCreateMutationError = unknown
+
+    /**
+ * @summary Create a social insurance enrollment
+ */
+export const useEmployeeSocialInsuranceControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>, TError,{employeeId: string;data: CreateSocialInsuranceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeSocialInsuranceControllerCreate>>,
+        TError,
+        {employeeId: string;data: CreateSocialInsuranceDto},
+        TContext
+      > => {
+      return useMutation(getEmployeeSocialInsuranceControllerCreateMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Update a social insurance enrollment
+ */
+export type employeeSocialInsuranceControllerUpdateResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeSocialInsuranceControllerUpdateResponseSuccess = (employeeSocialInsuranceControllerUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeSocialInsuranceControllerUpdateResponse = (employeeSocialInsuranceControllerUpdateResponseSuccess)
+
+export const getEmployeeSocialInsuranceControllerUpdateUrl = (employeeId: string,
+    enrollmentId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/social-insurance/${enrollmentId}`
+}
+
+export const employeeSocialInsuranceControllerUpdate = async (employeeId: string,
+    enrollmentId: string,
+    updateSocialInsuranceDto: UpdateSocialInsuranceDto, options?: RequestInit): Promise<employeeSocialInsuranceControllerUpdateResponse> => {
+
+  return customFetch<employeeSocialInsuranceControllerUpdateResponse>(getEmployeeSocialInsuranceControllerUpdateUrl(employeeId,enrollmentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateSocialInsuranceDto,)
+  }
+);}
+
+
+
+
+export const getEmployeeSocialInsuranceControllerUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>, TError,{employeeId: string;enrollmentId: string;data: UpdateSocialInsuranceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>, TError,{employeeId: string;enrollmentId: string;data: UpdateSocialInsuranceDto}, TContext> => {
+
+const mutationKey = ['employeeSocialInsuranceControllerUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>, {employeeId: string;enrollmentId: string;data: UpdateSocialInsuranceDto}> = (props) => {
+          const {employeeId,enrollmentId,data} = props ?? {};
+
+          return  employeeSocialInsuranceControllerUpdate(employeeId,enrollmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeSocialInsuranceControllerUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>>
+    export type EmployeeSocialInsuranceControllerUpdateMutationBody = UpdateSocialInsuranceDto
+    export type EmployeeSocialInsuranceControllerUpdateMutationError = unknown
+
+    /**
+ * @summary Update a social insurance enrollment
+ */
+export const useEmployeeSocialInsuranceControllerUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>, TError,{employeeId: string;enrollmentId: string;data: UpdateSocialInsuranceDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeSocialInsuranceControllerUpdate>>,
+        TError,
+        {employeeId: string;enrollmentId: string;data: UpdateSocialInsuranceDto},
+        TContext
+      > => {
+      return useMutation(getEmployeeSocialInsuranceControllerUpdateMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Delete a social insurance enrollment
+ */
+export type employeeSocialInsuranceControllerRemoveResponse200 = {
+  data: void
+  status: 200
+}
+
+export type employeeSocialInsuranceControllerRemoveResponseSuccess = (employeeSocialInsuranceControllerRemoveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeeSocialInsuranceControllerRemoveResponse = (employeeSocialInsuranceControllerRemoveResponseSuccess)
+
+export const getEmployeeSocialInsuranceControllerRemoveUrl = (employeeId: string,
+    enrollmentId: string,) => {
+
+
+
+
+  return `/api/v1/employees/${employeeId}/social-insurance/${enrollmentId}`
+}
+
+export const employeeSocialInsuranceControllerRemove = async (employeeId: string,
+    enrollmentId: string, options?: RequestInit): Promise<employeeSocialInsuranceControllerRemoveResponse> => {
+
+  return customFetch<employeeSocialInsuranceControllerRemoveResponse>(getEmployeeSocialInsuranceControllerRemoveUrl(employeeId,enrollmentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getEmployeeSocialInsuranceControllerRemoveMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>, TError,{employeeId: string;enrollmentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>, TError,{employeeId: string;enrollmentId: string}, TContext> => {
+
+const mutationKey = ['employeeSocialInsuranceControllerRemove'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>, {employeeId: string;enrollmentId: string}> = (props) => {
+          const {employeeId,enrollmentId} = props ?? {};
+
+          return  employeeSocialInsuranceControllerRemove(employeeId,enrollmentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeSocialInsuranceControllerRemoveMutationResult = NonNullable<Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>>
+
+    export type EmployeeSocialInsuranceControllerRemoveMutationError = unknown
+
+    /**
+ * @summary Delete a social insurance enrollment
+ */
+export const useEmployeeSocialInsuranceControllerRemove = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>, TError,{employeeId: string;enrollmentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeSocialInsuranceControllerRemove>>,
+        TError,
+        {employeeId: string;enrollmentId: string},
+        TContext
+      > => {
+      return useMutation(getEmployeeSocialInsuranceControllerRemoveMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Export Mẫu 01/PLI - Excel (.xlsx)
+ */
+export type laborReportControllerExportResponse200 = {
+  data: void
+  status: 200
+}
+
+export type laborReportControllerExportResponseSuccess = (laborReportControllerExportResponse200) & {
+  headers: Headers;
+};
+;
+
+export type laborReportControllerExportResponse = (laborReportControllerExportResponseSuccess)
+
+export const getLaborReportControllerExportUrl = (params?: LaborReportControllerExportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/reports/labor-usage?${stringifiedParams}` : `/api/v1/reports/labor-usage`
+}
+
+export const laborReportControllerExport = async (params?: LaborReportControllerExportParams, options?: RequestInit): Promise<laborReportControllerExportResponse> => {
+
+  return customFetch<laborReportControllerExportResponse>(getLaborReportControllerExportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLaborReportControllerExportInfiniteQueryKey = (params?: LaborReportControllerExportParams,) => {
+    return [
+    'infinite', `/api/v1/reports/labor-usage`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getLaborReportControllerExportQueryKey = (params?: LaborReportControllerExportParams,) => {
+    return [
+    `/api/v1/reports/labor-usage`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getLaborReportControllerExportInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExport>>>, TError = unknown>(params?: LaborReportControllerExportParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLaborReportControllerExportInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof laborReportControllerExport>>> = ({ signal }) => laborReportControllerExport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LaborReportControllerExportInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof laborReportControllerExport>>>
+export type LaborReportControllerExportInfiniteQueryError = unknown
+
+
+export function useLaborReportControllerExportInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExport>>>, TError = unknown>(
+ params: undefined |  LaborReportControllerExportParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExport>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExport>>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExport>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExport>>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Mẫu 01/PLI - Excel (.xlsx)
+ */
+
+export function useLaborReportControllerExportInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExport>>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLaborReportControllerExportInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getLaborReportControllerExportQueryOptions = <TData = Awaited<ReturnType<typeof laborReportControllerExport>>, TError = unknown>(params?: LaborReportControllerExportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLaborReportControllerExportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof laborReportControllerExport>>> = ({ signal }) => laborReportControllerExport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LaborReportControllerExportQueryResult = NonNullable<Awaited<ReturnType<typeof laborReportControllerExport>>>
+export type LaborReportControllerExportQueryError = unknown
+
+
+export function useLaborReportControllerExport<TData = Awaited<ReturnType<typeof laborReportControllerExport>>, TError = unknown>(
+ params: undefined |  LaborReportControllerExportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExport>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExport<TData = Awaited<ReturnType<typeof laborReportControllerExport>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExport>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExport<TData = Awaited<ReturnType<typeof laborReportControllerExport>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Mẫu 01/PLI - Excel (.xlsx)
+ */
+
+export function useLaborReportControllerExport<TData = Awaited<ReturnType<typeof laborReportControllerExport>>, TError = unknown>(
+ params?: LaborReportControllerExportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLaborReportControllerExportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * @summary Export Mẫu 01/PLI - Word (.docx)
+ */
+export type laborReportControllerExportDocxResponse200 = {
+  data: void
+  status: 200
+}
+
+export type laborReportControllerExportDocxResponseSuccess = (laborReportControllerExportDocxResponse200) & {
+  headers: Headers;
+};
+;
+
+export type laborReportControllerExportDocxResponse = (laborReportControllerExportDocxResponseSuccess)
+
+export const getLaborReportControllerExportDocxUrl = (params?: LaborReportControllerExportDocxParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/reports/labor-usage/docx?${stringifiedParams}` : `/api/v1/reports/labor-usage/docx`
+}
+
+export const laborReportControllerExportDocx = async (params?: LaborReportControllerExportDocxParams, options?: RequestInit): Promise<laborReportControllerExportDocxResponse> => {
+
+  return customFetch<laborReportControllerExportDocxResponse>(getLaborReportControllerExportDocxUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLaborReportControllerExportDocxInfiniteQueryKey = (params?: LaborReportControllerExportDocxParams,) => {
+    return [
+    'infinite', `/api/v1/reports/labor-usage/docx`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getLaborReportControllerExportDocxQueryKey = (params?: LaborReportControllerExportDocxParams,) => {
+    return [
+    `/api/v1/reports/labor-usage/docx`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getLaborReportControllerExportDocxInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>, TError = unknown>(params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLaborReportControllerExportDocxInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof laborReportControllerExportDocx>>> = ({ signal }) => laborReportControllerExportDocx(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LaborReportControllerExportDocxInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>
+export type LaborReportControllerExportDocxInfiniteQueryError = unknown
+
+
+export function useLaborReportControllerExportDocxInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>, TError = unknown>(
+ params: undefined |  LaborReportControllerExportDocxParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportDocxInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportDocxInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Mẫu 01/PLI - Word (.docx)
+ */
+
+export function useLaborReportControllerExportDocxInfinite<TData = InfiniteData<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLaborReportControllerExportDocxInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getLaborReportControllerExportDocxQueryOptions = <TData = Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError = unknown>(params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLaborReportControllerExportDocxQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof laborReportControllerExportDocx>>> = ({ signal }) => laborReportControllerExportDocx(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LaborReportControllerExportDocxQueryResult = NonNullable<Awaited<ReturnType<typeof laborReportControllerExportDocx>>>
+export type LaborReportControllerExportDocxQueryError = unknown
+
+
+export function useLaborReportControllerExportDocx<TData = Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError = unknown>(
+ params: undefined |  LaborReportControllerExportDocxParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportDocx<TData = Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>,
+          TError,
+          Awaited<ReturnType<typeof laborReportControllerExportDocx>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLaborReportControllerExportDocx<TData = Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Mẫu 01/PLI - Word (.docx)
+ */
+
+export function useLaborReportControllerExportDocx<TData = Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError = unknown>(
+ params?: LaborReportControllerExportDocxParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof laborReportControllerExportDocx>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLaborReportControllerExportDocxQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
  * @summary List contracts with pagination, filter, and sort
  */
 export type contractsControllerFindAllResponse200 = {
@@ -23018,6 +24292,385 @@ export const useOnboardingControllerDeleteOne = <TError = unknown,
     }
 
 /**
+ * @summary List onboarding processes
+ */
+export type boardingProcessControllerFindAllResponse200 = {
+  data: void
+  status: 200
+}
+
+export type boardingProcessControllerFindAllResponseSuccess = (boardingProcessControllerFindAllResponse200) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerFindAllResponse = (boardingProcessControllerFindAllResponseSuccess)
+
+export const getBoardingProcessControllerFindAllUrl = (params: BoardingProcessControllerFindAllParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/onboarding/processes?${stringifiedParams}` : `/api/v1/onboarding/processes`
+}
+
+export const boardingProcessControllerFindAll = async (params: BoardingProcessControllerFindAllParams, options?: RequestInit): Promise<boardingProcessControllerFindAllResponse> => {
+
+  return customFetch<boardingProcessControllerFindAllResponse>(getBoardingProcessControllerFindAllUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerFindAllInfiniteQueryKey = (params?: BoardingProcessControllerFindAllParams,) => {
+    return [
+    'infinite', `/api/v1/onboarding/processes`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getBoardingProcessControllerFindAllQueryKey = (params?: BoardingProcessControllerFindAllParams,) => {
+    return [
+    `/api/v1/onboarding/processes`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getBoardingProcessControllerFindAllInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>, TError = unknown>(params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBoardingProcessControllerFindAllInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>> = ({ signal }) => boardingProcessControllerFindAll(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BoardingProcessControllerFindAllInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>
+export type BoardingProcessControllerFindAllInfiniteQueryError = unknown
+
+
+export function useBoardingProcessControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List onboarding processes
+ */
+
+export function useBoardingProcessControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBoardingProcessControllerFindAllInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getBoardingProcessControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError = unknown>(params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBoardingProcessControllerFindAllQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>> = ({ signal }) => boardingProcessControllerFindAll(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BoardingProcessControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>>
+export type BoardingProcessControllerFindAllQueryError = unknown
+
+
+export function useBoardingProcessControllerFindAll<TData = Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindAll<TData = Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindAll>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindAll<TData = Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List onboarding processes
+ */
+
+export function useBoardingProcessControllerFindAll<TData = Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError = unknown>(
+ params: BoardingProcessControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindAll>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBoardingProcessControllerFindAllQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * @summary Get onboarding process detail
+ */
+export type boardingProcessControllerFindOneResponse200 = {
+  data: void
+  status: 200
+}
+
+export type boardingProcessControllerFindOneResponseSuccess = (boardingProcessControllerFindOneResponse200) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerFindOneResponse = (boardingProcessControllerFindOneResponseSuccess)
+
+export const getBoardingProcessControllerFindOneUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/onboarding/processes/${id}`
+}
+
+export const boardingProcessControllerFindOne = async (id: string, options?: RequestInit): Promise<boardingProcessControllerFindOneResponse> => {
+
+  return customFetch<boardingProcessControllerFindOneResponse>(getBoardingProcessControllerFindOneUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerFindOneInfiniteQueryKey = (id: string,) => {
+    return [
+    'infinite', `/api/v1/onboarding/processes/${id}`
+    ] as const;
+    }
+
+export const getBoardingProcessControllerFindOneQueryKey = (id: string,) => {
+    return [
+    `/api/v1/onboarding/processes/${id}`
+    ] as const;
+    }
+
+
+export const getBoardingProcessControllerFindOneInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>, TError = unknown>(id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBoardingProcessControllerFindOneInfiniteQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>> = ({ signal }) => boardingProcessControllerFindOne(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BoardingProcessControllerFindOneInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>
+export type BoardingProcessControllerFindOneInfiniteQueryError = unknown
+
+
+export function useBoardingProcessControllerFindOneInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>, TError = unknown>(
+ id: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindOneInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindOneInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get onboarding process detail
+ */
+
+export function useBoardingProcessControllerFindOneInfinite<TData = InfiniteData<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBoardingProcessControllerFindOneInfiniteQueryOptions(id,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getBoardingProcessControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBoardingProcessControllerFindOneQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>> = ({ signal }) => boardingProcessControllerFindOne(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BoardingProcessControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>>
+export type BoardingProcessControllerFindOneQueryError = unknown
+
+
+export function useBoardingProcessControllerFindOne<TData = Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindOne<TData = Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof boardingProcessControllerFindOne>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBoardingProcessControllerFindOne<TData = Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get onboarding process detail
+ */
+
+export function useBoardingProcessControllerFindOne<TData = Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof boardingProcessControllerFindOne>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBoardingProcessControllerFindOneQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
  * @summary List offboarding processes
  */
 export type offboardingControllerFindAllResponse200 = {
@@ -23496,7 +25149,7 @@ export type offboardingControllerDecideClearanceResponseSuccess = (offboardingCo
 export type offboardingControllerDecideClearanceResponse = (offboardingControllerDecideClearanceResponseSuccess)
 
 export const getOffboardingControllerDecideClearanceUrl = (id: string,
-    department: string,) => {
+    department: 'it' | 'hr' | 'finance' | 'manager' | 'security',) => {
 
 
 
@@ -23505,7 +25158,7 @@ export const getOffboardingControllerDecideClearanceUrl = (id: string,
 }
 
 export const offboardingControllerDecideClearance = async (id: string,
-    department: string, options?: RequestInit): Promise<offboardingControllerDecideClearanceResponse> => {
+    department: 'it' | 'hr' | 'finance' | 'manager' | 'security', options?: RequestInit): Promise<offboardingControllerDecideClearanceResponse> => {
 
   return customFetch<offboardingControllerDecideClearanceResponse>(getOffboardingControllerDecideClearanceUrl(id,department),
   {
@@ -23520,8 +25173,8 @@ export const offboardingControllerDecideClearance = async (id: string,
 
 
 export const getOffboardingControllerDecideClearanceMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: 'it' | 'hr' | 'finance' | 'manager' | 'security'}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: 'it' | 'hr' | 'finance' | 'manager' | 'security'}, TContext> => {
 
 const mutationKey = ['offboardingControllerDecideClearance'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -23533,7 +25186,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, {id: string;department: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, {id: string;department: 'it' | 'hr' | 'finance' | 'manager' | 'security'}> = (props) => {
           const {id,department} = props ?? {};
 
           return  offboardingControllerDecideClearance(id,department,requestOptions)
@@ -23554,11 +25207,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Decide a departmental clearance (approve/reject)
  */
 export const useOffboardingControllerDecideClearance = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof offboardingControllerDecideClearance>>, TError,{id: string;department: 'it' | 'hr' | 'finance' | 'manager' | 'security'}, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof offboardingControllerDecideClearance>>,
         TError,
-        {id: string;department: string},
+        {id: string;department: 'it' | 'hr' | 'finance' | 'manager' | 'security'},
         TContext
       > => {
       return useMutation(getOffboardingControllerDecideClearanceMutationOptions(options), queryClient);
@@ -38376,6 +40029,192 @@ export const useApprovalRequestControllerCancel = <TError = unknown,
       > => {
       return useMutation(getApprovalRequestControllerCancelMutationOptions(options), queryClient);
     }
+
+/**
+ * @summary Get navigation tree for current user
+ */
+export type platformNavigationControllerGetNavResponse200 = {
+  data: NavResponseDto
+  status: 200
+}
+
+export type platformNavigationControllerGetNavResponseSuccess = (platformNavigationControllerGetNavResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformNavigationControllerGetNavResponse = (platformNavigationControllerGetNavResponseSuccess)
+
+export const getPlatformNavigationControllerGetNavUrl = () => {
+
+
+
+
+  return `/api/v1/nav`
+}
+
+export const platformNavigationControllerGetNav = async ( options?: RequestInit): Promise<platformNavigationControllerGetNavResponse> => {
+
+  return customFetch<platformNavigationControllerGetNavResponse>(getPlatformNavigationControllerGetNavUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPlatformNavigationControllerGetNavInfiniteQueryKey = () => {
+    return [
+    'infinite', `/api/v1/nav`
+    ] as const;
+    }
+
+export const getPlatformNavigationControllerGetNavQueryKey = () => {
+    return [
+    `/api/v1/nav`
+    ] as const;
+    }
+
+
+export const getPlatformNavigationControllerGetNavInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformNavigationControllerGetNavInfiniteQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>> = ({ signal }) => platformNavigationControllerGetNav({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformNavigationControllerGetNavInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>
+export type PlatformNavigationControllerGetNavInfiniteQueryError = unknown
+
+
+export function usePlatformNavigationControllerGetNavInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>,
+          TError,
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformNavigationControllerGetNavInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>,
+          TError,
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformNavigationControllerGetNavInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get navigation tree for current user
+ */
+
+export function usePlatformNavigationControllerGetNavInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformNavigationControllerGetNavInfiniteQueryOptions(options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getPlatformNavigationControllerGetNavQueryOptions = <TData = Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformNavigationControllerGetNavQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>> = ({ signal }) => platformNavigationControllerGetNav({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformNavigationControllerGetNavQueryResult = NonNullable<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>>
+export type PlatformNavigationControllerGetNavQueryError = unknown
+
+
+export function usePlatformNavigationControllerGetNav<TData = Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>,
+          TError,
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformNavigationControllerGetNav<TData = Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>,
+          TError,
+          Awaited<ReturnType<typeof platformNavigationControllerGetNav>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformNavigationControllerGetNav<TData = Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get navigation tree for current user
+ */
+
+export function usePlatformNavigationControllerGetNav<TData = Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformNavigationControllerGetNav>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformNavigationControllerGetNavQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 /**
  * @summary Create a webhook subscription

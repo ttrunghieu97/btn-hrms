@@ -5,8 +5,10 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { UpdatePositionDtoJobCategory } from './updatePositionDtoJobCategory';
 
 export interface UpdatePositionDto {
   name?: string;
   description?: string;
+  jobCategory?: UpdatePositionDtoJobCategory;
 }

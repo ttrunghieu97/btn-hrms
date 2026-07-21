@@ -13,4 +13,6 @@ export interface PositionListItemDto {
   description?: string | null;
   isActive: boolean;
   employeeCount: number;
+  /** @nullable */
+  jobCategory?: string | null;
 }

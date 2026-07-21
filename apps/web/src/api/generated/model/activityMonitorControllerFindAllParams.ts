@@ -5,10 +5,11 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 
 export type ActivityMonitorControllerFindAllParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 action?: string;
 entity?: string;
 actorUserId?: string;

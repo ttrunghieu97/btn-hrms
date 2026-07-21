@@ -6,10 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 import type { AssetIssueControllerListLineStatus } from './assetIssueControllerListLineStatus';
+import type { Object } from './object';
 
 export type AssetIssueControllerListParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 employeeId?: string;
 requestId?: string;

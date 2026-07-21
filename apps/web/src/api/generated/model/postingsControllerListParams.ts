@@ -5,11 +5,12 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { Object } from './object';
 import type { PostingsControllerListStatus } from './postingsControllerListStatus';
 
 export type PostingsControllerListParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 requisitionId?: string;
 status?: "open" | "paused" | "closed";

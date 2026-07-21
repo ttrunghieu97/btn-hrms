@@ -7,10 +7,11 @@
  */
 import type { EmployeesControllerFindAllExpiryStatus } from './employeesControllerFindAllExpiryStatus';
 import type { EmployeesControllerFindAllTab } from './employeesControllerFindAllTab';
+import type { Object } from './object';
 
 export type EmployeesControllerFindAllParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 sort?: string;
 include?: string;

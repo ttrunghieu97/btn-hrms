@@ -7,10 +7,11 @@
  */
 import type { ContractsControllerFindAllContractType } from './contractsControllerFindAllContractType';
 import type { ContractsControllerFindAllStatus } from './contractsControllerFindAllStatus';
+import type { Object } from './object';
 
 export type ContractsControllerFindAllParams = {
-page?: number;
-limit?: number;
+page?: unknown;
+limit?: unknown;
 search?: string;
 departmentId?: string;
 employeeId?: string;

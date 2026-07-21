@@ -56,6 +56,7 @@ export const backendErrorDomainCopy = {
   task: 'công việc',
   notification: 'mẫu thông báo',
   onboarding: 'onboarding',
+  offboarding: 'offboarding',
   approval: 'yêu cầu phê duyệt',
   role: 'vai trò',
   integration: 'kết nối tích hợp',
