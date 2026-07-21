@@ -11,6 +11,7 @@ import {
   assetIssueControllerHoldings,
   assetHistoryControllerHistory,
 } from '@/api/generated/endpoints';
+import { unwrapData } from '@/lib/api-extract';
 import { queryPolicyPresets } from '@/lib/query-client';
 import {
   catalogKeys,
@@ -85,11 +86,26 @@ export const issueDetailQueryOptions = (id: string) =>
     enabled: !!id,
   });
 
+export interface AssetHoldingItem {
+  assetId: string | null;
+  assetTag: string | null;
+  assetTypeName: string;
+  serialNumber: string | null;
+  quantity: number;
+  issuedAt: string;
+  expectedReturnAt: string | null;
+  status: string;
+}
+
 export const employeeHoldingsQueryOptions = (employeeId: string) =>
   queryOptions({
     ...queryPolicyPresets['employees'],
     queryKey: holdingsKeys.byEmployee(employeeId),
     queryFn: () => assetIssueControllerHoldings(employeeId),
+    select: (data) => {
+      const result = unwrapData<{ employeeId: string; holdings: AssetHoldingItem[] }>(data);
+      return result?.holdings ?? [];
+    },
     enabled: !!employeeId,
   });
 

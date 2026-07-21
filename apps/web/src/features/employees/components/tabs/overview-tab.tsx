@@ -14,8 +14,7 @@ import { COMPANY_DOCUMENT_OPTIONS } from '../../utils/employee-form-model';
 import { employeeUiCopy } from '@/lib/app-copy';
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { useQuery } from '@tanstack/react-query';
-import { assetIssueControllerHoldings } from '@/api/generated/endpoints';
-import { unwrapData } from '@/lib/api-extract';
+import { employeeHoldingsQueryOptions, type AssetHoldingItem } from '@/features/asset-management/api/queries';
 import { Icons } from '@/components/icons';
 import { useEmployeeTimelineQuery } from '../../queries/employee-queries';
 import type { TimelineEventDto } from '../../api/timeline';
@@ -182,12 +181,7 @@ function RecordsCompletenessCard({ employee }: { employee: EmployeeResponseDto }
 /* ------------------------------------------------------------------ */
 
 function AssetsSummaryCard({ employee }: { employee: EmployeeResponseDto }) {
-  const { data } = useQuery({
-    queryKey: ['asset-holdings', employee.id],
-    queryFn: () => assetIssueControllerHoldings(employee.id),
-  });
-  const result = unwrapData<{ employeeId: string; holdings: any[] }>(data);
-  const handovers = result?.holdings ?? [];
+  const { data: handovers = [] } = useQuery(employeeHoldingsQueryOptions(employee.id));
   const recentItems = handovers.slice(0, 3);
 
   return (
@@ -206,7 +200,7 @@ function AssetsSummaryCard({ employee }: { employee: EmployeeResponseDto }) {
             </p>
             {recentItems.length > 0 && (
               <div className='space-y-1.5'>
-                {recentItems.map((item: any, idx: number) => {
+                {recentItems.map((item: AssetHoldingItem, idx: number) => {
                   return (
                     <div key={item.assetId ?? idx} className='flex items-center gap-2 text-xs'>
                       <Icons.checks className='size-3 shrink-0 text-muted-foreground' />
