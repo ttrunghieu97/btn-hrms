@@ -42,7 +42,7 @@ jobs:
         run: pnpm --filter frontend typecheck
 
       - name: Unit tests (API)
-        run: pnpm --filter @project/api test -- --ci
+        run: pnpm --filter @project/api test
 
       - name: Build
         run: pnpm build
