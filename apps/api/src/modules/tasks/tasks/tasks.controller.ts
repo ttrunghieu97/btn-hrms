@@ -177,6 +177,53 @@ export class TasksController {
     return this.listMyTasks.execute(query, req.user.employeeId ?? null);
   }
 
+  @Get("delegations")
+  @CheckPolicy(TaskPolicies.manage)
+  @ApiOperation({ summary: "List active task delegations for current user" })
+  async listDelegations(@Request() req: AuthenticatedRequest) {
+    return this.listTaskDelegationsUseCase.execute(req.user.id);
+  }
+
+  @Post("delegations")
+  @CheckPolicy(TaskPolicies.manage)
+  @AuditLog({ action: "task_delegation_create", entity: "task_delegation" })
+  @ApiOperation({ summary: "Create a task delegation" })
+  async createDelegation(
+    @Body() dto: CreateTaskDelegationDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.createTaskDelegationUseCase.execute(dto, req.user.id, req.user);
+  }
+
+  @Delete("delegations/:id")
+  @CheckPolicy(TaskPolicies.manage)
+  @AuditLog({ action: "task_delegation_revoke", entity: "task_delegation" })
+  @ApiOperation({ summary: "Revoke a task delegation" })
+  async revokeDelegation(@Param("id") id: string, @Request() req: AuthenticatedRequest) {
+    return this.revokeTaskDelegationUseCase.execute(id, req.user.id);
+  }
+
+  @Get("notifications")
+  @CheckPolicy(TaskPolicies.viewOwn)
+  @ApiOperation({ summary: "List task notifications for current user" })
+  async listNotifications(@Request() req: AuthenticatedRequest) {
+    return this.listTaskNotificationsUseCase.execute(req.user.id);
+  }
+
+  @Patch("notifications/:id/read")
+  @CheckPolicy(TaskPolicies.viewOwn)
+  @ApiOperation({ summary: "Mark a notification as read" })
+  async markNotificationRead(@Param("id") id: string, @Request() req: AuthenticatedRequest) {
+    return this.markTaskNotificationReadUseCase.execute(req.user.id, id);
+  }
+
+  @Patch("notifications/read-all")
+  @CheckPolicy(TaskPolicies.viewOwn)
+  @ApiOperation({ summary: "Mark all notifications as read" })
+  async markAllNotificationsRead(@Request() req: AuthenticatedRequest) {
+    return this.markAllTaskNotificationsReadUseCase.execute(req.user.id);
+  }
+
   @Get(":id")
   @Resource(Task, "id")
   @CheckPolicy(TaskPolicies.viewOwn)
@@ -454,52 +501,7 @@ export class TasksController {
     return this.listTaskSubmissions.execute(id);
   }
 
-  @Get("delegations")
-  @CheckPolicy(TaskPolicies.manage)
-  @ApiOperation({ summary: "List active task delegations for current user" })
-  async listDelegations(@Request() req: AuthenticatedRequest) {
-    return this.listTaskDelegationsUseCase.execute(req.user.id);
-  }
 
-  @Post("delegations")
-  @CheckPolicy(TaskPolicies.manage)
-  @AuditLog({ action: "task_delegation_create", entity: "task_delegation" })
-  @ApiOperation({ summary: "Create a task delegation" })
-  async createDelegation(
-    @Body() dto: CreateTaskDelegationDto,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    return this.createTaskDelegationUseCase.execute(dto, req.user.id, req.user);
-  }
-
-  @Delete("delegations/:id")
-  @CheckPolicy(TaskPolicies.manage)
-  @AuditLog({ action: "task_delegation_revoke", entity: "task_delegation" })
-  @ApiOperation({ summary: "Revoke a task delegation" })
-  async revokeDelegation(@Param("id") id: string, @Request() req: AuthenticatedRequest) {
-    return this.revokeTaskDelegationUseCase.execute(id, req.user.id);
-  }
-
-  @Get("notifications")
-  @CheckPolicy(TaskPolicies.viewOwn)
-  @ApiOperation({ summary: "List task notifications for current user" })
-  async listNotifications(@Request() req: AuthenticatedRequest) {
-    return this.listTaskNotificationsUseCase.execute(req.user.id);
-  }
-
-  @Patch("notifications/:id/read")
-  @CheckPolicy(TaskPolicies.viewOwn)
-  @ApiOperation({ summary: "Mark a notification as read" })
-  async markNotificationRead(@Param("id") id: string, @Request() req: AuthenticatedRequest) {
-    return this.markTaskNotificationReadUseCase.execute(req.user.id, id);
-  }
-
-  @Patch("notifications/read-all")
-  @CheckPolicy(TaskPolicies.viewOwn)
-  @ApiOperation({ summary: "Mark all notifications as read" })
-  async markAllNotificationsRead(@Request() req: AuthenticatedRequest) {
-    return this.markAllTaskNotificationsReadUseCase.execute(req.user.id);
-  }
 
   @Sse("events/stream")
   @Throttle({ default: { limit: 200, ttl: 60000 } })
