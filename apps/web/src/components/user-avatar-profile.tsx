@@ -19,7 +19,7 @@ export function UserAvatarProfile({ className, showInfo = false, user }: UserAva
       <Avatar className={className}>
         <AvatarImage src={imageUrl || ''} alt={user?.fullName || ''} />
         <AvatarFallback className='rounded-lg'>
-          {user?.fullName?.slice(0, 2)?.toUpperCase() || 'CN'}
+          {typeof user?.fullName === 'string' ? user.fullName.slice(0, 2).toUpperCase() : 'CN'}
         </AvatarFallback>
       </Avatar>
 

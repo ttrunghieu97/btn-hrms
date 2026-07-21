@@ -27,8 +27,9 @@ function formatDate(value: string | null | undefined, fallback = '') {
   return formatDateVN(date);
 }
 
-function getInitials(name: string) {
-  const parts = name.split(' ');
+function getInitials(name?: string | null) {
+  if (!name || typeof name !== 'string') return 'NV';
+  const parts = name.trim().split(' ').filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase();
 }
