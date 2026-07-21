@@ -166,6 +166,7 @@ jobs:
           export IMAGE_API="$IMAGE_API_TAG"
           export IMAGE_WEB="$IMAGE_WEB_TAG"
 
+          docker compose -f docker-compose.infra.yml up -d
           docker compose pull
           docker compose up -d --no-build --wait
           docker compose restart caddy
