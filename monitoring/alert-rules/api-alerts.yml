@@ -1,0 +1,42 @@
+# API Alert Rules
+# Phase: P5.1 — Operations Foundation
+
+groups:
+  - name: api
+    interval: 1m
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          rate(http_request_duration_ms_count{statusCode=~"5.."}[5m])
+          /
+          rate(http_request_duration_ms_count[5m]) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API error rate {{ $value | humanize }}%"
+          description: "Error rate is above 5% for the last 5 minutes."
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_ms_bucket[5m])
+          ) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency {{ $value | humanize }}ms"
+          description: "p95 latency exceeds 1s for 10 minutes."
+
+      - alert: High4xxRate
+        expr: |
+          rate(http_request_duration_ms_count{statusCode=~"4.."}[5m])
+          /
+          rate(http_request_duration_ms_count[5m]) * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "4xx rate {{ $value | humanize }}%"
+          description: "Client error rate is above 10% — possible API misuse."

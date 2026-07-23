@@ -1,0 +1,38 @@
+{
+  "title": "Engineering Dashboard",
+  "description": "Core API, Database, and Event metrics. Phase: P5.1",
+  "panels": [
+    {
+      "title": "API Request Rate",
+      "type": "graph",
+      "metrics": ["rate(http_request_duration_ms_count[1m])"]
+    },
+    {
+      "title": "API Latency (p50 / p95 / p99)",
+      "type": "graph",
+      "metrics": [
+        "histogram_quantile(0.50, rate(http_request_duration_ms_bucket[5m]))",
+        "histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m]))",
+        "histogram_quantile(0.99, rate(http_request_duration_ms_bucket[5m]))"
+      ]
+    },
+    {
+      "title": "Error Rate (4xx vs 5xx)",
+      "type": "graph",
+      "metrics": [
+        "rate(http_request_duration_ms_count{statusCode=~\"4..\"}[5m])",
+        "rate(http_request_duration_ms_count{statusCode=~\"5..\"}[5m])"
+      ]
+    },
+    {
+      "title": "Outbox Pending Events",
+      "type": "gauge",
+      "metrics": ["outbox_pending_events_total"]
+    },
+    {
+      "title": "Outbox Oldest Unpublished Age",
+      "type": "graph",
+      "metrics": ["outbox_oldest_unpublished_age_ms"]
+    }
+  ]
+}

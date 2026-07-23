@@ -1,0 +1,105 @@
+name: E2E Tests
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+jobs:
+  e2e:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hrms
+          POSTGRES_PASSWORD: hrms
+          POSTGRES_DB: hrms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      minio:
+        image: minio/minio:RELEASE.2024-08-03T04-33-23Z
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DOMAIN: localhost
+        ports:
+          - 9000:9000
+          - 9001:9001
+        options: >-
+          --health-cmd "curl -s http://localhost:9000/minio/health/live"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        entrypoint: sh
+        command: -c 'mkdir -p /data/btn-hrms && /usr/bin/minio server /data --console-address ":9001"'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build API
+        run: pnpm --filter @project/api build
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          REDIS_URL: redis://localhost:6379
+          AUTH_JWT_SECRET: test-secret
+      - name: Seed database
+        run: pnpm --filter @project/api db:seed
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+      - name: Run API E2E tests
+        run: pnpm --filter @project/api test:e2e
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          AUTH_JWT_SECRET: test-secret
+          REDIS_URL: redis://localhost:6379
+          STORAGE_BACKEND: s3
+          STORAGE_S3_URL: http://minioadmin:minioadmin@localhost:9000?region=us-east-1
+          STORAGE_BUCKET: btn-hrms
+          STORAGE_S3_FORCE_PATH_STYLE: true
+      - name: Install Playwright browsers
+        run: pnpm --filter frontend exec playwright install chromium
+      - name: Start API server
+        run: |
+          cd apps/api && node dist/main.js &
+          sleep 5
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          AUTH_JWT_SECRET: test-secret
+          REDIS_URL: redis://localhost:6379
+      - name: Start Web server
+        run: |
+          cd apps/web && npx next start &
+          sleep 5
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      - name: Run Playwright tests
+        run: pnpm --filter frontend exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

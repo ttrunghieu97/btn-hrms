@@ -1,0 +1,201 @@
+# ============================================
+# BTN HRMS -- App services
+# ============================================
+# Images are built by GitHub Actions and pushed to GHCR.
+# VPS runs: docker compose pull && docker compose up -d --no-build
+# Infra services (postgres, minio) run separately via
+# docker-compose.infra.yml. Bring infra up first.
+
+x-security-base: &security-base
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  stop_grace_period: 30s
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-pids: &pids
+  pids_limit: 200
+
+networks:
+  btn-hrms-network:
+    external: true
+
+services:
+  # ============================================
+  # API -- NestJS backend
+  # ============================================
+  api:
+    image: ${IMAGE_API:-btn-hrms-api:latest}
+    container_name: btn-hrms-api
+    init: true
+    restart: unless-stopped
+    user: "1000:1000"
+    <<: [*security-base, *logging, *pids]
+    environment:
+      # App
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: "0.0.0.0"
+      APP_URL: ${APP_URL:?APP_URL required}
+      APP_TIMEZONE: Asia/Ho_Chi_Minh
+      TRUST_PROXY: 1
+      MAX_REQUEST_BODY_KB: 512
+      TENANT_ID: default
+      TZ: Asia/Ho_Chi_Minh
+
+      # Database
+      DATABASE_URL: postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}
+      DATABASE_DIRECT_URL: postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}
+
+      # Redis
+      REDIS_URL: redis://btn-hrms-redis:6379
+
+      # Auth
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET required}
+      AUTH_JWT_REFRESH_SECRET: ${AUTH_JWT_REFRESH_SECRET:?AUTH_JWT_REFRESH_SECRET required}
+      AUTH_JWT_ACCESS_EXPIRES_IN: 15m
+      AUTH_DEFAULT_PASSWORD: ${AUTH_DEFAULT_PASSWORD:?AUTH_DEFAULT_PASSWORD required}
+      AUTH_BCRYPT_ROUNDS: 12
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
+      AUTH_ACCESS_COOKIE_NAME: access_token
+      AUTH_REFRESH_COOKIE_NAME: refresh_token
+      AUTH_COOKIE_DOMAIN: ""
+      AUTH_REFRESH_TOKEN_CLEANUP_ENABLED: "true"
+      AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS: 60000
+
+      # PII
+      PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?PII_ENCRYPTION_KEY required}
+      PII_ENCRYPTION_ACTIVE_VERSION: 1
+
+      # Storage (MinIO S3)
+      STORAGE_BACKEND: s3
+      STORAGE_BUCKET: btn-hrms
+      STORAGE_S3_URL: http://${MINIO_ROOT_USER:?MINIO_ROOT_USER required}:${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD required}@btn-hrms-minio:9000?region=us-east-1
+      STORAGE_S3_FORCE_PATH_STYLE: "true"
+      STORAGE_SIGNED_URL_TTL_SEC: 300
+      STORAGE_PUBLIC_CDN_ENABLED: "false"
+
+      # Observability
+      OBSERVABILITY_SENTRY_DSN: ""
+      OBSERVABILITY_SENTRY_TRACES_SAMPLE_RATE: 0.1
+      OBSERVABILITY_OTEL_URL: http://localhost:4318
+      OBSERVABILITY_OTEL_SERVICE_NAME: btn-hrms-api
+
+      # Features
+      FEATURE_SWAGGER: "false"
+      FEATURE_DB_VERIFY: "true"
+      FEATURE_VAULT: "false"
+      FEATURE_REDIS_EVENT_BUS: "false"
+
+      # Webhooks
+      WEBHOOK_SECRET: ""
+      WEBHOOK_DELIVERY_TIMEOUT_MS: 30000
+      WEBHOOK_ALLOW_INSECURE_HTTP: "false"
+      WEBHOOK_TARGET_ALLOWLIST: ""
+
+      # Security
+      ALLOW_DB_RESET: "false"
+      ALLOW_REMOTE_DB_RESET: "false"
+      SEED_PASSWORD: 123456
+
+      # Upload
+      UPLOAD_MAX_MB: 10
+      OUTBOX_MAX_CONCURRENT_PER_TYPE: 5
+
+      # Backup
+      BACKUP_DIR: ./backups
+      RESTORE_CONFIRM: ""
+      SMOKE_API_BASE_URL: ""
+      SMOKE_WEB_URL: ""
+      SMOKE_TIMEOUT_MS: 30000
+
+    mem_limit: 1g
+    cpus: "1.0"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/v1/ready/strict', r => { process.exit(r.statusCode >= 200 && r.statusCode < 400 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - btn-hrms-network
+
+  # ============================================
+  # Web -- Next.js frontend (standalone image)
+  # ============================================
+  web:
+    image: ${IMAGE_WEB:-btn-hrms-web:latest}
+    container_name: btn-hrms-web
+    init: true
+    restart: unless-stopped
+    user: "1000:1000"
+    <<: [*security-base, *logging, *pids]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      HOSTNAME: "0.0.0.0"
+      TZ: Asia/Ho_Chi_Minh
+      # Server-side API calls (RSC / route handlers) go directly to the API container.
+      # Browser calls use the relative /api/v1 path baked at build time -- Caddy proxies it.
+      APP_URL: http://btn-hrms-web:8080
+      API_URL: http://btn-hrms-api:3001
+    mem_limit: 512m
+    cpus: "1.0"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080', r => { process.exit(r.statusCode >= 200 && r.statusCode < 400 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - btn-hrms-network
+
+  # ============================================
+  # Reverse Proxy -- Caddy for HTTPS
+  # ============================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: btn-hrms-caddy
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./.certs:/etc/caddy/certs:ro
+    networks:
+      - btn-hrms-network
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  # ============================================
+  # Cloudflare Tunnel for secure external access
+  # ============================================
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: btn-hrms-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --protocol http2
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
+    networks:
+      - btn-hrms-network
+    depends_on:
+      caddy:
+        condition: service_started
+
+volumes:
+  caddy_data:
+  caddy_config:

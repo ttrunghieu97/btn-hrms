@@ -1,0 +1,18 @@
+meta {
+  name: POST create
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/payroll-periods
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"name":"Jul 2026","startDate":"2026-07-01"}
+}

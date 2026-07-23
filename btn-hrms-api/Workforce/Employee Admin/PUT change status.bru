@@ -1,0 +1,18 @@
+meta {
+  name: PUT change status
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/employees/{{id}}/change-status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"status":"active"}
+}

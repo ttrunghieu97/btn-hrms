@@ -1,0 +1,18 @@
+meta {
+  name: POST record event
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/attendance/reconciliation/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"employeeId":"{{eid}}","date":"2026-07-04"}
+}

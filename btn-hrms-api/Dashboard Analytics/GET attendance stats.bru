@@ -1,0 +1,14 @@
+meta {
+  name: GET attendance stats
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/dashboard/attendance-stats
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

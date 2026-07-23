@@ -1,0 +1,26 @@
+# Security Alert Rules
+# Phase: P5.1 — Operations Foundation
+
+groups:
+  - name: security
+    interval: 1m
+    rules:
+      - alert: BruteForceLogin
+        expr: |
+          rate(failed_login_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Failed login spike"
+          description: "More than 10 failed logins in 5 minutes — possible brute force."
+
+      - alert: PermissionDeniedSpike
+        expr: |
+          rate(permission_denied_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Permission denied spike"
+          description: "More than 20 authorization failures in 5 minutes."

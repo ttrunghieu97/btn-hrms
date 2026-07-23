@@ -1,0 +1,14 @@
+meta {
+  name: POST approve
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/overtime/{{id}}/approve
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,18 @@
+meta {
+  name: POST conversation
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/chat/conversations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"participantIds":["a","b"]}
+}

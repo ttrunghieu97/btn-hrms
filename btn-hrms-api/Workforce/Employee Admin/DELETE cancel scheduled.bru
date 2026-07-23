@@ -1,0 +1,14 @@
+meta {
+  name: DELETE cancel scheduled
+  type: http
+}
+
+delete {
+  url: {{base_url}}/api/v1/employees/{{id}}/scheduled-termination
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

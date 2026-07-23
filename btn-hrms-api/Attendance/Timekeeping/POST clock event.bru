@@ -1,0 +1,18 @@
+meta {
+  name: POST clock event
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/clock-events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"type":"check_in"}
+}

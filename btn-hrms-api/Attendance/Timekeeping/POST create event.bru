@@ -1,0 +1,18 @@
+meta {
+  name: POST create event
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/attendances
+  body: multipart-form
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:multipart-form {
+  type: check_in
+}

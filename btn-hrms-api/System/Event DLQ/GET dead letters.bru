@@ -1,0 +1,14 @@
+meta {
+  name: GET dead letters
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/admin/events/dead-letters
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

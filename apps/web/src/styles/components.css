@@ -1,0 +1,121 @@
+/* ==========================================================================
+   Component refinements — Coral theme
+   Layer: visual only, no layout shifts
+   ========================================================================== */
+
+/* ---- Cards: refined borders & hover ---- */
+@layer components {
+  div[data-slot='card'] {
+    @apply border-border/70 transition-shadow duration-200;
+  }
+
+  div[data-slot='card']:hover {
+    border-color: var(--border);
+  }
+
+  /* Card header with description spacing */
+  div[data-slot='card-header'] div[data-slot='card-description'] + * {
+    margin-top: 0.25rem;
+  }
+
+  /* ---- Table refinements ---- */
+  div[data-slot='table'] {
+    --table-radius: 0.625rem;
+  }
+
+  /* Table header styling */
+  thead tr[data-slot='table-row'] {
+    border-bottom-width: 1px;
+  }
+
+  thead tr[data-slot='table-row'] th {
+    @apply text-muted-foreground text-xs font-medium uppercase tracking-wider;
+  }
+
+  /* Table row hover */
+  tbody tr[data-slot='table-row'] {
+    @apply transition-colors duration-150;
+    cursor: pointer;
+  }
+
+  tbody tr[data-slot='table-row']:hover {
+    @apply bg-muted/40;
+  }
+
+  /* ---- Tabs: refined active indicator ---- */
+  div[data-slot='tabs-list'] {
+    @apply gap-0.5 rounded-lg p-0.5;
+  }
+
+  button[data-slot='tab-trigger'] {
+    @apply text-muted-foreground transition-all duration-150;
+  }
+
+  button[data-slot='tab-trigger'][data-state='active'] {
+    @apply text-foreground bg-background shadow-xs;
+  }
+
+  /* ---- Badge refinements ---- */
+  span[data-slot='badge'] {
+    @apply font-medium;
+  }
+
+  /* ---- Input refinements ---- */
+  input[data-slot='input'] {
+    @apply transition-shadow duration-150;
+  }
+
+  input[data-slot='input']:focus-visible {
+    @apply ring-2 ring-ring/30;
+  }
+
+  /* ---- Select refinements ---- */
+  select[data-slot='select-trigger'],
+  button[data-slot='select-trigger'] {
+    @apply transition-shadow duration-150;
+  }
+
+  /* ---- Dialog refinements ---- */
+  div[data-slot='dialog-content'] {
+    @apply shadow-2xl;
+  }
+
+  /* ---- Sheet refinements ---- */
+  div[data-slot='sheet-content'] {
+    @apply shadow-2xl;
+  }
+
+  /* ---- Sidebar refinements ---- */
+  aside[data-slot='sidebar'] {
+    @apply border-r border-sidebar-border/60;
+  }
+
+  /* Sidebar menu button hover */
+  button[data-slot='sidebar-menu-button']:hover {
+    @apply bg-sidebar-accent/60;
+  }
+
+  button[data-slot='sidebar-menu-button'][data-active='true'] {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
+  }
+
+  /* Sidebar group label */
+  div[data-slot='sidebar-group-label'] {
+    @apply text-muted-foreground/50 text-[10px] font-medium uppercase tracking-[0.12em];
+  }
+
+  /* ---- Button refinements ---- */
+  button[data-slot='button'] {
+    @apply transition-all duration-150;
+  }
+
+  /* Outline button hover refinement */
+  button[data-slot='button'][data-variant='outline'] {
+    @apply border-border/80;
+  }
+
+  /* ---- Skeleton refinements ---- */
+  div[data-slot='skeleton'] {
+    @apply bg-muted/60;
+  }
+}

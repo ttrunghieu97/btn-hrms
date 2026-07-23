@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/main.ts",
+    "src/core/events/events/*.event.ts",
+    "src/core/events/handlers/*.handler.ts",
+    "src/core/security/policies/*.policy.ts",
+    "src/shared/workflow/workflow-engine.ts",
+    "src/shared/workflow/workflow-definition.ts"
+  ],
+  "project": ["src/**/*.ts"],
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.e2e-spec.ts",
+    "src/**/__snapshots__/**",
+    "drizzle/**",
+    "scripts/**",
+    "test/**",
+    "src/scripts/**",
+    "src/infrastructure/database/reset.ts",
+    "src/infrastructure/database/seed*.ts",
+    "src/infrastructure/database/schema/**/enums.ts",
+    "src/infrastructure/database/schema/workforce/constants.ts"
+  ],
+  "ignoreDependencies": []
+}

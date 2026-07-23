@@ -1,0 +1,18 @@
+meta {
+  name: POST check-out
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/check-out
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"location":"Office"}
+}

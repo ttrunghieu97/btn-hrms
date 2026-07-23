@@ -1,0 +1,26 @@
+# Database Alert Rules
+# Phase: P5.1 — Operations Foundation
+
+groups:
+  - name: database
+    interval: 1m
+    rules:
+      - alert: DatabaseDown
+        expr: |
+          health_check_status{check="database"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database health check failing"
+          description: "Database health check has been failing for 30 seconds."
+
+      - alert: DatabaseSlow
+        expr: |
+          health_check_latency_ms{check="database"} > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database latency {{ $value | humanize }}ms"
+          description: "Database health check latency exceeds 500ms for 5 minutes."

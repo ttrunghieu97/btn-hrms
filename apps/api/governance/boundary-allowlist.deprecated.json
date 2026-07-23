@@ -1,0 +1,32 @@
+{
+  "violations": [
+    "[schema-import-outside-repository] src/modules/attendance/attendance-summaries/read-model/attendance-summary-read.service.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/attendance/subscribers/employee-lifecycle.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts",
+    "[schema-import-outside-repository] src/modules/attendance/timekeeping/use-cases/override-attendance-summary.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/access-control/handlers/employee-lifecycle.handler.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts",
+    "[schema-import-outside-repository] src/modules/leave/subscribers/employee-lifecycle.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts",
+    "[schema-import-outside-repository] src/modules/payroll/interfaces/event-subscribers/employee-terminated.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts",
+    "[schema-import-outside-repository] src/modules/scheduling/schedule-core/use-cases/replace-requirements.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/scheduling/shifts/schedule-roster/services/coverage.service.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/application/use-cases/terminate-employee.usecase.ts imports src/infrastructure/database/schema/workforce/tables.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/contract-event.provider.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/position-event.provider.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/status-event.provider.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/system-event.provider.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employees/services/employee-lifecycle.service.ts imports src/infrastructure/database/schema/workforce/tables.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employees/use-cases/apply-transfer.usecase.ts imports src/infrastructure/database/schema/workforce/tables.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employees/use-cases/list-employee-status-history.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/attendance/attendances/use-cases/get-employees-presence.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/services/authorization-version.service.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/link-email.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/list-login-history.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/list-security-timeline.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/list-user-sessions.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/revoke-user-session.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/auth/use-cases/sso-login.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/identity/users/use-cases/get-user-security.usecase.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/workforce/employees/services/education-aggregation.service.ts imports src/infrastructure/database/schema/index.ts",
+    "[schema-import-outside-repository] src/modules/asset-management/issue/subscribers/employee-terminated.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts",
+    "[schema-import-outside-repository] src/modules/onboarding/infrastructure/seeds/seed-onboarding-templates.ts imports src/infrastructure/database/schema/index.ts"
+  ]
+}

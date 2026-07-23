@@ -1,0 +1,376 @@
+{
+  "contexts": [
+    {
+      "context": "platform-navigation",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "platform-navigation"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "asset-management",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "asset-management"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "recruitment",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "recruitment"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "chat",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "chat"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "analytics",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "analytics"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "attendance",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "attendance"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "identity",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "identity"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "payroll",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "payroll"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "tasks",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "tasks"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "workforce",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "workforce"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "rate-limit",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "rate-limit"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "platform-notifications",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "platform-notifications"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "integration-hub",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "integration-hub"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "platform-workflow-engine",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "platform-workflow-engine"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "platform-approval-engine",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "platform-approval-engine"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "organization",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "organization"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "leave",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "leave"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "scheduling",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "scheduling"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "storage",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "storage"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "reconciliation",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "reconciliation"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts"
+      ]
+    },
+    {
+      "context": "performance",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "performance"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "workforce",
+        "platform-approval-engine"
+      ]
+    },
+    {
+      "context": "benefits",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "benefits"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "workforce"
+      ]
+    },
+    {
+      "context": "expenses",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "expenses"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "workforce",
+        "platform-approval-engine"
+      ]
+    },
+    {
+      "context": "learning",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "learning"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "workforce"
+      ]
+    },
+    {
+      "context": "onboarding",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "onboarding"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "workforce"
+      ]
+    },
+    {
+      "context": "offboarding",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "offboarding"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "onboarding"
+      ]
+    }
+  ]
+}

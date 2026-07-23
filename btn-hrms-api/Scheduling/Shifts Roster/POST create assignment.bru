@@ -1,0 +1,18 @@
+meta {
+  name: POST create assignment
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/assignments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"employeeId":"{{eid}}","templateId":"{{tid}}"}
+}

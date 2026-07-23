@@ -1,0 +1,12 @@
+{
+  "extends": "@project/tsconfig/nest.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "ignoreDeprecations": "5.0",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "drizzle.config.ts"]
+}

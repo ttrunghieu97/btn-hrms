@@ -1,0 +1,18 @@
+meta {
+  name: PATCH update
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/task-templates/{{id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"name":"UPD"}
+}

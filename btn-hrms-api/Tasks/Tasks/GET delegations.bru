@@ -1,0 +1,14 @@
+meta {
+  name: GET delegations
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/delegations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

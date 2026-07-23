@@ -1,0 +1,237 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # never cancel an in-flight deploy
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/btn-hrms-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/btn-hrms-web
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.10.0"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Gate: lint, test, build, security audit before any image push
+  # ──────────────────────────────────────────────────────────────
+  check:
+    name: Lint, Test & Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint (API)
+        run: pnpm --filter @project/api lint:check
+      - name: Lint (Web)
+        run: pnpm --filter frontend lint
+
+      - name: TypeCheck (Web)
+        run: pnpm --filter frontend typecheck
+
+      - name: Unit tests (API)
+        run: pnpm --filter @project/api test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Security audit
+        run: pnpm audit --prod
+        continue-on-error: true  # advisory only, not a hard gate
+
+  # ──────────────────────────────────────────────────────────────
+  # Build both images on GitHub runners, push to GHCR.
+  # VPS never touches source or runs pnpm/tsc/next build.
+  # ──────────────────────────────────────────────────────────────
+  build:
+    name: Build & Push Images
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        id: build-api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ github.sha }}
+            ${{ env.IMAGE_API }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Check API image size
+        run: |
+          SIZE=$(docker images --format "{{.Size}}" ${{ env.IMAGE_API }}:${{ github.sha }})
+          echo "API image size: $SIZE"
+          BYTES=$(docker inspect ${{ env.IMAGE_API }}:${{ github.sha }} --format="{{.Size}}")
+          if [ "$BYTES" -gt 900000000 ]; then
+            echo "::warning::API image size $SIZE exceeds 900 MB threshold"
+          fi
+
+      - name: Build and push Web image
+        id: build-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_WEB }}:${{ github.sha }}
+            ${{ env.IMAGE_WEB }}:latest
+
+      - name: Check Web image size
+        run: |
+          SIZE=$(docker images --format "{{.Size}}" ${{ env.IMAGE_WEB }}:${{ github.sha }})
+          echo "Web image size: $SIZE"
+          BYTES=$(docker inspect ${{ env.IMAGE_WEB }}:${{ github.sha }} --format="{{.Size}}")
+          if [ "$BYTES" -gt 550000000 ]; then
+            echo "::warning::Web image size $SIZE exceeds 550 MB threshold"
+          fi
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+          build-args: |
+            NEXT_PUBLIC_API_URL=/api/v1
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            NEXT_PUBLIC_SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Trivy scanner (API)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_API }}:${{ github.sha }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy scanner (Web)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  # ──────────────────────────────────────────────────────────────
+  # VPS: pull pre-built images, restart services.
+  # No git pull, no build, no pnpm — deterministic deploy.
+  # ──────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to VPS
+    needs: build
+    runs-on: [self-hosted, btn-hrms-vps]
+    environment: production
+
+    steps:
+      - name: Checkout (for compose files)
+        uses: actions/checkout@v4
+
+      - name: Deploy and restart services
+        run: |
+          set -euo pipefail
+
+          # 1. Setup deployment directory
+          mkdir -p /home/hieutt/btn-hrms
+
+          # 2. Copy deployment configurations only (avoiding git pull on VPS host)
+          cp docker-compose.yml docker-compose.infra.yml Caddyfile /home/hieutt/btn-hrms/
+          mkdir -p /home/hieutt/btn-hrms/scripts/deployment
+          cp scripts/deployment/* /home/hieutt/btn-hrms/scripts/deployment/
+
+          # 3. Change directory to deploy path
+          cd /home/hieutt/btn-hrms
+
+          # 4. Login to GHCR
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+          # 5. Pull new images
+          export IMAGE_API="$IMAGE_API_TAG"
+          export IMAGE_WEB="$IMAGE_WEB_TAG"
+
+          docker compose -f docker-compose.infra.yml up -d
+          docker compose pull
+
+          # 6. Migration Gate (Fail-fast: strictly run db:migrate before app boot)
+          echo "Running database migration gate..."
+          docker run --rm \
+            --network btn-hrms-network \
+            -e DATABASE_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
+            -e DATABASE_DIRECT_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
+            "$IMAGE_API_TAG" npx drizzle-kit migrate || { echo "Migration gate failed! Stopping deploy."; exit 1; }
+
+          # 7. Update images & bring containers up
+          docker tag "$IMAGE_API_TAG" btn-hrms-api:latest
+          docker tag "$IMAGE_WEB_TAG" btn-hrms-web:latest
+          docker compose up -d --no-build --wait || { echo "Container boot / readiness check failed! Aborting."; exit 1; }
+
+          # 8. Hot reload Caddy (Zero connection drop, keep WebSocket & sessions)
+          docker exec btn-hrms-caddy caddy reload --config /etc/caddy/Caddyfile
+          docker image prune -f
+
+          # 9. Run post-deploy smoke checks inside the Docker network
+          docker run --rm --network btn-hrms-network \
+            -v "/home/hieutt/btn-hrms:/app" -w /app \
+            -e SMOKE_API_URL="http://btn-hrms-api:3001/api/v1" \
+            -e SMOKE_WEB_URL="http://btn-hrms-web:8080" \
+            node:22-alpine node scripts/deployment/smoke-check.mjs
+      - name: Create Sentry release
+        if: env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@v3
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: apps/web/.next/static/chunks
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_API_TAG: ${{ env.IMAGE_API }}:${{ github.sha }}
+          IMAGE_WEB_TAG: ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

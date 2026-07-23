@@ -1,0 +1,18 @@
+meta {
+  name: PATCH update type
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/leave-admin/types/{{id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"name":"Updated"}
+}

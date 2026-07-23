@@ -1,0 +1,21 @@
+{
+  "title": "Security Dashboard",
+  "description": "Authentication, Authorization, and Audit metrics. Phase: P5.1",
+  "panels": [
+    {
+      "title": "Failed Logins Rate",
+      "type": "graph",
+      "metrics": ["rate(failed_login_total[5m])"]
+    },
+    {
+      "title": "Permission Denied Rate",
+      "type": "graph",
+      "metrics": ["rate(permission_denied_total[5m])"]
+    },
+    {
+      "title": "Authorization Audit Events",
+      "type": "graph",
+      "metrics": ["rate(authorization_audit_total[5m])"]
+    }
+  ]
+}

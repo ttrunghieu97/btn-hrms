@@ -1,0 +1,18 @@
+meta {
+  name: POST ingest
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/integrations/inbound/generic
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"source":"ext","eventType":"update"}
+}

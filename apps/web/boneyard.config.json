@@ -1,0 +1,9 @@
+{
+  "breakpoints": [1280],
+  "out": "./src/bones",
+  "wait": 8000,
+  "animate": "pulse",
+  "routes": [
+    "/boneyard-snap"
+  ]
+}

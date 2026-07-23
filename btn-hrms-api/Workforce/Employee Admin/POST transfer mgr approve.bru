@@ -1,0 +1,14 @@
+meta {
+  name: POST transfer mgr approve
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/transfers/{{iid}}/manager-approve
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

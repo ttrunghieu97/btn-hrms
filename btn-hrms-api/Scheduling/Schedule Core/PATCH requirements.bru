@@ -1,0 +1,18 @@
+meta {
+  name: PATCH requirements
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}/requirements
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"count":3}
+}

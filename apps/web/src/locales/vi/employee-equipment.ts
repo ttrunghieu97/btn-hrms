@@ -1,0 +1,23 @@
+export const employeeEquipmentCopy = {
+  section: {
+    title: 'Bàn giao',
+    description: 'Thiết bị đã bàn giao và chứng từ bàn giao.',
+  },
+  handoverDocument: 'Chứng từ bàn giao',
+  handoverDocumentDescription: 'Upload một file minh chứng chung cho các thiết bị.',
+  upload: 'Upload',
+  noDocument: 'Chưa có chứng từ',
+  handoverItems: 'Thiết bị bàn giao',
+  addItem: 'Thêm thiết bị',
+  itemNamePlaceholder: 'Tên thiết bị',
+  serialNumberPlaceholder: 'Mã/serial',
+  handedOverAt: 'Ngày bàn giao',
+  quantity: 'Số lượng',
+  notePlaceholder: 'Ghi chú',
+  remove: 'Xóa',
+  notAvailable: 'N/A',
+  quantityPrefix: 'SL:',
+  serialPrefix: 'Serial:',
+  noNote: 'Không ghi chú',
+  noItems: 'Chưa có thiết bị bàn giao',
+} as const;

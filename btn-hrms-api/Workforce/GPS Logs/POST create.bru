@@ -1,0 +1,18 @@
+meta {
+  name: POST create
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/workforce/gps
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"latitude":10.76,"longitude":106.66}
+}

@@ -1,0 +1,1229 @@
+{
+  "schemaVersion": 1,
+  "contracts": {
+    "ALLOWANCE_INVALID_TYPE": {
+      "code": "ALLOWANCE_INVALID_TYPE",
+      "httpStatus": 400,
+      "domain": "employee",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ALLOWANCE_NOT_FOUND": {
+      "code": "ALLOWANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "APPROVAL_POLICY_EMPTY_STEPS": {
+      "code": "APPROVAL_POLICY_EMPTY_STEPS",
+      "httpStatus": 400,
+      "domain": "approval",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "APPROVAL_POLICY_NOT_FOUND": {
+      "code": "APPROVAL_POLICY_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "approval",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "APPROVAL_REQUEST_NOT_FOUND": {
+      "code": "APPROVAL_REQUEST_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "approval",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "APPROVAL_REQUEST_NOT_PENDING": {
+      "code": "APPROVAL_REQUEST_NOT_PENDING",
+      "httpStatus": 409,
+      "domain": "approval",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "APPROVAL_STEP_ALREADY_DECIDED": {
+      "code": "APPROVAL_STEP_ALREADY_DECIDED",
+      "httpStatus": 409,
+      "domain": "approval",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "APPROVAL_STEP_NOT_FOUND": {
+      "code": "APPROVAL_STEP_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "approval",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_DUPLICATE_CODE": {
+      "code": "ASSET_DUPLICATE_CODE",
+      "httpStatus": 409,
+      "domain": "asset",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "ASSET_INSUFFICIENT_STOCK": {
+      "code": "ASSET_INSUFFICIENT_STOCK",
+      "httpStatus": 400,
+      "domain": "asset",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ASSET_INVALID_STATUS": {
+      "code": "ASSET_INVALID_STATUS",
+      "httpStatus": 409,
+      "domain": "asset",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_ISSUE_NOT_FOUND": {
+      "code": "ASSET_ISSUE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "asset",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_NOT_AVAILABLE": {
+      "code": "ASSET_NOT_AVAILABLE",
+      "httpStatus": 409,
+      "domain": "asset",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_NOT_FOUND": {
+      "code": "ASSET_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "asset",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_REQUEST_INVALID_STATUS": {
+      "code": "ASSET_REQUEST_INVALID_STATUS",
+      "httpStatus": 409,
+      "domain": "asset",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_REQUEST_NOT_APPROVED": {
+      "code": "ASSET_REQUEST_NOT_APPROVED",
+      "httpStatus": 409,
+      "domain": "asset",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_REQUEST_NOT_FOUND": {
+      "code": "ASSET_REQUEST_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "asset",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_TYPE_NOT_FOUND": {
+      "code": "ASSET_TYPE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "asset",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ASSET_VALIDATION": {
+      "code": "ASSET_VALIDATION",
+      "httpStatus": 400,
+      "domain": "asset",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ATTENDANCE_ALREADY_RECORDED": {
+      "code": "ATTENDANCE_ALREADY_RECORDED",
+      "httpStatus": 409,
+      "domain": "attendance",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ATTENDANCE_IMAGE_UPLOAD_FORBIDDEN": {
+      "code": "ATTENDANCE_IMAGE_UPLOAD_FORBIDDEN",
+      "httpStatus": 403,
+      "domain": "attendance",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "AUTH_ACCOUNT_DISABLED": {
+      "code": "AUTH_ACCOUNT_DISABLED",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_EXPIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "AUTH_INVALID_CREDENTIALS": {
+      "code": "AUTH_INVALID_CREDENTIALS",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_EXPIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "AUTH_REFRESH_INVALID": {
+      "code": "AUTH_REFRESH_INVALID",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_EXPIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "AUTH_TOKEN_INVALID": {
+      "code": "AUTH_TOKEN_INVALID",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_EXPIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "AUTH_TOKEN_MISSING": {
+      "code": "AUTH_TOKEN_MISSING",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_REQUIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "AUTH_TOKEN_OUTDATED": {
+      "code": "AUTH_TOKEN_OUTDATED",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_EXPIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "CHAT_CONVERSATION_NOT_FOUND": {
+      "code": "CHAT_CONVERSATION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "chat",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "CHAT_INVALID_PARTICIPANT_COUNT": {
+      "code": "CHAT_INVALID_PARTICIPANT_COUNT",
+      "httpStatus": 400,
+      "domain": "chat",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "CHAT_MESSAGE_NOT_FOUND": {
+      "code": "CHAT_MESSAGE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "chat",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "CHAT_NOT_PARTICIPANT": {
+      "code": "CHAT_NOT_PARTICIPANT",
+      "httpStatus": 403,
+      "domain": "chat",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "CONFLICT": {
+      "code": "CONFLICT",
+      "httpStatus": 409,
+      "domain": "request",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "CONTRACT_NOT_FOUND": {
+      "code": "CONTRACT_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "contract",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "DEPARTMENT_ALREADY_EXISTS": {
+      "code": "DEPARTMENT_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "department",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "DEPARTMENT_NOT_FOUND": {
+      "code": "DEPARTMENT_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "department",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "DOCUMENT_NOT_FOUND": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "document",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "EMAIL_ALREADY_EXISTS": {
+      "code": "EMAIL_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "user",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "EMPLOYEE_ALREADY_TERMINATED": {
+      "code": "EMPLOYEE_ALREADY_TERMINATED",
+      "httpStatus": 409,
+      "domain": "employee",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "EMPLOYEE_CODE_ALREADY_EXISTS": {
+      "code": "EMPLOYEE_CODE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "employee",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "EMPLOYEE_NOT_FOUND": {
+      "code": "EMPLOYEE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "EMPLOYEE_PROFILE_NOT_FOUND": {
+      "code": "EMPLOYEE_PROFILE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "EMPLOYEE_PROFILE_REQUIRED": {
+      "code": "EMPLOYEE_PROFILE_REQUIRED",
+      "httpStatus": 400,
+      "domain": "employee",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "FILE_REQUIRED": {
+      "code": "FILE_REQUIRED",
+      "httpStatus": 422,
+      "domain": "upload",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "FILE_TOKEN_EXPIRED": {
+      "code": "FILE_TOKEN_EXPIRED",
+      "httpStatus": 422,
+      "domain": "upload",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "reselect-file"
+    },
+    "FILE_TOKEN_NOT_FOUND": {
+      "code": "FILE_TOKEN_NOT_FOUND",
+      "httpStatus": 422,
+      "domain": "upload",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "reselect-file"
+    },
+    "FORBIDDEN": {
+      "code": "FORBIDDEN",
+      "httpStatus": 403,
+      "domain": "auth",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "GEOFENCE_VIOLATION": {
+      "code": "GEOFENCE_VIOLATION",
+      "httpStatus": 400,
+      "domain": "attendance",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "IDEMPOTENCY_CONFLICT": {
+      "code": "IDEMPOTENCY_CONFLICT",
+      "httpStatus": 409,
+      "domain": "workflow",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "IDEMPOTENCY_IN_PROGRESS": {
+      "code": "IDEMPOTENCY_IN_PROGRESS",
+      "httpStatus": 409,
+      "domain": "workflow",
+      "kind": "rate-limit",
+      "apiCode": "RATE_LIMIT",
+      "retryable": false,
+      "action": "retry"
+    },
+    "INTERNAL_ERROR": {
+      "code": "INTERNAL_ERROR",
+      "httpStatus": 500,
+      "domain": "system",
+      "kind": "service-unavailable",
+      "apiCode": "SERVER",
+      "retryable": true,
+      "action": "retry"
+    },
+    "INVALID_REQUEST": {
+      "code": "INVALID_REQUEST",
+      "httpStatus": 400,
+      "domain": "request",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "INVALID_STATUS_TRANSITION": {
+      "code": "INVALID_STATUS_TRANSITION",
+      "httpStatus": 409,
+      "domain": "workflow",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "INVALID_UPDATE_PAYLOAD": {
+      "code": "INVALID_UPDATE_PAYLOAD",
+      "httpStatus": 400,
+      "domain": "request",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "IP_NOT_WHITELISTED": {
+      "code": "IP_NOT_WHITELISTED",
+      "httpStatus": 403,
+      "domain": "attendance",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "LEAVE_APPROVER_REQUIRED": {
+      "code": "LEAVE_APPROVER_REQUIRED",
+      "httpStatus": 400,
+      "domain": "leave",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LEAVE_BALANCE_INSUFFICIENT": {
+      "code": "LEAVE_BALANCE_INSUFFICIENT",
+      "httpStatus": 400,
+      "domain": "leave",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LEAVE_BALANCE_NOT_FOUND": {
+      "code": "LEAVE_BALANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "leave",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "LEAVE_PARTIAL_DAY_INVALID": {
+      "code": "LEAVE_PARTIAL_DAY_INVALID",
+      "httpStatus": 400,
+      "domain": "leave",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LEAVE_POLICY_INELIGIBLE": {
+      "code": "LEAVE_POLICY_INELIGIBLE",
+      "httpStatus": 400,
+      "domain": "leave",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LEAVE_POLICY_OVERLAP": {
+      "code": "LEAVE_POLICY_OVERLAP",
+      "httpStatus": 409,
+      "domain": "leave",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "LEAVE_SELF_APPROVAL_FORBIDDEN": {
+      "code": "LEAVE_SELF_APPROVAL_FORBIDDEN",
+      "httpStatus": 400,
+      "domain": "leave",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LOCATION_ALREADY_EXISTS": {
+      "code": "LOCATION_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "location",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "LOCATION_INVALID_HIERARCHY": {
+      "code": "LOCATION_INVALID_HIERARCHY",
+      "httpStatus": 400,
+      "domain": "location",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "LOCATION_NOT_FOUND": {
+      "code": "LOCATION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "location",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "LOCATION_TYPE_NOT_ASSIGNABLE": {
+      "code": "LOCATION_TYPE_NOT_ASSIGNABLE",
+      "httpStatus": 400,
+      "domain": "location",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "NOTE_REQUIRED": {
+      "code": "NOTE_REQUIRED",
+      "httpStatus": 400,
+      "domain": "request",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "NOTIFICATION_BODY_REQUIRED": {
+      "code": "NOTIFICATION_BODY_REQUIRED",
+      "httpStatus": 400,
+      "domain": "notification",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "NOTIFICATION_TEMPLATE_ALREADY_EXISTS": {
+      "code": "NOTIFICATION_TEMPLATE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "notification",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "NOTIFICATION_TEMPLATE_NOT_FOUND": {
+      "code": "NOTIFICATION_TEMPLATE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "notification",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "NOT_FOUND": {
+      "code": "NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "request",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "NO_SHIFT_ASSIGNED": {
+      "code": "NO_SHIFT_ASSIGNED",
+      "httpStatus": 400,
+      "domain": "attendance",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "OFFBOARDING_CLEARANCE_ALREADY_DECIDED": {
+      "code": "OFFBOARDING_CLEARANCE_ALREADY_DECIDED",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_CLEARANCE_NOT_FOUND": {
+      "code": "OFFBOARDING_CLEARANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "offboarding",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_COMPLETION_BLOCKED": {
+      "code": "OFFBOARDING_COMPLETION_BLOCKED",
+      "httpStatus": 400,
+      "domain": "offboarding",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "OFFBOARDING_EXIT_INTERVIEW_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_EXIT_INTERVIEW_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_PROCESS_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_PROCESS_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_PROCESS_NOT_FOUND": {
+      "code": "OFFBOARDING_PROCESS_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "offboarding",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OFFBOARDING_REJECT_REQUIRES_NOTE": {
+      "code": "OFFBOARDING_REJECT_REQUIRES_NOTE",
+      "httpStatus": 400,
+      "domain": "offboarding",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "OFFBOARDING_SETTLEMENT_ALREADY_EXISTS": {
+      "code": "OFFBOARDING_SETTLEMENT_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "offboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ONBOARDING_PROCESS_ALREADY_EXISTS": {
+      "code": "ONBOARDING_PROCESS_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "onboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "ONBOARDING_TEMPLATE_ALREADY_EXISTS": {
+      "code": "ONBOARDING_TEMPLATE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "onboarding",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "ONBOARDING_TEMPLATE_NOT_FOUND": {
+      "code": "ONBOARDING_TEMPLATE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "onboarding",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "OUTSIDE_WORK_AREA": {
+      "code": "OUTSIDE_WORK_AREA",
+      "httpStatus": 400,
+      "domain": "attendance",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "PAYROLL_NOT_FOUND": {
+      "code": "PAYROLL_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "payroll",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "PERMISSION_DENIED": {
+      "code": "PERMISSION_DENIED",
+      "httpStatus": 403,
+      "domain": "auth",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "POSITION_NOT_FOUND": {
+      "code": "POSITION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "position",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "POSITION_TITLE_ALREADY_EXISTS": {
+      "code": "POSITION_TITLE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "position",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "RATE_LIMITED": {
+      "code": "RATE_LIMITED",
+      "httpStatus": 429,
+      "domain": "system",
+      "kind": "rate-limit",
+      "apiCode": "RATE_LIMIT",
+      "retryable": false,
+      "action": "retry"
+    },
+    "RECRUITMENT_APPLICATION_DUPLICATE": {
+      "code": "RECRUITMENT_APPLICATION_DUPLICATE",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "RECRUITMENT_APPLICATION_NOT_FOUND": {
+      "code": "RECRUITMENT_APPLICATION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "recruitment",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_INVALID_STAGE": {
+      "code": "RECRUITMENT_INVALID_STAGE",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_INVALID_STAGE_TRANSITION": {
+      "code": "RECRUITMENT_INVALID_STAGE_TRANSITION",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_INVALID_STATUS": {
+      "code": "RECRUITMENT_INVALID_STATUS",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_OFFER_NOT_FOUND": {
+      "code": "RECRUITMENT_OFFER_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "recruitment",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_POSTING_NOT_FOUND": {
+      "code": "RECRUITMENT_POSTING_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "recruitment",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_POSTING_NOT_OPEN": {
+      "code": "RECRUITMENT_POSTING_NOT_OPEN",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_REQUISITION_NOT_APPROVED": {
+      "code": "RECRUITMENT_REQUISITION_NOT_APPROVED",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_REQUISITION_NOT_FOUND": {
+      "code": "RECRUITMENT_REQUISITION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "recruitment",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_SCORECARD_STAGE_INVALID": {
+      "code": "RECRUITMENT_SCORECARD_STAGE_INVALID",
+      "httpStatus": 409,
+      "domain": "recruitment",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "RECRUITMENT_VALIDATION": {
+      "code": "RECRUITMENT_VALIDATION",
+      "httpStatus": 400,
+      "domain": "recruitment",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ROLE_ALREADY_EXISTS": {
+      "code": "ROLE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "role",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "ROLE_CODE_ALREADY_EXISTS": {
+      "code": "ROLE_CODE_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "role",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "ROLE_CODE_IMMUTABLE": {
+      "code": "ROLE_CODE_IMMUTABLE",
+      "httpStatus": 400,
+      "domain": "role",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "ROLE_IN_USE": {
+      "code": "ROLE_IN_USE",
+      "httpStatus": 409,
+      "domain": "role",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ROLE_NOT_FOUND": {
+      "code": "ROLE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "role",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "ROLE_SYSTEM_PROTECTED": {
+      "code": "ROLE_SYSTEM_PROTECTED",
+      "httpStatus": 403,
+      "domain": "role",
+      "kind": "forbidden",
+      "apiCode": "FORBIDDEN",
+      "retryable": false,
+      "action": "contact-admin"
+    },
+    "SCHEDULE_CONFLICT": {
+      "code": "SCHEDULE_CONFLICT",
+      "httpStatus": 409,
+      "domain": "schedule",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "SCHEDULE_LOCKED": {
+      "code": "SCHEDULE_LOCKED",
+      "httpStatus": 409,
+      "domain": "schedule",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "SCHEDULE_NOT_FOUND": {
+      "code": "SCHEDULE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "schedule",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "SELFIE_MISSING": {
+      "code": "SELFIE_MISSING",
+      "httpStatus": 400,
+      "domain": "attendance",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SELFIE_REJECTED": {
+      "code": "SELFIE_REJECTED",
+      "httpStatus": 400,
+      "domain": "attendance",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SERVICE_UNAVAILABLE": {
+      "code": "SERVICE_UNAVAILABLE",
+      "httpStatus": 503,
+      "domain": "system",
+      "kind": "service-unavailable",
+      "apiCode": "SERVER",
+      "retryable": true,
+      "action": "retry"
+    },
+    "SHIFT_CANCEL_BEFORE_START": {
+      "code": "SHIFT_CANCEL_BEFORE_START",
+      "httpStatus": 400,
+      "domain": "schedule",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SHIFT_TEMPLATE_ALREADY_ARCHIVED": {
+      "code": "SHIFT_TEMPLATE_ALREADY_ARCHIVED",
+      "httpStatus": 409,
+      "domain": "schedule",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "SHIFT_TEMPLATE_CREATE_FAILED": {
+      "code": "SHIFT_TEMPLATE_CREATE_FAILED",
+      "httpStatus": 400,
+      "domain": "schedule",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SHIFT_TEMPLATE_INACTIVE": {
+      "code": "SHIFT_TEMPLATE_INACTIVE",
+      "httpStatus": 400,
+      "domain": "schedule",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SHIFT_TIME_IDENTICAL": {
+      "code": "SHIFT_TIME_IDENTICAL",
+      "httpStatus": 400,
+      "domain": "schedule",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SHIFT_TIME_INVALID_ORDER": {
+      "code": "SHIFT_TIME_INVALID_ORDER",
+      "httpStatus": 400,
+      "domain": "schedule",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "SOCIAL_INSURANCE_CONFLICT": {
+      "code": "SOCIAL_INSURANCE_CONFLICT",
+      "httpStatus": 409,
+      "domain": "employee",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "SOCIAL_INSURANCE_NOT_FOUND": {
+      "code": "SOCIAL_INSURANCE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "employee",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "TASK_BLOCKED_BY_DEPENDENCIES": {
+      "code": "TASK_BLOCKED_BY_DEPENDENCIES",
+      "httpStatus": 400,
+      "domain": "task",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "TASK_CONFLICT": {
+      "code": "TASK_CONFLICT",
+      "httpStatus": 409,
+      "domain": "task",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "reload"
+    },
+    "TASK_DEPENDENCY_CIRCULAR": {
+      "code": "TASK_DEPENDENCY_CIRCULAR",
+      "httpStatus": 400,
+      "domain": "task",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "TASK_DEPENDENCY_NOT_FOUND": {
+      "code": "TASK_DEPENDENCY_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "task",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "TASK_DEPENDENCY_SELF_REF": {
+      "code": "TASK_DEPENDENCY_SELF_REF",
+      "httpStatus": 400,
+      "domain": "task",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "TASK_NOT_FOUND": {
+      "code": "TASK_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "task",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "TASK_REVISION_LIMIT_REACHED": {
+      "code": "TASK_REVISION_LIMIT_REACHED",
+      "httpStatus": 400,
+      "domain": "task",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "TASK_TEMPLATE_NOT_FOUND": {
+      "code": "TASK_TEMPLATE_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "task",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "UNAUTHORIZED": {
+      "code": "UNAUTHORIZED",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_REQUIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "UNPROCESSABLE_ENTITY": {
+      "code": "UNPROCESSABLE_ENTITY",
+      "httpStatus": 422,
+      "domain": "request",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "USERNAME_ALREADY_EXISTS": {
+      "code": "USERNAME_ALREADY_EXISTS",
+      "httpStatus": 409,
+      "domain": "user",
+      "kind": "conflict",
+      "apiCode": "CONFLICT",
+      "retryable": false,
+      "action": "review"
+    },
+    "USER_NOT_AUTHENTICATED": {
+      "code": "USER_NOT_AUTHENTICATED",
+      "httpStatus": 401,
+      "domain": "auth",
+      "kind": "unauthenticated",
+      "apiCode": "AUTH_REQUIRED",
+      "retryable": false,
+      "action": "sign-in"
+    },
+    "USER_NOT_FOUND": {
+      "code": "USER_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "user",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "VALIDATION_ERROR": {
+      "code": "VALIDATION_ERROR",
+      "httpStatus": 400,
+      "domain": "request",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    },
+    "WEBHOOK_SUBSCRIPTION_NOT_FOUND": {
+      "code": "WEBHOOK_SUBSCRIPTION_NOT_FOUND",
+      "httpStatus": 404,
+      "domain": "integration",
+      "kind": "not-found",
+      "apiCode": "NOT_FOUND",
+      "retryable": false,
+      "action": "reload"
+    },
+    "WORKFLOW_ACTION_FAILED": {
+      "code": "WORKFLOW_ACTION_FAILED",
+      "httpStatus": 400,
+      "domain": "workflow",
+      "kind": "validation",
+      "apiCode": "VALIDATION",
+      "retryable": false,
+      "action": "review"
+    }
+  }
+}
