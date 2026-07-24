@@ -24,6 +24,15 @@ http://btn.hieutt.id.vn {
     # Sentry tunnel — receive error reports from browsers
     reverse_proxy /sentry/* btn-hrms-glitchtip:8000
 
+    # Proxy file requests to NestJS (/files/* -> /api/v1/files/*)
+    handle /files/* {
+        rewrite * /api/v1{path}
+        reverse_proxy btn-hrms-api:3001 {
+            header_up X-Forwarded-Proto "https"
+            header_up X-Forwarded-For {remote_host}
+        }
+    }
+
     # Proxy API requests to NestJS
     reverse_proxy /api/v1/* btn-hrms-api:3001 {
         header_up X-Forwarded-Proto "https"
@@ -50,6 +59,15 @@ localhost, 10.8.1.84, 10.10.3.231, 10.139.143.90 {
 
     # Sentry tunnel — receive error reports from browsers
     reverse_proxy /sentry/* btn-hrms-glitchtip:8000
+
+    # Proxy file requests to NestJS (/files/* -> /api/v1/files/*)
+    handle /files/* {
+        rewrite * /api/v1{path}
+        reverse_proxy btn-hrms-api:3001 {
+            header_up X-Forwarded-Proto "https"
+            header_up X-Forwarded-For {remote_host}
+        }
+    }
 
     # Proxy API requests to NestJS
     reverse_proxy /api/v1/* btn-hrms-api:3001 {
