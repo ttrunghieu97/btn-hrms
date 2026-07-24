@@ -44,12 +44,13 @@ export class AttendanceSessionRepository {
 
   async findActiveSession(
     employeeId: string,
-    date: string,
+    _date?: string,
+    tx?: AppDatabase,
   ): Promise<SessionRow | null> {
-    const rows = await this.db.query.attendanceSessions.findMany({
+    const db = tx ?? this.db;
+    const rows = await db.query.attendanceSessions.findMany({
       where: and(
         eq(schema.attendanceSessions.employeeId, employeeId),
-        eq(schema.attendanceSessions.date, date),
         eq(schema.attendanceSessions.status, "IN_PROGRESS"),
       ),
       limit: 1,
@@ -61,13 +62,16 @@ export class AttendanceSessionRepository {
     employeeId: string,
     date: string,
     sessionType: SessionType,
+    tx?: AppDatabase,
   ): Promise<SessionRow | null> {
-    const rows = await this.db.query.attendanceSessions.findMany({
+    const db = tx ?? this.db;
+    const rows = await db.query.attendanceSessions.findMany({
       where: and(
         eq(schema.attendanceSessions.employeeId, employeeId),
         eq(schema.attendanceSessions.date, date),
         eq(schema.attendanceSessions.sessionType, sessionType),
       ),
+      orderBy: (sessions, { desc }) => [desc(sessions.createdAt)],
       limit: 1,
     });
     return rows[0] ?? null;
@@ -88,9 +92,23 @@ export class AttendanceSessionRepository {
 
   async create(values: SessionInsert, tx?: AppDatabase): Promise<SessionRow> {
     const db = tx ?? this.db;
-    const [row] = await db.insert(schema.attendanceSessions).values(values).returning();
-    if (!row) throw new Error("failed_to_insert_session");
-    return row;
+    try {
+      const [row] = await db.insert(schema.attendanceSessions).values(values).returning();
+      if (row) return row;
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        const existing = await db.query.attendanceSessions.findFirst({
+          where: and(
+            eq(schema.attendanceSessions.employeeId, values.employeeId),
+            eq(schema.attendanceSessions.date, values.date),
+            eq(schema.attendanceSessions.sessionType, values.sessionType),
+          ),
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
+    throw new Error("failed_to_insert_session");
   }
 
   async updateStatus(

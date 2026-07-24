@@ -241,7 +241,6 @@ export function ScheduleTable() {
         <DataTable
           table={table}
           emptyState={emptyState}
-          onRowClick={(row) => handleRowClick(row.original)}
         >
           <DataTableToolbar table={table}>
             <Button

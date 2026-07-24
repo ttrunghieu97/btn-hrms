@@ -14,12 +14,12 @@ import {
 
 export function ShiftsSheetsController() {
   const [params, setParams] = useQueryStates({
-    tab: parseAsString.withDefault('templates'),
+    managementTab: parseAsString.withDefault('templates'),
     create: parseAsString,
     detail: parseAsString
   });
 
-  const activeTab = (params.tab as 'templates' | 'assignments' | 'roster' | 'schedule' | 'requirements') || 'templates';
+  const activeTab = (params.managementTab as 'templates' | 'assignments' | 'roster' | 'schedule' | 'requirements') || 'templates';
 
   // Fetch data to find selected row objects using queryOptions
   const { data: templatesData } = useQuery(shiftsTemplatesQueryOptions());

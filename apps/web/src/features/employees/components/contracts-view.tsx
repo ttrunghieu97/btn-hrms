@@ -249,7 +249,7 @@ export function ContractsView() {
 
   return (
     <div className='flex flex-1 flex-col gap-4 min-h-0'>
-      <DataTable table={table} isLoading={isLoading} onRowClick={handleRowClick}>
+      <DataTable table={table} isLoading={isLoading}>
         <DataTableToolbar table={table}>
           <div className='flex items-center gap-2 flex-wrap'>
             <FilterSelect value={params.contractType ?? ''} onValueChange={(v) => setParam('contractType', v)}

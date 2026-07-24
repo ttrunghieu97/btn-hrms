@@ -54,7 +54,10 @@ export function PositionsTable({ onRowClick }: PositionsTableProps) {
     columns,
     pageCount: Math.max(1, Math.ceil(sortedPositions.length / params.perPage)),
     shallow: true,
-    debounceMs: 300
+    debounceMs: 300,
+    meta: {
+      onRowClick
+    }
   });
 
   if (isAuthError) {

@@ -158,6 +158,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const dbField = this.extractDbFieldName(detail, constraint, message);
     const label = this.toDisplayFieldName(dbField);
 
+
     const camelCaseMap: Record<string, string> = {
       department_id: "departmentId",
       position_id: "positionId",

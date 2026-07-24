@@ -202,15 +202,49 @@ function FieldError({
     const uniqueMessages = Array.from(new Set(messages));
 
     if (uniqueMessages.length === 1) {
-      return uniqueMessages[0];
+      return (
+        <div className='flex items-center gap-1.5 text-rose-400 text-xs font-medium mt-1.5'>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='size-3.5 shrink-0 text-rose-400'
+          >
+            <circle cx='12' cy='12' r='10' />
+            <line x1='12' y1='8' x2='12' y2='12' />
+            <line x1='12' y1='16' x2='12.01' y2='16' />
+          </svg>
+          <span>{uniqueMessages[0]}</span>
+        </div>
+      );
     }
 
     return (
-      <ul className='ml-4 flex list-disc flex-col gap-1'>
+      <div className='flex flex-col gap-1 mt-1.5'>
         {uniqueMessages.map((msg, index) => (
-          <li key={index}>{msg}</li>
+          <div key={index} className='flex items-center gap-1.5 text-rose-400 text-xs font-medium'>
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              className='size-3.5 shrink-0 text-rose-400'
+            >
+              <circle cx='12' cy='12' r='10' />
+              <line x1='12' y1='8' x2='12' y2='12' />
+              <line x1='12' y1='16' x2='12.01' y2='16' />
+            </svg>
+            <span>{msg}</span>
+          </div>
         ))}
-      </ul>
+      </div>
     );
   }, [children, errors]);
 
@@ -222,7 +256,7 @@ function FieldError({
     <div
       role='alert'
       data-slot='field-error'
-      className={cn('text-destructive text-sm font-normal', className)}
+      className={cn('transition-all', className)}
       {...props}
     >
       {content}

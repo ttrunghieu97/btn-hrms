@@ -93,7 +93,8 @@ export function AssignmentFormSheet({
 
   const createMutation = useMutation({
     ...createShiftAssignmentMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await createShiftAssignmentMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.assigned(feedbackEntity.assignment));
       onOpenChange(false);
     },
@@ -111,7 +112,8 @@ export function AssignmentFormSheet({
 
   const updateMutation = useMutation({
     ...updateShiftAssignmentMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await updateShiftAssignmentMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.updated(feedbackEntity.assignment));
       onOpenChange(false);
     },
@@ -129,7 +131,8 @@ export function AssignmentFormSheet({
 
   const cancelMutation = useMutation({
     ...cancelShiftAssignmentMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await cancelShiftAssignmentMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.cancelled(feedbackEntity.assignment));
       onCancelTargetChange?.(undefined);
       setCancelFormValues(getCancelDefaults(undefined, assignment));

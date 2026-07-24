@@ -1,7 +1,8 @@
-﻿import { EmployeeStatusBadge } from '../display/employee-status-badge';
+import { EmployeeStatusBadge } from '../display/employee-status-badge';
 import { formatDateVN } from "@/lib/date";
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { Icons } from '@/components/icons';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Column, ColumnDef } from '@tanstack/react-table';
@@ -68,7 +69,7 @@ function SortHeader({
   );
 }
 
-export const columns = (onRowClick: (employee: EmployeeResponseDto) => void): ColumnDef<EmployeeResponseDto>[] => [
+export const columns = (onRowClick?: (employee: EmployeeResponseDto) => void): ColumnDef<EmployeeResponseDto>[] => [
   {
     id: 'name',
     accessorFn: (row) => getEmployeeName(row),
@@ -78,7 +79,10 @@ export const columns = (onRowClick: (employee: EmployeeResponseDto) => void): Co
     cell: ({ row }) => {
       const name = getEmployeeName(row.original);
       return (
-        <div className='flex items-center gap-3'>
+        <Link
+          href={`/employees/${row.original.id}`}
+          className='flex items-center gap-3 group/employee-link w-fit'
+        >
           <Avatar className='size-8'>
             <AvatarImage src={extractProtectedAssetUrl(row.original.avatar) || ''} alt={name} loading='lazy' />
             <AvatarFallback className='text-xs bg-primary/10 text-primary'>
@@ -86,10 +90,12 @@ export const columns = (onRowClick: (employee: EmployeeResponseDto) => void): Co
             </AvatarFallback>
           </Avatar>
           <div className='flex flex-col'>
-            <span className='font-medium'>{name}</span>
+            <span className='font-medium text-foreground group-hover/employee-link:text-primary group-hover/employee-link:underline transition-colors'>
+              {name}
+            </span>
             <span className='text-muted-foreground text-xs'>{row.original.email}</span>
           </div>
-        </div>
+        </Link>
       );
     },
     meta: {

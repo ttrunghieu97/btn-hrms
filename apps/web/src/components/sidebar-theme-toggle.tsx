@@ -57,7 +57,7 @@ export function SidebarThemeToggle() {
       <span className='flex-1 text-sm'>{appShellCopy.toggleTheme}</span>
       <span
         id={`${id}-light`}
-        className='group-data-[state=checked]:text-muted-foreground/70 cursor-pointer text-sm font-medium'
+        className='group-data-[state=checked]:text-muted-foreground/70 cursor-pointer text-sm font-medium hover:text-foreground transition-colors'
         onClick={handleLightClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLightClick(); }}
         role='button'
@@ -75,7 +75,7 @@ export function SidebarThemeToggle() {
       />
       <span
         id={`${id}-dark`}
-        className='group-data-[state=unchecked]:text-muted-foreground/70 cursor-pointer text-sm font-medium'
+        className='group-data-[state=unchecked]:text-muted-foreground/70 cursor-pointer text-sm font-medium hover:text-foreground transition-colors'
         onClick={handleDarkClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDarkClick(); }}
         role='button'

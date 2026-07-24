@@ -55,7 +55,10 @@ export function DepartmentsTable({ onRowClick }: DepartmentsTableProps) {
     columns,
     pageCount: Math.max(1, Math.ceil((data?.pagination?.total ?? 0) / params.perPage)),
     shallow: true,
-    debounceMs: 300
+    debounceMs: 300,
+    meta: {
+      onRowClick
+    }
   });
 
   if (isAuthError) {
@@ -81,10 +84,7 @@ export function DepartmentsTable({ onRowClick }: DepartmentsTableProps) {
   }
 
   return (
-    <DataTable
-      table={table}
-      onRowClick={onRowClick ? (row) => onRowClick(row.original) : undefined}
-    >
+    <DataTable table={table} totalRowsLabel='Tổng số phòng ban'>
       <DataTableToolbar table={table} />
     </DataTable>
   );

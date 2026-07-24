@@ -31,6 +31,8 @@ interface DataTableProps<TData> extends React.ComponentProps<'div'> {
   emptyState?: React.ReactNode;
   isLoading?: boolean;
   animationKey?: string;
+  totalRowsLabel?: string;
+  totalRows?: number;
 }
 
 export function DataTable<TData>({
@@ -43,6 +45,8 @@ export function DataTable<TData>({
   emptyState,
   isLoading = false,
   animationKey,
+  totalRowsLabel,
+  totalRows,
   children,
   className,
   ...props
@@ -243,6 +247,24 @@ export function DataTable<TData>({
           </ScrollArea>
         </div>
       </div>
+      {totalRowsLabel ? (
+        <div className='flex items-center justify-between px-1 py-1 text-xs text-muted-foreground shrink-0 mt-auto'>
+          <div className='flex items-center gap-2'>
+            <span>
+              {totalRowsLabel}: <strong className='font-semibold text-foreground text-sm ml-1'>
+                {typeof totalRows === 'number'
+                  ? totalRows
+                  : table.getFilteredRowModel().rows.length}
+              </strong>
+            </span>
+          </div>
+          {table.getPageCount() > 1 ? (
+            <span className='font-medium'>
+              Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {actionBar && hasSelectedRows ? (
         <div className='mt-auto flex flex-col gap-2.5'>
           {actionBar}

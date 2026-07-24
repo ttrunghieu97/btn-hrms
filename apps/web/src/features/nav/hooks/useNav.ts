@@ -3,19 +3,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { fetchNav } from '../api/nav-api';
+import type { NavResponse } from '../types/nav-types';
 import { createKeyFactory } from '@/lib/query-keys';
 
-const navKeys = createKeyFactory('nav');
+export const navKeys = createKeyFactory('nav');
 
-export function useNav() {
+export function useNav(initialData?: NavResponse) {
   const userId = useAuthStore((state) => state.user?.id);
 
   return useQuery({
     queryKey: [...navKeys.all(), userId],
-    queryFn: fetchNav,
-    staleTime: 5 * 60_000, // 5 min — nav rarely changes
-    gcTime: 30 * 60_000,
+    queryFn: () => fetchNav(),
+    staleTime: 10 * 60_000, // 10 min — nav tree is static per user session
+    gcTime: 60 * 60_000,
     enabled: !!userId,
-    select: (data) => data.groups,
+    initialData,
+    select: (data: NavResponse) => data.groups,
   });
 }

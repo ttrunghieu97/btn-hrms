@@ -274,13 +274,14 @@ export function EmployeesTable() {
         ) : null}
       </div>
 
-      <div className='flex flex-1 flex-col gap-2 min-h-0'>
+      <div className='flex flex-1 flex-col gap-2 min-h-0 overflow-hidden'>
         <DataTable
           table={table}
           emptyState={emptyState}
           isLoading={isLoading}
           animationKey={resolvedActiveStatus}
-          onRowClick={(row) => handleRowClick(row.original)}
+          totalRowsLabel='Tổng số nhân viên'
+          totalRows={data?.totalEmployees ?? 0}
           onRowMouseEnter={(row) => prefetchEmployeeDetail(row.original.id)}
         >
           <DataTableToolbar table={table}>
@@ -297,8 +298,6 @@ export function EmployeesTable() {
             </Button>
           </DataTableToolbar>
         </DataTable>
-
-
       </div>
     </motion.div>
   );

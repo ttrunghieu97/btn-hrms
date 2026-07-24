@@ -16,13 +16,7 @@ export default function AuthStoreHydrator({
   // Synchronous server hydration during initial render phase
   if (!hydrated.current) {
     hydrated.current = true;
-    if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        useAuthStore.setState({ user, initialized: true });
-      }, 0);
-    } else {
-      useAuthStore.setState({ user, initialized: true });
-    }
+    useAuthStore.setState({ user, initialized: true });
   }
 
   return <>{children}</>;

@@ -86,7 +86,7 @@ export function TasksTable({ scope, onRowClick }: TasksTableProps) {
 
   return (
     <div className='flex flex-1 flex-col gap-2'>
-      <DataTable table={table} onRowClick={(row) => onRowClick(row.original)}>
+      <DataTable table={table}>
         <DataTableToolbar table={table} />
       </DataTable>
     </div>

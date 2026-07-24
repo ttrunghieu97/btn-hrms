@@ -48,7 +48,7 @@ function advisoryLockKeys(
 function isUniqueViolation(err: unknown): boolean {
   if (err && typeof err === "object") {
     const pgErr = err as { code?: string; constraint?: string };
-    return pgErr.code === "23505" && /^uq_attendances_employee_date_session_type/i.test(pgErr.constraint ?? "");
+    return pgErr.code === "23505";
   }
   return false;
 }
@@ -129,50 +129,31 @@ export class AttendancesRepository extends BaseRepository<
     return this.db.transaction(cb);
   }
 
+  async acquireAdvisoryLock(employeeId: string, tx: AppDatabase): Promise<void> {
+    const raw = `${employeeId}`;
+    const buf = createHash("sha256").update(raw).digest();
+    const key1 = buf.readInt32BE(0);
+    const key2 = buf.readInt32BE(4);
+    
+    const [locked] = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(${key1}, ${key2}) AS locked`);
+    if (!locked?.locked) {
+      throwConflict(
+        "This attendance is being processed by another request",
+        ERROR_CODES.ATTENDANCE_ALREADY_RECORDED,
+        { employeeId },
+      );
+    }
+  }
+
   async insertEvent(values: typeof schema.attendances.$inferInsert, tx?: AppDatabase): Promise<typeof schema.attendances.$inferSelect> {
     const db = tx ?? this.db;
-    // Acquire a transaction-level advisory lock based on employee+date+session+type.
-    // Prevents concurrent insert races before they hit the unique constraint.
-    const lockKeys = advisoryLockKeys(values.employeeId, values.date, values.session ?? null, values.type);
-    if (lockKeys !== null) {
-      const [locked] = await db.execute(sql`SELECT pg_try_advisory_xact_lock(${lockKeys[0]}, ${lockKeys[1]}) AS locked`);
-      if (!locked?.locked) {
-        throwConflict(
-          "This attendance is being processed by another request",
-          ERROR_CODES.ATTENDANCE_ALREADY_RECORDED,
-          { employeeId: values.employeeId, date: values.date },
-        );
-      }
-    }
-    // Use INSERT ... ON CONFLICT DO NOTHING for idempotent semantics.
-    // If the row already exists (unique constraint on employee_id, date, session, type),
-    // the insert is a no-op and we return the existing row.
-    // The advisory lock above prevents concurrent races; this handles sequential replays.
     const [row] = await db
-      .insert(attendances)
+      .insert(schema.attendances)
       .values(values)
-      .onConflictDoNothing({ target: [attendances.employeeId, attendances.date, attendances.session, attendances.type] })
       .returning();
 
-    if (row) return row;
-
-    // Idempotent replay — row already exists, fetch and return
-    const conditions: SQL[] = [
-      eq(attendances.employeeId, values.employeeId),
-      eq(attendances.date, values.date ?? ""),
-    ];
-    if (values.session) conditions.push(eq(attendances.session, values.session));
-    if (values.type) conditions.push(eq(attendances.type, values.type));
-
-    const existing = await this.db.query.attendances.findFirst({
-      where: and(...conditions),
-    });
-    if (existing) {
-      this.metricsService.incrementAttendanceDuplicate();
-      return existing;
-    }
-
-    throw new Error("failed_to_insert_attendance");
+    if (!row) throw new Error("failed_to_insert_attendance");
+    return row;
   }
 
   async findMyAttendancePaginated(

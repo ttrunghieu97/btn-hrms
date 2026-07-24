@@ -97,6 +97,9 @@ export class CheckAttendanceUseCase {
     // -- Persist: resolve session → append event → update session state --
     const tPersist = performance.now();
     const result = await this.attendancesRepo.transaction(async (tx) => {
+      // Serialize concurrent punch requests per employee
+      await this.attendancesRepo.acquireAdvisoryLock(employeeId, tx);
+
       // Phase 2C: resolve/create session
       const resolved = await this.sessionService.resolveSession(
         employeeId, today, resolvedSession, type, tx,

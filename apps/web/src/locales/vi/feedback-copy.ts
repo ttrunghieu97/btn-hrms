@@ -123,11 +123,11 @@ export const validationCopy = {
     invalidTime: 'Gio khong hop le'
   },
   auth: {
-    usernameRequired: 'Tai khoan bat buoc',
-    usernameMax: 'Tai khoan toi da 64 ky tu',
-    usernamePattern: 'Tai khoan chi chua chu, so, . _ @ -',
-    passwordMin6: 'Mat khau toi thieu 6 ky tu',
-    passwordMax128: 'Mat khau toi da 128 ky tu'
+    usernameRequired: 'Vui lòng nhập tên đăng nhập',
+    usernameMax: 'Tên đăng nhập tối đa 64 ký tự',
+    usernamePattern: 'Tên đăng nhập chỉ chứa chữ cái, số và ký tự đặc biệt (. _ @ -)',
+    passwordMin6: 'Mật khẩu tối thiểu 6 ký tự',
+    passwordMax128: 'Mật khẩu tối đa 128 ký tự'
   },
   department: {
     nameRequired: 'Ten phong ban bat buoc'

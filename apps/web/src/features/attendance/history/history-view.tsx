@@ -142,8 +142,8 @@ export function HistoryView({ canViewAll = false }: HistoryViewProps) {
   };
 
   return (
-    <Section>
-      <div className='flex flex-1 flex-col gap-4'>
+    <Section className='h-full flex flex-col overflow-y-auto pr-1'>
+      <div className='flex min-h-0 flex-1 flex-col gap-4'>
       <div className='flex items-center gap-2 self-end'>
         <Button variant='outline' size='icon' className='h-8 w-8' onClick={handlePrevMonth}>
           <Icons.chevronLeft className='h-4 w-4' />

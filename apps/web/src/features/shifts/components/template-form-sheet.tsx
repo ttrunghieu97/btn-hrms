@@ -61,7 +61,8 @@ export function TemplateFormSheet({ template, open, onOpenChange }: TemplateForm
 
   const createMutation = useMutation({
     ...createShiftTemplateMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await createShiftTemplateMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.created(feedbackEntity.shiftTemplate));
       onOpenChange(false);
     }
@@ -69,7 +70,8 @@ export function TemplateFormSheet({ template, open, onOpenChange }: TemplateForm
 
   const updateMutation = useMutation({
     ...updateShiftTemplateMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await updateShiftTemplateMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.updated(feedbackEntity.shiftTemplate));
       onOpenChange(false);
     }
@@ -77,7 +79,8 @@ export function TemplateFormSheet({ template, open, onOpenChange }: TemplateForm
 
   const archiveMutation = useMutation({
     ...archiveShiftTemplateMutation,
-    onSuccess: () => {
+    onSuccess: async (...args) => {
+      await archiveShiftTemplateMutation.onSuccess?.(...args);
       toast.success(feedbackCopy.success.archived(feedbackEntity.shiftTemplate));
       onOpenChange(false);
     }

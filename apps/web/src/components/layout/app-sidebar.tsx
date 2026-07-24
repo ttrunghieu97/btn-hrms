@@ -33,10 +33,12 @@ import { Icons } from '../icons';
 import { SidebarBrand } from '../sidebar-brand';
 import { SidebarThemeToggle } from '../sidebar-theme-toggle';
 
-export default function AppSidebar() {
+import type { NavResponse } from '@/features/nav/types/nav-types';
+
+export default function AppSidebar({ initialNavData }: { initialNavData?: NavResponse }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: navGroups = [], isLoading } = useNav();
+  const { data: navGroups = [], isLoading, status } = useNav(initialNavData);
   const signOut = useAuthStore((state) => state.signOut);
   const authUser = useAuthStore((state) => state.user);
   const { state, isMobile, setOpenMobile } = useSidebar();
@@ -58,7 +60,7 @@ export default function AppSidebar() {
     try {
       await signOut();
     } finally {
-      router.push('/auth/sign-in');
+      window.location.href = '/auth/sign-in';
     }
   };
 
@@ -68,7 +70,7 @@ export default function AppSidebar() {
         <SidebarBrand />
       </SidebarHeader>
       <SidebarContent className='overflow-x-hidden'>
-        {isLoading ? (
+        {isLoading || (!navGroups.length && status === 'pending') ? (
           <div className='flex flex-col items-center justify-center gap-3 px-4 py-12 text-center'>
             <Icons.spinner className='text-muted-foreground size-6 animate-spin' />
           </div>

@@ -14,12 +14,25 @@ export const columns: ColumnDef<DepartmentRow>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title={departmentUiCopy.nameLabel} />
     ),
-    cell: ({ row }) => (
-      <div className='flex items-center gap-2'>
-        <Icons.department className='text-muted-foreground h-4 w-4 shrink-0' />
-        <span className='font-medium'>{row.original.name}</span>
-      </div>
-    ),
+    cell: ({ row, table }) => {
+      const onRowClick = (table.options.meta as { onRowClick?: (row: DepartmentRow) => void })?.onRowClick;
+      return (
+        <div className='flex items-center gap-2'>
+          <Icons.department className='text-muted-foreground h-4 w-4 shrink-0' />
+          {onRowClick ? (
+            <button
+              type='button'
+              onClick={() => onRowClick(row.original)}
+              className='font-medium text-foreground hover:text-primary hover:underline text-left cursor-pointer'
+            >
+              {row.original.name}
+            </button>
+          ) : (
+            <span className='font-medium'>{row.original.name}</span>
+          )}
+        </div>
+      );
+    },
     meta: {
       label: departmentUiCopy.nameLabel,
       placeholder: departmentUiCopy.table.searchPlaceholder,

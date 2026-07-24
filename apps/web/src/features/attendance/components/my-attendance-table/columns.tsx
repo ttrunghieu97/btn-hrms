@@ -68,7 +68,7 @@ function EvidenceCell({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 font-mono font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded px-2 py-1 text-xs transition-all active:scale-95"
+            className="flex items-center gap-1 font-mono font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded px-2 py-1 text-xs transition-all active:scale-95 cursor-pointer"
           >
             <span>{formatted}</span>
             {image && <Icons.camera className="h-3 w-3 opacity-80 shrink-0" />}
@@ -110,7 +110,7 @@ function EvidenceCell({
     <button
       type="button"
       onClick={() => onPunch(date, session, action)}
-      className="flex items-center justify-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/90 text-slate-300 hover:text-slate-100 transition-all border border-slate-700/50 active:scale-95 shrink-0"
+      className="flex items-center justify-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/90 text-slate-300 hover:text-slate-100 transition-all border border-slate-700/50 active:scale-95 shrink-0 cursor-pointer"
     >
       <Icons.camera className="h-3.5 w-3.5" />
       <span>{action === 'checkin' ? attendanceUiCopy.timekeeping.table.in : attendanceUiCopy.timekeeping.table.out}</span>

@@ -166,6 +166,7 @@ export function LeaveRequestsTable() {
       <DataTable
         table={table}
         isLoading={isLoading}
+        totalRowsLabel='Tổng số đơn xin nghỉ'
         emptyState={
           <AppEmptyState
             icon={<Icons.calendar className='size-10' />}

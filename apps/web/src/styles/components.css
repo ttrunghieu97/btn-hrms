@@ -35,7 +35,6 @@
   /* Table row hover */
   tbody tr[data-slot='table-row'] {
     @apply transition-colors duration-150;
-    cursor: pointer;
   }
 
   tbody tr[data-slot='table-row']:hover {
