@@ -186,8 +186,9 @@ jobs:
           echo "Running database migration gate..."
           docker run --rm \
             --network btn-hrms-network \
-            -e DATABASE_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
-            -e DATABASE_DIRECT_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
+            --env-file /home/hieutt/btn-hrms/.env \
+            -e DATABASE_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
+            -e DATABASE_DIRECT_URL="postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}" \
             "$IMAGE_API_TAG" npx drizzle-kit migrate || { echo "Migration gate failed! Stopping deploy."; exit 1; }
 
           # 7. Update images & bring containers up
