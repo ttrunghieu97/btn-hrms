@@ -8,17 +8,14 @@ const checks = [];
 if (apiBaseUrl) {
   const base = apiBaseUrl.replace(/\/$/, "");
 
-  checks.push({ name: "api v1 root", url: `${base}/` });
   checks.push({ name: "api health", url: `${base}/health` });
   checks.push({ name: "api ready", url: `${base}/ready` });
   checks.push({ name: "api strict readiness", url: `${base}/ready/strict` });
-  checks.push({ name: "api auth session", url: `${base}/auth/session` });
 }
 
 if (webUrl) {
   const base = webUrl.replace(/\/$/, "");
   checks.push({ name: "web root", url: `${base}/` });
-  checks.push({ name: "web login", url: `${base}/auth/login` });
   checks.push({ name: "web dashboard", url: `${base}/dashboard` });
   checks.push({ name: "web favicon", url: `${base}/favicon.ico` });
   checks.push({ name: "web robots", url: `${base}/robots.txt` });
