@@ -14,7 +14,7 @@ import { COMPANY_DOCUMENT_OPTIONS } from '../../utils/employee-form-model';
 import { employeeUiCopy } from '@/lib/app-copy';
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { useQuery } from '@tanstack/react-query';
-import { employeeHoldingsQueryOptions, type AssetHoldingItem } from '@/features/asset-management/api/queries';
+import { employeeHoldingsQueryOptions, type AssetHoldingItem } from '@/features/asset-management';
 import { Icons } from '@/components/icons';
 import { useEmployeeTimelineQuery } from '../../queries/employee-queries';
 import type { TimelineEventDto } from '../../api/timeline';

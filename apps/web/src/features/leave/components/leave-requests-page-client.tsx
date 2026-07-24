@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { employeesQueryOptions } from '@/features/employees/api/queries';
+import { employeesQueryOptions } from '@/features/employees';
 import { extractList, extractPagination } from '@/lib/api-extract';
 import { LeaveRequestsTable } from './leave-requests-table';
 import { LeaveBalanceView } from './leave-balance-view';

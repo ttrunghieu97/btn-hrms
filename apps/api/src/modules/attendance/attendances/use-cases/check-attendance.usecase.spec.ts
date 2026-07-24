@@ -9,6 +9,7 @@ import { AttendanceEvidenceService } from "../services/attendance-evidence.servi
 describe(CheckAttendanceUseCase.name, () => {
   function buildUseCase(overrides: Record<string, any> = {}) {
     const attendancesRepo = {
+      acquireAdvisoryLock: jest.fn().mockResolvedValue(undefined),
       insertEvent: jest.fn().mockResolvedValue({ id: "att-1" }),
       transaction: jest.fn().mockImplementation(async (fn) => fn({})),
       ...overrides.attendancesRepo,
