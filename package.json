@@ -20,6 +20,7 @@
     "lint:api": "pnpm --filter @project/api lint",
     "lint:web": "pnpm --filter frontend lint",
     "check": "pnpm lint:check && pnpm arch:check",
+    "check:all": "pnpm lint:check && pnpm arch:check && pnpm test:api && pnpm --filter frontend typecheck && pnpm --filter frontend depcruise && pnpm build",
     "check:api": "pnpm --filter @project/api check",
     "test": "pnpm --filter @project/api test && pnpm --filter frontend test",
     "test:api": "pnpm --filter @project/api test",

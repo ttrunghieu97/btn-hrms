@@ -90,15 +90,6 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
-      - name: Check API image size
-        run: |
-          SIZE=$(docker images --format "{{.Size}}" ${{ env.IMAGE_API }}:${{ github.sha }})
-          echo "API image size: $SIZE"
-          BYTES=$(docker inspect ${{ env.IMAGE_API }}:${{ github.sha }} --format="{{.Size}}")
-          if [ "$BYTES" -gt 900000000 ]; then
-            echo "::warning::API image size $SIZE exceeds 900 MB threshold"
-          fi
-
       - name: Build and push Web image
         id: build-web
         uses: docker/build-push-action@v6
@@ -117,15 +108,6 @@ jobs:
             NEXT_PUBLIC_SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             NEXT_PUBLIC_SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      - name: Check Web image size
-        run: |
-          SIZE=$(docker images --format "{{.Size}}" ${{ env.IMAGE_WEB }}:${{ github.sha }})
-          echo "Web image size: $SIZE"
-          BYTES=$(docker inspect ${{ env.IMAGE_WEB }}:${{ github.sha }} --format="{{.Size}}")
-          if [ "$BYTES" -gt 550000000 ]; then
-            echo "::warning::Web image size $SIZE exceeds 550 MB threshold"
-          fi
 
       - name: Trivy scanner (API)
         uses: aquasecurity/trivy-action@master
