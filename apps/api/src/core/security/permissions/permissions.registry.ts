@@ -131,6 +131,9 @@ export const Permissions = {
   ROLES_EDIT: "roles:edit",
   ROLES_DELETE: "roles:delete",
 
+  // -- Profile -----------------------------------------------------------
+  PROFILE_VIEW: "profile:view",
+
   // -- Chat ---------------------------------------------------------------
   CHAT_VIEW: "chat:view",
   CHAT_SEND: "chat:send",
@@ -196,6 +199,7 @@ const CATALOG_PERMISSION_CODES = [
   Permissions.PAYROLL_MANAGE,
   Permissions.NOTIFICATIONS_VIEW_SELF,
   Permissions.NOTIFICATIONS_MANAGE_PLATFORM,
+  Permissions.PROFILE_VIEW,
 ] as const;
 
 export const PERMISSION_CATALOG = CATALOG_PERMISSION_CODES.map((code) => {
