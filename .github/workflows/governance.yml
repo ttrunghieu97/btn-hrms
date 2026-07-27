@@ -1,10 +1,10 @@
-name: governance
+name: Governance
+
 on:
   pull_request:
     branches: [master]
-  # push on master is handled by deploy.yml (check job) + e2e.yml.
-  # governance runs alongside deploy, duplicating checks unnecessarily.
-  # Keep only pull_request trigger. Master push is covered by deploy.
+  push:
+    branches: [master]
 
 concurrency:
   group: ${{ github.ref }}

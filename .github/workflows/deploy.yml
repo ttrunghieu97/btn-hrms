@@ -18,50 +18,12 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────
-  # Gate: lint, test, build, security audit before any image push
-  # ──────────────────────────────────────────────────────────────
-  check:
-    name: Lint, Test & Security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-
-      - name: Lint (API)
-        run: pnpm --filter @project/api lint:check
-      - name: Lint (Web)
-        run: pnpm --filter frontend lint
-
-      - name: Build shared packages
-        run: pnpm --filter @project/permissions build
-
-      - name: TypeCheck (Web)
-        run: pnpm --filter frontend typecheck
-
-      - name: Unit tests (API)
-        run: pnpm --filter @project/api test
-
-      - name: Build
-        run: pnpm build
-
-      - name: Security audit
-        run: pnpm audit --prod
-        continue-on-error: true  # advisory only, not a hard gate
-
-  # ──────────────────────────────────────────────────────────────
   # Build both images on GitHub runners, push to GHCR.
   # VPS never touches source or runs pnpm/tsc/next build.
+  # Pre-merge checks handled by governance.yml.
   # ──────────────────────────────────────────────────────────────
   build:
     name: Build & Push Images
-    needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: read

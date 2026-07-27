@@ -1,12 +1,12 @@
 import { EmployeePolicies } from './employee.policy';
 
 describe('EmployeePolicies.view', () => {
-  it('allows self access with employees:view:self', () => {
+  it('allows self access with employee:view:self', () => {
     const user = {
       id: 'user-1',
       employeeId: 'employee-1',
       departmentId: 'dept-1',
-      permissions: ['employees:view:self'],
+      permissions: ['employee:view:self'],
     };
     const resource = { id: 'employee-1', departmentId: 'dept-2' };
 
@@ -18,19 +18,19 @@ describe('EmployeePolicies.view', () => {
       id: 'user-1',
       employeeId: 'employee-1',
       departmentId: 'dept-1',
-      permissions: ['employees:view:department'],
+      permissions: ['employee:view:department'],
     };
 
     expect(EmployeePolicies.view.handle(user as never, { id: 'employee-2', departmentId: 'dept-1' })).toBe(true);
     expect(EmployeePolicies.view.handle(user as never, { id: 'employee-3', departmentId: 'dept-2' })).toBe(false);
   });
 
-  it('allows all access with employees:view:all', () => {
+  it('allows all access with employee:view:all', () => {
     const user = {
       id: 'user-1',
       employeeId: 'employee-1',
       departmentId: 'dept-1',
-      permissions: ['employees:view:all'],
+      permissions: ['employee:view:all'],
     };
 
     expect(EmployeePolicies.view.handle(user as never, { id: 'employee-2', departmentId: 'dept-9' })).toBe(true);
