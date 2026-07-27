@@ -187,6 +187,8 @@ function checkRoutePermission(pathname: string, req: NextRequest) {
   if (!permCookie) return null;
 
   const decoded = decodePermissions(permCookie);
+  if (!decoded) return null;
+
   const permissions = decoded.permissions;
   const isSuperAdmin = permissions.includes('sys:all') || permissions.includes('ALL');
 
