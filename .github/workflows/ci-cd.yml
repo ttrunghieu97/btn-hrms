@@ -1,0 +1,394 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/btn-hrms-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/btn-hrms-web
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.10.0"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Governance Jobs (Lint, TypeCheck, Architecture, Unit Tests)
+  # ──────────────────────────────────────────────────────────────
+  lint:
+    name: Governance / Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter frontend error-contracts:verify
+      - run: pnpm --filter @project/api lint:check
+      - run: pnpm --filter frontend lint
+
+  typecheck:
+    name: Governance / TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter frontend typecheck
+
+  arch-check:
+    name: Governance / Architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/api arch:check
+        env:
+          ARCH_MODE: enforce-new
+      - run: pnpm --filter frontend depcruise
+
+  unit-test:
+    name: Governance / Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: hrms
+          POSTGRES_PASSWORD: hrms
+          POSTGRES_DB: hrms
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/api test:unit
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+
+  build-check:
+    name: Governance / Code Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  dependency-health:
+    name: Governance / Dependency Health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check lockfile deduplication
+        run: pnpm dedupe --check
+      - name: Security audit (advisory only)
+        run: pnpm audit --prod --audit-level=high
+        continue-on-error: true
+      - name: Check for unused dependencies
+        run: npx -y depcheck --ignores="postgres,supabase"
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────────
+  # E2E Testing
+  # ──────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hrms
+          POSTGRES_PASSWORD: hrms
+          POSTGRES_DB: hrms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      minio:
+        image: minio/minio:RELEASE.2024-08-03T04-33-23Z
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DOMAIN: localhost
+        ports:
+          - 9000:9000
+          - 9001:9001
+        options: >-
+          --health-cmd "curl -s http://localhost:9000/minio/health/live"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        command: -c 'mkdir -p /data/btn-hrms && /usr/bin/minio server /data --console-address ":9001"'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build API
+        run: pnpm --filter @project/api build
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          REDIS_URL: redis://localhost:6379
+          AUTH_JWT_SECRET: test-secret
+      - name: Seed database
+        run: pnpm --filter @project/api db:seed
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+      - name: Run API E2E tests
+        run: pnpm --filter @project/api test:e2e
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          AUTH_JWT_SECRET: test-secret
+          REDIS_URL: redis://localhost:6379
+          STORAGE_BACKEND: s3
+          STORAGE_S3_URL: http://minioadmin:minioadmin@localhost:9000?region=us-east-1
+          STORAGE_BUCKET: btn-hrms
+          STORAGE_S3_FORCE_PATH_STYLE: true
+      - name: Install Playwright browsers
+        run: pnpm --filter frontend exec playwright install chromium
+      - name: Start API server
+        run: |
+          cd apps/api && node dist/main.js &
+          sleep 5
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          AUTH_JWT_SECRET: test-secret
+          REDIS_URL: redis://localhost:6379
+      - name: Start Web server
+        run: |
+          cd apps/web && npx next start &
+          sleep 5
+        env:
+          DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      - name: Run Playwright tests
+        run: pnpm --filter frontend exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────
+  # Docker Build & VPS Deployment (Master Branch Only)
+  # ──────────────────────────────────────────────────────────────
+  docker-build:
+    name: Build & Push Images
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        id: build-api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ github.sha }}
+            ${{ env.IMAGE_API }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push Web image
+        id: build-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_WEB }}:${{ github.sha }}
+            ${{ env.IMAGE_WEB }}:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+          build-args: |
+            NEXT_PUBLIC_API_URL=/api/v1
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            NEXT_PUBLIC_SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Trivy scanner (API)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_API }}:${{ github.sha }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy scanner (Web)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Deploy to VPS
+    if: github.ref == 'refs/heads/master'
+    needs: docker-build
+    runs-on: [self-hosted, btn-hrms-vps]
+    environment: production
+    steps:
+      - name: Checkout (for compose files)
+        uses: actions/checkout@v4
+
+      - name: Deploy and restart services
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_API_TAG: ${{ env.IMAGE_API }}:${{ github.sha }}
+          IMAGE_WEB_TAG: ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p /home/hieutt/btn-hrms
+          cp docker-compose.yml docker-compose.infra.yml Caddyfile /home/hieutt/btn-hrms/
+          mkdir -p /home/hieutt/btn-hrms/scripts/deployment
+          cp scripts/deployment/* /home/hieutt/btn-hrms/scripts/deployment/
+
+          cd /home/hieutt/btn-hrms
+
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+          export IMAGE_API="$IMAGE_API_TAG"
+          export IMAGE_WEB="$IMAGE_WEB_TAG"
+
+          docker compose -f docker-compose.infra.yml up -d
+          docker compose pull
+
+          echo "Running database migration gate..."
+          docker run --rm \
+            --network btn-hrms-network \
+            --env-file /home/hieutt/btn-hrms/.env \
+            -e HOME=/tmp \
+            "$IMAGE_API_TAG" npx drizzle-kit migrate || { echo "Migration gate failed! Stopping deploy."; exit 1; }
+
+          docker tag "$IMAGE_API_TAG" btn-hrms-api:latest
+          docker tag "$IMAGE_WEB_TAG" btn-hrms-web:latest
+          docker compose up -d --no-build --wait || { echo "Container boot / readiness check failed! Aborting."; exit 1; }
+
+          docker exec btn-hrms-caddy caddy reload --config /etc/caddy/Caddyfile
+          docker image prune -f
+
+          docker run --rm --network btn-hrms-network \
+            -v "/home/hieutt/btn-hrms:/app" -w /app \
+            -e SMOKE_API_URL="http://btn-hrms-api:3001/api/v1" \
+            -e SMOKE_WEB_URL="http://btn-hrms-web:8080" \
+            node:22-alpine node scripts/deployment/smoke-check.mjs
+
+      - name: Create Sentry release
+        if: env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@v3
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: apps/web/.next/static/chunks
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
