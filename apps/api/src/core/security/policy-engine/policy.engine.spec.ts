@@ -12,7 +12,9 @@ describe('PolicyEngine', () => {
     // Mock the hierarchy resolver to just check for exact matches
     const mockResolver = {
       satisfies: jest.fn((permissions: string[] | undefined, required: string) => {
-        return (permissions || []).includes(required);
+        const perms = permissions || [];
+        if (perms.includes('sys:all')) return true;
+        return perms.includes(required);
       }),
     };
 
@@ -36,19 +38,6 @@ describe('PolicyEngine', () => {
     action: 'TestAction',
   });
 
-  it('should always allow super-admins', async () => {
-    const ctx = createCtx({ isSuperAdmin: true });
-    const handler: PolicyHandler = {
-      requiredAnyOfPermissions: ['test:perm'],
-      handle: () => false, // Would normally fail
-    };
-
-    const result = await engine.evaluate([handler], ctx);
-
-    expect(result.allowed).toBe(true);
-    expect(result.decidedBy).toBe('super_admin');
-  });
-
   it('should always allow users with sys:all permission', async () => {
     const ctx = createCtx({ permissions: ['sys:all'] });
     const handler: PolicyHandler = {
@@ -59,7 +48,6 @@ describe('PolicyEngine', () => {
     const result = await engine.evaluate([handler], ctx);
 
     expect(result.allowed).toBe(true);
-    expect(result.decidedBy).toBe('super_admin');
   });
 
   it('should deny if permission fast-path fails (single handler)', async () => {

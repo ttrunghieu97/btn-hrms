@@ -4,14 +4,14 @@ import * as React from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { DomainHeader } from '@/components/layout/domain-header';
 import { useAuthStore } from '@/stores/auth-store';
-import { hasPermission } from '@/lib/rbac';
+import { hasPermission } from '@project/permissions';
 import { permissions } from '@/lib/permissions';
 
 export default function AttendanceLayout({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
 
-  const canViewAll = hasPermission(user, permissions.attendance.viewAll);
-  const canViewDepartment = hasPermission(user, permissions.attendance.viewDepartment);
+  const canViewAll = hasPermission(user?.permissions ?? [], permissions.attendance.viewAll);
+  const canViewDepartment = hasPermission(user?.permissions ?? [], permissions.attendance.viewDepartment);
   const canAdmin = canViewAll || canViewDepartment;
 
   const tabs = [

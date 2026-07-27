@@ -27,7 +27,7 @@ import { extractList, unwrapData } from '@/lib/api-extract';
 import { isUnauthenticatedError } from '@/lib/error-taxonomy';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
-import { hasPermission } from '@/lib/rbac';
+import { hasPermission } from '@project/permissions';
 import { permissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { presenceColumns, type PresenceItem, type PresenceStatus } from './presence-columns';
@@ -55,7 +55,7 @@ export function PresenceManagement() {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const user = useAuthStore((state) => state.user);
-  const canViewAll = hasPermission(user, permissions.attendance.viewAll);
+  const canViewAll = hasPermission(user?.permissions ?? [], permissions.attendance.viewAll);
 
   const [departmentId, setDepartmentId] = React.useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = React.useState<PresenceStatus | null>(null);

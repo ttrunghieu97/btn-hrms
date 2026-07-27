@@ -1,12 +1,14 @@
 import type { UserMeResponseDto } from '@/api/generated/model';
 import { navGroups } from '@/config/nav-config';
 import { filterNavItems } from '@/hooks/use-nav';
+import { hasPermission } from '@/lib/rbac';
 
 /**
  * Navigate to first accessible nav item after login.
  * Fallback:
- *   - /account/profile (auth-only) if user has some permissions
  *   - /account/no-permissions if user has zero permissions
+ *   - /account/profile (auth-only) if user has some permissions
+ *   - /overview if user has dashboard:view
  */
 export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefined): string {
   if (!user) return '/auth/sign-in';
@@ -26,6 +28,17 @@ export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefi
     return '/account/no-permissions';
   }
 
-  // Has some permissions but none match nav → safe profile
+  // Try fallback pages — verify permission before redirecting
+  const fallbacks: [string, string][] = [
+    ['/account/profile', 'employees:view:self'],
+    ['/overview', 'dashboard:view'],
+  ];
+  for (const [url, perm] of fallbacks) {
+    if (hasPermission(user, perm)) {
+      return url;
+    }
+  }
+
+  // Last resort: user truly has zero permissions
   return '/account/profile';
 }

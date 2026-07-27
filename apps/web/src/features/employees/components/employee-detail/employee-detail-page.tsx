@@ -14,7 +14,7 @@ import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { feedbackCopy, feedbackEntity } from '@/lib/feedback-copy';
 import { useAuthStore } from '@/stores/auth-store';
 import { getVietnameseApiErrorMessage } from '@/lib/api-error-message';
-import { anyOf } from '@/lib/rbac';
+import { hasAnyPermission } from '@project/permissions';
 import { permissions } from '@/lib/permissions';
 import { getEmployeeName, extractAssetUrl } from '../../utils/employee-display';
 import { employeeKeys } from '../../api/queries';
@@ -119,11 +119,11 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   const [confirmDiscardOpen, setConfirmDiscardOpen] = React.useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const canEdit = anyOf(user, ['employees:edit', 'employees:manage']);
-  const canDelete = anyOf(user, ['employees:delete', 'employees:manage']);
-  const canResetPassword = anyOf(user, [permissions.employees.resetPassword, 'employees:manage']);
+  const canEdit = hasAnyPermission(user?.permissions ?? [], ['employees:edit', 'employees:manage']);
+  const canDelete = hasAnyPermission(user?.permissions ?? [], ['employees:delete', 'employees:manage']);
+  const canResetPassword = hasAnyPermission(user?.permissions ?? [], [permissions.employees.resetPassword, 'employees:manage']);
   const showTerminate =
-    anyOf(user, ['employees:edit', 'employees:manage']) &&
+    hasAnyPermission(user?.permissions ?? [], ['employees:edit', 'employees:manage']) &&
     currentEmployee?.allowedTransitions?.includes('terminated');
 
   const avatarUrl = extractAssetUrl(currentEmployee?.avatar);

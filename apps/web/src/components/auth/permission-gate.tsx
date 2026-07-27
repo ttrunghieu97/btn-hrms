@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
-import { hasPermission } from '@/lib/rbac';
+import { hasPermission } from '@project/permissions';
 import { can, type PermissionRule, ruleLabel } from '@/lib/permission-resolver';
 
 interface PermissionGateProps {
@@ -31,7 +31,7 @@ export default function PermissionGate({ permission, rule, children, redirectOnD
   const user = useAuthStore((state) => state.user);
 
   const denied = permission
-    ? !hasPermission(user, permission)
+    ? !hasPermission(user?.permissions ?? [], permission)
     : rule
       ? !can(user, rule)
       : false;

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { type AuthUser } from "../types/auth-user.interface";
 import { type PolicyHandler } from "../policies/policy-handler.interface";
 import { PermissionHierarchyResolver } from "../permissions/permission-hierarchy.resolver";
-import { Permissions } from "../permissions/permissions.registry";
 import {
   PolicyEvaluationContext,
   PolicyEvaluationResult,
@@ -42,8 +41,9 @@ export class PolicyEngine {
   ): Promise<PolicyEvaluationResult> {
     const { user, resource } = ctx;
 
-    // ── Stage 1: Super-admin bypass ─────────────────────────────────────────
-    if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) {
+    // ── Stage 1: Root permission bypass ─────────────────────────────────────
+    // sys:all in user permissions is the root — skip all handler evaluation.
+    if (user.permissions?.includes('sys:all')) {
       return {
         allowed: true,
         decidedBy: "super_admin",
@@ -128,7 +128,6 @@ export class PolicyEngine {
    * Usage: policyEngine.can(user, "attendance:view:self")
    */
   can(user: AuthUser, permissionCode: string): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
-    return this.hierarchyResolver.satisfies(user.permissions, permissionCode);
+    return this.hierarchyResolver.satisfies(user.permissions ?? [], permissionCode);
   }
 }

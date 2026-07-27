@@ -3,13 +3,14 @@
  * Hierarchy-aware — delegates to @project/permissions.
  *
  * Supports anyOf (OR), allOf (AND), not (NOT) compositions.
+ * `sys:all` root permission handled by the resolver, not here.
  *
  * Usage:
  *   can({ anyOf: [employee.view, employee.manage] })
  *   can({ allOf: [employee.view, payroll.view], not: [employee.suspended] })
  */
-import { hasAnyPermission, hasAllPermissions, type PermissionedUser } from '@project/permissions';
-import { SUPER_ADMIN_CODES } from './rbac';
+import { hasAnyPermission, hasAllPermissions } from '@project/permissions';
+import type { PermissionedUser } from './rbac';
 
 export interface PermissionRule {
   anyOf?: readonly string[];
@@ -17,45 +18,30 @@ export interface PermissionRule {
   not?: readonly string[];
 }
 
-function isSuper(user: PermissionedUser | null | undefined): boolean {
-  if (!user) return false;
-  if (user.isSuperAdmin) return true;
-  return SUPER_ADMIN_CODES.some((c) => (user.permissions ?? []).includes(c));
-}
-
 /**
  * Resolve compound permission rule against a user.
- * All conditions must be satisfied (anyOf ∩ allOf ∩ not).
+ * Delegates permission checking to @project/permissions (hierarchy-aware,
+ * sys:all root).
  */
 export function can(
   user: PermissionedUser | null | undefined,
   rule: PermissionRule,
 ): boolean {
-  if (isSuper(user)) return true;
   const perms = user?.permissions ?? [];
-  if (!perms.length && !isSuper(user)) {
-    // If rule has not-condition, still evaluate it
-    if (rule.not?.length) {
-      // User has no permissions → definitely doesn't have the negated ones
-      // not: [...] is satisfied
-    } else {
-      return false;
-    }
-  }
 
   // not: none of these must be present
   if (rule.not?.length) {
-    if (hasAnyPermission(perms, [...rule.not], false)) return false;
+    if (hasAnyPermission(perms, [...rule.not])) return false;
   }
 
   // anyOf: at least one must match
   if (rule.anyOf?.length) {
-    if (!hasAnyPermission(perms, [...rule.anyOf], false)) return false;
+    if (!hasAnyPermission(perms, [...rule.anyOf])) return false;
   }
 
   // allOf: every one must match
   if (rule.allOf?.length) {
-    if (!hasAllPermissions(perms, [...rule.allOf], false)) return false;
+    if (!hasAllPermissions(perms, [...rule.allOf])) return false;
   }
 
   return true;

@@ -12,12 +12,12 @@ export interface PermissionedUser {
 
 /**
  * Simple permission check (mirrors frontend rbac.ts logic server-side).
- * Single source of truth — FE and BE use same semantics.
+ * `sys:all` root permission handled by resolver — no separate super-admin bypass.
  */
 function hasPermission(user: PermissionedUser, perm: string): boolean {
-  if (user.isSuperAdmin) return true;
   const owned = user.permissions ?? [];
   if (owned.includes(perm)) return true;
+  if (owned.includes("sys:all")) return true;
   // :view shortcut — :manage implies :view
   if (perm.endsWith(":view")) {
     return owned.includes(perm.replace(/:view$/, ":manage"));
@@ -27,7 +27,6 @@ function hasPermission(user: PermissionedUser, perm: string): boolean {
 
 function anyOf(user: PermissionedUser, perms?: string[]): boolean {
   if (!perms || perms.length === 0) return true;
-  if (user.isSuperAdmin) return true;
   return perms.some((p) => hasPermission(user, p));
 }
 

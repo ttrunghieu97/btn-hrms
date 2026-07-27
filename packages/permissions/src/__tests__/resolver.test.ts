@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hasPermission, hasAnyPermission, hasAllPermissions, resolvePermissions } from '../utils';
+import { PermissionRegistry } from '../registry/registry';
 
 describe('hasPermission (hierarchy-aware)', () => {
   it('returns true on direct match', () => {
@@ -21,10 +22,6 @@ describe('hasPermission (hierarchy-aware)', () => {
 
   it('returns false for missing permission', () => {
     expect(hasPermission(['attendance:view:self'], 'attendance:check')).toBe(false);
-  });
-
-  it('returns true for super admin', () => {
-    expect(hasPermission([], 'attendance:view:self', true)).toBe(true);
   });
 
   it('returns false for null/undefined permissions', () => {
@@ -58,6 +55,37 @@ describe('hasPermission (hierarchy-aware)', () => {
   it('does not cross domain hierarchies', () => {
     expect(hasPermission(['attendance:view:all'], 'leave:view:self')).toBe(false);
   });
+
+  // ── sys:all root permission ──────────────────────────────────────────
+
+  it('sys:all grants any permission via hierarchy', () => {
+    expect(hasPermission(['sys:all'], 'dashboard:view')).toBe(true);
+    expect(hasPermission(['sys:all'], 'employee:view:self')).toBe(true);
+    expect(hasPermission(['sys:all'], 'attendance:view:self')).toBe(true);
+    expect(hasPermission(['sys:all'], 'payroll:view:all')).toBe(true);
+    expect(hasPermission(['sys:all'], 'nonexistent:perm')).toBe(true);
+  });
+
+  it('sys:all works alongside other permissions', () => {
+    expect(hasPermission(['sys:all', 'employee:view'], 'attendance:view:self')).toBe(true);
+  });
+});
+
+// ── Regression: sys:all grants EVERY registered permission ─────────────
+describe('sys:all root permission invariant', () => {
+  // Flatten PermissionRegistry to get all known permission codes
+  const allPermissionCodes = Object.values(PermissionRegistry).flatMap(
+    (domain: Record<string, string>) => Object.values(domain),
+  );
+
+  it.each(allPermissionCodes)('sys:all grants %s', (code: string) => {
+    expect(hasPermission(['sys:all'], code)).toBe(true);
+  });
+
+  it('sys:all grants any imaginable future permission code', () => {
+    expect(hasPermission(['sys:all'], 'future-module:create')).toBe(true);
+    expect(hasPermission(['sys:all'], 'hr:report:view:all')).toBe(true);
+  });
 });
 
 describe('hasAnyPermission', () => {
@@ -81,6 +109,10 @@ describe('hasAnyPermission', () => {
       ['leave:view:self', 'attendance:view:self'],
     )).toBe(true);
   });
+
+  it('sys:all passes hasAnyPermission', () => {
+    expect(hasAnyPermission(['sys:all'], ['nonexistent:perm', 'also:missing'])).toBe(true);
+  });
 });
 
 describe('hasAllPermissions', () => {
@@ -96,6 +128,10 @@ describe('hasAllPermissions', () => {
       ['attendance:view:self'],
       ['attendance:view:self', 'leave:view:self'],
     )).toBe(false);
+  });
+
+  it('sys:all passes hasAllPermissions', () => {
+    expect(hasAllPermissions(['sys:all'], ['attendance:view:self', 'leave:view:self', 'payroll:view:all'])).toBe(true);
   });
 });
 
@@ -115,5 +151,10 @@ describe('resolvePermissions', () => {
   it('returns empty for null/undefined', () => {
     expect(resolvePermissions(null)).toEqual([]);
     expect(resolvePermissions(undefined)).toEqual([]);
+  });
+
+  it('sys:all resolvePermissions returns sys:all', () => {
+    const resolved = resolvePermissions(['sys:all']);
+    expect(resolved).toContain('sys:all');
   });
 });

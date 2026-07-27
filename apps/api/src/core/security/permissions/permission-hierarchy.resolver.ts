@@ -57,13 +57,17 @@ export class PermissionHierarchyResolver {
   /**
    * Check whether a user's effective permissions satisfy a required code,
    * considering inheritance (caller has a parent of requiredCode).
+   *
+   * `sys:all` is the root permission — grants every code.
    */
   satisfies(userPermissions: string[], requiredCode: string): boolean {
+    // Root permission — sys:all grants everything
+    if (userPermissions.includes('sys:all')) return true;
+
     // Direct match
     if (userPermissions.includes(requiredCode)) return true;
 
     // Check if any user permission is an ancestor of requiredCode
-    // (i.e. user has a broader permission that implies requiredCode)
     const expanded = this.expand(userPermissions);
     return expanded.includes(requiredCode);
   }

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { anyOf, hasPermission, type PermissionedUser } from './rbac';
+import { hasPermission, hasAnyPermission } from '@project/permissions';
+import type { PermissionedUser } from './rbac';
 
 /**
  * Client-side: call from "use client" component after auth store initialized.
@@ -10,7 +11,7 @@ export function ensurePermission(
   perm: string,
   redirectTo = '/unauthorized'
 ): void {
-  if (!hasPermission(user, perm)) {
+  if (!hasPermission(user?.permissions ?? [], perm)) {
     redirect(`${redirectTo}?missing=${encodeURIComponent(perm)}`);
   }
 }
@@ -20,7 +21,7 @@ export function ensureAnyPermission(
   perms: string[],
   redirectTo = '/unauthorized'
 ): void {
-  if (!anyOf(user, perms)) {
+  if (!hasAnyPermission(user?.permissions ?? [], perms)) {
     redirect(`${redirectTo}?missingAnyOf=${encodeURIComponent(perms.join(','))}`);
   }
 }

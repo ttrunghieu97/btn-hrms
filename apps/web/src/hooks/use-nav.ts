@@ -1,12 +1,12 @@
 import * as React from 'react';
 import type { NavGroup, NavItem } from '@/types';
-import { anyOf, hasPermission } from '@/lib/rbac';
+import { hasAnyPermission } from '@project/permissions';
 import { useAuthStore } from '@/stores/auth-store';
 
 export function canAccessNavItem(item: NavItem, user: ReturnType<typeof useAuthStore.getState>['user']) {
   const access = item.access;
   if (!access) return true;
-  if (access.permissions?.length) return anyOf(user, access.permissions);
+  if (access.permissions?.length) return hasAnyPermission(user?.permissions ?? [], access.permissions);
   return true;
 }
 
