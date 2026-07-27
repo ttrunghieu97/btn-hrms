@@ -45,7 +45,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        entrypoint: sh
         command: -c 'mkdir -p /data/btn-hrms && /usr/bin/minio server /data --console-address ":9001"'
     steps:
       - uses: actions/checkout@v4
