@@ -39,6 +39,9 @@ jobs:
       - name: Lint (Web)
         run: pnpm --filter frontend lint
 
+      - name: Build shared packages
+        run: pnpm --filter @project/permissions build
+
       - name: TypeCheck (Web)
         run: pnpm --filter frontend typecheck
 
