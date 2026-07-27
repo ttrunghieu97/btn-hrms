@@ -3,7 +3,7 @@ import { type PolicyHandler } from "./base.policy";
 import { Permissions } from "../permissions/permissions.registry";
 
 function hasAny(user: AuthUser, ...perms: string[]): boolean {
-  if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+  if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
   const granted = user.permissions ?? [];
   return perms.some((p) => granted.includes(p));
 }

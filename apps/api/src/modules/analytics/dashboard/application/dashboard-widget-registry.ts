@@ -24,7 +24,7 @@ export class DashboardWidgetRegistry {
         if (!def.enabled) return false;
 
         const hasPermission =
-          ctx.currentUserPermissions.includes("ALL") ||
+          ctx.currentUserPermissions.includes("sys:all") ||
           def.permissions.length === 0 ||
           def.permissions.some((p) => ctx.currentUserPermissions.includes(p));
 

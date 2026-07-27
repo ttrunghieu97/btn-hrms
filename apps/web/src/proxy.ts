@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAnyPermission } from '@project/permissions';
+import { canAccessRoute } from '@/shared/authorization';
 import { matchRoute } from '@/features/authorization/utils/route-matcher';
 import { routeRegistry } from '@/features/authorization/route-registry/routes';
 import { decodePermissions } from '@/lib/server/permission-session-edge';
@@ -188,11 +189,10 @@ function checkRoutePermission(pathname: string, req: NextRequest) {
   const decoded = decodePermissions(permCookie);
   if (!decoded) return null; // corrupted cookie → SSR fallback
 
-  // Uses shared hasAnyPermission (hierarchy-aware, sys:all root)
-  if (!hasAnyPermission(decoded.permissions, [...permission.anyOf])) {
+  if (!canAccessRoute(normalized, decoded.permissions)) {
     const url = req.nextUrl.clone();
     url.pathname = '/unauthorized';
-    url.search = '?missing=' + encodeURIComponent(permission.anyOf.join(','));
+    url.search = '?path=' + encodeURIComponent(normalized);
     return NextResponse.redirect(url);
   }
   return null;

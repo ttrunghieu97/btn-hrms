@@ -27,7 +27,10 @@ export function can(
   user: PermissionedUser | null | undefined,
   rule: PermissionRule,
 ): boolean {
+  if (!user) return false;
   const perms = user?.permissions ?? [];
+
+  if (!rule.anyOf?.length && !rule.allOf?.length && !rule.not?.length) return false;
 
   // not: none of these must be present
   if (rule.not?.length) {

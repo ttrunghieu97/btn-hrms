@@ -12,7 +12,7 @@ class ViewDepartmentPolicyHandler implements PolicyHandler {
   readonly policyName = "ViewDepartment";
   readonly requiredAnyOfPermissions = [Permissions.DEPARTMENTS_VIEW];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.DEPARTMENTS_VIEW) ?? false;
   }
 }
@@ -20,7 +20,7 @@ class CreateDepartmentPolicyHandler implements PolicyHandler {
   readonly policyName = "CreateDepartment";
   readonly requiredAnyOfPermissions = [Permissions.DEPARTMENTS_CREATE];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.DEPARTMENTS_CREATE) ?? false;
   }
 }
@@ -28,7 +28,7 @@ class EditDepartmentPolicyHandler implements PolicyHandler {
   readonly policyName = "EditDepartment";
   readonly requiredAnyOfPermissions = [Permissions.DEPARTMENTS_EDIT];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.DEPARTMENTS_EDIT) ?? false;
   }
 }
@@ -36,7 +36,7 @@ class DeleteDepartmentPolicyHandler implements PolicyHandler {
   readonly policyName = "DeleteDepartment";
   readonly requiredAnyOfPermissions = [Permissions.DEPARTMENTS_DELETE];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.DEPARTMENTS_DELETE) ?? false;
   }
 }
@@ -52,7 +52,7 @@ class ViewSchedulePolicyHandler implements PolicyHandler {
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     if (perms.includes(Permissions.SCHEDULE_VIEW_ALL)) return true;
     if (!resource) {
@@ -88,7 +88,7 @@ class EditSchedulePolicyHandler implements PolicyHandler {
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     if (perms.includes(Permissions.SCHEDULE_EDIT_ALL)) return true;
     if (!resource) return perms.includes(Permissions.SCHEDULE_EDIT_DEPARTMENT);
@@ -114,7 +114,7 @@ class CopySchedulePolicyHandler implements PolicyHandler {
   readonly policyName = "CopySchedule";
   readonly requiredAnyOfPermissions = [Permissions.SCHEDULE_COPY];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.SCHEDULE_COPY) ?? false;
   }
 }
@@ -127,7 +127,7 @@ class CreateSchedulePolicyHandler implements PolicyHandler {
     Permissions.SCHEDULE_EDIT_DEPARTMENT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     return (
       perms.includes(Permissions.SCHEDULE_CREATE) ||
@@ -144,7 +144,7 @@ class DeleteSchedulePolicyHandler implements PolicyHandler {
     Permissions.SCHEDULE_EDIT_ALL,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     return (
       perms.includes(Permissions.SCHEDULE_DELETE) ||
@@ -163,7 +163,7 @@ class ViewPayrollPolicyHandler implements PolicyHandler {
     Permissions.PAYROLL_MANAGE,
   ];
   handle(user: AuthUser, resource?: any): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     if (
       perms.includes(Permissions.PAYROLL_VIEW_ALL) ||
@@ -189,7 +189,7 @@ class ViewAllPayrollPolicyHandler implements PolicyHandler {
     Permissions.PAYROLL_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     return (
       perms.includes(Permissions.PAYROLL_VIEW) ||
@@ -206,7 +206,7 @@ class EditPayrollPolicyHandler implements PolicyHandler {
     Permissions.PAYROLL_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     return (
       perms.includes(Permissions.PAYROLL_EDIT) ||
@@ -219,7 +219,7 @@ class ManagePayrollPeriodsPolicyHandler implements PolicyHandler {
   readonly policyName = "ManagePayrollPeriods";
   readonly requiredAnyOfPermissions = [Permissions.PAYROLL_MANAGE_PERIODS];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.PAYROLL_MANAGE_PERIODS) ?? false;
   }
 }
@@ -228,7 +228,7 @@ class ManagePayslipsPolicyHandler implements PolicyHandler {
   readonly policyName = "ManagePayslips";
   readonly requiredAnyOfPermissions = [Permissions.PAYROLL_MANAGE_PAYSLIPS];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.PAYROLL_MANAGE_PAYSLIPS) ?? false;
   }
 }

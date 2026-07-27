@@ -36,7 +36,7 @@ export class ReassignTaskUseCase {
 
     // Guard: only manager/admin can reassign
     const actorPerms = actor.permissions ?? [];
-    const canManageAll = actor.isSuperAdmin || actorPerms.includes("ALL") || actorPerms.includes("tasks:manage");
+    const canManageAll = actor.isSuperAdmin || actorPerms.includes("sys:all") || actorPerms.includes("tasks:manage");
     const canManageScoped = actorPerms.includes(Permissions.TASKS_EDIT) || actorPerms.includes(Permissions.TASKS_ASSIGN);
     if (!canManageAll && !canManageScoped) {
       throwForbidden("Permission denied: only managers can reassign tasks", ERROR_CODES.PERMISSION_DENIED, { taskId: id });

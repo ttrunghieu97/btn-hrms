@@ -5,7 +5,7 @@ import { Permissions } from "../permissions/permissions.registry";
 class CheckAttendancePolicyHandler implements PolicyHandler {
   readonly policyName = "CheckAttendance";
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     if (user.permissions?.includes(Permissions.ATTENDANCE_CHECK)) return true;
     return Boolean(user.employeeId); // Any employee can check themselves
   }
@@ -20,7 +20,7 @@ class ViewAttendancePolicyHandler implements PolicyHandler {
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
 
     if (perms.includes(Permissions.ATTENDANCE_VIEW_ALL)) return true;
@@ -59,7 +59,7 @@ class AttendanceReportPolicyHandler implements PolicyHandler {
   readonly policyName = "AttendanceReport";
   readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_REPORT];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.ATTENDANCE_REPORT) ?? false;
   }
 }

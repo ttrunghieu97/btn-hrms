@@ -75,7 +75,7 @@ export class TaskEventsService {
     const perms = user.permissions ?? [];
     const canViewAll =
       user.isSuperAdmin ||
-      perms.includes("ALL") ||
+      perms.includes("sys:all") ||
       perms.includes("tasks:manage") ||
       perms.includes(Permissions.TASKS_VIEW);
 
@@ -87,7 +87,7 @@ export class TaskEventsService {
     }
 
     const canViewSelf =
-      perms.includes("ALL") || perms.includes(Permissions.TASKS_VIEW_SELF);
+      perms.includes("sys:all") || perms.includes(Permissions.TASKS_VIEW_SELF);
     if (!canViewSelf || !user.employeeId) {
       // Route guard/policy should prevent this, but keep safe default.
       return new Observable<SseEvent>((sub) => sub.complete());

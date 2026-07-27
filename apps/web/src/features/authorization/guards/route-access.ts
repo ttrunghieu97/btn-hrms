@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { PermissionedUser } from '@project/permissions';
-import { canAccessRoute, resolveRoutePermission } from '../utils/route-resolver';
+import { canAccessRoute } from '@/shared/authorization';
 
 /**
  * Server-side route access guard.
@@ -26,16 +26,7 @@ export async function requireRouteAccess(
     redirect('/auth/sign-in');
   }
 
-  const rule = resolveRoutePermission(pathname);
-  if (!rule) return; // unknown route → allow
-
-  // Guard uses the compound checker
-  const { can } = await import('@/lib/permission-resolver');
-  if (!can(user, rule)) {
-    const label = Object.entries(rule)
-      .filter(([, v]) => v?.length)
-      .map(([k, v]) => `${k}=${(v as string[]).join(',')}`)
-      .join('&');
-    redirect(`/unauthorized?missing=${encodeURIComponent(label || 'access')}`);
+  if (!canAccessRoute(pathname, user.permissions)) {
+    redirect(`/unauthorized?path=${encodeURIComponent(pathname)}`);
   }
 }

@@ -2,30 +2,30 @@ import type { UserMeResponseDto } from '@/api/generated/model';
 import { navGroups } from '@/config/nav-config';
 import { filterNavItems } from '@/hooks/use-nav';
 import { hasPermission } from '@/lib/rbac';
+import { canAccessRoute, PUBLIC_ROUTES } from '@/shared/authorization';
 
 /**
  * Navigate to first accessible nav item after login.
- * Fallback:
- *   - /account/no-permissions if user has zero permissions
- *   - /account/profile (auth-only) if user has some permissions
- *   - /overview if user has dashboard:view
+ * Uses Fail-Fast check with canAccessRoute to guarantee destination is strictly accessible.
  */
 export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefined): string {
-  if (!user) return '/auth/sign-in';
+  if (!user) return PUBLIC_ROUTES.SIGN_IN;
 
   const allowedItems = filterNavItems(
     navGroups.flatMap((g) => g.items),
     user
   );
 
-  if (allowedItems.length > 0 && allowedItems[0].url) {
-    return allowedItems[0].url;
+  for (const item of allowedItems) {
+    if (item.url && canAccessRoute(item.url, user.permissions)) {
+      return item.url;
+    }
   }
 
   // User has no accessible nav items → check if they have zero permissions
   const perms = user.permissions;
   if (!perms || perms.length === 0) {
-    return '/account/no-permissions';
+    return PUBLIC_ROUTES.ACCOUNT_NO_PERMISSIONS;
   }
 
   // Try fallback pages — verify permission before redirecting
@@ -34,11 +34,15 @@ export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefi
     ['/overview', 'dashboard:view'],
   ];
   for (const [url, perm] of fallbacks) {
-    if (hasPermission(user, perm)) {
+    if (hasPermission(user, perm) && canAccessRoute(url, user.permissions)) {
       return url;
     }
   }
 
-  // Last resort: user truly has zero permissions
-  return '/account/profile';
+  // Last resort: Fail fast to account profile if accessible, else sign-in
+  if (canAccessRoute('/account/profile', user.permissions)) {
+    return '/account/profile';
+  }
+
+  return PUBLIC_ROUTES.ACCOUNT_NO_PERMISSIONS;
 }

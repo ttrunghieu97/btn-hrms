@@ -20,7 +20,7 @@ export class BulkAssignTaskUseCase {
     const actorPerms: string[] = actor?.permissions ?? [];
     const canManageAll =
       actor?.isSuperAdmin ||
-      actorPerms.includes("ALL") ||
+      actorPerms.includes("sys:all") ||
       actorPerms.includes("tasks:manage");
     const canManageScoped = actorPerms.includes(Permissions.TASKS_EDIT);
 

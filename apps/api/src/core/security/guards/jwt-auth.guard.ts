@@ -92,7 +92,7 @@ export class JwtAuthGuard implements CanActivate {
     let roleNames: string[];
 
     if (dbUser.isSuperAdmin) {
-      effectivePermissions = ["ALL"];
+      effectivePermissions = ["sys:all"];
       roleNames = ["super_admin"];
     } else {
       const [directPerms, roleContext] = await Promise.all([
@@ -104,7 +104,7 @@ export class JwtAuthGuard implements CanActivate {
       const merged = [...new Set([...directPerms, ...roleContext.permissions])];
 
       if (merged.includes("sys:all")) {
-        effectivePermissions = ["ALL"];
+        effectivePermissions = ["sys:all"];
       } else {
         effectivePermissions = this.hierarchyResolver.expand(merged);
       }

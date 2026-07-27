@@ -11,7 +11,7 @@ class ViewUserPolicyHandler implements PolicyHandler {
   readonly policyName = "ViewUser";
   readonly requiredAnyOfPermissions = [Permissions.USERS_VIEW];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.USERS_VIEW) ?? false;
   }
 }
@@ -19,7 +19,7 @@ class EditUserPolicyHandler implements PolicyHandler {
   readonly policyName = "EditUser";
   readonly requiredAnyOfPermissions = [Permissions.USERS_EDIT];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.USERS_EDIT) ?? false;
   }
 }
@@ -27,7 +27,7 @@ class DeleteUserPolicyHandler implements PolicyHandler {
   readonly policyName = "DeleteUser";
   readonly requiredAnyOfPermissions = [Permissions.USERS_DELETE];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.USERS_DELETE) ?? false;
   }
 }
@@ -35,7 +35,7 @@ class ManageUserPermissionsPolicyHandler implements PolicyHandler {
   readonly policyName = "ManageUserPermissions";
   readonly requiredAnyOfPermissions = [Permissions.USERS_EDIT];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.USERS_EDIT) ?? false;
   }
 }
@@ -46,7 +46,7 @@ class ViewRolePolicyHandler implements PolicyHandler {
   readonly policyName = "ViewRole";
   readonly requiredAnyOfPermissions = [Permissions.ROLES_VIEW];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.ROLES_VIEW) ?? false;
   }
 }
@@ -58,7 +58,7 @@ class ManageRolePolicyHandler implements PolicyHandler {
     Permissions.ROLES_DELETE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     return (
       perms.includes(Permissions.ROLES_CREATE) ||
@@ -74,7 +74,7 @@ class ViewAuditLogPolicyHandler implements PolicyHandler {
   readonly policyName = "ViewAuditLog";
   readonly requiredAnyOfPermissions = [Permissions.AUDIT_LOGS_VIEW];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.AUDIT_LOGS_VIEW) ?? false;
   }
 }
@@ -101,7 +101,7 @@ class ViewFilePolicyHandler implements PolicyHandler {
   readonly policyName = "ViewFile";
   readonly requiredAnyOfPermissions = Array.from(FILE_VIEW_PERMS);
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (user.permissions ?? []).some((p) => FILE_VIEW_PERMS.has(p));
   }
 }
@@ -110,7 +110,7 @@ class UploadFilePolicyHandler implements PolicyHandler {
   readonly policyName = "UploadFile";
   readonly requiredAnyOfPermissions = [Permissions.FILES_UPLOAD];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.FILES_UPLOAD) ?? false;
   }
 }

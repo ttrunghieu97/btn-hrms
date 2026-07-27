@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { canAccessRoute } from "../../../core/security/authorization/authorization.evaluator";
 import {
   NavigationRegistry,
   type NavResponseDto,
@@ -58,16 +59,27 @@ export class NavService {
   ): NavItemDefinition[] {
     return items
       .filter((item) => {
-        if (item.state === "disabled" || item.state === "coming_soon") {
-          return true; // Show disabled items — FE renders them greyed out
+        if (item.href) {
+          return canAccessRoute(item.href, user.permissions);
+        }
+        if (!item.requiredPermissions || item.requiredPermissions.length === 0) {
+          return true;
         }
         return anyOf(user, item.requiredPermissions);
       })
-      .map((item) => ({
-        ...item,
-        children: item.children
+      .map((item) => {
+        const children = item.children
           ? this.filterItems(item.children, user)
-          : undefined,
-      }));
+          : undefined;
+
+        // Clean nav item representation without leaking permission array metadata
+        const { requiredPermissions, ...cleanItem } = item;
+
+        return {
+          ...cleanItem,
+          children: children && children.length > 0 ? children : undefined,
+        };
+      })
+      .filter((item) => !item.children || item.children.length > 0);
   }
 }

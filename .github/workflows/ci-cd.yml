@@ -202,6 +202,8 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Build permissions
+        run: pnpm --filter @project/permissions build
       - name: Build API
         run: pnpm --filter @project/api build
         env:

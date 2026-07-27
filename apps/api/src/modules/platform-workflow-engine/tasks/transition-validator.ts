@@ -207,7 +207,7 @@ export class TransitionValidator {
     const isCreator =
       task.createdByUserId && String(task.createdByUserId) === String(actor.id);
 
-    const isAdmin = actor.permissions?.includes("ALL") ?? false;
+    const isAdmin = actor.permissions?.includes("sys:all") ?? false;
 
     const isManagerPermitted =
       actor.permissions?.includes(Permissions.TASKS_EDIT) ||

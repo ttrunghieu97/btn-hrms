@@ -35,7 +35,7 @@ export class DeleteTaskAttachmentUseCase {
     const actorPerms: string[] = actor?.permissions ?? [];
     const isAdmin =
       actor?.isSuperAdmin ||
-      actorPerms.includes("ALL") ||
+      actorPerms.includes("sys:all") ||
       actorPerms.includes("tasks:manage") ||
       actorPerms.includes(Permissions.TASKS_EDIT);
 

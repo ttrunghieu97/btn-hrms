@@ -80,7 +80,7 @@ class CreateEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.EMPLOYEES_CREATE) ||
       user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
@@ -95,7 +95,7 @@ class EditEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.EMPLOYEES_EDIT) ||
       user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
@@ -110,7 +110,7 @@ class DeleteEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.EMPLOYEES_DELETE) ||
       user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
@@ -125,7 +125,7 @@ class ResetEmployeePasswordPolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_MANAGE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.EMPLOYEES_RESET_PASSWORD) ||
       user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
@@ -137,7 +137,7 @@ class ManageEmployeePolicyHandler implements PolicyHandler {
   readonly policyName = "ManageEmployee";
   readonly requiredAnyOfPermissions = [Permissions.EMPLOYEES_MANAGE];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.EMPLOYEES_MANAGE) ?? false;
   }
 }
@@ -162,7 +162,7 @@ class PurgeEmployeePolicyHandler implements PolicyHandler {
   readonly policyName = "PurgeEmployee";
   readonly requiredAnyOfPermissions = [];
   handle(user: AuthUser): boolean {
-    return user.isSuperAdmin || user.permissions?.includes("ALL");
+    return user.isSuperAdmin || user.permissions?.includes("sys:all");
   }
 }
 

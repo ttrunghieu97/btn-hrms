@@ -8,7 +8,7 @@ class ViewOffboardingPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_VIEW,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.OFFBOARDING_VIEW) ?? false;
   }
 }
@@ -20,7 +20,7 @@ class EditOffboardingPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_CREATE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT) ||
       user.permissions?.includes(Permissions.OFFBOARDING_CREATE)
@@ -34,7 +34,7 @@ class DeleteOffboardingPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_DELETE,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.OFFBOARDING_DELETE) ?? false;
   }
 }
@@ -46,7 +46,7 @@ class ClearanceITPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_CLEARANCE_IT) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -61,7 +61,7 @@ class ClearanceHRPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_CLEARANCE_HR) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -76,7 +76,7 @@ class ClearanceFinancePolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_CLEARANCE_FINANCE) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -91,7 +91,7 @@ class ClearanceManagerPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_CLEARANCE_MANAGER) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -106,7 +106,7 @@ class ClearanceSecurityPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_CLEARANCE_SECURITY) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -121,7 +121,7 @@ class ExitInterviewPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_EXIT_INTERVIEW) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)
@@ -136,7 +136,7 @@ class CompleteOffboardingPolicyHandler implements PolicyHandler {
     Permissions.OFFBOARDING_EDIT,
   ];
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
       user.permissions?.includes(Permissions.OFFBOARDING_COMPLETE) ||
       user.permissions?.includes(Permissions.OFFBOARDING_EDIT)

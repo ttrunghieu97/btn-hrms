@@ -27,7 +27,7 @@ export class ManageTaskDelegationsUseCase {
     if (departmentId) {
       const isAdmin =
         actor?.isSuperAdmin ||
-        actor?.permissions?.includes("ALL") ||
+        actor?.permissions?.includes("sys:all") ||
         actor?.permissions?.includes("tasks:manage");
       if (!isAdmin) {
         throwForbidden(

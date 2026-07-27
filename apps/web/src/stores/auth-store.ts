@@ -319,4 +319,3 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-console.log('BONEYARD_CHECK_ACTIVE');

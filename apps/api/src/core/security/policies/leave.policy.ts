@@ -6,7 +6,7 @@ class ViewLeavePolicyHandler implements PolicyHandler {
   requiredAnyOfPermissions = [Permissions.LEAVE_VIEW];
 
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.LEAVE_VIEW) ?? false;
   }
 }
@@ -15,7 +15,7 @@ class CreateLeavePolicyHandler implements PolicyHandler {
   requiredAnyOfPermissions = [Permissions.LEAVE_CREATE];
 
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.LEAVE_CREATE) ?? false;
   }
 }
@@ -24,7 +24,7 @@ class EditLeavePolicyHandler implements PolicyHandler {
   requiredAnyOfPermissions = [Permissions.LEAVE_EDIT];
 
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.LEAVE_EDIT) ?? false;
   }
 }
@@ -33,7 +33,7 @@ class ApproveLeavePolicyHandler implements PolicyHandler {
   requiredAnyOfPermissions = [Permissions.LEAVE_APPROVE];
 
   handle(user: AuthUser): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.LEAVE_APPROVE) ?? false;
   }
 }
@@ -46,7 +46,7 @@ class ViewLeaveBalancePolicyHandler implements PolicyHandler {
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
-    if (user.isSuperAdmin || user.permissions?.includes("ALL")) return true;
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     if (perms.includes(Permissions.LEAVE_VIEW_ALL)) return true;
     if (!resource) return false;

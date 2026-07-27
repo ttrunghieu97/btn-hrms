@@ -3,10 +3,12 @@ import type { NavGroup, NavItem } from '@/types';
 import { hasAnyPermission } from '@project/permissions';
 import { useAuthStore } from '@/stores/auth-store';
 
+import { canAccessRoute } from '@/shared/authorization';
+
 export function canAccessNavItem(item: NavItem, user: ReturnType<typeof useAuthStore.getState>['user']) {
-  const access = item.access;
-  if (!access) return true;
-  if (access.permissions?.length) return hasAnyPermission(user?.permissions ?? [], access.permissions);
+  if (item.url) {
+    return canAccessRoute(item.url, user?.permissions);
+  }
   return true;
 }
 
