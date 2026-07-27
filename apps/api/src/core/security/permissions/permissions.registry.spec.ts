@@ -8,8 +8,8 @@ describe('Permissions catalog', () => {
   });
 
   it('contains employee base permissions with self scope only', () => {
-    expect(Permissions.EMPLOYEES_VIEW_SELF).toBe('employees:view:self');
-    expect(Permissions.EMPLOYEES_UPDATE_SELF_LIMITED).toBe('employees:update:self');
+    expect(Permissions.EMPLOYEES_VIEW_SELF).toBe('employee:view:self');
+    expect(Permissions.EMPLOYEES_UPDATE_SELF_LIMITED).toBe('employee:update:self');
   });
 
   it('contains parseable catalog entries', () => {

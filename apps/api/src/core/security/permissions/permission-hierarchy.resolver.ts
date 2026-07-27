@@ -61,8 +61,8 @@ export class PermissionHierarchyResolver {
    * `sys:all` is the root permission — grants every code.
    */
   satisfies(userPermissions: string[], requiredCode: string): boolean {
-    // Root permission — sys:all grants everything
-    if (userPermissions.includes('sys:all')) return true;
+    // Root permission — sys:all grants everything (ALL is legacy)
+    if (userPermissions.includes('sys:all') || userPermissions.includes('ALL')) return true;
 
     // Direct match
     if (userPermissions.includes(requiredCode)) return true;

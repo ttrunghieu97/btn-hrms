@@ -1,7 +1,7 @@
 import { hierarchyMap } from '../hierarchy';
 
-/** Permission code used as the system-wide root — grants everything. */
-const ROOT_PERMISSION = 'sys:all';
+/** Permission codes treated as the system-wide root — grants everything. */
+const ROOT_PERMISSIONS = ['sys:all', 'ALL']; // ALL is legacy, kept for backward compat
 
 /**
  * Check if user has a specific permission.
@@ -18,7 +18,7 @@ export function hasPermission(
   if (userPermissions.includes(required)) return true;
 
   // Root permission — grants everything
-  if (userPermissions.includes(ROOT_PERMISSION)) return true;
+  if (ROOT_PERMISSIONS.some((r) => userPermissions.includes(r))) return true;
 
   // Hierarchy resolution: does user own any ancestor of required?
   const chain = hierarchyMap[required];
@@ -42,7 +42,7 @@ export function hasAnyPermission(
   required: string[],
 ): boolean {
   if (!userPermissions?.length) return false;
-  if (userPermissions.includes(ROOT_PERMISSION)) return true;
+  if (ROOT_PERMISSIONS.some((r) => userPermissions.includes(r))) return true;
   return required.some((p) => hasPermission(userPermissions, p));
 }
 
@@ -54,7 +54,7 @@ export function hasAllPermissions(
   required: string[],
 ): boolean {
   if (!userPermissions?.length) return false;
-  if (userPermissions.includes(ROOT_PERMISSION)) return true;
+  if (ROOT_PERMISSIONS.some((r) => userPermissions.includes(r))) return true;
   return required.every((p) => hasPermission(userPermissions, p));
 }
 
@@ -71,8 +71,8 @@ export function resolvePermissions(
   if (!userPermissions?.length) return [];
 
   // Root permission — no meaningful expansion beyond itself
-  if (userPermissions.includes(ROOT_PERMISSION)) {
-    return [ROOT_PERMISSION];
+  if (ROOT_PERMISSIONS.some((r) => userPermissions.includes(r))) {
+    return [ROOT_PERMISSIONS[0]];
   }
 
   const result = new Set(userPermissions);

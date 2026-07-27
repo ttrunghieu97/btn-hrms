@@ -11,20 +11,18 @@ const SCOPES = new Set<PermissionScope>(['self', 'department', 'all', 'sensitive
 export function parsePermissionCode(code: string): ParsedPermissionCode {
   const parts = code.split(':');
 
-  if (parts.length === 2 && parts[0] === 'sys' && parts[1] === 'all') {
-    return { domain: 'sys', action: 'all', scope: null };
-  }
-
-  if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
+  if (parts.length < 2 || parts.some((part) => part.length === 0)) {
     throw new Error('Invalid permission code');
   }
 
   const domain = parts[0]!;
   const action = parts[1]!;
-  const scope = parts[2]!;
-  if (!SCOPES.has(scope as PermissionScope)) {
+  const scope = parts.length >= 3 && parts[2]!.length > 0 ? (parts[2]! as PermissionScope) : null;
+
+  // Only validate scope when present — many codes (employee:view, profile:view) are 2-part
+  if (scope && !SCOPES.has(scope)) {
     throw new Error('Invalid permission scope');
   }
 
-  return { domain, action, scope: scope as PermissionScope };
+  return { domain, action, scope };
 }

@@ -20,8 +20,9 @@ import {
  * `sys:all` is the root — grants every permission via resolver logic.
  */
 export const hierarchyMap: Record<string, readonly string[]> = {
-  // Root — sys:all grants everything
+  // Root — sys:all grants everything (ALL is legacy)
   'sys:all': ['sys:all'],
+  'ALL': ['ALL'],
 
   // Attendance
   'attendance:view:self': attendanceHierarchy,

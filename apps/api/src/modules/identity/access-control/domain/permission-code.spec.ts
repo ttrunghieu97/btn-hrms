@@ -18,7 +18,12 @@ describe('parsePermissionCode', () => {
   });
 
   it('rejects malformed permission codes', () => {
-    expect(() => parsePermissionCode('employees:view')).toThrow('Invalid permission code');
+    // 2-part codes are valid (domain:action, no scope)
+    expect(parsePermissionCode('employees:view')).toEqual({
+      domain: 'employees',
+      action: 'view',
+      scope: null,
+    });
     expect(() => parsePermissionCode('employees:view:')).toThrow('Invalid permission code');
     expect(() => parsePermissionCode('employees:view:team')).toThrow('Invalid permission scope');
   });
