@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_SENTRY_ORG=$NEXT_PUBLIC_SENTRY_ORG
 ENV NEXT_PUBLIC_SENTRY_PROJECT=$NEXT_PUBLIC_SENTRY_PROJECT
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --frozen-lockfile
-RUN pnpm --filter frontend build
+RUN pnpm --filter @project/permissions build && pnpm --filter frontend build
 
 FROM base AS runner
 RUN addgroup --system --gid 1001 nodejs && \

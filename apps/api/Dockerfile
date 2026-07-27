@@ -15,7 +15,7 @@ WORKDIR /usr/src/app
 FROM base AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --frozen-lockfile
-RUN pnpm --filter @project/api build
+RUN pnpm --filter @project/permissions build && pnpm --filter @project/api build
 # Strip source maps from production dist
 RUN find apps/api/dist -name "*.js.map" -delete
 # Extract production-only dependency subtree
