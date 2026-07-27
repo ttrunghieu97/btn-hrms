@@ -84,7 +84,7 @@ jobs:
           POSTGRES_DB: hrms
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U hrms -d hrms"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
