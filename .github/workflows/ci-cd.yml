@@ -35,6 +35,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/permissions build
       - run: pnpm --filter frontend error-contracts:verify
       - run: pnpm --filter @project/api lint:check
       - run: pnpm --filter frontend lint
@@ -52,6 +53,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/permissions build
       - run: pnpm --filter frontend typecheck
 
   arch-check:
@@ -67,6 +69,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/permissions build
       - run: pnpm --filter @project/api arch:check
         env:
           ARCH_MODE: enforce-new
@@ -100,6 +103,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/permissions build
       - run: pnpm --filter @project/api test:unit
         env:
           DATABASE_URL: postgres://hrms:hrms@localhost:5432/hrms
@@ -117,6 +121,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @project/permissions build
       - run: pnpm build
 
   dependency-health:
