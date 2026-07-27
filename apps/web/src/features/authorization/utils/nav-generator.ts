@@ -7,8 +7,7 @@
  */
 import type { PermissionedUser } from '@project/permissions';
 import { can, type PermissionRule } from '@/lib/permission-resolver';
-import { routeRegistry } from '../route-registry/routes';
-import type { NavIcon } from '../route-registry/routes';
+import { routeRegistry, type NavIcon } from '@/shared/authorization';
 
 export interface NavItem {
   title: string;

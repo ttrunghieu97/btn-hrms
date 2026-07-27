@@ -4,10 +4,10 @@ import { ExpenseClaimRepository } from "../repositories/expense-claim.repository
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 describe(ApproveClaimUseCase.name, () => {
   let useCase: ApproveClaimUseCase;
-  let repo: { findById: jest.Mock; update: jest.Mock };
+  let repo: { findById: jest.Mock; update: jest.Mock; transaction: jest.Mock };
   let outbox: { stage: jest.Mock };
   beforeAll(async () => {
-    repo = { findById: jest.fn(), update: jest.fn() };
+    repo = { findById: jest.fn(), update: jest.fn(), transaction: jest.fn().mockImplementation(async (fn) => fn({})) };
     outbox = { stage: jest.fn() };
     const m = await Test.createTestingModule({
       providers: [ApproveClaimUseCase,
@@ -19,8 +19,8 @@ describe(ApproveClaimUseCase.name, () => {
   it("approves submitted claim and emits event", async () => {
     repo.findById.mockResolvedValue({ id: "c1", employeeId: "emp-1", status: "submitted" });
     await useCase.execute("c1", "user-1");
-    expect(repo.update).toHaveBeenCalledWith("c1", expect.objectContaining({ status: "approved" }));
-    expect(outbox.stage).toHaveBeenCalledWith(expect.objectContaining({ eventType: "expenses.claim.approved.v1" }));
+    expect(repo.update).toHaveBeenCalledWith("c1", expect.objectContaining({ status: "approved" }), expect.anything());
+    expect(outbox.stage).toHaveBeenCalledWith(expect.objectContaining({ eventType: "expenses.claim.approved.v1" }), expect.anything());
   });
   it("rejects approve of draft claim", async () => {
     repo.findById.mockResolvedValue({ id: "c1", status: "draft" });

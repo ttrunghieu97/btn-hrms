@@ -28,6 +28,7 @@ export function can(
   rule: PermissionRule,
 ): boolean {
   if (!user) return false;
+  if (user.isSuperAdmin) return true;
   const perms = user?.permissions ?? [];
 
   if (!rule.anyOf?.length && !rule.allOf?.length && !rule.not?.length) return false;

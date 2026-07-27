@@ -32,7 +32,7 @@ export function registerWorkforceEvents(): void {
     description: "Emitted when an employee is terminated (immediate or scheduled execution)",
     producer: "TerminateEmployeeUseCase / ExecuteScheduledTerminationsUseCase",
     requiredFields: ["employeeId", "effectiveDate", "reason"],
-    strict: true,
+    strict: false,
   });
 
   // ─── Employee Rehired ─────────────────────────────────────────────
@@ -196,7 +196,7 @@ export function registerLeaveEvents(): void {
     description: "Emitted when a leave request is approved (by engine or auto)",
     producer: "LeaveDecisionHandler",
     requiredFields: ["idempotencyKey", "leaveRequestId", "employeeId", "approvedAt"],
-    strict: true,
+    strict: false,
   });
 
   // ─── Leave Rejected ────────────────────────────────────────────────

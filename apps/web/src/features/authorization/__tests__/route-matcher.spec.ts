@@ -1,5 +1,5 @@
 import { matchRoute } from '../utils/route-matcher';
-import { routeRegistry } from '../route-registry/routes';
+import { routeRegistry } from '@/shared/authorization';
 
 describe('matchRoute', () => {
   it('matches exact path', () => {

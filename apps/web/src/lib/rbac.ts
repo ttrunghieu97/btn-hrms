@@ -18,7 +18,9 @@ export interface PermissionedUser {
 
 /** Check if user has `sys:all` — the root permission. */
 export function isSuperAdmin(user: PermissionedUser | null | undefined): boolean {
-  return user?.permissions?.includes('sys:all') ?? false;
+  if (!user) return false;
+  if (user.isSuperAdmin) return true;
+  return user.permissions?.includes('sys:all') || user.permissions?.includes('ALL') || false;
 }
 
 /** Hierarchy-aware permission check. */
@@ -26,7 +28,30 @@ export function hasPermission(
   user: PermissionedUser | null | undefined,
   perm: string,
 ): boolean {
-  return hierarchyCheck(user?.permissions ?? [], perm);
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  const perms = user.permissions ?? [];
+  if (hierarchyCheck(perms, perm)) return true;
+
+  // Normalize plural/singular permissions (e.g., employees:view:self vs employee:view:self)
+  const normalizedPerm = perm.replace(/^employees:/, 'employee:');
+  const normalizedPerms = perms.map((p) => p.replace(/^employees:/, 'employee:'));
+  if (hierarchyCheck(normalizedPerms, normalizedPerm)) return true;
+
+  // Implied boundary checks: domain:manage implies domain:view or domain:*
+  const [domain] = perm.split(':');
+  if (domain) {
+    const rootDomain = domain.endsWith('s') ? domain.slice(0, -1) : domain;
+    if (
+      perms.includes(`${domain}:manage`) ||
+      perms.includes(`${domain}s:manage`) ||
+      perms.includes(`${rootDomain}:manage`) ||
+      normalizedPerms.includes(`${rootDomain}:manage`)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Hierarchy-aware anyOf. */
@@ -34,7 +59,9 @@ export function anyOf(
   user: PermissionedUser | null | undefined,
   perms: string[],
 ): boolean {
-  return hierarchyAnyOf(user?.permissions ?? [], perms);
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  return perms.some((p) => hasPermission(user, p));
 }
 
 /** Hierarchy-aware allOf. */
@@ -42,5 +69,7 @@ export function allOf(
   user: PermissionedUser | null | undefined,
   perms: string[],
 ): boolean {
-  return hierarchyAllOf(user?.permissions ?? [], perms);
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  return perms.every((p) => hasPermission(user, p));
 }

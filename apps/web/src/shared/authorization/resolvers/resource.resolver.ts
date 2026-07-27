@@ -8,3 +8,4 @@ export function resolveResourceAccess(
   const rule = AUTHORIZATION.resources[resource];
   return evaluatePermissionRule(rule, permissions);
 }
+export const canAccessResource = resolveResourceAccess;

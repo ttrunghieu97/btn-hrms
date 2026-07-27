@@ -121,8 +121,7 @@ export class AuthController {
       );
     }
 
-    const { refresh_token: _refresh, ...safe } = result;
-    return safe;
+    return result;
   }
 
   @Post("refresh")

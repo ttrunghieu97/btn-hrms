@@ -5,6 +5,7 @@ import { LeaveLifecycleService } from "../services/leave-lifecycle.service";
 import { LeaveAttendanceReconciliationService } from "../services/leave-attendance-reconciliation.service";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
+import { LeaveAuthorizationService } from "../services/leave-authorization.service";
 
 describe("CancelLeaveRequestUseCase", () => {
   let useCase: CancelLeaveRequestUseCase;
@@ -45,7 +46,33 @@ describe("CancelLeaveRequestUseCase", () => {
           useValue: reconciliation,
         },
         { provide: EventOutboxService, useValue: eventOutbox },
-        { provide: RequestContextService, useValue: { getRequestId: jest.fn().mockReturnValue('test-request-id'), get: jest.fn() } },
+        {
+          provide: RequestContextService,
+          useValue: { getRequestId: jest.fn().mockReturnValue('test-request-id'), get: jest.fn() },
+        },
+        {
+          provide: LeaveAuthorizationService,
+          useValue: {
+            canCreate: jest.fn().mockResolvedValue(undefined),
+            canCancel: jest.fn().mockImplementation(async (actor, requestEmployeeId) => {
+              const permissions = actor.permissions ?? [];
+              const isSelf = actor.employeeId === requestEmployeeId;
+              const isHR =
+                actor.isSuperAdmin === true ||
+                permissions.includes("leave:manage") ||
+                permissions.includes("leave:edit:all") ||
+                permissions.includes("leave:approve") ||
+                permissions.includes("leave:approve:department") ||
+                permissions.includes("sys:all") ||
+                permissions.includes("ALL");
+
+              if (!isSelf && !isHR) {
+                const { throwForbidden } = await import("../../../../shared/utils/http-error");
+                throwForbidden("Cannot cancel another employee's leave request", "FORBIDDEN");
+              }
+            }),
+          },
+        },
       ],
     }).compile();
 

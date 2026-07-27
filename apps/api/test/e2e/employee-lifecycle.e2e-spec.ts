@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import * as request from "supertest";
+import request from "supertest";
 import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
 
@@ -34,8 +34,9 @@ describe("Employee Lifecycle (e2e)", () => {
       .set("Authorization", `Bearer ${ctx.token}`)
       .send({
         firstName: "E2E", lastName: "TestEmployee",
+        employeeCode: `EMP-${Date.now()}`,
         email: `e2e-${Date.now()}@test.com`,
-        hireDate: "2026-07-19",
+        startDate: "2026-07-19",
       });
     expect(res.status).toBe(201);
     expect(res.body.data.id).toBeDefined();
@@ -51,20 +52,12 @@ describe("Employee Lifecycle (e2e)", () => {
     expect(res.body.data.firstName).toBe("E2E");
   });
 
-  it("POST /offboarding — start offboarding", async () => {
+  it("PUT /employees/:id/terminate — terminate employee", async () => {
     const res = await request(ctx.app!.getHttpServer())
-      .post("/offboarding")
+      .put(`/employees/${ctx.employeeId}/terminate`)
       .set("Authorization", `Bearer ${ctx.token}`)
-      .send({ employeeId: ctx.employeeId, reason: "E2E test", exitDate: "2026-07-31" });
-    expect(res.status).toBe(201);
-  });
-
-  it("GET /offboarding?employeeId=:id — verify offboarding created", async () => {
-    const res = await request(ctx.app!.getHttpServer())
-      .get(`/offboarding?employeeId=${ctx.employeeId}`)
-      .set("Authorization", `Bearer ${ctx.token}`);
+      .send({ effectiveDate: "2026-07-31", reason: "E2E test" });
     expect(res.status).toBe(200);
-    expect(res.body.data).toBeDefined();
   });
 
   it("GET /employees/:id — verify employee status", async () => {

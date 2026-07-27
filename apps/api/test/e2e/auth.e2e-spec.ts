@@ -1,4 +1,4 @@
-import * as request from "supertest";
+import request from "supertest";
 import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
 
@@ -41,11 +41,13 @@ describe("Auth (e2e)", () => {
     const loginRes = await request(ctx.app!.getHttpServer())
       .post("/auth/login")
       .send({ username: ctx.admin.username, password: ctx.admin.password });
-    const accessToken = loginRes.body.data.access_token;
+    const refreshToken = loginRes.body.data.refresh_token;
+    const refreshCookie = loginRes.headers["set-cookie"];
 
     const res = await request(ctx.app!.getHttpServer())
       .post("/auth/refresh")
-      .set("Authorization", `Bearer ${accessToken}`);
+      .set("Cookie", refreshCookie)
+      .send({ refreshToken });
     expect(res.status).toBe(200);
     expect(res.body.data.access_token).toBeDefined();
   });

@@ -1,5 +1,5 @@
 // Set required env vars for E2E tests
-process.env.DATABASE_URL = process.env.DATABASE_URL || "postgres://hrms:hrms@localhost:5432/hrms";
+process.env.DATABASE_URL = process.env.DATABASE_URL || "postgres://hrms:v8OmvyzAe44CxuCzYuFvfsVXr8mrbz4F@127.0.0.1:5432/hrms";
 process.env.REDIS_URL = process.env.REDIS_URL || "";
 process.env.AUTH_JWT_SECRET = "e2e-test-jwt-secret-1234567890123456";
 process.env.STORAGE_S3_URL = "http://minioadmin:minioadmin@localhost:9000";

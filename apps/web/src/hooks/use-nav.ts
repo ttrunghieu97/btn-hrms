@@ -3,10 +3,16 @@ import type { NavGroup, NavItem } from '@/types';
 import { hasAnyPermission } from '@project/permissions';
 import { useAuthStore } from '@/stores/auth-store';
 
-import { canAccessRoute } from '@/shared/authorization';
+import { canAccessRoute, isPublicRoute } from '@/shared/authorization';
 
 export function canAccessNavItem(item: NavItem, user: ReturnType<typeof useAuthStore.getState>['user']) {
+  if (item.access?.permissions?.length) {
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    return hasAnyPermission(user.permissions, item.access.permissions);
+  }
   if (item.url) {
+    if (item.url === '/' || isPublicRoute(item.url)) return true;
     return canAccessRoute(item.url, user?.permissions);
   }
   return true;
@@ -23,7 +29,7 @@ export function filterNavItems(items: NavItem[], user: ReturnType<typeof useAuth
       const children = item.items?.length ? filterNavItems(item.items, user) : item.items;
       return { ...item, items: children };
     })
-    .filter((item) => !item.disabled && (canAccessNavItem(item, user) || Boolean(item.items?.length)));
+    .filter((item) => item.disabled || canAccessNavItem(item, user) || Boolean(item.items?.length));
 }
 
 export function useFilteredNavItems(items: NavItem[]) {

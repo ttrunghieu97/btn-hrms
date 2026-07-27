@@ -1,4 +1,5 @@
 export * from './constants/routes';
+export * from './route-registry/routes';
 export * from './constants/resources';
 export * from './constants/actions';
 export * from './permissions/permissions';

@@ -1,4 +1,4 @@
-import { routeRegistry } from '../route-registry/routes';
+import { routeRegistry } from '@/shared/authorization';
 
 describe('route registry validation', () => {
   it('all routes have a path starting with /', () => {

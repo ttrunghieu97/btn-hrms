@@ -11,7 +11,9 @@ export class ApproveClaimUseCase {
     const claim = await this.repo.findById(id);
     if (!claim) throwNotFound("Claim not found", ERROR_CODES.NOT_FOUND);
     if (claim.status !== "submitted") throwBadRequest("Only submitted claims can be approved", ERROR_CODES.INVALID_REQUEST);
-    await this.repo.update(id, { status: "approved", approvedByUserId, approvedAt: new Date() });
-    await this.eventOutbox.stage(new ExpenseClaimApprovedEvent({ claimId: id, employeeId: claim.employeeId, approvedByUserId }));
+    await this.repo.transaction(async (tx) => {
+      await this.repo.update(id, { status: "approved", approvedByUserId, approvedAt: new Date() }, tx);
+      await this.eventOutbox.stage(new ExpenseClaimApprovedEvent({ claimId: id, employeeId: claim.employeeId, approvedByUserId }), tx);
+    });
   }
 }

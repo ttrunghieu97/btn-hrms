@@ -1,6 +1,6 @@
 import { AUTHORIZATION } from '../registry/authorization.registry';
 import { navGroups } from '@/config/nav-config';
-import { routeRegistry } from '@/features/authorization/route-registry/routes';
+import { routeRegistry } from '../route-registry/routes';
 import { PUBLIC_ROUTES } from '../constants/routes';
 
 describe('Authorization Registry CI Validation (Registry Sync Enforcement)', () => {

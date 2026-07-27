@@ -8,3 +8,4 @@ export function resolveActionAccess(
   const rule = AUTHORIZATION.actions[action];
   return evaluatePermissionRule(rule, permissions);
 }
+export const canPerformAction = resolveActionAccess;

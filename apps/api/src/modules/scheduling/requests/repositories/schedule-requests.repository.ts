@@ -59,12 +59,18 @@ export class ScheduleRequestsRepository implements IScheduleRequestsRepository {
     return row!;
   }
 
+  async transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
+
   async updateStatus(
     id: string,
     status: RequestStatus,
-    reviewedBy: string
+    reviewedBy: string,
+    tx?: any
   ): Promise<ScheduleRequestRecord | null> {
-    const [row] = await this.db
+    const client = tx ?? this.db;
+    const [row] = await client
       .update(schema.scheduleRequests)
       .set({ status: status as any, reviewedBy, reviewedAt: new Date(), updatedAt: new Date() })
       .where(eq(schema.scheduleRequests.id, id))
@@ -72,3 +78,4 @@ export class ScheduleRequestsRepository implements IScheduleRequestsRepository {
     return row ?? null;
   }
 }
+

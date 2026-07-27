@@ -1,4 +1,4 @@
-import * as request from "supertest";
+import request from "supertest";
 import { eq } from "drizzle-orm";
 import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
@@ -24,7 +24,12 @@ describe("Attendance (e2e)", () => {
     const hireRes = await request(ctx.app.getHttpServer())
       .post("/employees")
       .set("Authorization", `Bearer ${ctx.token}`)
-      .send({ firstName: "Att", lastName: "Test", email: `att-${Date.now()}@test.com`, hireDate: "2026-07-19" });
+      .send({
+        firstName: "Att", lastName: "Test",
+        employeeCode: `EMP-ATT-${Date.now()}`,
+        email: `att-${Date.now()}@test.com`,
+        startDate: "2026-07-19",
+      });
     ctx.employeeId = hireRes.body.data.id;
   });
 
@@ -39,7 +44,10 @@ describe("Attendance (e2e)", () => {
     const res = await request(ctx.app!.getHttpServer())
       .post("/attendances/check")
       .set("Authorization", `Bearer ${ctx.token}`)
-      .send({ date: "2026-07-19", session: "morning", type: "checkin" });
+      .field("date", "2026-07-19")
+      .field("session", "morning")
+      .field("type", "checkin")
+      .attach("image", Buffer.from("fake-image"), "selfie.jpg");
     expect(res.status).toBe(201);
   });
 
@@ -47,7 +55,10 @@ describe("Attendance (e2e)", () => {
     const res = await request(ctx.app!.getHttpServer())
       .post("/attendances/check")
       .set("Authorization", `Bearer ${ctx.token}`)
-      .send({ date: "2026-07-19", session: "morning", type: "checkout" });
+      .field("date", "2026-07-19")
+      .field("session", "morning")
+      .field("type", "checkout")
+      .attach("image", Buffer.from("fake-image"), "selfie.jpg");
     expect(res.status).toBe(201);
   });
 });

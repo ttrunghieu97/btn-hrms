@@ -5,6 +5,8 @@ import { LeaveAttendanceReconciliationService } from "../services/leave-attendan
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 
+import { LeaveAuthorizationService } from "../services/leave-authorization.service";
+
 describe(CreateLeaveRequestUseCase.name, () => {
   let useCase: CreateLeaveRequestUseCase;
   let repo: jest.Mocked<LeaveRequestsRepository>;
@@ -38,6 +40,7 @@ describe(CreateLeaveRequestUseCase.name, () => {
         { provide: LeaveAttendanceReconciliationService, useValue: { reconcileApprovedLeave: jest.fn() } },
         { provide: EventOutboxService, useValue: eventOutbox },
         { provide: RequestContextService, useValue: { getRequestId: jest.fn(), get: jest.fn() } },
+        { provide: LeaveAuthorizationService, useValue: { canCreate: jest.fn().mockResolvedValue(undefined), canCancel: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

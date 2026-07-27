@@ -84,7 +84,7 @@ export class ScheduleRequestsController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @Request() req: Request & { user: AuthUser }
   ) {
-    const record = await this.reviewUseCase.execute(id, "APPROVED", req.user.id);
+    const record = await this.reviewUseCase.execute(id, "APPROVED", req.user);
     const withEmployee = await this.listUseCase.execute({ employeeId: record.employeeId });
     const full = withEmployee.find((r) => r.id === id);
     return mapScheduleRequestToDto(full ?? { ...record, employee: null });
@@ -98,7 +98,7 @@ export class ScheduleRequestsController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @Request() req: Request & { user: AuthUser }
   ) {
-    const record = await this.reviewUseCase.execute(id, "DENIED", req.user.id);
+    const record = await this.reviewUseCase.execute(id, "DENIED", req.user);
     const withEmployee = await this.listUseCase.execute({ employeeId: record.employeeId });
     const full = withEmployee.find((r) => r.id === id);
     return mapScheduleRequestToDto(full ?? { ...record, employee: null });

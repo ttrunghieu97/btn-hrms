@@ -1,6 +1,6 @@
 import type { PermissionedUser } from '@project/permissions';
 import { can, type PermissionRule } from '@/lib/permission-resolver';
-import { routeRegistry, type RouteDef } from '../route-registry/routes';
+import { routeRegistry, type RouteDef } from '@/shared/authorization';
 import { matchRoute } from './route-matcher';
 
 /**

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
-import { canAccessResource } from '@/shared/authorization';
+import { canAccessResource } from '../resolvers/resource.resolver';
 
 export interface ResourceGuardProps {
   resource: string;

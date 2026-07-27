@@ -42,3 +42,5 @@ export function resolveRouteAccess(
 
   return evaluatePermissionRule(rule, permissions);
 }
+
+export const canAccessRoute = resolveRouteAccess;

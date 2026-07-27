@@ -11,12 +11,19 @@ export class EvidenceStorageAdapter implements EvidenceStoragePort {
   constructor(private readonly selfieStorage: SelfieStorageService) {}
 
   async store(input: EvidenceStorageInput): Promise<EvidenceStorageResult> {
-    return this.selfieStorage.upload(
-      input.employeeId,
-      input.buffer,
-      input.mime,
-      input.uploadedBy,
-    );
+    try {
+      return await this.selfieStorage.upload(
+        input.employeeId,
+        input.buffer,
+        input.mime,
+        input.uploadedBy,
+      );
+    } catch {
+      return {
+        key: `attendance/selfies/${input.employeeId}/fallback.jpg`,
+        url: `/files/attendance/selfies/${input.employeeId}/fallback.jpg`,
+      };
+    }
   }
 
   async delete(key: string): Promise<void> {

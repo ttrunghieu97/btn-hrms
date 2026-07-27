@@ -2,7 +2,7 @@
 
 import { cloneElement, isValidElement, type ReactNode } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
-import { canPerformAction } from '@/shared/authorization';
+import { canPerformAction } from '../resolvers/action.resolver';
 
 export type ActionGuardMode = 'hide' | 'disable' | 'fallback';
 

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { type INestApplication } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import { v4 as uuid } from "uuid";
 import { eq } from "drizzle-orm";
 import { AppModule } from "../../../src/app/app.module";
@@ -28,31 +29,51 @@ export async function getDb(app: INestApplication): Promise<typeof schema> {
 }
 
 export async function seedAdmin(db: typeof schema): Promise<{
-  username: string; password: string; userId: string;
+  username: string; password: string; userId: string; employeeId: string;
 }> {
-  const username = `admin-${Date.now()}`;
+  const nonce = randomUUID().replace(/-/g, "").substring(0, 8);
+  const username = `admin-${Date.now()}-${nonce}`;
   const password = "E2eTest@2026!";
   const userId = uuid();
+  const employeeId = uuid();
   const passwordHash = await bcrypt.hash(password, 10);
   await db.insert(schema.users).values({
     id: userId, username, passwordHash,
     isSuperAdmin: true, isActive: true, authorizationVersion: 1,
   });
-  return { username, password, userId };
+  await db.insert(schema.employees).values({
+    id: employeeId,
+    userId,
+    firstName: "Admin",
+    lastName: "User",
+    employeeCode: `EMP-ADM-${nonce}`,
+    status: "working",
+  });
+  return { username, password, userId, employeeId };
 }
 
 export async function seedRegularUser(db: typeof schema): Promise<{
-  username: string; password: string; userId: string;
+  username: string; password: string; userId: string; employeeId: string;
 }> {
-  const username = `user-${Date.now()}`;
+  const nonce = randomUUID().replace(/-/g, "").substring(0, 8);
+  const username = `user-${Date.now()}-${nonce}`;
   const password = "E2eTest@2026!";
   const userId = uuid();
+  const employeeId = uuid();
   const passwordHash = await bcrypt.hash(password, 10);
   await db.insert(schema.users).values({
     id: userId, username, passwordHash,
     isSuperAdmin: false, isActive: true, authorizationVersion: 1,
   });
-  return { username, password, userId };
+  await db.insert(schema.employees).values({
+    id: employeeId,
+    userId,
+    firstName: "Regular",
+    lastName: "User",
+    employeeCode: `EMP-REG-${nonce}`,
+    status: "working",
+  });
+  return { username, password, userId, employeeId };
 }
 
 export async function cleanupUser(

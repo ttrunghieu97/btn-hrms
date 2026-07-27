@@ -1,4 +1,4 @@
-import type { RouteDef } from '../route-registry/routes';
+import type { RouteDef } from '@/shared/authorization';
 
 /**
  * Convert route path with `:param` segments to a RegExp.
@@ -58,6 +58,17 @@ export function matchRoute(
         params[paramNames[i]!] = match[i + 1]!;
       }
       return { route, params };
+    }
+  }
+
+  // Parent route fallback (e.g. /overview/operations -> /overview)
+  const segments = normalized.split('/').filter(Boolean);
+  while (segments.length > 1) {
+    segments.pop();
+    const parentPath = '/' + segments.join('/');
+    const parentMatch = matchRoute(parentPath, registry);
+    if (parentMatch) {
+      return parentMatch;
     }
   }
 

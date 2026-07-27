@@ -11,6 +11,8 @@ import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 
+import { LeaveAuthorizationService } from "../services/leave-authorization.service";
+
 @Injectable()
 export class CancelLeaveRequestUseCase {
   private readonly logger: ContextLogger;
@@ -20,6 +22,7 @@ export class CancelLeaveRequestUseCase {
     private readonly reconciliationService: LeaveAttendanceReconciliationService,
     private readonly eventOutbox: EventOutboxService,
     private readonly requestContext: RequestContextService,
+    private readonly authService: LeaveAuthorizationService,
   ) {
     this.logger = new ContextLogger(this.requestContext, CancelLeaveRequestUseCase.name);
   }
@@ -32,20 +35,7 @@ export class CancelLeaveRequestUseCase {
       });
     }
 
-    const canCancel =
-      existing.employeeId === actor.employeeId ||
-      actor.isSuperAdmin === true ||
-      actor.permissions.includes(Permissions.SYS_ALL) ||
-      actor.permissions.includes(Permissions.LEAVE_APPROVE) ||
-      actor.permissions.includes(Permissions.LEAVE_APPROVE_DEPARTMENT);
-
-    if (!canCancel) {
-      throwForbidden(
-        "Cannot cancel another employee's leave request",
-        ERROR_CODES.FORBIDDEN,
-        { leaveRequestId: id },
-      );
-    }
+    await this.authService.canCancel(actor, existing.employeeId);
 
     this.lifecycleService.assertTransition(
       existing.status ,

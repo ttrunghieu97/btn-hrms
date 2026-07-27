@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { CreateLeaveRequestDto } from "../dto/create-leave-request.dto";
 import { LeaveRequestsRepository } from "../repositories/leave-requests.repository";
 import { LeaveAttendanceReconciliationService } from "../services/leave-attendance-reconciliation.service";
+import { LeaveAuthorizationService } from "../services/leave-authorization.service";
 import {
   throwBadRequest,
   throwConflict,
@@ -14,6 +15,7 @@ import { LeaveApprovedEvent } from "../../../../core/events/events/leave-approve
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
+import type { AuthUser } from "../../../../core/security/types/auth-user.interface";
 
 @Injectable()
 export class CreateLeaveRequestUseCase {
@@ -23,12 +25,16 @@ export class CreateLeaveRequestUseCase {
     private readonly eventOutbox: EventOutboxService,
     private readonly reconciliationService: LeaveAttendanceReconciliationService,
     private readonly requestContext: RequestContextService,
+    private readonly authService: LeaveAuthorizationService,
   ) {
     this.logger = new ContextLogger(this.requestContext, CreateLeaveRequestUseCase.name);
   }
 
-  async execute(dto: CreateLeaveRequestDto, requesterEmployeeId?: string) {
+  async execute(dto: CreateLeaveRequestDto, requesterEmployeeId?: string, actor?: AuthUser) {
     const employeeId = requesterEmployeeId ?? dto.employeeId;
+    if (actor) {
+      await this.authService.canCreate(actor, employeeId);
+    }
     if (dto.startDate > dto.endDate) {
       throwBadRequest("Invalid leave date range", ERROR_CODES.INVALID_REQUEST, {
         startDate: dto.startDate,

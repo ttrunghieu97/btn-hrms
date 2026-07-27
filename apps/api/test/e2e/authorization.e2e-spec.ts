@@ -1,4 +1,4 @@
-import * as request from "supertest";
+import request from "supertest";
 import { eq } from "drizzle-orm";
 import { getApp, getDb, seedAdmin, seedRegularUser, cleanupUser } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
@@ -40,7 +40,7 @@ describe("Authorization (e2e)", () => {
   it("GET /admin-only — 403 for non-admin user", async () => {
     // Try accessing an admin-only endpoint with regular user token
     const res = await request(ctx.app!.getHttpServer())
-      .get("/api/v1/admin/users")  // Adjust path to actual admin endpoint
+      .get("/users")
       .set("Authorization", `Bearer ${ctx.regularToken}`);
     expect(res.status).toBe(403);
   });
@@ -51,19 +51,24 @@ describe("Authorization (e2e)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("POST /offboarding — 403 for non-admin trying to offboard", async () => {
+  it("PUT /employees/:id/terminate — 403 for non-admin trying to terminate", async () => {
     // Need an employee first — create via admin
     const hireRes = await request(ctx.app!.getHttpServer())
       .post("/employees")
       .set("Authorization", `Bearer ${ctx.adminToken}`)
-      .send({ firstName: "AuthZ", lastName: "Test", email: `authz-${Date.now()}@test.com`, hireDate: "2026-07-19" });
+      .send({
+        firstName: "AuthZ", lastName: "Test",
+        employeeCode: `EMP-AZ-${Date.now()}`,
+        email: `authz-${Date.now()}@test.com`,
+        startDate: "2026-07-19",
+      });
     ctx.employeeId = hireRes.body.data.id;
 
-    // Regular user tries to offboard
+    // Regular user tries to terminate employee
     const res = await request(ctx.app!.getHttpServer())
-      .post("/offboarding")
+      .put(`/employees/${ctx.employeeId}/terminate`)
       .set("Authorization", `Bearer ${ctx.regularToken}`)
-      .send({ employeeId: ctx.employeeId, reason: "should fail", exitDate: "2026-07-31" });
+      .send({ terminationDate: "2026-07-31", reason: "should fail" });
     expect(res.status).toBe(403);
   });
 });

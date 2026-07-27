@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { PermissionedUser } from '@project/permissions';
-import { canAccessRoute } from '@/shared/authorization';
+import { canAccessRoute } from '../utils/route-resolver';
 
 /**
  * Server-side route access guard.
@@ -26,7 +26,7 @@ export async function requireRouteAccess(
     redirect('/auth/sign-in');
   }
 
-  if (!canAccessRoute(pathname, user.permissions)) {
+  if (!canAccessRoute(pathname, user)) {
     redirect(`/unauthorized?path=${encodeURIComponent(pathname)}`);
   }
 }

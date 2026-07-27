@@ -73,7 +73,7 @@ export class LeaveManagementController {
   @AuditLog({ action: "leave_request_create", entity: "leave_request" })
   @ApiOperation({ summary: "Create leave request" })
   create(@Body() dto: CreateLeaveRequestDto, @Req() req: AuthRequest) {
-    return this.createLeaveRequest.execute(dto, req.user.employeeId);
+    return this.createLeaveRequest.execute(dto, req.user.employeeId, req.user);
   }
 
   @Patch(":id")

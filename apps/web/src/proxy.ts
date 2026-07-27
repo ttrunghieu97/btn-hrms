@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAnyPermission } from '@project/permissions';
-import { canAccessRoute } from '@/shared/authorization';
+import { canAccessRoute } from '@/features/authorization/utils/route-resolver';
 import { matchRoute } from '@/features/authorization/utils/route-matcher';
-import { routeRegistry } from '@/features/authorization/route-registry/routes';
+import { routeRegistry } from '@/shared/authorization';
 import { decodePermissions } from '@/lib/server/permission-session-edge';
 
 const ACCESS_COOKIE_NAME = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token';
@@ -187,9 +187,10 @@ function checkRoutePermission(pathname: string, req: NextRequest) {
   if (!permCookie) return null;
 
   const decoded = decodePermissions(permCookie);
-  if (!decoded) return null; // corrupted cookie → SSR fallback
+  const permissions = decoded.permissions;
+  const isSuperAdmin = permissions.includes('sys:all') || permissions.includes('ALL');
 
-  if (!canAccessRoute(normalized, decoded.permissions)) {
+  if (!canAccessRoute(normalized, { permissions, isSuperAdmin })) {
     const url = req.nextUrl.clone();
     url.pathname = '/unauthorized';
     url.search = '?path=' + encodeURIComponent(normalized);

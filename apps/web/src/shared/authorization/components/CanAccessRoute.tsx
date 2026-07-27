@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
-import { canAccessRoute } from '@/shared/authorization';
+import { canAccessRoute } from '../resolvers/route.resolver';
 
 export interface CanAccessRouteProps {
   route: string;

@@ -15,7 +15,3 @@ export const authorizationService = {
     return resolveActionAccess(action, permissions);
   },
 };
-
-export const canAccessRoute = authorizationService.canAccessRoute;
-export const canAccessResource = authorizationService.canAccessResource;
-export const canPerformAction = authorizationService.canPerformAction;

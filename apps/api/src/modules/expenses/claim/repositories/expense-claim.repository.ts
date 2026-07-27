@@ -19,8 +19,12 @@ export class ExpenseClaimRepository {
     const where = employeeId ? eq(schema.expenseClaims.employeeId, employeeId) : undefined;
     return this.db.query.expenseClaims.findMany({ where, orderBy: desc(schema.expenseClaims.createdAt) });
   }
-  async update(id: string, v: ClaimUpdate): Promise<ClaimRow | null> {
-    const [r] = await this.db.update(schema.expenseClaims).set({ ...v, updatedAt: new Date() }).where(eq(schema.expenseClaims.id, id)).returning(); return r ?? null;
+  async transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
+  async update(id: string, v: ClaimUpdate, tx?: any): Promise<ClaimRow | null> {
+    const client = tx ?? this.db;
+    const [r] = await client.update(schema.expenseClaims).set({ ...v, updatedAt: new Date() }).where(eq(schema.expenseClaims.id, id)).returning(); return r ?? null;
   }
   async addItem(v: typeof schema.expenseItems.$inferInsert): Promise<void> {
     await this.db.insert(schema.expenseItems).values(v);

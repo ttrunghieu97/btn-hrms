@@ -1,23 +1,26 @@
-import { routeRegistry } from '@/features/authorization/route-registry/routes';
 import { PUBLIC_ROUTES } from '../constants/routes';
 import { RESOURCES } from '../constants/resources';
 import { ACTIONS } from '../constants/actions';
 import { employee, payroll } from '../permissions/permissions';
-import type { AuthorizationRegistry } from '../types/authorization.types';
+import type { AuthorizationRegistry, AuthorizationRule } from '../types/authorization.types';
 
-function buildAuthorizationRegistryFromRouteRegistry(): AuthorizationRegistry {
-  const routes: Record<string, { anyOf?: string[]; allOf?: string[] }> = {};
+export function buildAuthorizationRegistry(
+  routeList?: readonly { path: string; permission?: { anyOf?: readonly string[]; allOf?: readonly string[] } }[]
+): AuthorizationRegistry {
+  const routes: Record<string, AuthorizationRule> = {};
 
-  for (const route of routeRegistry) {
-    if (Object.values(PUBLIC_ROUTES).includes(route.path as any)) continue;
+  if (routeList) {
+    for (const route of routeList) {
+      if (Object.values(PUBLIC_ROUTES).includes(route.path as any)) continue;
 
-    const anyOf = route.permission?.anyOf;
-    const allOf = route.permission?.allOf;
+      const anyOf = route.permission?.anyOf;
+      const allOf = route.permission?.allOf;
 
-    routes[route.path] = {
-      ...(anyOf && anyOf.length ? { anyOf: [...anyOf] } : {}),
-      ...(allOf && allOf.length ? { allOf: [...allOf] } : {}),
-    };
+      routes[route.path] = {
+        ...(anyOf && anyOf.length ? { anyOf: [...anyOf] } : {}),
+        ...(allOf && allOf.length ? { allOf: [...allOf] } : {}),
+      };
+    }
   }
 
   return {
@@ -53,4 +56,5 @@ function buildAuthorizationRegistryFromRouteRegistry(): AuthorizationRegistry {
   };
 }
 
-export const AUTHORIZATION: AuthorizationRegistry = buildAuthorizationRegistryFromRouteRegistry();
+import { routeRegistry } from '../route-registry/routes';
+export const AUTHORIZATION: AuthorizationRegistry = buildAuthorizationRegistry(routeRegistry);

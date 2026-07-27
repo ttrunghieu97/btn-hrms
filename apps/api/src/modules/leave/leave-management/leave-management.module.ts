@@ -10,6 +10,7 @@ import { ListEmployeeLeaveBalancesUseCase } from "./use-cases/list-employee-leav
 import { LeaveLifecycleService } from "./services/leave-lifecycle.service";
 import { LeaveAttendanceReconciliationService } from "./services/leave-attendance-reconciliation.service";
 import { LeaveApprovalPolicyService } from "./services/leave-approval-policy.service";
+import { LeaveAuthorizationService } from "./services/leave-authorization.service";
 import { LeaveEmployeeLifecycleSubscriber } from "../subscribers/employee-lifecycle.subscriber";
 
 @Module({
@@ -19,6 +20,7 @@ import { LeaveEmployeeLifecycleSubscriber } from "../subscribers/employee-lifecy
     LeaveLifecycleService,
     LeaveAttendanceReconciliationService,
     LeaveApprovalPolicyService,
+    LeaveAuthorizationService,
     LeaveEmployeeLifecycleSubscriber,
     ListLeaveRequestsUseCase,
     GetLeaveRequestUseCase,
@@ -27,8 +29,11 @@ import { LeaveEmployeeLifecycleSubscriber } from "../subscribers/employee-lifecy
     CancelLeaveRequestUseCase,
     ListEmployeeLeaveBalancesUseCase,
   ],
-  exports: [LeaveRequestsRepository, LeaveLifecycleService, LeaveAttendanceReconciliationService],
+  exports: [
+    LeaveRequestsRepository,
+    LeaveLifecycleService,
+    LeaveAttendanceReconciliationService,
+    LeaveAuthorizationService,
+  ],
 })
 export class LeaveManagementModule {}
-
-
