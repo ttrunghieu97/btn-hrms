@@ -1,7 +1,7 @@
 import type { SearchParams } from 'nuqs/server';
 import { TaskListingPage } from '@/features/tasks';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { searchParamsCache } from '@/lib/searchparams';
 
@@ -15,7 +15,7 @@ type PageProps = {
 };
 
 export default async function TasksPage(props: PageProps) {
-  await requirePageAccess(permissions.tasks.view);
+  await requireServerSession();
 
   const searchParams = await props.searchParams;
   searchParamsCache.parse(searchParams);

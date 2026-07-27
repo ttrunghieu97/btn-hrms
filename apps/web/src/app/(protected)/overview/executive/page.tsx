@@ -1,8 +1,8 @@
 import { WidgetDashboard } from '@/features/dashboard';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 
 export default async function ExecutiveOverviewPage() {
-  await requirePageAccess(permissions.dashboard.view);
+  await requireServerSession();
   return <WidgetDashboard layoutId="executive" />;
 }

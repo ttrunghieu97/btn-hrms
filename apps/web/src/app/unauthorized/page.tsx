@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { navGroups } from '@/config/nav-config';
-import { filterNavItems } from '@/hooks/use-nav';
+import { getPreferredLandingRoute } from '@/lib/auth-landing';
 import { appShellCopy } from '@/locales/vi/system-ui';
 
 export default function UnauthorizedPage() {
@@ -21,15 +20,7 @@ export default function UnauthorizedPage() {
 
   // Dynamically determine the best landing page based on user permissions
   const getLandingPage = React.useCallback(() => {
-    if (!user) return '/auth/sign-in';
-    const allowedItems = filterNavItems(
-      navGroups.flatMap((g) => g.items),
-      user
-    );
-    if (allowedItems.length > 0 && allowedItems[0].url) {
-      return allowedItems[0].url;
-    }
-    return '/account/profile'; // Fallback to profile page which is always safe
+    return getPreferredLandingRoute(user);
   }, [user]);
 
   const handleGoHome = () => {

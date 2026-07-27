@@ -38,6 +38,7 @@ const PERMISSIONS = [
   { code: "employees:manage:sensitive", description: "Quản lý dữ liệu nhạy cảm của nhân viên" },
   { code: "employees:reset-password", description: "Reset mật khẩu nhân viên" },
   { code: "employees:delete", description: "Xóa hồ sơ nhân viên" },
+  { code: "profile:view", description: "Xem trang cá nhân" },
   { code: "schedule:view:self", description: "Xem lịch làm việc của bản thân" },
   { code: "schedule:view:department", description: "Xem lịch làm việc trong phòng ban" },
   { code: "schedule:view:all", description: "Xem lịch làm việc toàn công ty" },
@@ -74,6 +75,7 @@ const SYSTEM_ROLES = [
     permissions: [
       "schedule:view:self", "attendance:view:self", "attendance:edit:self",
       "leave:view:self", "leave:request", "payroll:view:self",
+      "profile:view", "employees:view:self", "dashboard:view",
     ],
   },
   {

@@ -1,6 +1,6 @@
 import { RolesListingPage } from '@/features/roles/server';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 
 export const metadata = {
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function AdminRolesPage() {
-  await requirePageAccess(permissions.roles.manage);
+  await requireServerSession();
 
   return <RolesListingPage />;
 }

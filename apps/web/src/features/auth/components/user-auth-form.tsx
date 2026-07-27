@@ -12,7 +12,9 @@ import { appCopy } from '@/lib/app-copy';
 import { useAuthStore } from '@/stores/auth-store';
 import { GoogleSsoButton } from './google-sso-button';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getPreferredLandingRoute } from '@/lib/auth-landing';
 import Link from 'next/link';
+
 
 import { IconUser, IconLock, IconEye, IconEyeOff, IconInfoCircle } from '@tabler/icons-react';
 import {
@@ -53,16 +55,8 @@ export default function UserAuthForm() {
               return;
             }
 
-            const canViewDashboard = user.isSuperAdmin || user.permissions?.some(p => p === 'ALL' || p === 'dashboard:view');
-            const canViewAttendance = user.permissions?.some(p => p.startsWith('attendance:'));
-
-            if (canViewDashboard) {
-              router.replace('/overview');
-            } else if (canViewAttendance) {
-              router.replace('/attendance');
-            } else {
-              router.replace('/account/profile');
-            }
+            const landingRoute = getPreferredLandingRoute(user);
+            router.replace(landingRoute);
           }
         } catch (error) {
           if (isUnauthenticatedError(error)) {
@@ -207,7 +201,7 @@ export default function UserAuthForm() {
               try {
                 const user = await signInWithGoogle(idToken);
                 if (user) {
-                  router.replace('/overview');
+                  router.replace(getPreferredLandingRoute(user));
                 }
               } catch (error) {
                 setSubmitError(getVietnameseApiErrorMessage(error, 'Đăng nhập Google thất bại'));

@@ -21,7 +21,7 @@ export function filterNavItems(items: NavItem[], user: ReturnType<typeof useAuth
       const children = item.items?.length ? filterNavItems(item.items, user) : item.items;
       return { ...item, items: children };
     })
-    .filter((item) => item.disabled || canAccessNavItem(item, user) || Boolean(item.items?.length));
+    .filter((item) => !item.disabled && (canAccessNavItem(item, user) || Boolean(item.items?.length)));
 }
 
 export function useFilteredNavItems(items: NavItem[]) {

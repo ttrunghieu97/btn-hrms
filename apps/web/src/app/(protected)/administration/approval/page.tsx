@@ -1,13 +1,16 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApprovalPoliciesListPage, ApprovalRequestsListPage, ApprovalInboxListPage } from '@/features/approval';
 import { buildDashboardMetadataTitle, approvalCopy } from '@/lib/app-copy';
+import { requireServerSession } from '@/lib/server/auth-session';
 
 export const metadata = {
   title: buildDashboardMetadataTitle(approvalCopy.management),
   description: approvalCopy.description,
 };
 
-export default function ApprovalAdminPage() {
+export default async function ApprovalAdminPage() {
+  await requireServerSession();
+  await requireServerSession();
   return (
     <div className="space-y-6">
 

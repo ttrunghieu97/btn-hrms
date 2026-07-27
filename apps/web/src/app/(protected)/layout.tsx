@@ -6,11 +6,12 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { pageCopy, routeLabels } from '@/lib/app-copy';
 import { appLogger } from '@/lib/logger';
 import { requireServerSession } from '@/lib/server/auth-session';
+import { requirePagePermission } from '@/features/authorization/guards/page-permission';
 import { fetchNav } from '@/features/nav/api/nav-api';
 import { navKeys } from '@/features/nav/hooks/useNav';
 import { QueryClient, HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: routeLabels.dashboard,
@@ -23,6 +24,13 @@ export const metadata: Metadata = {
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [cookieStore, initialUser] = await Promise.all([cookies(), requireServerSession()]);
+
+  // SSR permission check — secondary enforcement behind middleware
+  const h = await headers();
+  const pathname = h.get('next-url') ?? h.get('x-forwarded-path') ?? '';
+  if (pathname) {
+    requirePagePermission(pathname, initialUser);
+  }
   const defaultOpen = cookieStore.get('sidebar_state')?.value === 'true';
 
   appLogger.debug('auth_session_seeded', {

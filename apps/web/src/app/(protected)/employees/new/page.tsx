@@ -1,6 +1,6 @@
 import { EmployeeCreatePage } from '@/features/employees';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requireAnyPageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,9 +10,7 @@ export const metadata = {
 };
 
 export default async function EmployeeCreatePageRoute() {
-  await requireAnyPageAccess([
-    permissions.employees.create,
-  ]);
+  await requireServerSession();
 
   return (
     <Suspense fallback={

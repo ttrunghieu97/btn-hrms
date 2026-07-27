@@ -19,7 +19,8 @@
     "test": "jest --runInBand",
     "lint": "pnpm error-contracts:verify && eslint --config eslint.arch.config.mjs \"src/**/*.{ts,tsx}\" --max-warnings 1227",
     "depcruise": "depcruise --validate .dependency-cruiser.cjs src",
-    "ci:verify": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm build",
+    "authorization:check": "node scripts/validate-authorization.mjs",
+    "ci:verify": "pnpm authorization:check && pnpm typecheck && pnpm lint && pnpm depcruise && pnpm build",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui"
   },
@@ -29,6 +30,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@project/api": "workspace:*",
+    "@project/permissions": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

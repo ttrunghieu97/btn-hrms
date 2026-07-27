@@ -7,7 +7,7 @@ import {
   type TimelineEventDto
 } from '@/features/employees';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requireAnyPageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { getQueryClient } from '@/lib/query-client';
 import { employeesControllerFindOne, employeeContractsControllerGet } from '@/api/generated/endpoints';
@@ -28,12 +28,7 @@ type PageProps = {
 
 export default async function EmployeeDetailPageRoute(props: PageProps) {
   const { employeeId } = await props.params;
-  await requireAnyPageAccess([
-    permissions.employees.view,
-    permissions.employees.viewSelf,
-    permissions.employees.viewDepartment,
-    permissions.employees.viewAll,
-  ]);
+  await requireServerSession();
 
   const queryClient = getQueryClient();
   const cookieHeader = (await cookies()).toString();

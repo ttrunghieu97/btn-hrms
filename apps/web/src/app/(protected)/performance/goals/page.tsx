@@ -1,4 +1,4 @@
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { buildDashboardMetadataTitle, routeLabels } from '@/locales/vi/app-copy';
 import { PerformanceGoalsView } from '@/features/performance';
 
@@ -7,6 +7,6 @@ export const metadata = {
 };
 
 export default async function PerformanceGoalsPage() {
-  await requirePageAccess('performance:view');
+  await requireServerSession();
   return <PerformanceGoalsView />;
 }

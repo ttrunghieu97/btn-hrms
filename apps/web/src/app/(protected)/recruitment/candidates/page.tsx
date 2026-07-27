@@ -1,4 +1,4 @@
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { buildDashboardMetadataTitle, routeLabels } from '@/lib/app-copy';
 import { CandidatesView } from '@/features/recruitment';
 
@@ -7,6 +7,6 @@ export const metadata = {
 };
 
 export default async function RecruitmentCandidatesPage() {
-  await requirePageAccess('recruitment:view');
+  await requireServerSession();
   return <CandidatesView />;
 }

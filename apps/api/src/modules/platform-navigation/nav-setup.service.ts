@@ -44,9 +44,10 @@ export class NavSetupService implements OnApplicationBootstrap {
           href: "/employees",
           icon: "employee",
           requiredPermissions: [
-            "employees:view:self",
             "employees:view:department",
             "employees:view:all",
+            "employees:view",
+            "employees:view:self",
           ],
         },
       ],
@@ -291,7 +292,7 @@ export class NavSetupService implements OnApplicationBootstrap {
           label: "Profile",
           href: "/account/profile",
           icon: "profile",
-          requiredPermissions: ["profile:view"],
+          requiredPermissions: ["profile:view", "employees:view:self"],
         },
         {
           id: "notifications",

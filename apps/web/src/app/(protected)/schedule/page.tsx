@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { HydrationBoundary } from '@tanstack/react-query';
 import { CalendarView } from '@/features/schedule';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { prefetchSchedulePage } from '@/features/shifts/server';
 import { Suspense } from 'react';
@@ -18,7 +18,7 @@ export default async function SchedulePage(props: {
   if (tab === 'requests') redirect('/schedule/requests');
   if (tab === 'my-schedule') redirect('/schedule/my-schedule');
 
-  await requirePageAccess(permissions.schedule.view);
+  await requireServerSession();
 
   const { dehydratedState } = await prefetchSchedulePage(searchParams);
 

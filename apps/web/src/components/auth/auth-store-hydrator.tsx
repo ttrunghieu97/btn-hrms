@@ -14,10 +14,14 @@ export default function AuthStoreHydrator({
   const hydrated = React.useRef(false);
 
   // Synchronous server hydration during initial render phase
-  if (!hydrated.current) {
-    hydrated.current = true;
-    useAuthStore.setState({ user, initialized: true });
-  }
+  React.useEffect(() => {
+    if (!hydrated.current) {
+      hydrated.current = true;
+      useAuthStore.getState().hydrateFromServer(user);
+    }
+  }, [user]);
 
   return <>{children}</>;
 }
+
+

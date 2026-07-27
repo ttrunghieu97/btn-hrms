@@ -1,4 +1,4 @@
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { buildDashboardMetadataTitle, routeLabels } from '@/locales/vi/app-copy';
 import { AssetCatalogView } from '@/features/asset-management';
 
@@ -7,6 +7,6 @@ export const metadata = {
 };
 
 export default async function AssetCatalogPage() {
-  await requirePageAccess('asset:view');
+  await requireServerSession();
   return <AssetCatalogView />;
 }

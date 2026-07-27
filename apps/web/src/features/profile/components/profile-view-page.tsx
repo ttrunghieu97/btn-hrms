@@ -348,16 +348,18 @@ export default function ProfileViewPage() {
       <div className="space-y-8 xl:col-span-2">
         <div className="flex items-center justify-between">
           <div />
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-          >
-            <Link href={`/employees/${employee.id}`}>
-              <Icons.profile className="mr-1.5 size-4" />
-              {employeeUiCopy.table.viewDetails}
-            </Link>
-          </Button>
+          {user?.permissions?.some((p) => p === 'sys:all' || p === 'ALL' || p === 'employees:view' || p === 'employees:view:department' || p === 'employees:view:all') ? (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <Link href={`/employees/${employee.id}`}>
+                <Icons.profile className="mr-1.5 size-4" />
+                {employeeUiCopy.table.viewDetails}
+              </Link>
+            </Button>
+          ) : null}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

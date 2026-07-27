@@ -1,0 +1,15 @@
+export const employee = {
+  view: 'employee:view',
+  viewSelf: 'employee:view:self',
+  viewDepartment: 'employee:view:department',
+  viewAll: 'employee:view:all',
+  viewSensitive: 'employee:view:sensitive',
+  create: 'employee:create',
+  edit: 'employee:edit',
+  updateSelf: 'employee:update:self',
+  updateAll: 'employee:update:all',
+  manageSensitive: 'employee:manage:sensitive',
+  resetPassword: 'employee:reset-password',
+  delete: 'employee:delete',
+  manage: 'employee:manage',
+} as const;

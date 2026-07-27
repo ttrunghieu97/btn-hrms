@@ -1,5 +1,5 @@
 import { SystemHealthCard } from '@/features/monitoring';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { monitoringCopy } from '@/locales/vi';
 import type { Metadata } from 'next';
@@ -10,6 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default async function SystemHealthPage() {
-  await requirePageAccess(permissions.monitoring.view);
+  await requireServerSession();
   return <SystemHealthCard />;
 }

@@ -27,7 +27,7 @@ export const navGroups: NavGroup[] = [
         shortcut: ['e', 'm'],
         isActive: false,
         items: [],
-        access: { permissions: ['employees:view:self', 'employees:view:department', 'employees:view:all'] }
+        access: { permissions: ['employees:view:department', 'employees:view:all', 'employees:view', 'employees:view:self'] }
       }
     ]
   },
@@ -271,7 +271,7 @@ export const navGroups: NavGroup[] = [
         shortcut: ['m', 'm'],
         isActive: false,
         items: [],
-        access: { permissions: ['profile:view'] }
+        access: { permissions: ['profile:view', 'employees:view:self'] }
       },
       {
         title: appCopy.nav.items.notifications,

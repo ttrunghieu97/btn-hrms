@@ -8,7 +8,7 @@ function requestOrigin(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
-  const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/overview';
+  const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/';
   const loginUrl = request.nextUrl.searchParams.get('loginUrl') || '/auth/sign-in';
 
   const cookieHeader = request.headers.get('cookie') || '';

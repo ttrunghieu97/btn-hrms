@@ -1,16 +1,11 @@
 import { EmployeesTable } from '@/features/employees';
-import { requireAnyPageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function EmployeesPage() {
-  await requireAnyPageAccess([
-    permissions.employees.view,
-    permissions.employees.viewSelf,
-    permissions.employees.viewDepartment,
-    permissions.employees.viewAll,
-  ]);
+  await requireServerSession();
   return (
     <Suspense fallback={
       <div className="space-y-4">

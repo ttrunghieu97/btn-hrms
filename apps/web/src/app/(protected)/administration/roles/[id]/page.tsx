@@ -1,6 +1,6 @@
 import { PermissionWorkspace } from '@/features/roles';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import type { Metadata } from 'next';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminRoleWorkspacePage({ params }: RoleWorkspacePageProps) {
-  await requirePageAccess(permissions.roles.manage);
+  await requireServerSession();
   const { id } = await params;
 
   return <PermissionWorkspace id={id} variant="full" />;

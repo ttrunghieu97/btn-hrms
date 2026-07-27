@@ -1,5 +1,5 @@
 import { NotificationsPage as NotificationsView } from '@/features/notifications';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 
 export const metadata = {
@@ -8,6 +8,6 @@ export const metadata = {
 };
 
 export default async function Page() {
-  await requirePageAccess(permissions.notifications.view);
+  await requireServerSession();
   return <NotificationsView />;
 }

@@ -1,5 +1,5 @@
 import { DepartmentsPositionsView } from '@/features/departments';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { buildDashboardMetadataTitle, routeLabels } from '@/lib/app-copy';
 import type { Metadata } from 'next';
@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default async function OrganizationDepartmentsPage() {
-  await requirePageAccess(permissions.departments.view);
+  await requireServerSession();
   return <DepartmentsPositionsView />;
 }

@@ -51,6 +51,7 @@ const PERMISSIONS = [
   { code: "employees:manage:sensitive", description: "Quản lý dữ liệu nhạy cảm của nhân viên" },
   { code: "employees:reset-password", description: "Reset mật khẩu nhân viên" },
   { code: "employees:delete", description: "Xóa hồ sơ nhân viên" },
+  { code: "profile:view", description: "Xem trang cá nhân" },
   { code: "schedule:view:self", description: "Xem lịch làm việc của bản thân" },
   { code: "schedule:view:department", description: "Xem lịch làm việc trong phòng ban" },
   { code: "schedule:view:all", description: "Xem lịch làm việc toàn công ty" },
@@ -87,6 +88,7 @@ export const SYSTEM_ROLES = [
     permissions: [
       "schedule:view:self", "attendance:view:self", "attendance:edit:self",
       "leave:view:self", "leave:request", "payroll:view:self",
+      "profile:view", "employees:view:self", "dashboard:view",
     ],
   },
   {
@@ -267,6 +269,27 @@ async function seed() {
         .limit(1);
       if (exists.length === 0) {
         await db.insert(userRoles).values({ userId: adminId, roleId: sysAdminRole[0]!.id });
+      }
+    }
+
+    // 7. Assign employee_base role to all non-superadmin users
+    console.log("  Assigning default employee_base role...");
+    const empRole = await db
+      .select()
+      .from(roles)
+      .where(sql`${roles.code} = 'employee_base'`)
+      .limit(1);
+
+    if (empRole.length > 0) {
+      const nonAdmins = await db
+        .select()
+        .from(users)
+        .where(sql`${users.isSuperAdmin} = false`);
+      for (const u of nonAdmins) {
+        await db
+          .insert(userRoles)
+          .values({ userId: u.id, roleId: empRole[0]!.id })
+          .onConflictDoNothing();
       }
     }
 

@@ -1,7 +1,7 @@
 import type { SearchParams } from 'nuqs/server';
 import { UserListingPage } from '@/features/users';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 import { searchParamsCache } from '@/lib/searchparams';
 
@@ -15,7 +15,7 @@ type PageProps = {
 };
 
 export default async function AdminUsersPage(props: PageProps) {
-  await requirePageAccess(permissions.users.view);
+  await requireServerSession();
 
   const searchParams = await props.searchParams;
   searchParamsCache.parse(searchParams);

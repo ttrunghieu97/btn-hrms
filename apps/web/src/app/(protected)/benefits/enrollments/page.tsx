@@ -1,4 +1,4 @@
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { buildDashboardMetadataTitle, routeLabels } from '@/locales/vi/app-copy';
 import { BenefitEnrollmentsView } from '@/features/benefits';
 
@@ -7,6 +7,6 @@ export const metadata = {
 };
 
 export default async function BenefitEnrollmentsPage() {
-  await requirePageAccess('benefits:view');
+  await requireServerSession();
   return <BenefitEnrollmentsView />;
 }

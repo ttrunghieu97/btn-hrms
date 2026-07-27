@@ -1,6 +1,6 @@
 import { ChatViewPage } from '@/features/chat';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requirePageAccess } from '@/lib/page-access';
+import { requireServerSession } from '@/lib/server/auth-session';
 import { permissions } from '@/lib/permissions';
 
 export const metadata = {
@@ -9,6 +9,6 @@ export const metadata = {
 };
 
 export default async function Page() {
-  await requirePageAccess(permissions.chat.view);
+  await requireServerSession();
   return <ChatViewPage />;
 }

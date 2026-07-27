@@ -133,6 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       const user = meRes.status === 200 ? unwrapData<User | null>(meRes) : null;
       set({ user, initialized: true });
       void setSentryUser(user ? { id: user.id, username: user.username } : null);
+      void fetch('/api/auth/permission-session', { method: 'POST' });
       toast.success(feedbackCopy.auth.signInSuccess);
       return user;
     } catch (err) {
@@ -164,6 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       const user = meRes.status === 200 ? unwrapData<User | null>(meRes) : null;
       set({ user, initialized: true });
       void setSentryUser(user ? { id: user.id, username: user.username } : null);
+      void fetch('/api/auth/permission-session', { method: 'POST' });
       toast.success(feedbackCopy.auth.signInSuccess);
       return user;
     } catch (err) {
@@ -176,7 +178,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
   signOut: async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await Promise.all([
+        fetch('/api/auth/logout', { method: 'POST' }),
+        fetch('/api/auth/permission-session', { method: 'DELETE' }),
+      ]);
     } catch {
       // ignore - clear local regardless
     } finally {

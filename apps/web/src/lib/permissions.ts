@@ -1,123 +1,168 @@
+// ── Shared package re-exports ──────────────────────────────────────────
+export {
+  employee,
+  attendance,
+  leave,
+  payroll,
+  schedule,
+  system,
+  dashboard,
+  users,
+  departments,
+  profile,
+  auth,
+  assetManagement,
+  benefits,
+  expenses,
+  performance,
+  learning,
+  recruitment,
+  onboarding,
+  offboarding,
+  notifications,
+  monitoring,
+  chat,
+  tasks,
+  approval,
+  PermissionRegistry,
+  hasPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+  resolvePermissions,
+  hierarchyMap,
+} from '@project/permissions';
+export type { PermissionedUser } from '@project/permissions';
+export type { PermissionCode } from '@project/permissions';
+
+// ── Legacy `permissions.xxx` compat ────────────────────────────────────
+// Existing code uses `import { permissions } from '@/lib/permissions'`
+// then accesses `permissions.employees.viewSelf`. This backward-compat
+// layer maps the new module-level exports back to the old object shape.
+//
+// Migrate to named imports: `import { employee } from '@/lib/permissions'`
+// then use `employee.viewSelf` directly.
+import * as mod from '@project/permissions';
+
+/** @deprecated Use named imports (`employee`, `attendance`, …) directly */
 export const permissions = {
-  dashboard: {
-    view: 'dashboard:view'
-  },
+  dashboard: { view: mod.dashboard.view },
   employees: {
-    view: 'employees:view',
-    viewSelf: 'employees:view:self',
-    viewDepartment: 'employees:view:department',
-    viewAll: 'employees:view:all',
-    create: 'employees:create',
-    edit: 'employees:edit',
-    resetPassword: 'employees:reset-password',
+    view: mod.employee.view,
+    viewSelf: mod.employee.viewSelf,
+    viewDepartment: mod.employee.viewDepartment,
+    viewAll: mod.employee.viewAll,
+    create: mod.employee.create,
+    edit: mod.employee.edit,
+    resetPassword: mod.employee.resetPassword,
   },
   departments: {
-    view: 'departments:view',
-    create: 'departments:create',
-    edit: 'departments:edit'
+    view: mod.departments.view,
+    create: mod.departments.create,
+    edit: mod.departments.edit,
   },
   attendance: {
-    view: 'attendance:view:self',
-    viewDepartment: 'attendance:view:department',
-    viewAll: 'attendance:view:all',
-    manage: 'attendance:view:all'
+    view: mod.attendance.viewSelf,
+    viewSelf: mod.attendance.viewSelf,
+    viewDepartment: mod.attendance.viewDepartment,
+    viewAll: mod.attendance.viewAll,
+    manage: mod.attendance.viewAll,
   },
   schedule: {
-    view: 'schedule:view',
-    manage: 'schedule:manage'
+    view: mod.schedule.viewSelf,
+    manage: mod.schedule.editAll,
   },
   leave: {
-    viewSelf: 'leave:view:self',
-    viewDepartment: 'leave:view:department',
-    viewAll: 'leave:view:all',
-    create: 'leave:create',
-    edit: 'leave:edit',
-    approve: 'leave:approve',
+    viewSelf: mod.leave.viewSelf,
+    viewDepartment: mod.leave.viewDepartment,
+    viewAll: mod.leave.viewAll,
+    create: mod.leave.create,
+    edit: mod.leave.edit,
+    approve: mod.leave.approve,
   },
   profile: {
-    view: 'profile:view',
-    edit: 'profile:edit'
+    view: mod.profile.view,
+    edit: mod.profile.edit,
   },
   auth: {
-    changePassword: 'auth:change-password'
+    changePassword: mod.auth.changePassword,
   },
   roles: {
-    view: 'roles:view',
-    manage: 'users:edit'
+    view: mod.roles!.view,
+    manage: mod.users.edit,
   },
   users: {
-    view: 'users:view',
-    edit: 'users:edit'
+    view: mod.users.view,
+    edit: mod.users.edit,
   },
   notifications: {
-    view: 'notifications:view'
+    view: mod.notifications.viewSelf,
   },
   chat: {
-    view: 'chat:view'
+    view: mod.chat.view,
   },
   tasks: {
-    view: 'tasks:view',
-    create: 'tasks:create',
-    edit: 'tasks:edit',
-    manage: 'tasks:manage'
+    view: mod.tasks.view,
+    create: mod.tasks.create,
+    edit: mod.tasks.edit,
+    manage: mod.tasks.edit,
   },
   products: {
-    view: 'products:view'
+    view: 'products:view',
   },
   company: {
-    view: 'company:view'
+    view: 'company:view',
   },
   billing: {
-    view: 'billing:view'
+    view: 'billing:view',
   },
   demos: {
-    view: 'sys:all'
+    view: 'sys:all',
   },
   monitoring: {
-    view: 'monitoring:view'
+    view: mod.monitoring.view,
   },
   recruitment: {
-    view: 'recruitment:view',
-    requisitionManage: 'recruitment:requisition:manage',
-    requisitionApprove: 'recruitment:requisition:approve',
-    postingManage: 'recruitment:posting:manage',
-    candidateManage: 'recruitment:candidate:manage',
-    pipelineManage: 'recruitment:pipeline:manage',
-    offerManage: 'recruitment:offer:manage',
-    offerApprove: 'recruitment:offer:approve'
+    view: mod.recruitment.view,
+    requisitionManage: mod.recruitment.requisitionManage,
+    requisitionApprove: mod.recruitment.requisitionApprove,
+    postingManage: mod.recruitment.postingManage,
+    candidateManage: mod.recruitment.candidateManage,
+    pipelineManage: mod.recruitment.pipelineManage,
+    offerManage: mod.recruitment.offerManage,
+    offerApprove: mod.recruitment.offerApprove,
   },
   assetManagement: {
-    view: 'asset:view',
-    catalog: 'asset:catalog:manage',
-    inventory: 'asset:inventory:manage',
-    request: 'asset:request:create',
-    issue: 'asset:issue:manage'
+    view: mod.assetManagement.view,
+    catalog: mod.assetManagement.catalogManage,
+    inventory: mod.assetManagement.inventoryManage,
+    request: mod.assetManagement.requestCreate,
+    issue: mod.assetManagement.issueManage,
   },
   benefits: {
-    view: 'benefits:view',
-    manage: 'benefits:manage'
+    view: mod.benefits.view,
+    manage: mod.benefits.manage,
   },
   expenses: {
-    view: 'expenses:view',
-    manage: 'expenses:manage'
+    view: mod.expenses.view,
+    manage: mod.expenses.manage,
   },
   performance: {
-    view: 'performance:view',
-    manage: 'performance:manage'
+    view: mod.performance.view,
+    manage: mod.performance.manage,
   },
   learning: {
-    view: 'learning:view',
-    manage: 'learning:manage'
+    view: mod.learning.view,
+    manage: mod.learning.manage,
   },
   onboarding: {
-    view: 'onboarding:view',
-    manage: 'onboarding:manage'
+    view: mod.onboarding.view,
+    manage: mod.onboarding.manage,
   },
   offboarding: {
-    view: 'offboarding:view',
-    manage: 'offboarding:manage',
-    clearance: 'offboarding:clearance'
-  }
+    view: mod.offboarding.view,
+    manage: mod.offboarding.edit,
+    clearance: mod.offboarding.clearanceIt,
+  },
 } as const;
 
 export type PermissionValue = {
