@@ -82,6 +82,7 @@ jobs:
           POSTGRES_USER: hrms
           POSTGRES_PASSWORD: hrms
           POSTGRES_DB: hrms
+          POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
