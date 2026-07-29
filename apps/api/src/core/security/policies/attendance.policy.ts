@@ -66,41 +66,67 @@ class AttendanceReportPolicyHandler implements PolicyHandler {
 
 class AttendanceTimesheetPolicyHandler implements PolicyHandler {
   readonly policyName = "AttendanceTimesheet";
-  readonly requiredAnyOfPermissions = [
-    Permissions.ATTENDANCE_TIMESHEET_VIEW,
-    Permissions.ATTENDANCE_TIMESHEET_MANAGE,
-  ];
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    const perms = user.permissions ?? [];
-    return this.requiredAnyOfPermissions.some((p) => perms.includes(p));
+    return (user.permissions ?? []).some((p) =>
+      [Permissions.ATTENDANCE_TIMESHEET_VIEW, Permissions.ATTENDANCE_TIMESHEET_MANAGE].includes(p as any)
+    );
   }
 }
 
 class AttendanceTimesheetManagePolicyHandler implements PolicyHandler {
   readonly policyName = "AttendanceTimesheetManage";
-  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_TIMESHEET_MANAGE];
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return user.permissions?.includes(Permissions.ATTENDANCE_TIMESHEET_MANAGE) ?? false;
   }
 }
 
-class AttendancePeriodLockPolicyHandler implements PolicyHandler {
-  readonly policyName = "AttendancePeriodLock";
-  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_PERIOD_LOCK_MANAGE];
+class AttendanceTimesheetApprovePolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendanceTimesheetApprove";
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_LOCK_MANAGE) ?? false;
+    return user.permissions?.includes(Permissions.ATTENDANCE_TIMESHEET_APPROVE) ?? false;
+  }
+}
+
+class AttendanceTimesheetImportPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendanceTimesheetImport";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_TIMESHEET_IMPORT) ?? false;
+  }
+}
+
+class AttendancePeriodViewPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodView";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_VIEW) ?? false;
+  }
+}
+
+class AttendancePeriodLockPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodLock";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_LOCK) ?? false;
   }
 }
 
 class AttendancePeriodUnlockPolicyHandler implements PolicyHandler {
   readonly policyName = "AttendancePeriodUnlock";
-  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_PERIOD_UNLOCK_MANAGE];
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_UNLOCK_MANAGE) ?? false;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_UNLOCK) ?? false;
+  }
+}
+
+class AttendancePeriodClosePolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodClose";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_CLOSE) ?? false;
   }
 }
 
@@ -110,6 +136,10 @@ export const AttendancePolicies = {
   report: new AttendanceReportPolicyHandler(),
   timesheetView: new AttendanceTimesheetPolicyHandler(),
   timesheetManage: new AttendanceTimesheetManagePolicyHandler(),
+  timesheetApprove: new AttendanceTimesheetApprovePolicyHandler(),
+  timesheetImport: new AttendanceTimesheetImportPolicyHandler(),
+  periodView: new AttendancePeriodViewPolicyHandler(),
   periodLock: new AttendancePeriodLockPolicyHandler(),
   periodUnlock: new AttendancePeriodUnlockPolicyHandler(),
+  periodClose: new AttendancePeriodClosePolicyHandler(),
 };

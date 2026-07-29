@@ -49,6 +49,23 @@ export class PeriodLockService {
     });
   }
 
+  async close(actorUserId: string, period: string, remarks: string): Promise<AttendancePeriodLock> {
+    const lock = await this.periodLockRepo.ensurePeriod(period);
+    if (!this.periodLockService.canClose(lock.status)) {
+      throwBadRequest(
+        `Period ${period} cannot be closed from status ${lock.status}`,
+        ERROR_CODES.INVALID_REQUEST,
+        { period, status: lock.status },
+      );
+    }
+    return this.periodLockRepo.upsert({
+      period,
+      status: "closed",
+      userId: actorUserId,
+      remarks,
+    });
+  }
+
   async getPeriodLock(period: string): Promise<AttendancePeriodLock | null> {
     return this.periodLockRepo.findByPeriod(period);
   }

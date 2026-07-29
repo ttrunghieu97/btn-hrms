@@ -25,6 +25,12 @@ export default function AttendanceLayout({ children }: { children: React.ReactNo
   const canTimesheet = hasAnyPermission(user?.permissions ?? [], [
     'attendance:timesheet:view',
     'attendance:timesheet:manage',
+    'attendance:timesheet:approve',
+  ]);
+  const canPeriodLock = hasAnyPermission(user?.permissions ?? [], [
+    'attendance:period:lock',
+    'attendance:period:unlock',
+    'attendance:period:close',
   ]);
 
   const tabs = [

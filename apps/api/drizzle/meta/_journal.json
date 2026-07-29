@@ -22,6 +22,13 @@
       "when": 1785302717191,
       "tag": "0002_good_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785312459297,
+      "tag": "0003_burly_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

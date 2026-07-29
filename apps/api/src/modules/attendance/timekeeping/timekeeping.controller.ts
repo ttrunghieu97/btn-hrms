@@ -205,6 +205,23 @@ export class TimekeepingController {
     return this.toPeriodLockResponse(lock);
   }
 
+  @Post("period-locks/close")
+  @CheckPolicy(AttendancePolicies.periodClose)
+  @AuditLog({ action: "period_lock_close", entity: "attendance" })
+  @ApiOperation({ summary: "Close attendance period — final, no further edits" })
+  @ApiOkResponse({ description: "Period closed" })
+  async closePeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: UnlockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.close(
+      req.user.id,
+      dto.period,
+      dto.remarks,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
   @Get("timesheet-workspace")
   @CheckPolicy(AttendancePolicies.report)
   @ApiOperation({ summary: "Get timesheet workspace data for a period" })

@@ -28,7 +28,7 @@ export interface TimesheetWorkspaceResponse {
   records: TimesheetWorkspaceRecord[];
 }
 
-export type PeriodStatus = 'open' | 'locked' | 'payroll_processing' | 'payroll_posted';
+export type PeriodStatus = 'open' | 'in_review' | 'locked' | 'payroll_processing' | 'payroll_posted' | 'closed';
 
 export interface PeriodLockData {
   id: string;

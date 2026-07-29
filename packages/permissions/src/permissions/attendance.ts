@@ -8,8 +8,12 @@ export const attendance = {
   overtimeApprove: 'attendance:overtime:approve',
   timesheetView: 'attendance:timesheet:view',
   timesheetManage: 'attendance:timesheet:manage',
-  periodLockManage: 'attendance:period-lock:manage',
-  periodUnlockManage: 'attendance:period-unlock:manage',
+  timesheetApprove: 'attendance:timesheet:approve',
+  timesheetImport: 'attendance:timesheet:import',
+  periodView: 'attendance:period:view',
+  periodLock: 'attendance:period:lock',
+  periodUnlock: 'attendance:period:unlock',
+  periodClose: 'attendance:period:close',
 } as const;
 
 export const attendanceHierarchy: readonly string[] = [

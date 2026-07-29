@@ -93,9 +93,11 @@ export const attendanceSourceEnum = pgEnum("attendance_source_enum", [
 
 export const attendancePeriodLockStatusEnum = pgEnum("attendance_period_lock_status_enum", [
   "open",
+  "in_review",
   "locked",
   "payroll_processing",
   "payroll_posted",
+  "closed",
 ]);
 
 export const lunchDutyTypeEnum = pgEnum("lunch_duty_type_enum", [
