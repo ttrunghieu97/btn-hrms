@@ -8,6 +8,7 @@ import { AttendanceExceptionDetectorService } from "./services/attendance-except
 import { AttendancePeriodLockService } from "./services/attendance-period-lock.service";
 import { TimesheetService } from "./services/timesheet.service";
 import { PeriodLockService } from "./services/period-lock.service";
+import { TimesheetSnapshotService } from "./services/timesheet-snapshot.service";
 import { CreateClockEventUseCase } from "./use-cases/create-clock-event.usecase";
 import { CreateManualCorrectionUseCase } from "./use-cases/create-manual-correction.usecase";
 import { ListClockEventsUseCase } from "./use-cases/list-clock-events.usecase";
@@ -29,6 +30,7 @@ import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-work
     AttendancePeriodLockService,
     TimesheetService,
     PeriodLockService,
+    TimesheetSnapshotService,
     QueryTimesheetWorkspaceUseCase,
     CreateClockEventUseCase,
     CreateManualCorrectionUseCase,

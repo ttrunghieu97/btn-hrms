@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { registerWorkforceEvents, registerLeaveEvents, registerSchedulingEvents, registerTasksEvents, registerApprovalEvents, registerPayrollEvents, registerRecruitmentEvents, registerAssetEvents, registerOnboardingEvents, registerOffboardingEvents } from "../../shared/events/event-types";
+import { registerWorkforceEvents, registerLeaveEvents, registerSchedulingEvents, registerTasksEvents, registerApprovalEvents, registerPayrollEvents, registerRecruitmentEvents, registerAssetEvents, registerOnboardingEvents, registerOffboardingEvents, registerTimesheetEvents } from "../../shared/events/event-types";
 import { assertEventRegistered, validatePayload } from "../../shared/events/event-registry";
 import { randomUUID } from "crypto";
 import { TracingService } from "../../shared/context/tracing.service";
@@ -14,6 +14,7 @@ registerRecruitmentEvents();
 registerAssetEvents();
 registerOnboardingEvents();
 registerOffboardingEvents();
+registerTimesheetEvents();
 import {
   assertCanonicalEventEnvelope,
   CanonicalEventEnvelope,

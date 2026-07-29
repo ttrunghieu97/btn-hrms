@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { AttendancePeriodStatus } from "./constants";
+import { AttendancePeriodStatus, AttendancePeriodStatusType } from "./constants";
 import { sql } from "drizzle-orm";
 import {
   attendanceSessionEnum,
@@ -657,5 +657,42 @@ export const attendancePeriodLocks = pgTable(
       "chk_attendance_period_locks_period_format",
       sql`${table.period} ~ '^\\d{4}-(?:0[1-9]|1[0-2])$'`,
     ),
+  }),
+);
+
+/**
+ * Immutable snapshots of monthly timesheet data per employee.
+ * Created when a period transitions to CLOSED.
+ * Payroll consumes these snapshots instead of querying live attendance data.
+ */
+export const timesheetSnapshots = pgTable(
+  "timesheet_snapshots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    period: text("period").notNull(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    snapshotVersion: integer("snapshot_version").default(1).notNull(),
+
+    workingDays: integer("working_days").default(0).notNull(),
+    workedMinutes: integer("worked_minutes").default(0).notNull(),
+    lateMinutes: integer("late_minutes").default(0).notNull(),
+    earlyLeaveMinutes: integer("early_leave_minutes").default(0).notNull(),
+    overtimeMinutes: integer("overtime_minutes").default(0).notNull(),
+
+    periodStatusAtSnapshot: attendancePeriodLockStatusEnum("period_status_at_snapshot").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPeriod: index("idx_timesheet_snapshots_period").on(table.period),
+    idxEmployee: index("idx_timesheet_snapshots_employee_id").on(table.employeeId),
+    uqEmployeePeriodVersion: unique(
+      "uq_timesheet_snapshots_employee_period_version",
+    ).on(table.employeeId, table.period, table.snapshotVersion),
   }),
 );

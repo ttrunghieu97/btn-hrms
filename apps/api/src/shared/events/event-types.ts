@@ -405,3 +405,38 @@ export function registerOffboardingEvents(): void {
     strict: false,
   });
 }
+
+export function registerTimesheetEvents(): void {
+  registerEvent({
+    type: "timesheet.saved.v1",
+    version: 1,
+    description: "Emitted when timesheet records are batch-saved",
+    producer: "TimesheetService.batchSave",
+    requiredFields: ["period", "recordCount", "actorUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "timesheet.period.locked.v1",
+    version: 1,
+    description: "Emitted when an attendance period is locked",
+    producer: "PeriodLockService.lock",
+    requiredFields: ["period", "actorUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "timesheet.period.unlocked.v1",
+    version: 1,
+    description: "Emitted when an attendance period is unlocked",
+    producer: "PeriodLockService.unlock",
+    requiredFields: ["period", "actorUserId", "remarks"],
+    strict: true,
+  });
+  registerEvent({
+    type: "timesheet.period.closed.v1",
+    version: 1,
+    description: "Emitted when an attendance period is closed (final)",
+    producer: "PeriodLockService.close",
+    requiredFields: ["period", "actorUserId", "remarks", "snapshotCount"],
+    strict: true,
+  });
+}

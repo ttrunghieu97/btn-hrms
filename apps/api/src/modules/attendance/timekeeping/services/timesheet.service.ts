@@ -21,6 +21,8 @@ import {
   BatchErrorDto,
   BatchTimesheetRecordDto,
 } from "../dto/timesheet.dto";
+import { EventOutboxService } from "../../../../core/events/event-outbox.service";
+import { TimesheetSavedEvent } from "../../../../core/events/events/timesheet-saved.event";
 
 @Injectable()
 export class TimesheetService {
@@ -35,6 +37,7 @@ export class TimesheetService {
     @Inject(CONTRACTS_TOKENS.WORKFORCE_TIME_MANAGEMENT_PORT)
     private readonly workforcePort: WorkforceTimeManagementPort,
     private readonly requestContext: RequestContextService,
+    private readonly eventOutbox: EventOutboxService,
   ) {
     this.logger = new ContextLogger(this.requestContext, TimesheetService.name);
   }
@@ -69,6 +72,11 @@ export class TimesheetService {
         });
       }
     }
+
+    // 3. Publish domain event
+    await this.eventOutbox.stage(
+      new TimesheetSavedEvent({ period: dto.period, recordCount: dto.records.length, actorUserId }),
+    );
 
     return {
       success: successCount,
