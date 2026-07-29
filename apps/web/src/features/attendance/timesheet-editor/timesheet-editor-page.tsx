@@ -6,7 +6,7 @@ import { useDirtyCells } from './hooks/use-dirty-cells';
 import { usePeriodLock } from './hooks/use-period-lock';
 import { useFillHandler } from './hooks/use-fill-handler';
 import { daysInMonth, cellKey } from './types';
-import type { TimesheetWorkspaceRecord } from './types';
+import type { TimesheetWorkspaceRecord, PeriodStatus } from './types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -144,13 +144,17 @@ function TimesheetDetail({
       }
     }, [dirty, focused, record?.checkIn, record?.checkOut]);
 
+    const statusBg = record?.status === 'late' ? 'bg-amber-950/10 border-y border-amber-500/10'
+      : record?.status === 'early_leave' ? 'bg-orange-950/10 border-y border-orange-500/10'
+      : record?.status === 'absent' ? 'bg-red-950/10 border-y border-red-500/10'
+      : record?.status === 'leave' ? 'bg-blue-950/10 border-y border-blue-500/10'
+      : record?.status === 'holiday' ? 'bg-indigo-950/10 border-y border-indigo-500/10'
+      : '';
     const bg = isDirty
       ? 'bg-emerald-950/20 border-y border-emerald-500/20'
-      : isToday
-        ? 'bg-slate-800/40'
-        : isWeekend
-          ? 'bg-slate-800/10'
-          : '';
+      : statusBg
+      || (isToday ? 'bg-slate-800/40' : '')
+      || (isWeekend ? 'bg-slate-800/10' : '');
 
     rows.push(
       <tr key={wd} className={`border-b border-slate-800/40 ${bg}`}>
@@ -271,48 +275,33 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
 
   // Employee list from workspace response
   const employeeMap = React.useMemo(() => {
-    const m = new Map<string, { id: string; code: string; name: string; dept: string | null }>();
-    for (const emp of ts.employees) {
-      m.set(emp.id, { id: emp.id, code: emp.employeeCode, name: emp.fullName, dept: emp.departmentName });
-    }
+    const m = new Map<string, typeof ts.employees[0]>();
+    for (const emp of ts.employees) m.set(emp.id, emp);
     return m;
   }, [ts.employees]);
 
   // Filter + sort
   const employees = React.useMemo(() => {
-    const list = Array.from(employeeMap.values());
-    let filtered = list;
+    let list = Array.from(employeeMap.values());
     if (search) {
       const q = search.toLowerCase();
-      filtered = filtered.filter((e) => e.name.toLowerCase().includes(q) || e.code.toLowerCase().includes(q));
+      list = list.filter((e) => e.fullName.toLowerCase().includes(q) || e.employeeCode.toLowerCase().includes(q));
     }
-    if (deptFilter) {
-      filtered = filtered.filter((e) => e.dept === deptFilter);
-    }
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    if (deptFilter) list = list.filter((e) => e.departmentName === deptFilter);
+    return list.sort((a, b) => a.fullName.localeCompare(b.fullName));
   }, [employeeMap, search, deptFilter]);
 
   // Departments for filter
   const departments = React.useMemo(() => {
     const s = new Set<string>();
     for (const e of employeeMap.values()) {
-      if (e.dept) s.add(e.dept);
+      if (e.departmentName) s.add(e.departmentName);
     }
     return Array.from(s).sort();
   }, [employeeMap]);
 
-  // Per-employee progress
-  const employeeFilled = React.useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of ts.records) {
-      if (r.status && !['absent', 'leave', 'holiday', 'off'].includes(r.status)) {
-        m.set(r.employeeId, (m.get(r.employeeId) ?? 0) + 1);
-      }
-    }
-    return m;
-  }, [ts.records]);
-
-  const selectedProgress = selectedEmployeeId ? employeeFilled.get(selectedEmployeeId) ?? 0 : 0;
+  // Derive selected employee stats (already computed by BE)
+  const selectedProgress = selectedEmployeeId ? (employeeMap.get(selectedEmployeeId)?.workingDays ?? 0) : 0;
 
   const handleCellChange = React.useCallback(
     (employeeId: string, workDate: string, checkIn: string, checkOut: string) => {
@@ -399,61 +388,54 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
           </button>
         </div>
 
-        {/* Status */}
-        <span className={`rounded-full border border-slate-700/50 bg-slate-800/60 px-3 py-1 text-xs font-semibold ${
-          ts.periodStatus === 'open' ? 'text-emerald-400' : ts.periodStatus === 'locked' ? 'text-amber-400' : ts.periodStatus === 'payroll_processing' ? 'text-blue-400' : 'text-slate-400'
-        }`}>
-          {ts.periodStatus?.toUpperCase() ?? 'UNKNOWN'}
-        </span>
-
-        {/* Actions */}
+        {/* Actions — server-driven from BE */}
         <div className="flex items-center gap-2">
           {dc.dirtyCount > 0 && <span className="text-xs text-slate-400">{dc.dirtyCount} modified</span>}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={dc.saving || dc.dirtyCount === 0}
-              className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-50 hover:bg-emerald-500"
-            >
-              {dc.saving ? 'Saving...' : `Save Changes (${dc.dirtyCount})`}
-            </button>
+          {ts.availableActions.includes('save') && (
+            <button type="button" onClick={handleSave} disabled={dc.saving || dc.dirtyCount === 0}
+              className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-50 hover:bg-emerald-500">{dc.saving ? 'Saving...' : `Save Changes (${dc.dirtyCount})`}</button>
           )}
-          {canLock && <button type="button" onClick={() => setShowLock(true)} className="rounded-md bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-amber-500">Lock Period</button>}
-          {canUnlock && <button type="button" onClick={() => setShowUnlock(true)} className="rounded-md border border-rose-600/50 bg-rose-950/30 px-4 py-1.5 text-sm font-semibold text-rose-400 hover:bg-rose-950/50">Unlock</button>}
+          {ts.availableActions.includes('review') && <button type="button" className="rounded-md border border-amber-500/50 bg-amber-950/30 px-4 py-1.5 text-sm font-semibold text-amber-400">Review Period</button>}
+          {ts.availableActions.includes('approve') && <button type="button" className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-500">Approve</button>}
+          {ts.availableActions.includes('lock') && <button type="button" onClick={() => setShowLock(true)} className="rounded-md bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-amber-500">Lock Period</button>}
+          {ts.availableActions.includes('unlock') && <button type="button" onClick={() => setShowUnlock(true)} className="rounded-md border border-rose-600/50 bg-rose-950/30 px-4 py-1.5 text-sm font-semibold text-rose-400 hover:bg-rose-950/50">Unlock</button>}
+          {ts.availableActions.includes('close') && <button type="button" onClick={() => setShowUnlock(true)} className="rounded-md bg-slate-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-500">Close Period</button>}
+          {ts.availableActions.includes('reopen') && <button type="button" className="rounded-md border border-orange-600/50 bg-orange-950/30 px-4 py-1.5 text-sm font-semibold text-orange-400">Reopen</button>}
         </div>
       </div>
 
       {showLock && <LockModal period={ts.period} onClose={() => setShowLock(false)} onConfirm={handleLock} />}
       {showUnlock && <UnlockModal period={ts.period} onClose={() => setShowUnlock(false)} onConfirm={handleUnlock} />}
 
-      {/* ── Company Progress ── */}
-      {(() => {
-        const total = employees.length;
-        const completed = employees.filter((e) => (employeeFilled.get(e.id) ?? 0) === days).length;
-        const inProgress = employees.filter((e) => {
-          const f = employeeFilled.get(e.id) ?? 0;
-          return f > 0 && f < days;
-        }).length;
-        const notStarted = total - completed - inProgress;
-        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-        return total > 0 ? (
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-800/60 bg-slate-900/60 px-4 py-3">
+      {/* ── Period Dashboard (server-driven) ── */}
+      {ts.totals ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-900/60 px-4 py-3">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{ts.period}</span>
               <div className="h-2 w-48 overflow-hidden rounded-full bg-slate-800">
-                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${ts.totals.totalEmployees > 0 ? (ts.totals.completedEmployees / ts.totals.totalEmployees) * 100 : 0}%` }} />
               </div>
-              <span className="text-xs font-bold text-slate-300">{pct}%</span>
+              <span className="text-xs font-bold text-slate-300">{ts.totals.totalEmployees > 0 ? Math.round((ts.totals.completedEmployees / ts.totals.totalEmployees) * 100) : 0}%</span>
             </div>
-            <div className="flex gap-4 text-xs">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{completed} completed</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" />{inProgress} in progress</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-600" />{notStarted} not started</span>
+            <span className="text-xs text-slate-500">|</span>
+            <div className="flex gap-3 text-xs">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{ts.totals.completedEmployees}</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" />{ts.totals.inProgressEmployees}</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-600" />{ts.totals.notStartedEmployees}</span>
+            </div>
+            <span className="text-xs text-slate-500">|</span>
+            <div className="flex gap-2 text-xs text-slate-400">
+              <span>⏱ {Math.round(ts.totals.totalWorkedMinutes / 60)}h</span>
+              <span>⏰ {Math.round(ts.totals.totalOtMinutes / 60)}h OT</span>
+              <span>⚠ {ts.totals.totalLateCount} late</span>
             </div>
           </div>
-        ) : null;
-      })()}
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+            ts.periodStatus === 'open' ? 'border-emerald-500/30 text-emerald-400' : ts.periodStatus === 'locked' ? 'border-amber-500/30 text-amber-400' : ts.periodStatus === 'payroll_processing' ? 'border-blue-500/30 text-blue-400' : ts.periodStatus === 'payroll_posted' ? 'border-indigo-500/30 text-indigo-400' : ts.periodStatus === 'closed' ? 'border-slate-500/30 text-slate-400' : 'border-slate-600/30 text-slate-500'
+          }`}>{ts.periodStatus?.toUpperCase() ?? 'UNKNOWN'}</span>
+        </div>
+      ) : null}
 
       {/* ── Body: employee list + detail ── */}
       <div className="flex min-h-0 flex-1 gap-4 overflow-hidden">
@@ -480,28 +462,24 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {employees.map((emp) => {
-              const filled = employeeFilled.get(emp.id) ?? 0;
-              const pct = days > 0 ? Math.round((filled / days) * 100) : 0;
+              const pct = emp.completionRate;
               const isSelected = emp.id === selectedEmployeeId;
-      const color = pct === 100 ? 'text-emerald-400' : pct > 0 ? 'text-amber-400' : 'text-slate-500';
-      const statusLabel = pct === 100 ? 'COMPLETE' : pct > 0 ? 'IN PROGRESS' : 'NOT STARTED';
-      const statusColor = pct === 100 ? 'text-emerald-400 border-emerald-500/30' : pct > 0 ? 'text-amber-400 border-amber-500/30' : 'text-slate-500 border-slate-600/30';
               return (
-                <button
-                  key={emp.id}
-                  type="button"
-                  onClick={() => setSelectedEmployeeId(emp.id)}
-                  className={`flex w-full items-center gap-2 border-b border-slate-800/40 px-3 py-2 text-left text-sm transition-colors ${
-                    isSelected ? 'bg-emerald-950/30 border-l-2 border-l-emerald-500' : 'hover:bg-slate-800/40'
-                  }`}
-                >
+                <button key={emp.id} type="button" onClick={() => setSelectedEmployeeId(emp.id)}
+                  className={`flex w-full items-start gap-2 border-b border-slate-800/40 px-3 py-2 text-left text-sm transition-colors ${isSelected ? 'bg-emerald-950/30 border-l-2 border-l-emerald-500' : 'hover:bg-slate-800/40'}`}>
                   <span className="flex-1 truncate min-w-0">
-                    <span className="block text-slate-200">{emp.name}</span>
-                    <span className="block text-[10px] text-slate-500">{emp.code}{emp.dept ? ` · ${emp.dept}` : ''}</span>
+                    <span className="block text-slate-200">{emp.fullName}</span>
+                    <span className="block text-[10px] text-slate-500">{emp.employeeCode}{emp.departmentName ? ` · ${emp.departmentName}` : ''}</span>
+                    <span className="mt-0.5 flex gap-2 text-[9px] text-slate-600">
+                      <span>{emp.workingDays}wd</span>
+                      {emp.lateCount > 0 && <span className="text-amber-500/80">{emp.lateCount} late</span>}
+                      {emp.leaveCount > 0 && <span className="text-blue-500/80">{emp.leaveCount} leave</span>}
+                      {emp.otMinutes > 0 && <span className="text-emerald-500/80">{Math.round(emp.otMinutes / 60)}h OT</span>}
+                    </span>
                   </span>
-                  <span className="flex flex-col items-end gap-0.5">
-                    <span className={`shrink-0 text-xs font-semibold ${color}`}>{filled}/{days}</span>
-                    <span className={`text-[9px] font-medium uppercase ${pct === 100 ? 'text-emerald-500' : pct > 0 ? 'text-amber-500' : 'text-slate-600'}`}>{statusLabel}</span>
+                  <span className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className={`text-xs font-semibold ${pct === 100 ? 'text-emerald-400' : pct > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{emp.workingDays}/{emp.totalDays}</span>
+                    <span className={`text-[9px] font-medium uppercase ${pct === 100 ? 'text-emerald-500' : pct > 0 ? 'text-amber-500' : 'text-slate-600'}`}>{pct === 100 ? 'COMPLETE' : pct > 0 ? 'IN PROGRESS' : 'NOT STARTED'}</span>
                   </span>
                 </button>
               );
@@ -516,18 +494,24 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
         <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-800/60 bg-slate-900/60">
           {selected ? (
             <>
-              {/* Employee header */}
+              {/* Employee header with stats */}
               <div className="flex items-center justify-between border-b border-slate-800/60 px-4 py-3">
                 <div>
-                  <h3 className="font-bold text-slate-100">{selected.name}</h3>
-                  <p className="text-xs text-slate-500">{selected.code}{selected.dept ? ` · ${selected.dept}` : ''}</p>
+                  <h3 className="font-bold text-slate-100">{selected.fullName}</h3>
+                  <p className="text-xs text-slate-500">{selected.employeeCode}{selected.departmentName ? ` · ${selected.departmentName}` : ''}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Progress</span>
-                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
-                    <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: days > 0 ? `${(selectedProgress / days) * 100}%` : '0%' }} />
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex gap-2 text-slate-400">
+                    <span className="text-emerald-400">{selected.workingDays}wd</span>
+                    {selected.lateCount > 0 && <span className="text-amber-400">{selected.lateCount} late</span>}
+                    {selected.leaveCount > 0 && <span className="text-blue-400">{selected.leaveCount} leave</span>}
+                    {selected.absentCount > 0 && <span className="text-red-400">{selected.absentCount} absent</span>}
+                    {selected.otMinutes > 0 && <span className="text-emerald-400">{Math.round(selected.otMinutes / 60)}h OT</span>}
                   </div>
-                  <span className="text-xs text-slate-400">{selectedProgress}/{days}</span>
+                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800">
+                    <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${selected.completionRate}%` }} />
+                  </div>
+                  <span className="text-slate-400">{selected.workingDays}/{selected.totalDays}</span>
                 </div>
               </div>
               {/* Table */}

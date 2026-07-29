@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   type TimesheetWorkspaceEmployee,
   type TimesheetWorkspaceRecord,
+  type TimesheetWorkspacePeriodTotals,
   type TimesheetWorkspaceResponse,
   type PeriodStatus,
 } from '../types';
@@ -14,6 +15,8 @@ export interface TimesheetState {
   employees: TimesheetWorkspaceEmployee[];
   records: TimesheetWorkspaceRecord[];
   periodStatus: PeriodStatus | null;
+  availableActions: string[];
+  totals: TimesheetWorkspacePeriodTotals | null;
   period: string;
   reload: () => Promise<void>;
   setPeriod: (period: string) => void;
@@ -28,6 +31,8 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
   const [employees, setEmployees] = useState<TimesheetWorkspaceEmployee[]>([]);
   const [records, setRecords] = useState<TimesheetWorkspaceRecord[]>([]);
   const [periodStatus, setPeriodStatus] = useState<PeriodStatus | null>(null);
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
+  const [totals, setTotals] = useState<TimesheetWorkspacePeriodTotals | null>(null);
 
   const fetchData = useCallback(async (p: string) => {
     setLoading(true);
@@ -47,6 +52,8 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
       setEmployees(data.employees ?? []);
       setRecords(data.records ?? []);
       setPeriodStatus(data.periodStatus ?? null);
+      setAvailableActions(data.availableActions ?? []);
+      setTotals(data.totals ?? null);
     } catch (err: any) {
       setError(err?.message ?? 'Unknown error');
     } finally {
@@ -62,5 +69,5 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
     await fetchData(period);
   }, [period, fetchData]);
 
-  return { loading, error, employees, records, periodStatus, period, reload, setPeriod };
+  return { loading, error, employees, records, periodStatus, availableActions, totals, period, reload, setPeriod };
 }

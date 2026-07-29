@@ -1,10 +1,23 @@
 const WS_URL = '/api/v1/timekeeping/timesheet-workspace';
 
 export interface TimesheetWorkspaceEmployee {
-  id: string;
-  employeeCode: string;
-  fullName: string;
-  departmentName: string | null;
+  id: string; employeeCode: string; fullName: string; departmentName: string | null;
+  workingDays: number; totalDays: number; completionRate: number;
+  lateCount: number; leaveCount: number; absentCount: number;
+  otMinutes: number; workedMinutes: number;
+}
+
+export interface TimesheetWorkspacePeriodTotals {
+  totalEmployees: number; completedEmployees: number; inProgressEmployees: number; notStartedEmployees: number;
+  totalWorkedMinutes: number; totalOtMinutes: number; totalLateCount: number; totalLeaveCount: number;
+}
+
+export interface TimesheetWorkspaceResponse {
+  period: string; periodStatus: PeriodStatus;
+  availableActions: string[];
+  totals: TimesheetWorkspacePeriodTotals;
+  employees: TimesheetWorkspaceEmployee[];
+  records: TimesheetWorkspaceRecord[];
 }
 
 export interface TimesheetWorkspaceRecord {

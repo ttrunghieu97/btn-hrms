@@ -24,6 +24,30 @@ export class TimesheetWorkspaceEmployeeDto {
 
   @ApiProperty({ nullable: true })
   departmentName!: string | null;
+
+  @ApiProperty()
+  workingDays!: number;
+
+  @ApiProperty()
+  totalDays!: number;
+
+  @ApiProperty()
+  completionRate!: number;
+
+  @ApiProperty()
+  lateCount!: number;
+
+  @ApiProperty()
+  leaveCount!: number;
+
+  @ApiProperty()
+  absentCount!: number;
+
+  @ApiProperty()
+  otMinutes!: number;
+
+  @ApiProperty()
+  workedMinutes!: number;
 }
 
 export class TimesheetWorkspaceRecordDto {
@@ -61,12 +85,29 @@ export class TimesheetWorkspaceRecordDto {
   isHoliday!: boolean | null;
 }
 
+export class TimesheetWorkspacePeriodTotalsDto {
+  @ApiProperty() totalEmployees!: number;
+  @ApiProperty() completedEmployees!: number;
+  @ApiProperty() inProgressEmployees!: number;
+  @ApiProperty() notStartedEmployees!: number;
+  @ApiProperty() totalWorkedMinutes!: number;
+  @ApiProperty() totalOtMinutes!: number;
+  @ApiProperty() totalLateCount!: number;
+  @ApiProperty() totalLeaveCount!: number;
+}
+
 export class TimesheetWorkspaceResponseDto {
   @ApiProperty()
   period!: string;
 
   @ApiProperty()
   periodStatus!: string;
+
+  @ApiProperty({ type: [String] })
+  availableActions!: string[];
+
+  @ApiProperty({ type: TimesheetWorkspacePeriodTotalsDto })
+  totals!: TimesheetWorkspacePeriodTotalsDto;
 
   @ApiProperty({ type: [TimesheetWorkspaceEmployeeDto] })
   employees!: TimesheetWorkspaceEmployeeDto[];
