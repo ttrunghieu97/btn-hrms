@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { AttendancePeriodStatus } from "./constants";
 import { sql } from "drizzle-orm";
 import {
   attendanceSessionEnum,
@@ -32,6 +33,7 @@ import {
   lunchDutyTypeEnum,
   attendanceExceptionTypeEnum,
   attendanceExceptionStatusEnum,
+  attendancePeriodLockStatusEnum,
 } from "./enums";
 import { employees } from "../workforce/tables";
 import { branches, locations } from "../org/tables";
@@ -610,6 +612,50 @@ export const attendanceEvents = pgTable(
     idxEmployeeDate: index("idx_attendance_events_employee_date").on(
       table.employeeId,
       table.timestamp,
+    ),
+  }),
+);
+
+/**
+ * Period locks for timesheet management.
+ * Controls editability of attendance data per monthly period.
+ * State machine: OPEN → LOCKED → PAYROLL_PROCESSING → PAYROLL_POSTED
+ */
+export const attendancePeriodLocks = pgTable(
+  "attendance_period_locks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    period: text("period").notNull().unique(), // "2026-08"
+    status: attendancePeriodLockStatusEnum("status")
+      .default(AttendancePeriodStatus.OPEN)
+      .notNull(),
+
+    lockedByUserId: uuid("locked_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+
+    unlockedByUserId: uuid("unlocked_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
+
+    remarks: text("remarks"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPeriod: index("idx_attendance_period_locks_period").on(table.period),
+    idxStatus: index("idx_attendance_period_locks_status").on(table.status),
+    chkPeriodFormat: check(
+      "chk_attendance_period_locks_period_format",
+      sql`${table.period} ~ '^\\d{4}-(?:0[1-9]|1[0-2])$'`,
     ),
   }),
 );

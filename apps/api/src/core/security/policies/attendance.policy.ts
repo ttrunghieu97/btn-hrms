@@ -64,8 +64,52 @@ class AttendanceReportPolicyHandler implements PolicyHandler {
   }
 }
 
+class AttendanceTimesheetPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendanceTimesheet";
+  readonly requiredAnyOfPermissions = [
+    Permissions.ATTENDANCE_TIMESHEET_VIEW,
+    Permissions.ATTENDANCE_TIMESHEET_MANAGE,
+  ];
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    const perms = user.permissions ?? [];
+    return this.requiredAnyOfPermissions.some((p) => perms.includes(p));
+  }
+}
+
+class AttendanceTimesheetManagePolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendanceTimesheetManage";
+  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_TIMESHEET_MANAGE];
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_TIMESHEET_MANAGE) ?? false;
+  }
+}
+
+class AttendancePeriodLockPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodLock";
+  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_PERIOD_LOCK_MANAGE];
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_LOCK_MANAGE) ?? false;
+  }
+}
+
+class AttendancePeriodUnlockPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodUnlock";
+  readonly requiredAnyOfPermissions = [Permissions.ATTENDANCE_PERIOD_UNLOCK_MANAGE];
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_UNLOCK_MANAGE) ?? false;
+  }
+}
+
 export const AttendancePolicies = {
   check: new CheckAttendancePolicyHandler(),
   view: new ViewAttendancePolicyHandler(),
   report: new AttendanceReportPolicyHandler(),
+  timesheetView: new AttendanceTimesheetPolicyHandler(),
+  timesheetManage: new AttendanceTimesheetManagePolicyHandler(),
+  periodLock: new AttendancePeriodLockPolicyHandler(),
+  periodUnlock: new AttendancePeriodUnlockPolicyHandler(),
 };

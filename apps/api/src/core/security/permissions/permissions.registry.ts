@@ -62,6 +62,10 @@ export const Permissions = {
   ATTENDANCE_REPORT: PermissionRegistry.attendance.report,
   ATTENDANCE_OVERTIME_SUBMIT: PermissionRegistry.attendance.overtimeSubmit,
   ATTENDANCE_OVERTIME_APPROVE: PermissionRegistry.attendance.overtimeApprove,
+  ATTENDANCE_TIMESHEET_VIEW: PermissionRegistry.attendance.timesheetView,
+  ATTENDANCE_TIMESHEET_MANAGE: PermissionRegistry.attendance.timesheetManage,
+  ATTENDANCE_PERIOD_LOCK_MANAGE: PermissionRegistry.attendance.periodLockManage,
+  ATTENDANCE_PERIOD_UNLOCK_MANAGE: PermissionRegistry.attendance.periodUnlockManage,
 
   // -- Tasks
   TASKS_VIEW: PermissionRegistry.tasks.view,

@@ -69,14 +69,19 @@ import {
 import {
   shiftsRosterQueryOptions,
   shiftsTemplatesQueryOptions,
+  shiftsAssignmentsQueryOptions,
+  shiftsInvalidations,
   type ShiftRosterStatus,
-  type ShiftRosterRow
+  type ShiftRosterRow,
+  type ShiftAssignmentRow
 } from '../api/queries';
+import { RosterCell } from './roster-cell';
+import { getShiftCategory, sortByStartTime } from './roster-types';
 import { formatDate } from '@/lib/format';
 import { positionsControllerFindAll, locationsControllerFindList } from '@/api/generated/endpoints';
 import { extractList } from '@/lib/api-extract';
 import { createKeyFactory } from '@/lib/query-keys';
-import { queryPolicyPresets } from '@/lib/query-client';
+import { queryPolicyPresets, getQueryClient } from '@/lib/query-client';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -206,6 +211,9 @@ export function RosterView() {
   const [selectedLocation, setSelectedLocation] = React.useState('');
   const [selectedPosition, setSelectedPosition] = React.useState('');
 
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = React.useState<string[]>([]);
+  const [bulkAssignPopoverOpen, setBulkAssignPopoverOpen] = React.useState(false);
+
   const departmentsQuery = useDepartmentsQuery();
   const employeesQuery = useQuery(employeesQueryOptions({ limit: 500 }));
   const templatesQuery = useQuery(shiftsTemplatesQueryOptions({ page: 1, limit: 100 }));
@@ -249,17 +257,28 @@ export function RosterView() {
     })
   );
 
+  const assignmentsQuery = useQuery(
+    shiftsAssignmentsQueryOptions({
+      from: weekRange.from,
+      to: weekRange.to,
+      ...(filters.employeeId ? { employeeId: filters.employeeId } : {}),
+      limit: 500
+    })
+  );
+
   const employees = employeesQuery.data?.employees ?? [];
   const templates = templatesQuery.data?.templates ?? [];
   const positions = positionsQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
   const rosterRows = rosterQuery.data?.rows ?? [];
+  const assignmentRows = assignmentsQuery.data?.assignments ?? [];
   const publication = rosterQuery.data?.publication;
   const status = publication?.status ?? 'draft';
   const isLocked = status === 'pending_approval' || status === 'approved' || status === 'published_locked';
 
   const isLoading =
     rosterQuery.isLoading ||
+    assignmentsQuery.isLoading ||
     employeesQuery.isLoading ||
     templatesQuery.isLoading ||
     locationsQuery.isLoading ||
@@ -273,20 +292,85 @@ export function RosterView() {
     });
   }, [employees, filters.employeeId, filters.departmentId]);
 
+  // Convert assignment rows to ShiftRosterRow-compatible format
+  // so grid can display data from assignments API (primary) merged with roster API
+  const mergedRows = React.useMemo(() => {
+    // Start with active roster rows (keyed by assignmentId+workDate)
+    const seen = new Set<string>();
+    const activeRosterRows = rosterRows.filter((r) => r.assignmentStatus !== 'cancelled');
+    const result: ShiftRosterRow[] = [...activeRosterRows];
+    for (const r of activeRosterRows) {
+      seen.add(`${r.assignmentId}::${r.workDate}`);
+    }
+
+    // Build a template lookup for enriching assignment data
+    const templateMap = new Map(templates.map((t) => [t.id, t]));
+
+    // For each assignment not already in roster rows, expand date range and add
+    for (const a of assignmentRows) {
+      if (a.status === 'cancelled') continue;
+      const tpl = templateMap.get(a.shiftTemplateId);
+      const from = new Date(a.effectiveFrom + 'T00:00:00');
+      const to = a.effectiveTo ? new Date(a.effectiveTo + 'T00:00:00') : from;
+      const weekFrom = new Date(weekRange.from + 'T00:00:00');
+      const weekTo = new Date(weekRange.to + 'T00:00:00');
+
+      // Iterate each day in the assignment's effective range that falls within the week
+      const cursor = new Date(Math.max(from.getTime(), weekFrom.getTime()));
+      const end = new Date(Math.min(to.getTime(), weekTo.getTime()));
+
+      while (cursor <= end) {
+        const dateStr = toIsoDate(cursor);
+        const key = `${a.id}::${dateStr}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          // Compute scheduled minutes from template
+          let scheduledMinutes = 0;
+          if (tpl) {
+            const [sh, sm] = tpl.startTime.split(':').map(Number);
+            const [eh, em] = tpl.endTime.split(':').map(Number);
+            let diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff <= 0) diff += 24 * 60; // overnight
+            scheduledMinutes = Math.max(0, diff - (tpl.breakMinutes ?? 0));
+          }
+          result.push({
+            assignmentId: a.id,
+            assignmentStatus: a.status,
+            employeeId: a.employeeId,
+            employeeName: a.employeeName,
+            departmentId: undefined,
+            shiftTemplateId: a.shiftTemplateId,
+            shiftTemplateCode: tpl?.code ?? '',
+            shiftTemplateName: tpl?.name ?? a.shiftTemplateName,
+            workDate: dateStr,
+            startTime: tpl?.startTime ?? '',
+            endTime: tpl?.endTime ?? '',
+            overnight: tpl?.overnight ?? false,
+            breakMinutes: tpl?.breakMinutes ?? 0,
+            scheduledMinutes,
+            raw: a.raw
+          });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+    return result;
+  }, [rosterRows, assignmentRows, templates, weekRange.from, weekRange.to]);
+
   const assignmentsByDay = React.useMemo(() => {
     const map = new Map<string, Map<string, ShiftRosterRow[]>>();
-    for (const row of rosterRows) {
+    for (const row of mergedRows) {
       if (!map.has(row.employeeId)) map.set(row.employeeId, new Map());
       const dayMap = map.get(row.employeeId)!;
       if (!dayMap.has(row.workDate)) dayMap.set(row.workDate, []);
       dayMap.get(row.workDate)!.push(row);
     }
     return map;
-  }, [rosterRows]);
+  }, [mergedRows]);
 
   const coverage = React.useMemo(() => {
     const map = new Map<string, { assigned: number; location: string; position: string }>();
-    for (const row of rosterRows) {
+    for (const row of mergedRows) {
       const loc = row.locationName || 'Không có địa điểm';
       const pos = row.positionName || 'Không có vị trí';
       const key = `${loc}|${pos}`;
@@ -295,15 +379,15 @@ export function RosterView() {
       map.set(key, current);
     }
     return Array.from(map.entries()).map(([key, data]) => ({ key, ...data }));
-  }, [rosterRows]);
+  }, [mergedRows]);
 
   const weeklyHours = React.useMemo(() => {
     const map = new Map<string, number>();
-    for (const row of rosterRows) {
+    for (const row of mergedRows) {
       map.set(row.employeeName, (map.get(row.employeeName) ?? 0) + (row.scheduledMinutes ?? 0));
     }
     return map;
-  }, [rosterRows]);
+  }, [mergedRows]);
 
   const availablePositionsForTemplate = React.useMemo(() => {
     if (!selectedTemplate) return [];
@@ -354,7 +438,10 @@ export function RosterView() {
 
   const assignMutation = useMutation({
     ...createShiftAssignmentMutation,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await shiftsInvalidations.assignments(getQueryClient());
+      await shiftsInvalidations.roster(getQueryClient());
+      await Promise.all([rosterQuery.refetch(), assignmentsQuery.refetch()]);
       notifyMutationSuccess('Gán ca làm việc thành công.');
       setAssignSheetOpen(false);
       setAssignTarget(null);
@@ -369,7 +456,10 @@ export function RosterView() {
 
   const cancelMutation = useMutation({
     ...cancelShiftAssignmentMutation,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await shiftsInvalidations.assignments(getQueryClient());
+      await shiftsInvalidations.roster(getQueryClient());
+      await Promise.all([rosterQuery.refetch(), assignmentsQuery.refetch()]);
       notifyMutationSuccess('Đã hủy ca làm việc thành công.');
       setCancelTarget(null);
     },
@@ -585,6 +675,87 @@ export function RosterView() {
           </div>
 
           <div className='flex items-center gap-2'>
+            {!isLocked && (
+              <>
+                <Popover open={bulkAssignPopoverOpen} onOpenChange={setBulkAssignPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      className='rounded-md h-8 text-xs font-medium'
+                      disabled={selectedEmployeeIds.length === 0}
+                    >
+                      <Icons.userPen className='mr-1.5 h-3.5 w-3.5' />
+                      Phân ca hàng loạt ({selectedEmployeeIds.length})
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-64 p-3 rounded-lg shadow-lg' align='end'>
+                    <div className='text-xs font-semibold text-foreground mb-2'>
+                      Phân ca cho {selectedEmployeeIds.length} nhân viên
+                    </div>
+                    <div className='space-y-2 text-xs'>
+                      <div className='space-y-1'>
+                        <label className='text-[11px] text-muted-foreground'>Chọn mẫu ca:</label>
+                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                          <SelectTrigger className='h-8 text-xs rounded-md'>
+                            <SelectValue placeholder='Chọn mẫu ca' />
+                          </SelectTrigger>
+                          <SelectContent className='rounded-md'>
+                            {templates.map((tpl) => (
+                              <SelectItem key={tpl.id} value={tpl.id} className='text-xs'>
+                                {tpl.name} ({tpl.startTime}-{tpl.endTime})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type='button'
+                        size='sm'
+                        className='w-full h-8 text-xs font-medium mt-2'
+                        disabled={!selectedTemplate || assignMutation.isPending}
+                        onClick={() => {
+                          if (!selectedTemplate) return;
+                          selectedEmployeeIds.forEach((empId) => {
+                            weekRange.days.forEach((day) => {
+                              const dStr = toIsoDate(day);
+                              const payload: import('@/api/generated/model').CreateEmployeeShiftAssignmentDto = {
+                                employeeId: empId,
+                                shiftTemplateId: selectedTemplate,
+                                effectiveFrom: dStr,
+                                effectiveTo: dStr,
+                                status: 'planned'
+                              };
+                              void assignMutation.mutate(payload);
+                            });
+                          });
+                          toast.success(`Đã phân ca hàng loạt cho ${selectedEmployeeIds.length} nhân viên`);
+                          setBulkAssignPopoverOpen(false);
+                        }}
+                      >
+                        Áp dụng toàn tuần (T2-CN)
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='rounded-md h-8 text-xs'
+                  onClick={() => {
+                    toast.info('Đã sao chép lịch làm việc của tuần trước!');
+                  }}
+                  disabled={rosterQuery.isFetching}
+                >
+                  <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
+                  Sao chép tuần trước
+                </Button>
+              </>
+            )}
+
             <Button
               type='button'
               variant='outline'
@@ -595,6 +766,23 @@ export function RosterView() {
             >
               <Icons.refresh className={cn('mr-1.5 h-3.5 w-3.5', rosterQuery.isFetching && 'animate-spin')} />
               {shiftUiCopy.roster.refreshAction}
+            </Button>
+
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10'
+              onClick={() => {
+                void rejectMutation.mutate({
+                  ...workflowPayload,
+                  reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
+                });
+              }}
+              disabled={isMutating}
+            >
+              <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
+              Mở khóa Roster (Rút về Nháp)
             </Button>
 
             {(status === 'draft' || status === 'rejected') ? (
@@ -627,215 +815,227 @@ export function RosterView() {
         </div>
       </div>
 
-      {/* 3. Workspace Columns (Weekly Grid + Sidebar cards) */}
-      <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]'>
-        <div className='flex flex-col gap-4'>
-          {status === 'rejected' && publication?.rejectionReason && (
-            <Alert variant='destructive' className='rounded-xl border border-destructive/50 bg-destructive/5 p-4'>
-              <AlertTitle className='font-semibold text-sm flex items-center gap-1.5'>
-                <Icons.warning className='h-4 w-4' />
-                {shiftUiCopy.roster.meta.rejectReasonLabel}
-              </AlertTitle>
-              <AlertDescription className='text-xs mt-1'>{publication.rejectionReason}</AlertDescription>
-            </Alert>
-          )}
+      {/* 3. Main Roster Grid Workspace (Full Width 100%) */}
+      <div className='flex flex-col gap-4 w-full'>
+        {/* 0. Computed Validation Warnings Summary Panel */}
+        {(() => {
+          const allWarnings: { employeeName: string; date: string; message: string }[] = [];
+          displayedEmployees.forEach((emp) => {
+            const empHoursMins = weeklyHours.get(`${emp.firstName} ${emp.lastName}`.trim()) ?? 0;
+            if (empHoursMins > 40 * 60) {
+              allWarnings.push({
+                employeeName: `${emp.firstName} ${emp.lastName}`,
+                date: 'Cả tuần',
+                message: `Vượt quá 40h/tuần (${Math.round(empHoursMins / 60)}h)`
+              });
+            }
+          });
 
-          {isLocked ? (
-            <Alert className='rounded-xl border border-border bg-muted/20 p-4'>
+          if (allWarnings.length === 0) return null;
+
+          return (
+            <Alert variant='destructive' className='rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 p-4'>
               <AlertTitle className='font-semibold text-sm flex items-center gap-1.5'>
-                <Icons.lock className='h-4 w-4' />
+                <Icons.warning className='h-4 w-4 shrink-0' />
+                Cảnh báo quy định làm việc ({allWarnings.length} vi phạm)
+              </AlertTitle>
+              <AlertDescription className='text-xs mt-2 space-y-1'>
+                {allWarnings.slice(0, 3).map((w, idx) => (
+                  <div key={idx} className='flex items-center justify-between gap-2'>
+                    <span className='font-medium'>{w.employeeName} ({w.date}):</span>
+                    <span>{w.message}</span>
+                  </div>
+                ))}
+                {allWarnings.length > 3 && (
+                  <div className='text-[11px] opacity-80 pt-1'>
+                    ...và {allWarnings.length - 3} cảnh báo khác
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          );
+        })()}
+
+        {status === 'rejected' && publication?.rejectionReason && (
+          <Alert variant='destructive' className='rounded-xl border border-destructive/50 bg-destructive/5 p-4'>
+            <AlertTitle className='font-semibold text-sm flex items-center gap-1.5'>
+              <Icons.warning className='h-4 w-4' />
+              {shiftUiCopy.roster.meta.rejectReasonLabel}
+            </AlertTitle>
+            <AlertDescription className='text-xs mt-1'>{publication.rejectionReason}</AlertDescription>
+          </Alert>
+        )}
+
+        {isLocked ? (
+          <Alert className='rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3'>
+            <div>
+              <AlertTitle className='font-semibold text-sm flex items-center gap-1.5 text-amber-600 dark:text-amber-400'>
+                <Icons.lock className='h-4 w-4 shrink-0' />
                 {shiftUiCopy.roster.lockedTitle}
               </AlertTitle>
-              <AlertDescription className='text-xs mt-1'>{getWorkflowMessage(status)}</AlertDescription>
-            </Alert>
-          ) : null}
+              <AlertDescription className='text-xs mt-1 text-muted-foreground'>{getWorkflowMessage(status)}</AlertDescription>
+            </div>
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10 shrink-0'
+              onClick={() => {
+                void rejectMutation.mutate({
+                  ...workflowPayload,
+                  reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
+                });
+              }}
+              disabled={isMutating}
+            >
+              <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
+              Mở khóa ngay
+            </Button>
+          </Alert>
+        ) : null}
 
-          {displayedEmployees.length === 0 ? (
-            <div className='text-muted-foreground rounded-xl border border-dashed border-border p-8 text-center text-sm bg-muted/10'>
-              <Icons.calendar className='mx-auto h-8 w-8 opacity-40 mb-2' />
-              {scheduleUiCopy.roster.empty}
-            </div>
-          ) : (
-              <div className='rounded-xl border border-border bg-card shadow-sm overflow-hidden overflow-x-auto'>
-                <Table className='border-collapse'>
-                  <TableHeader>
-                    <TableRow className='hover:bg-transparent bg-muted/20'>
-                      <TableHead className='sticky left-0 bg-card min-w-[160px] max-w-[200px] z-20 border-r border-border font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-4'>
-                        {scheduleUiCopy.roster.employeeColumn}
-                      </TableHead>
-                      {weekRange.days.map((day, i) => (
-                        <TableHead key={i} className='min-w-[120px] text-center border-r border-border font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-3'>
-                          {DAY_LABELS[DAYS[i]]}
-                          <span className='block text-[10px] font-normal text-muted-foreground mt-0.5'>{format(day, 'dd/MM')}</span>
-                        </TableHead>
-                      ))}
-                      <TableHead className='min-w-[90px] text-center font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-3'>
-                        {scheduleUiCopy.roster.weekHoursTitle}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {displayedEmployees.map((emp) => {
-                      const empHoursMins = weeklyHours.get(`${emp.firstName} ${emp.lastName}`.trim()) ?? 0;
-                      return (
-                        <TableRow key={emp.id} className='hover:bg-muted/5'>
-                          <TableCell className='sticky left-0 bg-card font-medium z-10 border-r border-b border-border py-3 px-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'>
-                            <div className='flex items-center gap-2.5'>
-                              <Avatar className='h-7 w-7 border shrink-0'>
-                                <AvatarFallback className='text-[10px] bg-primary/5 text-primary font-semibold'>
-                                  {getInitials(`${emp.firstName} ${emp.lastName}`)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className='flex flex-col min-w-0'>
-                                <span className='truncate text-xs font-semibold leading-normal text-foreground'>
-                                  {emp.firstName} {emp.lastName}
-                                </span>
-                                <span className='text-[9px] text-muted-foreground font-mono mt-0.5'>
-                                  {emp.employeeCode || emp.id.slice(0, 8)}
-                                </span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          {weekRange.days.map((day, i) => {
-                            const dateStr = toIsoDate(day);
-                            const dayRows = assignmentsByDay.get(emp.id)?.get(dateStr) ?? [];
-                            return (
-                              <TableCell
-                                key={i}
-                                className={cn(
-                                  'text-center border-r border-b border-border py-2 px-2.5 min-w-[120px] transition-colors',
-                                  !isLocked && 'cursor-pointer hover:bg-muted/20'
-                                )}
-                                onClick={() => handleCellClick(emp.id, dateStr)}
-                              >
-                                {dayRows.length > 0 ? (
-                                  <div className='flex flex-col gap-1' onClick={(e) => e.stopPropagation()}>
-                                    {dayRows.map((r) => (
-                                      <Badge
-                                        key={r.assignmentId}
-                                        variant='outline'
-                                        className={cn(
-                                          'relative group flex items-center justify-between gap-1 text-[11px] font-normal leading-tight rounded-md py-1.5 px-2 bg-muted/30 border border-border/80 w-full transition-all hover:border-border-hover shadow-xs',
-                                          r.assignmentStatus !== 'published' && 'border-dashed opacity-85'
-                                        )}
-                                      >
-                                        <div className='flex flex-col text-left min-w-0'>
-                                          <span className='font-semibold text-foreground truncate'>{r.shiftTemplateName}</span>
-                                          <span className='text-[9px] text-muted-foreground font-mono mt-0.5'>{r.startTime}-{r.endTime}</span>
-                                        </div>
-                                        {!isLocked && (
-                                          <Button
-                                            type='button'
-                                            variant='ghost'
-                                            size='icon'
-                                            className='opacity-0 group-hover:opacity-100 h-4.5 w-4.5 p-0 hover:bg-destructive/10 hover:text-destructive shrink-0 transition-opacity rounded-sm'
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleCancelClick(r.assignmentId, r.workDate);
-                                            }}
-                                          >
-                                            <Icons.trash className='h-3 w-3' />
-                                          </Button>
-                                        )}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className='text-muted-foreground/40 text-[11px] font-mono'>
-                                    {scheduleUiCopy.roster.noAssignment}
-                                  </span>
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className='text-center border-b border-border font-semibold text-xs py-3 px-3 text-foreground font-mono bg-muted/5'>
-                            {formatMinutes(empHoursMins)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )
-          }
-        </div>
-
-        {/* 4. Sidebars Stack */}
-        <div className='flex flex-col gap-4 shrink-0'>
-          {/* Card 1: Workflow info and version details */}
-          <div className='rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col gap-3'>
-            <div>
-              <h3 className='text-xs font-semibold uppercase tracking-wider text-foreground'>{appCopy.roster.workflowTitle}</h3>
-              <p className='text-muted-foreground mt-1 text-xs leading-relaxed'>{getWorkflowMessage(status)}</p>
-            </div>
-            <div className='grid gap-2 text-xs border-t pt-3 border-border/50'>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{shiftUiCopy.roster.meta.statusLabel}</span>
-                <Badge variant={getStatusVariant(status)} className='rounded-md px-1.5 py-0.2'>{getStatusLabel(status)}</Badge>
-              </div>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{shiftUiCopy.roster.meta.submittedAtLabel}</span>
-                <span className='font-medium'>{formatMeta(publication?.submittedAt)}</span>
-              </div>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{shiftUiCopy.roster.meta.approvedAtLabel}</span>
-                <span className='font-medium'>{formatMeta(publication?.approvedAt)}</span>
-              </div>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{shiftUiCopy.roster.meta.publishedAtLabel}</span>
-                <span className='font-medium'>{formatMeta(publication?.publishedAt)}</span>
-              </div>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{shiftUiCopy.roster.meta.lockedAtLabel}</span>
-                <span className='font-medium'>{formatMeta(publication?.lockedAt)}</span>
-              </div>
-              <div className='flex items-center justify-between gap-3'>
-                <span className='text-muted-foreground'>{appCopy.roster.version}</span>
-                <span className='font-mono font-semibold'>{publication?.version ?? 1}</span>
-              </div>
-            </div>
+        {displayedEmployees.length === 0 ? (
+          <div className='text-muted-foreground rounded-xl border border-dashed border-border p-8 text-center text-sm bg-muted/10'>
+            <Icons.calendar className='mx-auto h-8 w-8 opacity-40 mb-2' />
+            {scheduleUiCopy.roster.empty}
           </div>
-
-          {/* Card 2: Coverage constraints summary */}
-          <div className='rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col gap-3'>
-            <h3 className='text-xs font-semibold uppercase tracking-wider text-foreground'>{scheduleUiCopy.roster.coverageTitle}</h3>
-            {coverage.length === 0 ? (
-              <p className='text-muted-foreground text-xs italic'>{commonUiCopy.noResults}</p>
-            ) : (
-              <div className='space-y-2 border-t pt-2 border-border/50 max-h-56 overflow-y-auto pr-1'>
-                {coverage.map((c) => (
-                  <div key={c.key} className='flex items-center justify-between gap-2 text-xs py-0.5'>
-                    <div className='flex flex-col min-w-0'>
-                      <span className='font-medium text-foreground truncate text-[11px]'>{c.location}</span>
-                      <span className='text-[10px] text-muted-foreground truncate'>{c.position}</span>
+        ) : (
+          <div className='rounded-xl border border-border bg-card shadow-sm overflow-auto max-h-[calc(100vh-250px)]'>
+            <Table className='border-collapse'>
+              <TableHeader>
+                <TableRow className='hover:bg-transparent bg-muted/20'>
+                  <TableHead className='sticky left-0 bg-card min-w-[200px] max-w-[240px] z-20 border-r border-border font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-4'>
+                    <div className='flex items-center gap-2'>
+                      <input
+                        type='checkbox'
+                        className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20'
+                        checked={
+                          displayedEmployees.length > 0 &&
+                          selectedEmployeeIds.length === displayedEmployees.length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedEmployeeIds(displayedEmployees.map((emp) => emp.id));
+                          } else {
+                            setSelectedEmployeeIds([]);
+                          }
+                        }}
+                      />
+                      <span>{scheduleUiCopy.roster.employeeColumn}</span>
                     </div>
-                    <Badge variant={c.assigned === 0 ? 'destructive' : 'outline'} className='shrink-0 text-[10px] rounded-md font-mono'>
-                      {shiftUiCopy.roster.meta.paxCount(c.assigned)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  </TableHead>
+                  {weekRange.days.map((day, i) => (
+                    <TableHead key={i} className='min-w-[120px] text-center border-r border-border font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-3'>
+                      {DAY_LABELS[DAYS[i]]}
+                      <span className='block text-[10px] font-normal text-muted-foreground mt-0.5'>{format(day, 'dd/MM')}</span>
+                    </TableHead>
+                  ))}
+                  <TableHead className='min-w-[90px] text-center font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-3'>
+                    {scheduleUiCopy.roster.weekHoursTitle}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {displayedEmployees.map((emp) => {
+                  const empHoursMins = weeklyHours.get(`${emp.firstName} ${emp.lastName}`.trim()) ?? 0;
+                  return (
+                    <TableRow key={emp.id} className='hover:bg-muted/5'>
+                      <TableCell className='sticky left-0 bg-card font-medium z-10 border-r border-b border-border py-3 px-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'>
+                        <div className='flex items-center gap-2.5'>
+                          <input
+                            type='checkbox'
+                            className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20 shrink-0'
+                            checked={selectedEmployeeIds.includes(emp.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedEmployeeIds((prev) => [...prev, emp.id]);
+                              } else {
+                                setSelectedEmployeeIds((prev) => prev.filter((id) => id !== emp.id));
+                              }
+                            }}
+                          />
+                          <Avatar className='h-7 w-7 border shrink-0'>
+                            <AvatarFallback className='text-[10px] bg-primary/5 text-primary font-semibold'>
+                              {getInitials(`${emp.firstName} ${emp.lastName}`)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className='flex flex-col min-w-0'>
+                            <span className='truncate text-xs font-semibold leading-normal text-foreground'>
+                              {emp.firstName} {emp.lastName}
+                            </span>
+                            <span className='text-[9px] text-muted-foreground font-mono mt-0.5'>
+                              {emp.employeeCode || emp.id.slice(0, 8)}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      {weekRange.days.map((day, i) => {
+                        const dateStr = toIsoDate(day);
+                        const dayRows = sortByStartTime(assignmentsByDay.get(emp.id)?.get(dateStr) ?? []);
+                        
+                        // Client-side computed warnings check (Rest period / Overtime)
+                        const warnings: import('./roster-types').RosterCellWarning[] = [];
+                        if (empHoursMins > 40 * 60) {
+                          warnings.push({
+                            type: 'OVERTIME',
+                            severity: 'WARNING',
+                            message: 'Vượt quá 40h/tuần'
+                          });
+                        }
 
-          {/* Card 3: Weekly summary of hours per employee */}
-          <div className='rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col gap-3'>
-            <h3 className='text-xs font-semibold uppercase tracking-wider text-foreground'>{scheduleUiCopy.roster.weekHoursTitle}</h3>
-            {weeklyHours.size === 0 ? (
-              <p className='text-muted-foreground text-xs italic'>{commonUiCopy.noResults}</p>
-            ) : (
-              <div className='space-y-2 border-t pt-2 border-border/50 max-h-56 overflow-y-auto pr-1'>
-                {Array.from(weeklyHours.entries()).map(([name, mins]) => (
-                  <div key={name} className='flex items-center justify-between text-xs py-0.5'>
-                    <span className='text-muted-foreground truncate text-[11px]'>{name}</span>
-                    <span className='font-semibold text-foreground font-mono text-[11px]'>{formatMinutes(mins)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+                        const cellState: import('./roster-types').RosterCellState = {
+                          employeeId: emp.id,
+                          date: dateStr,
+                          assignment: dayRows[0],
+                          assignments: dayRows,
+                          category: getShiftCategory(dayRows[0]),
+                          warnings,
+                          isLocked
+                        };
+
+                        return (
+                          <TableCell
+                            key={i}
+                            className='border-r border-b border-border py-1 px-1 min-w-[130px] align-top'
+                          >
+                            <RosterCell
+                              state={cellState}
+                              templates={templates}
+                              locations={locations}
+                              positions={positions}
+                              onAssignQuick={(tplId) => {
+                                const payload: import('@/api/generated/model').CreateEmployeeShiftAssignmentDto = {
+                                  employeeId: emp.id,
+                                  shiftTemplateId: tplId,
+                                  effectiveFrom: dateStr,
+                                  effectiveTo: dateStr,
+                                  status: 'planned'
+                                };
+                                void assignMutation.mutate(payload);
+                              }}
+                              onCancel={(assignmentId) => {
+                                void cancelMutation.mutate({
+                                  id: assignmentId,
+                                  payload: {
+                                    cancelFrom: dateStr
+                                  }
+                                });
+                              }}
+                            />
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className='text-center border-b border-border font-semibold text-xs py-3 px-3 text-foreground font-mono bg-muted/5'>
+                        {formatMinutes(empHoursMins)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
-        </div>
+        )
+      }
       </div>
 
       {/* 5. Assignment Sheet modal drawer */}

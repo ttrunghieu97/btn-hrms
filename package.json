@@ -5,9 +5,10 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "predev": "node scripts/dev/clean-ports.mjs",
-    "dev": "pnpm run --parallel --filter @project/api --filter frontend dev",
+    "dev": "pnpm run --parallel --filter @project/permissions --filter @project/api --filter frontend dev",
     "dev:api": "pnpm --filter @project/api dev",
     "dev:web": "pnpm --filter frontend dev",
+    "dev:packages": "pnpm --filter @project/permissions dev",
     "setup:dev-certs": "bash scripts/dev/setup-certs.sh",
     "dev:tunnel": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/cloudflare-tunnel.ps1",
     "deploy:vps": "ssh -o StrictHostKeyChecking=no hieutt@server2 'cd /home/hieutt/btn-hrms && git pull origin master && docker compose pull && docker compose up -d --no-build --remove-orphans && docker image prune -f'",

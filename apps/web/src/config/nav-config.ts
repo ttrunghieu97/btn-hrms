@@ -286,7 +286,7 @@ export const navGroups: NavGroup[] = [
       },
       {
         title: appCopy.nav.items.changePassword,
-        url: '/change-password',
+        url: '/account/change-password',
         icon: 'lock',
         isActive: false,
         items: [],

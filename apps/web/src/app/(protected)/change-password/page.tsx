@@ -1,14 +1,5 @@
-import { ChangePasswordPage } from '@/features/change-password';
-import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
-import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: buildDashboardMetadataTitle(pageCopy.dashboard.changePassword.title)
-};
-
-export default async function Page() {
-  await requireServerSession();
-
-  return <ChangePasswordPage />;
+export default function ChangePasswordRedirectPage() {
+  redirect('/account/change-password');
 }

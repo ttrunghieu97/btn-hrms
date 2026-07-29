@@ -33,6 +33,20 @@ import { ListClockEventsUseCase } from "./use-cases/list-clock-events.usecase";
 import { OverrideAttendanceSummaryUseCase } from "./use-cases/override-attendance-summary.usecase";
 import { QueryAttendanceTimesheetUseCase } from "./use-cases/query-attendance-timesheet.usecase";
 import { ResolveAttendanceExceptionUseCase } from "./use-cases/resolve-attendance-exception.usecase";
+import { TimesheetService } from "./services/timesheet.service";
+import { PeriodLockService } from "./services/period-lock.service";
+import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-workspace.usecase";
+import {
+  BatchTimesheetDto,
+  BatchTimesheetResponseDto,
+  LockPeriodDto,
+  UnlockPeriodDto,
+  PeriodLockResponseDto,
+} from "./dto/timesheet.dto";
+import {
+  TimesheetWorkspaceQueryDto,
+  TimesheetWorkspaceResponseDto,
+} from "./dto/timesheet-workspace.dto";
 
 @ApiTags("Attendance Timekeeping")
 @ApiBearerAuth()
@@ -47,6 +61,9 @@ export class TimekeepingController {
     private readonly overrideSummary: OverrideAttendanceSummaryUseCase,
     private readonly queryTimesheet: QueryAttendanceTimesheetUseCase,
     private readonly attendanceCapturePolicy: AttendanceCapturePolicyService,
+    private readonly timesheetService: TimesheetService,
+    private readonly periodLockService: PeriodLockService,
+    private readonly queryTimesheetWorkspace: QueryTimesheetWorkspaceUseCase,
   ) {}
 
   @Post("clock-events")
@@ -136,6 +153,90 @@ export class TimekeepingController {
     @Query() query: AttendanceTimesheetQueryDto,
   ) {
     return this.queryTimesheet.execute(query);
+  }
+
+  // ─── Timesheet Batch ──────────────────────────────────────────────
+
+  @Post("timesheets/batch")
+  @CheckPolicy(AttendancePolicies.timesheetManage)
+  @AuditLog({ action: "timesheet_batch_save", entity: "attendance" })
+  @ApiOperation({ summary: "Batch save attendance timesheet records" })
+  @ApiOkResponse({ type: BatchTimesheetResponseDto })
+  async batchSaveTimesheet(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: BatchTimesheetDto,
+  ): Promise<BatchTimesheetResponseDto> {
+    return this.timesheetService.batchSave(req.user.id, dto);
+  }
+
+  // ─── Period Locks ──────────────────────────────────────────────────
+
+  @Post("period-locks/lock")
+  @CheckPolicy(AttendancePolicies.periodLock)
+  @AuditLog({ action: "period_lock_lock", entity: "attendance" })
+  @ApiOperation({ summary: "Lock attendance period" })
+  @ApiOkResponse({ description: "Period locked" })
+  async lockPeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: LockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.lock(
+      req.user.id,
+      dto.period,
+      dto.remarks,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
+  @Post("period-locks/unlock")
+  @CheckPolicy(AttendancePolicies.periodUnlock)
+  @AuditLog({ action: "period_lock_unlock", entity: "attendance" })
+  @ApiOperation({ summary: "Unlock attendance period (requires elevated privilege)" })
+  @ApiOkResponse({ description: "Period unlocked" })
+  async unlockPeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: UnlockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.unlock(
+      req.user.id,
+      dto.period,
+      dto.remarks,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
+  @Get("timesheet-workspace")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get timesheet workspace data for a period" })
+  @ApiOkResponse({ type: TimesheetWorkspaceResponseDto })
+  async getTimesheetWorkspace(
+    @Query() query: TimesheetWorkspaceQueryDto,
+  ): Promise<TimesheetWorkspaceResponseDto> {
+    return this.queryTimesheetWorkspace.execute(query);
+  }
+
+  @Get("period-locks/:period")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get attendance period lock status" })
+  @ApiOkResponse({ description: "Period lock status" })
+  async getPeriodLock(
+    @Param("period") period: string,
+  ): Promise<{ data: PeriodLockResponseDto | null }> {
+    const lock = await this.periodLockService.getPeriodLock(period);
+    return { data: lock ? this.toPeriodLockResponse(lock) : null };
+  }
+
+  private toPeriodLockResponse(lock: any): PeriodLockResponseDto {
+    return {
+      id: lock.id,
+      period: lock.period,
+      status: lock.status,
+      lockedByUserId: lock.lockedByUserId,
+      lockedAt: lock.lockedAt,
+      unlockedByUserId: lock.unlockedByUserId,
+      unlockedAt: lock.unlockedAt,
+      remarks: lock.remarks,
+    };
   }
 }
 

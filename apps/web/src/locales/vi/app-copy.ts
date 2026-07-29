@@ -1674,8 +1674,11 @@ export const changePasswordUiCopy = {
   confirmPasswordLabel: 'Xác nhận mật khẩu mới',
   confirmPasswordPlaceholder: 'Nhập lại mật khẩu mới',
   submitAction: 'Cập nhật mật khẩu',
-  securityTitle: 'Khuyến nghị bảo mật',
-  securityDescription: 'Giữ tài khoản an toàn hơn.',
+  successMessage: 'Mật khẩu đã được cập nhật thành công.',
+  clearAction: 'Xoá',
+  securityTitle: 'Yêu cầu mật khẩu',
+  securityDescription: 'Mật khẩu phải đáp ứng các tiêu chuẩn sau.',
+  tipsTitle: 'Mẹo bảo mật',
   tips: [
     'Dùng ít nhất 10 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
     'Không dùng lại mật khẩu cũ hoặc mật khẩu đang dùng ở hệ thống khác.',

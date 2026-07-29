@@ -6,6 +6,10 @@ export const attendance = {
   report: 'attendance:report',
   overtimeSubmit: 'attendance:overtime:submit',
   overtimeApprove: 'attendance:overtime:approve',
+  timesheetView: 'attendance:timesheet:view',
+  timesheetManage: 'attendance:timesheet:manage',
+  periodLockManage: 'attendance:period-lock:manage',
+  periodUnlockManage: 'attendance:period-unlock:manage',
 } as const;
 
 export const attendanceHierarchy: readonly string[] = [

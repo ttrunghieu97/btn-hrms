@@ -10,6 +10,7 @@ import { ChevronDownIcon, ChevronUpIcon, CaretSortIcon } from '@radix-ui/react-i
 import { extractProtectedAssetUrl } from '@/lib/asset-url';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { getSmartStatus } from '../../utils/employee-status';
+import { CellAction } from './cell-action';
 
 function getEmployeeName(employee: EmployeeResponseDto) {
   const fullName = [employee.firstName, employee.lastName].filter(Boolean).join(' ').trim();
@@ -233,6 +234,16 @@ export const columns = (onRowClick?: (employee: EmployeeResponseDto) => void): C
     meta: {
       label: employeeUiCopy.table.updatedAt,
       responsivePriority: 'rich'
+    }
+  },
+  {
+    id: 'actions',
+    header: '',
+    cell: ({ row }) => <CellAction data={row.original} />,
+    enableSorting: false,
+    enableColumnFilter: false,
+    meta: {
+      responsivePriority: 'core'
     }
   },
 ];
