@@ -1,13 +1,13 @@
 import { Global, Module } from "@nestjs/common";
 import { CONTRACTS_TOKENS } from "./contracts.tokens";
 import { WorkforceIdentityAclImpl } from "./acls/implementations/workforce-identity.acl.impl";
-import { PayrollInputAclImpl } from "./acls/implementations/payroll-input.acl.impl";
 import { DepartmentReaderAdapter } from "./adapters/department-reader.adapter";
 import { EmployeeShiftReaderAdapter } from "./adapters/employee-shift-reader.adapter";
 import { FakeAttendanceAssignmentAdapter } from "./adapters/attendance-assignment-reader.adapter";
 import { WorkforceTimeManagementAdapter } from "./adapters/workforce-time-management.adapter";
-import { TimeManagementPayrollAdapter } from "./adapters/time-management-payroll.adapter";
 import { WorkflowContextActionAdapter } from "./adapters/workflow-context-action.adapter";
+import { AttendanceAdjustmentReaderAdapter } from "./adapters/attendance-adjustment-reader.adapter";
+import { ATTENDANCE_ADJUSTMENT_READER } from "./ports/attendance-adjustment-reader.port";
 
 import { AttendanceSummariesReaderAdapter } from "./adapters/attendance-summaries-reader.adapter";
 import { ATTENDANCE_SUMMARIES_READER } from "./ports/attendance-summaries-reader.port";
@@ -43,6 +43,7 @@ import { PositionReaderAdapter } from "./adapters/position-reader.adapter";
 import { PositionsModule } from "../modules/organization/positions/positions.module";
 import { DepartmentsModule } from "../modules/organization/departments/departments.module";
 import { WorkforceShiftsModule } from "../modules/scheduling/shifts/workforce-shifts.module";
+import { TimekeepingModule } from "../modules/attendance/timekeeping/timekeeping.module";
 
 @Global()
 @Module({
@@ -55,6 +56,7 @@ import { WorkforceShiftsModule } from "../modules/scheduling/shifts/workforce-sh
     LocationsModule,
     PositionsModule,
     WorkforceShiftsModule,
+    TimekeepingModule,
   ],
   providers: [
     {
@@ -62,20 +64,16 @@ import { WorkforceShiftsModule } from "../modules/scheduling/shifts/workforce-sh
       useClass: AttendanceSummariesReaderAdapter,
     },
     {
+      provide: ATTENDANCE_ADJUSTMENT_READER,
+      useClass: AttendanceAdjustmentReaderAdapter,
+    },
+    {
       provide: CONTRACTS_TOKENS.WORKFORCE_IDENTITY_ACL,
       useClass: WorkforceIdentityAclImpl,
     },
     {
-      provide: CONTRACTS_TOKENS.PAYROLL_INPUT_ACL,
-      useClass: PayrollInputAclImpl,
-    },
-    {
       provide: CONTRACTS_TOKENS.WORKFORCE_TIME_MANAGEMENT_PORT,
       useClass: WorkforceTimeManagementAdapter,
-    },
-    {
-      provide: CONTRACTS_TOKENS.TIME_MANAGEMENT_PAYROLL_PORT,
-      useClass: TimeManagementPayrollAdapter,
     },
     {
       provide: CONTRACTS_TOKENS.WORKFLOW_CONTEXT_ACTION_PORT,
@@ -145,9 +143,7 @@ import { WorkforceShiftsModule } from "../modules/scheduling/shifts/workforce-sh
   exports: [
     ATTENDANCE_SUMMARIES_READER,
     CONTRACTS_TOKENS.WORKFORCE_IDENTITY_ACL,
-    CONTRACTS_TOKENS.PAYROLL_INPUT_ACL,
     CONTRACTS_TOKENS.WORKFORCE_TIME_MANAGEMENT_PORT,
-    CONTRACTS_TOKENS.TIME_MANAGEMENT_PAYROLL_PORT,
     CONTRACTS_TOKENS.WORKFLOW_CONTEXT_ACTION_PORT,
     CONTRACTS_TOKENS.AUDIT_LOG_PORT,
     CONTRACTS_TOKENS.IDENTITY_ADMIN_PORT,
@@ -164,6 +160,7 @@ import { WorkforceShiftsModule } from "../modules/scheduling/shifts/workforce-sh
     LEAVE_READER_PORT,
     ATTENDANCE_SUMMARY_WRITER_PORT,
     SETTLEMENT_STATUS_WRITER_PORT,
+    ATTENDANCE_ADJUSTMENT_READER,
   ],
 })
 export class ContractsModule {}

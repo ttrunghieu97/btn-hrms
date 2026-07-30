@@ -221,7 +221,9 @@ export class EmployeeMapper {
       identityNumber:
         sensitiveFieldsAllowed && !redactListField("identityNumber")
           ? (row.identityNumber ?? null)
-          : null,
+          : row.identityNumber
+            ? "••••••••" + row.identityNumber.slice(-4)
+            : null,
       identityDate:
         sensitiveFieldsAllowed && !redactListField("identityDate")
           ? (row.identityDate ?? null)
@@ -242,7 +244,9 @@ export class EmployeeMapper {
       bankAccountNumber:
         sensitiveFieldsAllowed && !redactListField("bankAccountNumber")
           ? (row.bankAccountNumber ?? null)
-          : null,
+          : row.bankAccountNumber
+            ? "••••••••" + row.bankAccountNumber.slice(-4)
+            : null,
       bankName:
         sensitiveFieldsAllowed && !redactListField("bankName")
           ? (row.bankName ?? null)
@@ -250,7 +254,9 @@ export class EmployeeMapper {
       taxCode:
         sensitiveFieldsAllowed && !redactListField("taxCode")
           ? (row.taxCode ?? null)
-          : null,
+          : row.taxCode
+            ? "••••••••" + row.taxCode.slice(-4)
+            : null,
 
       department: currentAssignment?.department
         ? {

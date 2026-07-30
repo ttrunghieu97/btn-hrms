@@ -7,6 +7,7 @@ import { GPSStatusBadge } from '../components/home/GPSStatusBadge';
 import { AttendanceActionButton } from '../components/home/AttendanceActionButton';
 import { Icons } from '@/components/icons';
 import { toDateString } from '../utils/attendance-utils';
+import { SESSION_TYPE_TO_LABEL } from '../constants';
 import { employeeUiCopy } from '@/lib/app-copy';
 
 const SESSION_LABELS: Record<string, string> = {
@@ -186,14 +187,7 @@ export function AttendanceHomeScreen({ onPunch }: AttendanceHomeScreenProps) {
   }, [sessions]);
 
   const handleSessionAction = (type: string, action: 'checkin' | 'checkout') => {
-    const sessionTypeToLabel: Record<string, "morning" | "noon" | "afternoon"> = {
-      MORNING: "morning",
-      LUNCH_DUTY: "noon",
-      AFTERNOON: "afternoon",
-      NIGHT: "afternoon",
-      OT: "afternoon",
-    };
-    const sessionLabel = sessionTypeToLabel[type] ?? "morning";
+    const sessionLabel = SESSION_TYPE_TO_LABEL[type] ?? 'morning';
     onPunch(toDateString(new Date()), sessionLabel, action);
   };
 
@@ -264,21 +258,11 @@ export function AttendanceHomeScreen({ onPunch }: AttendanceHomeScreenProps) {
               canCheckIn={canCheckIn}
               canCheckOut={canCheckOut}
               onCheckIn={() => {
-                const sessionTypeToLabel: Record<string, "morning" | "noon" | "afternoon"> = {
-                  MORNING: "morning",
-                  LUNCH_DUTY: "noon",
-                  AFTERNOON: "afternoon",
-                };
-                const label = activeSession ? (sessionTypeToLabel[activeSession.type] ?? 'morning') : 'morning';
+                const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
                 onPunch(toDateString(new Date()), label, 'checkin');
               }}
               onCheckOut={() => {
-                const sessionTypeToLabel: Record<string, "morning" | "noon" | "afternoon"> = {
-                  MORNING: "morning",
-                  LUNCH_DUTY: "noon",
-                  AFTERNOON: "afternoon",
-                };
-                const label = activeSession ? (sessionTypeToLabel[activeSession.type] ?? 'morning') : 'morning';
+                const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
                 onPunch(toDateString(new Date()), label, 'checkout');
               }}
               isLoading={false}

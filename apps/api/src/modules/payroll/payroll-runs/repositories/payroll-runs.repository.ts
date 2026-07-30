@@ -62,30 +62,6 @@ export class PayrollRunsRepository extends BaseRepository<
     );
   }
 
-  async getAttendanceSummariesByEmployee(
-    employeeIds: string[],
-    startsOn: string,
-    endsOn: string,
-  ) {
-    if (!employeeIds.length) return new Map<string, typeof schema.attendanceDailySummaries.$inferSelect[]>();
-
-    const attendanceRows = await this.db.query.attendanceDailySummaries.findMany({
-      where: and(
-        inArray(schema.attendanceDailySummaries.employeeId, employeeIds),
-        gte(schema.attendanceDailySummaries.workDate, startsOn),
-        lte(schema.attendanceDailySummaries.workDate, endsOn),
-      ),
-    });
-
-    const byEmployee = new Map<string, typeof schema.attendanceDailySummaries.$inferSelect[]>();
-    for (const row of attendanceRows) {
-      const current = byEmployee.get(row.employeeId) ?? [];
-      current.push(row);
-      byEmployee.set(row.employeeId, current);
-    }
-    return byEmployee;
-  }
-
   transaction<T>(handler: (tx: PayrollRunTransaction) => Promise<T>) {
     return this.db.transaction(handler);
   }
@@ -146,6 +122,20 @@ export class PayrollRunsRepository extends BaseRepository<
     return tx.insert(schema.payrollItems).values(items);
   }
 
+  async insertInputSnapshot(
+    snapshot: typeof schema.payrollInputSnapshots.$inferInsert,
+    itemInputs: Array<Omit<typeof schema.payrollInputSnapshotItems.$inferInsert, "snapshotId">>,
+    tx: PayrollRunTransaction,
+  ) {
+    const [created] = await tx.insert(schema.payrollInputSnapshots).values(snapshot).returning();
+    if (!created) return null;
+    if (itemInputs.length > 0) {
+      const items = itemInputs.map((item) => ({ ...item, snapshotId: created.id }));
+      await tx.insert(schema.payrollInputSnapshotItems).values(items as any);
+    }
+    return created;
+  }
+
   markRunApproved(payrollRunId: string, tx: PostgresJsDatabase<typeof schema>) {
     return tx
       .update(schema.payrollRuns)
@@ -165,6 +155,37 @@ export class PayrollRunsRepository extends BaseRepository<
         updatedAt: new Date(),
       })
       .where(eq(schema.payrollRuns.id, payrollRunId));
+  }
+
+  async recordApprovalAction(
+    payrollRunId: string,
+    action: string,
+    performedByUserId: string | null,
+    comment: string | null,
+    tx: PayrollRunTransaction,
+  ) {
+    await tx.insert(schema.payrollRunApprovalHistory).values({
+      payrollRunId,
+      action,
+      performedByUserId,
+      comment,
+    });
+  }
+
+  async getApprovalHistory(payrollRunId: string) {
+    return this.db
+      .select()
+      .from(schema.payrollRunApprovalHistory)
+      .where(eq(schema.payrollRunApprovalHistory.payrollRunId, payrollRunId))
+      .orderBy(schema.payrollRunApprovalHistory.createdAt);
+  }
+
+  async findActiveCalculationVersion() {
+    const row = await this.db.query.payrollCalculationVersions.findFirst({
+      where: eq(schema.payrollCalculationVersions.status, "active"),
+      orderBy: [desc(schema.payrollCalculationVersions.createdAt)],
+    });
+    return row ?? null;
   }
 
   async findById(id: string): Promise<PayrollRunWithPeriod | null> {

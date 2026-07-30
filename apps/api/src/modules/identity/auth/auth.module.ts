@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { JwtModule, type JwtModuleOptions } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { type SignOptions } from "jsonwebtoken";
@@ -20,11 +20,14 @@ import { ListSecurityTimelineUseCase } from "./use-cases/list-security-timeline.
 import { LinkEmailUseCase } from "./use-cases/link-email.usecase";
 import { SsoLoginUseCase } from "./use-cases/sso-login.usecase";
 import { AuthorizationVersionService } from "./services/authorization-version.service";
+import { TotpService } from "./services/totp.service";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [
     ConfigModule,
     PermissionsModule,
+    forwardRef(() => UsersModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
@@ -64,6 +67,7 @@ import { AuthorizationVersionService } from "./services/authorization-version.se
     LinkEmailUseCase,
     SsoLoginUseCase,
     AuthorizationVersionService,
+    TotpService,
   ],
   exports: [
     JwtModule,
@@ -74,6 +78,7 @@ import { AuthorizationVersionService } from "./services/authorization-version.se
     RevokeAllRefreshTokensUseCase,
     ChangePasswordUseCase,
     AuthorizationVersionService,
+    TotpService,
   ],
 })
 export class AuthModule {}

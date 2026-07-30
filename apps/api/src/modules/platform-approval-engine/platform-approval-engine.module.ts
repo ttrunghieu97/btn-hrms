@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../../infrastructure/database/database.module";
 import { PlatformApprovalEngineService } from "./platform-approval-engine.service";
 import { PlatformApprovalEngineRepository } from "./repositories/platform-approval-engine.repository";
+import { ApprovalSlaService } from "./services/approval-sla.service";
 
 import { ApprovalPolicyController } from "./controllers/approval-policy.controller";
 import { ApprovalRequestController } from "./controllers/approval-request.controller";
@@ -24,6 +25,7 @@ import { GetApprovalInboxUseCase } from "./use-cases/get-approval-inbox.usecase"
   providers: [
     PlatformApprovalEngineRepository,
     PlatformApprovalEngineService,
+    ApprovalSlaService,
     CreateApprovalPolicyUseCase,
     ListApprovalPoliciesUseCase,
     GetApprovalPolicyUseCase,
@@ -36,6 +38,7 @@ import { GetApprovalInboxUseCase } from "./use-cases/get-approval-inbox.usecase"
     ListApprovalRequestsUseCase,
     GetApprovalInboxUseCase,
   ],
-  exports: [PlatformApprovalEngineService, PlatformApprovalEngineRepository],
+  exports: [PlatformApprovalEngineService, PlatformApprovalEngineRepository, ApprovalSlaService],
 })
 export class PlatformApprovalEngineDomainModule {}
+

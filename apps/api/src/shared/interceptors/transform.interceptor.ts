@@ -106,10 +106,20 @@ export class TransformInterceptor<T> implements NestInterceptor<
       response.getHeader?.("x-request-id") ||
       request?.id ||
       request?.headers?.["x-request-id"];
+    const correlationId =
+      ctx?.correlationId ||
+      request?.headers?.["x-correlation-id"] ||
+      requestId;
+
+    if (correlationId) {
+      response.setHeader("x-correlation-id", String(correlationId));
+    }
+
     const timestamp = new Date().toISOString();
 
     const meta: Record<string, any> = {
       requestId: String(requestId || ""),
+      correlationId: String(correlationId || ""),
       timestamp,
     };
 

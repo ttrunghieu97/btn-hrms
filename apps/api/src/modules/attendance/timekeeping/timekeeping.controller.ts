@@ -35,6 +35,10 @@ import { QueryAttendanceTimesheetUseCase } from "./use-cases/query-attendance-ti
 import { ResolveAttendanceExceptionUseCase } from "./use-cases/resolve-attendance-exception.usecase";
 import { TimesheetService } from "./services/timesheet.service";
 import { PeriodLockService } from "./services/period-lock.service";
+import { PayrollReconciliationService } from "./services/payroll-reconciliation.service";
+import { AttendanceAdjustmentService } from "./services/attendance-adjustment.service";
+import { AttendanceHealthService } from "./services/attendance-health.service";
+import type { PeriodTransitionRecord } from "./repositories/attendance-period-lock.repository";
 import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-workspace.usecase";
 import {
   BatchTimesheetDto,
@@ -64,6 +68,9 @@ export class TimekeepingController {
     private readonly timesheetService: TimesheetService,
     private readonly periodLockService: PeriodLockService,
     private readonly queryTimesheetWorkspace: QueryTimesheetWorkspaceUseCase,
+    private readonly payrollReconciliationService: PayrollReconciliationService,
+    private readonly adjustmentService: AttendanceAdjustmentService,
+    private readonly healthService: AttendanceHealthService,
   ) {}
 
   @Post("clock-events")
@@ -222,6 +229,23 @@ export class TimekeepingController {
     return this.toPeriodLockResponse(lock);
   }
 
+  @Post("period-locks/reopen")
+  @CheckPolicy(AttendancePolicies.periodClose)
+  @AuditLog({ action: "period_lock_reopen", entity: "attendance" })
+  @ApiOperation({ summary: "Reopen a closed attendance period (privileged)" })
+  @ApiOkResponse({ description: "Period reopened" })
+  async reopenPeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: UnlockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.reopen(
+      req.user.id,
+      dto.period,
+      dto.remarks,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
   @Get("timesheet-workspace")
   @CheckPolicy(AttendancePolicies.report)
   @ApiOperation({ summary: "Get timesheet workspace data for a period" })
@@ -241,6 +265,181 @@ export class TimekeepingController {
   ): Promise<{ data: PeriodLockResponseDto | null }> {
     const lock = await this.periodLockService.getPeriodLock(period);
     return { data: lock ? this.toPeriodLockResponse(lock) : null };
+  }
+
+  @Get("period-locks/:period/validate-close")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Validate whether period can be closed" })
+  @ApiOkResponse({ description: "Close validation result" })
+  async validateClose(
+    @Param("period") period: string,
+  ): Promise<{ data: { valid: boolean; reasons: string[] } }> {
+    const result = await this.periodLockService.validateClose(period);
+    return { data: result };
+  }
+
+  @Get("period-locks/:period/history")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get period lifecycle history" })
+  @ApiOkResponse({ description: "Period transition history" })
+  async getPeriodHistory(
+    @Param("period") period: string,
+  ): Promise<{ data: PeriodTransitionRecord[] }> {
+    const history = await this.periodLockService.getPeriodHistory(period);
+    return { data: history };
+  }
+
+  // ─── Attendance Adjustments ─────────────────────────────────────────
+
+  @Post("adjustments")
+  @CheckPolicy(AttendancePolicies.report)
+  @AuditLog({ action: "attendance_adjustment_create", entity: "attendance" })
+  @ApiOperation({ summary: "Create post-closure attendance adjustment" })
+  @ApiOkResponse({ description: "Adjustment created" })
+  async createAdjustment(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() body: {
+      period: string;
+      employeeId: string;
+      reason: string;
+      items: { fieldName: string; oldValue: number; newValue: number; delta: number }[];
+    },
+  ) {
+    return this.adjustmentService.create(
+      {
+        period: body.period,
+        employeeId: body.employeeId,
+        reason: body.reason,
+        items: body.items.map((i) => ({
+          fieldName: i.fieldName as any,
+          oldValue: i.oldValue,
+          newValue: i.newValue,
+          delta: i.delta,
+        })),
+      },
+      req.user.id,
+    );
+  }
+
+  @Get("adjustments/:id")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get adjustment details" })
+  @ApiOkResponse({ description: "Adjustment details" })
+  async getAdjustment(@Param("id") id: string) {
+    const result = await this.adjustmentService.findById(id);
+    return { data: result };
+  }
+
+  @Post("adjustments/:id/approve")
+  @CheckPolicy(AttendancePolicies.report)
+  @AuditLog({ action: "attendance_adjustment_approve", entity: "attendance" })
+  @ApiOperation({ summary: "Approve attendance adjustment" })
+  @ApiOkResponse({ description: "Adjustment approved" })
+  async approveAdjustment(
+    @Param("id") id: string,
+    @Request() req: ExpressRequest & { user: AuthUser },
+  ) {
+    return this.adjustmentService.approve(id, req.user.id);
+  }
+
+  @Post("adjustments/:id/reject")
+  @CheckPolicy(AttendancePolicies.report)
+  @AuditLog({ action: "attendance_adjustment_reject", entity: "attendance" })
+  @ApiOperation({ summary: "Reject attendance adjustment" })
+  @ApiOkResponse({ description: "Adjustment rejected" })
+  async rejectAdjustment(
+    @Param("id") id: string,
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() body: { reason: string },
+  ) {
+    return this.adjustmentService.reject(id, req.user.id, body.reason);
+  }
+
+  @Post("adjustments/:id/apply")
+  @CheckPolicy(AttendancePolicies.report)
+  @AuditLog({ action: "attendance_adjustment_apply", entity: "attendance" })
+  @ApiOperation({ summary: "Apply approved adjustment" })
+  @ApiOkResponse({ description: "Adjustment applied" })
+  async applyAdjustment(@Param("id") id: string) {
+    return this.adjustmentService.apply(id);
+  }
+
+  // ─── Payroll Reconciliation ─────────────────────────────────────────
+
+  @Post("reconcile/run")
+  @CheckPolicy(AttendancePolicies.report)
+  @AuditLog({ action: "payroll_reconciliation_run", entity: "attendance" })
+  @ApiOperation({ summary: "Run attendance-payroll reconciliation for a period" })
+  @ApiOkResponse({ description: "Reconciliation started" })
+  async runReconciliation(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() body: { period: string },
+  ) {
+    return this.payrollReconciliationService.runReconciliation(
+      body.period,
+      req.user.id,
+    );
+  }
+
+  @Get("reconcile/:id")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get reconciliation result" })
+  @ApiOkResponse({ description: "Reconciliation details" })
+  async getReconciliation(
+    @Param("id") id: string,
+  ) {
+    const result = await this.payrollReconciliationService.getReconciliation(id);
+    return { data: result };
+  }
+
+  @Get("reconcile/:id/items")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "List reconciliation items" })
+  @ApiOkResponse({ description: "Reconciliation items" })
+  async getReconciliationItems(
+    @Param("id") id: string,
+    @Query("diffType") diffType?: string,
+  ) {
+    const items = await this.payrollReconciliationService.getReconciliationItems(
+      id,
+      diffType as any,
+    );
+    return { data: items };
+  }
+
+  @Get("reconcile/:id/mismatches")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "List reconciliation mismatches only" })
+  @ApiOkResponse({ description: "Mismatch items" })
+  async getReconciliationMismatches(
+    @Param("id") id: string,
+  ) {
+    const items = await this.payrollReconciliationService.getReconciliationItems(
+      id,
+      "MATCH",
+    );
+    return { data: items.filter((i) => i.diffType !== "MATCH") };
+  }
+
+  @Get("reconcile")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "List reconciliation runs" })
+  @ApiOkResponse({ description: "Reconciliation runs" })
+  async listReconciliations(
+    @Query("period") period?: string,
+  ) {
+    const list = await this.payrollReconciliationService.listReconciliations(period);
+    return { data: list };
+  }
+
+  // ─── Operational Health ─────────────────────────────────────────────
+
+  @Get("health")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "Get attendance module operational health" })
+  @ApiOkResponse({ description: "Health dashboard data" })
+  async getHealth() {
+    return this.healthService.getHealth();
   }
 
   private toPeriodLockResponse(lock: any): PeriodLockResponseDto {

@@ -15,25 +15,15 @@ import type {
   CreateClockEventDto,
   ResolveAttendanceExceptionDto,
 } from '@/api/generated/model';
-import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
 import { extractList, extractPagination } from '@/lib/api-extract';
+import { attendanceKeys } from '../attendance-keys';
 
-const keys = createKeyFactory('timekeeping');
-
-export const timekeepingKeys = {
-  ...keys,
-  timesheets: (params?: TimekeepingControllerQueryAttendanceTimesheetParams) =>
-    [...keys.all(), 'timesheets', params] as const,
-  exceptions: (params?: TimekeepingControllerListAttendanceExceptionsParams) =>
-    [...keys.all(), 'exceptions', params] as const,
-  clockEvents: (params?: TimekeepingControllerListEventsParams) =>
-    [...keys.all(), 'clock-events', params] as const,
-};
+const t = attendanceKeys.timesheet;
 
 export function useTimesheetQuery(params: TimekeepingControllerQueryAttendanceTimesheetParams) {
   return useQuery({
-    queryKey: timekeepingKeys.timesheets(params),
+    queryKey: t.timesheets(params),
     queryFn: ({ signal }) =>
       timekeepingControllerQueryAttendanceTimesheet(params, { signal }),
     select: (data) => {
@@ -49,7 +39,7 @@ export function useTimesheetQuery(params: TimekeepingControllerQueryAttendanceTi
 
 export function useExceptionsQuery(params: TimekeepingControllerListAttendanceExceptionsParams) {
   return useQuery({
-    queryKey: timekeepingKeys.exceptions(params),
+    queryKey: t.exceptions(params),
     queryFn: ({ signal }) =>
       timekeepingControllerListAttendanceExceptions(params, { signal }),
     select: (data) => ({
@@ -62,7 +52,7 @@ export function useExceptionsQuery(params: TimekeepingControllerListAttendanceEx
 
 export function useClockEventsQuery(params: TimekeepingControllerListEventsParams) {
   return useQuery({
-    queryKey: timekeepingKeys.clockEvents(params),
+    queryKey: t.clockEvents(params),
     queryFn: ({ signal }) =>
       timekeepingControllerListEvents(params, { signal }),
     select: (data) => ({
@@ -79,7 +69,7 @@ export function useManualCorrectionMutation() {
     mutationFn: (data: CreateManualCorrectionDto) =>
       timekeepingControllerManualCorrection(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: timekeepingKeys.all() });
+      qc.invalidateQueries({ queryKey: t.all() });
     },
   });
 }
@@ -90,7 +80,7 @@ export function useCaptureClockEventMutation() {
     mutationFn: (data: CreateClockEventDto) =>
       timekeepingControllerCaptureClockEvent(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: timekeepingKeys.all() });
+      qc.invalidateQueries({ queryKey: t.all() });
     },
   });
 }
@@ -101,7 +91,7 @@ export function useResolveExceptionMutation() {
     mutationFn: ({ id, data }: { id: string; data: ResolveAttendanceExceptionDto }) =>
       timekeepingControllerResolveAttendanceException(id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: timekeepingKeys.all() });
+      qc.invalidateQueries({ queryKey: t.all() });
     },
   });
 }

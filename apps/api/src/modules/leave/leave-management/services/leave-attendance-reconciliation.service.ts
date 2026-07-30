@@ -29,7 +29,7 @@ export class LeaveAttendanceReconciliationService {
     const existingSummaries = await this.attendanceSummariesReader.findByEmployeeAndDates(
       request.employeeId,
       dates,
-    ) as { workDate: string; sourceData: unknown; workedMinutes: number | null; status: string }[];
+    );
     const summaryMap = new Map(existingSummaries.map(s => [s.workDate, s]));
 
     for (const workDate of dates) {
@@ -61,7 +61,7 @@ export class LeaveAttendanceReconciliationService {
   }) {
     const summaries = await this.attendanceSummariesReader.findByLeaveRequestId(
       request.id,
-    ) as { employeeId: string; workDate: string; sourceData: unknown; workedMinutes: number | null; status: string }[];
+    );
     const key = this.buildReconciliationKey(request, "cancelled");
 
     for (const summary of summaries) {

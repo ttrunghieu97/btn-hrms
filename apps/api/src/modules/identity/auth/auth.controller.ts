@@ -33,6 +33,7 @@ import { ERROR_REASONS } from "../../../shared/constants/error-reasons";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
 import { throwUnauthorized } from "../../../shared/utils/http-error";
 import { GoogleAuthService } from "./services/google-auth.service";
+import { TotpService } from "./services/totp.service";
 import { AuthConfigService } from "./auth-config.service";
 import { ChangePasswordRequestDto } from "./dto/change-password.dto";
 import { LoginRequestDto } from "./dto/login.dto";
@@ -67,6 +68,7 @@ export class AuthController {
     private readonly linkEmailUseCase: LinkEmailUseCase,
     private readonly ssoLogin: SsoLoginUseCase,
     private readonly googleAuth: GoogleAuthService,
+    private readonly totpService: TotpService,
   ) {}
 
   private clearLegacyAuthFlagCookie(res: Response) {
@@ -333,6 +335,42 @@ export class AuthController {
       });
     }
     return this.linkEmailUseCase.execute(userId, body.idToken);
+  }
+
+  @Post("totp/setup")
+  @CheckPolicy(AuthenticatedOnlyPolicy)
+  @ApiBearerAuth()
+  @AuditLog({ action: "auth_totp_setup", entity: "auth" })
+  @ApiOperation({ summary: "Generate TOTP secret for 2FA setup" })
+  async setupTotp(@Req() req: Request & { user?: AuthUser }) {
+    const userId = req.user?.id;
+    if (!userId) throwUnauthorized("Not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED);
+    return this.totpService.generateSecret(userId);
+  }
+
+  @Post("totp/enable")
+  @CheckPolicy(AuthenticatedOnlyPolicy)
+  @ApiBearerAuth()
+  @AuditLog({ action: "auth_totp_enable", entity: "auth" })
+  @ApiOperation({ summary: "Enable TOTP 2FA with verified passcode" })
+  async enableTotp(
+    @Req() req: Request & { user?: AuthUser },
+    @Body() body: { secret: string; passcode: string },
+  ) {
+    const userId = req.user?.id;
+    if (!userId) throwUnauthorized("Not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED);
+    return this.totpService.enableTotp(userId, body.secret, body.passcode);
+  }
+
+  @Post("totp/disable")
+  @CheckPolicy(AuthenticatedOnlyPolicy)
+  @ApiBearerAuth()
+  @AuditLog({ action: "auth_totp_disable", entity: "auth" })
+  @ApiOperation({ summary: "Disable TOTP 2FA" })
+  async disableTotp(@Req() req: Request & { user?: AuthUser }) {
+    const userId = req.user?.id;
+    if (!userId) throwUnauthorized("Not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED);
+    return this.totpService.disableTotp(userId);
   }
 
   @Post("sso/google")

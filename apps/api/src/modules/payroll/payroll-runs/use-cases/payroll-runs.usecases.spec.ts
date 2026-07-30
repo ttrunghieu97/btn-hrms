@@ -13,10 +13,11 @@ describe(GeneratePayrollRunUseCase.name, () => {
     };
     const useCase = new GeneratePayrollRunUseCase(
       repo as any,
-      { getBatchPayrollInputs: jest.fn() } as any,
       { getEffectiveDailySummaries: jest.fn().mockResolvedValue([]) },
       { evaluate: jest.fn() },
+      { getAdjustmentDeltas: jest.fn().mockResolvedValue([]) },
       { stage: jest.fn() } as any,
+      { canTransition: jest.fn().mockReturnValue(true) } as any,
     );
 
     await expect(useCase.execute("run-1")).rejects.toThrow(
@@ -31,7 +32,7 @@ describe(GeneratePayrollRunUseCase.name, () => {
       getPayrollPeriodById: jest.fn().mockResolvedValue({ id: "period-1", companyId: "company-1", startsOn: "2026-04-01", endsOn: "2026-04-30" }),
       getEmployeesForPayrollRun: jest.fn().mockResolvedValue([{ id: "emp-1" }]),
       getCurrentSalaryByEmployee: jest.fn().mockResolvedValue(new Map([["emp-1", { baseSalary: 1000, currency: "VND" }]])),
-      getAttendanceSummariesByEmployee: jest.fn().mockResolvedValue(new Map([["emp-1", []]])),
+      // getAttendanceSummariesByEmployee removed — unused (Sprint 1 migrated to AttendanceReadPort)
       transaction: jest.fn().mockImplementation(async (fn) => fn({})),
       markRunProcessing: jest.fn(),
       deleteRunItems: jest.fn(),
@@ -41,17 +42,12 @@ describe(GeneratePayrollRunUseCase.name, () => {
       markRunApproved: jest.fn(),
       markRunPendingApproval: jest.fn(),
     };
-    const payrollInputPort = {
-      getPayrollInputs: jest.fn().mockResolvedValue([]),
-      getBatchPayrollInputs: jest.fn().mockResolvedValue(new Map()),
-    };
     const eventOutbox = {
       stage: jest.fn().mockResolvedValue({ id: "out-1" }),
     };
 
     const useCase = new GeneratePayrollRunUseCase(
       repo as any,
-      payrollInputPort as any,
       { getEffectiveDailySummaries: jest.fn().mockResolvedValue([]) },
       {
         evaluate: jest.fn().mockImplementation((summary) => ({
@@ -62,7 +58,9 @@ describe(GeneratePayrollRunUseCase.name, () => {
           attendanceOutcome: "present",
         })),
       },
+      { getAdjustmentDeltas: jest.fn().mockResolvedValue([]) },
       eventOutbox as any,
+      { canTransition: jest.fn().mockReturnValue(true) } as any,
     );
 
     await useCase.execute("run-1");

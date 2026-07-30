@@ -2,7 +2,7 @@
 
 import { Section } from '@/components/layout/section';
 import { attendanceUiCopy } from '@/lib/app-copy';
-import { TimekeepingView } from '../components/timekeeping-view';
+import { TimekeepingView } from '../timekeeping';
 
 export function SummaryView() {
   return (

@@ -761,6 +761,66 @@
         ]
       }
     },
+    "/api/v1/auth/totp/setup": {
+      "post": {
+        "operationId": "AuthController_setupTotp",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate TOTP secret for 2FA setup",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/totp/enable": {
+      "post": {
+        "operationId": "AuthController_enableTotp",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enable TOTP 2FA with verified passcode",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/totp/disable": {
+      "post": {
+        "operationId": "AuthController_disableTotp",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disable TOTP 2FA",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
     "/api/v1/auth/sso/google": {
       "post": {
         "operationId": "AuthController_ssoGoogle",
@@ -773,6 +833,151 @@
         "summary": "Login or register via Google SSO",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "UsersController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMeEnvelopeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user profile",
+        "tags": [
+          "Users Management"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search",
+            "schema": {
+              "example": "john",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          },
+          {
+            "name": "include",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated relations to include",
+            "schema": {
+              "example": "department,manager",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List users with filtering and pagination",
+        "tags": [
+          "Users Management"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/security": {
+      "get": {
+        "operationId": "UsersController_getSecurity",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user security details (login, sessions, password)",
+        "tags": [
+          "Users Management"
         ]
       }
     },
@@ -2862,151 +3067,6 @@
         ]
       }
     },
-    "/api/v1/users/me": {
-      "get": {
-        "operationId": "UsersController_getMe",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserMeEnvelopeResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get current user profile",
-        "tags": [
-          "Users Management"
-        ]
-      }
-    },
-    "/api/v1/users": {
-      "get": {
-        "operationId": "UsersController_findAll",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "description": "Free-text search",
-            "schema": {
-              "example": "john",
-              "type": "string"
-            }
-          },
-          {
-            "name": "sort",
-            "required": false,
-            "in": "query",
-            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
-            "schema": {
-              "example": "createdAt:desc",
-              "type": "string"
-            }
-          },
-          {
-            "name": "include",
-            "required": false,
-            "in": "query",
-            "description": "Comma-separated relations to include",
-            "schema": {
-              "example": "department,manager",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List users with filtering and pagination",
-        "tags": [
-          "Users Management"
-        ]
-      }
-    },
-    "/api/v1/users/{id}/security": {
-      "get": {
-        "operationId": "UsersController_getSecurity",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get user security details (login, sessions, password)",
-        "tags": [
-          "Users Management"
-        ]
-      }
-    },
     "/api/v1/employees/{employeeId}/contract": {
       "get": {
         "operationId": "EmployeeContractsController_get",
@@ -4500,6 +4560,1656 @@
         "summary": "Publish schedule roster",
         "tags": [
           "Workforce Schedules"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/clock-events": {
+      "post": {
+        "operationId": "TimekeepingController_captureClockEvent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClockEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Clock event captured"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Capture attendance clock event",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      },
+      "get": {
+        "operationId": "TimekeepingController_listEvents",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mobile",
+                "web",
+                "api",
+                "manual"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of clock events"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List attendance clock events",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/corrections": {
+      "post": {
+        "operationId": "TimekeepingController_manualCorrection",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManualCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Manual correction created"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create manual attendance correction",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/exceptions": {
+      "get": {
+        "operationId": "TimekeepingController_listAttendanceExceptions",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "resolved",
+                "closed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of exceptions"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List attendance exceptions",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/exceptions/{id}/resolve": {
+      "patch": {
+        "operationId": "TimekeepingController_resolveAttendanceException",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveAttendanceExceptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exception resolved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve attendance exception",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/summary-overrides": {
+      "post": {
+        "operationId": "TimekeepingController_overrideAttendanceSummary",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideAttendanceSummaryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Summary override saved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create/update attendance summary override",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/timesheets": {
+      "get": {
+        "operationId": "TimekeepingController_queryAttendanceTimesheet",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeUnresolvedAsPayable",
+            "required": false,
+            "in": "query",
+            "description": "When false, unresolved-exception rows are excluded from payable totals",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Timesheet summaries"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Query attendance timesheet summaries",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/timesheets/batch": {
+      "post": {
+        "operationId": "TimekeepingController_batchSaveTimesheet",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchTimesheetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchTimesheetResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Batch save attendance timesheet records",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/lock": {
+      "post": {
+        "operationId": "TimekeepingController_lockPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period locked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lock attendance period",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/unlock": {
+      "post": {
+        "operationId": "TimekeepingController_unlockPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period unlocked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unlock attendance period (requires elevated privilege)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/close": {
+      "post": {
+        "operationId": "TimekeepingController_closePeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close attendance period — final, no further edits",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/reopen": {
+      "post": {
+        "operationId": "TimekeepingController_reopenPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period reopened"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reopen a closed attendance period (privileged)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/timesheet-workspace": {
+      "get": {
+        "operationId": "TimekeepingController_getTimesheetWorkspace",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "description": "Period in YYYY-MM format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimesheetWorkspaceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get timesheet workspace data for a period",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}": {
+      "get": {
+        "operationId": "TimekeepingController_getPeriodLock",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Period lock status"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get attendance period lock status",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/validate-close": {
+      "get": {
+        "operationId": "TimekeepingController_validateClose",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Close validation result"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validate whether period can be closed",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/history": {
+      "get": {
+        "operationId": "TimekeepingController_getPeriodHistory",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Period transition history"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get period lifecycle history",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/adjustments": {
+      "post": {
+        "operationId": "TimekeepingController_createAdjustment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Adjustment created"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create post-closure attendance adjustment",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/adjustments/{id}": {
+      "get": {
+        "operationId": "TimekeepingController_getAdjustment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adjustment details"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get adjustment details",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/adjustments/{id}/approve": {
+      "post": {
+        "operationId": "TimekeepingController_approveAdjustment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adjustment approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve attendance adjustment",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/adjustments/{id}/reject": {
+      "post": {
+        "operationId": "TimekeepingController_rejectAdjustment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adjustment rejected"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject attendance adjustment",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/adjustments/{id}/apply": {
+      "post": {
+        "operationId": "TimekeepingController_applyAdjustment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adjustment applied"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Apply approved adjustment",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/reconcile/run": {
+      "post": {
+        "operationId": "TimekeepingController_runReconciliation",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reconciliation started"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Run attendance-payroll reconciliation for a period",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/reconcile/{id}": {
+      "get": {
+        "operationId": "TimekeepingController_getReconciliation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation details"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get reconciliation result",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/reconcile/{id}/items": {
+      "get": {
+        "operationId": "TimekeepingController_getReconciliationItems",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "diffType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation items"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List reconciliation items",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/reconcile/{id}/mismatches": {
+      "get": {
+        "operationId": "TimekeepingController_getReconciliationMismatches",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mismatch items"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List reconciliation mismatches only",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/reconcile": {
+      "get": {
+        "operationId": "TimekeepingController_listReconciliations",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation runs"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List reconciliation runs",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/health": {
+      "get": {
+        "operationId": "TimekeepingController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Health dashboard data"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get attendance module operational health",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/attendances/check": {
+      "post": {
+        "operationId": "AttendanceCommandController_checkAttendanceFromWeb",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "example": "2026-03-14"
+                  },
+                  "session": {
+                    "type": "string",
+                    "enum": [
+                      "morning",
+                      "noon",
+                      "afternoon"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "checkin",
+                      "checkout",
+                      "check",
+                      "note"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "string"
+                  },
+                  "longitude": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "imageSource": {
+                    "type": "string",
+                    "enum": [
+                      "camera",
+                      "upload"
+                    ]
+                  },
+                  "lunchDutyType": {
+                    "type": "string",
+                    "enum": [
+                      "indoor",
+                      "outdoor"
+                    ]
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "date",
+                  "session",
+                  "type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check attendance (web app format)",
+        "tags": [
+          "Attendance Commands"
+        ]
+      }
+    },
+    "/api/v1/attendances": {
+      "post": {
+        "operationId": "AttendanceCommandController_createEvent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "check_in",
+                      "check_out",
+                      "break_start",
+                      "break_end"
+                    ]
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "string"
+                  },
+                  "longitude": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "imageSource": {
+                    "type": "string",
+                    "enum": [
+                      "camera",
+                      "upload"
+                    ]
+                  },
+                  "lunchDutyType": {
+                    "type": "string",
+                    "enum": [
+                      "indoor",
+                      "outdoor"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an attendance event (check-in/out, etc.)",
+        "tags": [
+          "Attendance Commands"
+        ]
+      },
+      "get": {
+        "operationId": "AttendanceQueryController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search",
+            "schema": {
+              "example": "john",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List attendances with optional date range filter",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/log": {
+      "post": {
+        "deprecated": true,
+        "operationId": "AttendanceCommandController_logEventLegacy",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create attendance event (deprecated)",
+        "tags": [
+          "Attendance Commands"
+        ]
+      }
+    },
+    "/api/v1/attendances/check-in": {
+      "post": {
+        "operationId": "AttendanceCommandController_checkIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceAliasDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check in (alias)",
+        "tags": [
+          "Attendance Commands"
+        ]
+      }
+    },
+    "/api/v1/attendances/check-out": {
+      "post": {
+        "operationId": "AttendanceCommandController_checkOut",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceAliasDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check out (alias)",
+        "tags": [
+          "Attendance Commands"
+        ]
+      }
+    },
+    "/api/v1/attendances/me": {
+      "get": {
+        "operationId": "AttendanceQueryController_getMyAttendance",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search",
+            "schema": {
+              "example": "john",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user's attendance history",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/checked-in-today": {
+      "get": {
+        "operationId": "AttendanceQueryController_checkedInToday",
+        "parameters": [
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List employees checked in today",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/presence": {
+      "get": {
+        "operationId": "AttendanceQueryController_getPresence",
+        "parameters": [
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "description": "Department ID filter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locationId",
+            "required": false,
+            "in": "query",
+            "description": "Location ID filter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Real-time presence status filter",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "BREAK",
+                "UPCOMING",
+                "OFF_DUTY",
+                "LEAVE",
+                "ABSENT"
+              ]
+            }
+          },
+          {
+            "name": "employeeIds",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated list of employee IDs",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List current employee working presence status",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/presence/summary": {
+      "get": {
+        "operationId": "AttendanceQueryController_getPresenceSummary",
+        "parameters": [
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "description": "Department ID filter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locationId",
+            "required": false,
+            "in": "query",
+            "description": "Location ID filter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Real-time presence status filter",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "BREAK",
+                "UPCOMING",
+                "OFF_DUTY",
+                "LEAVE",
+                "ABSENT"
+              ]
+            }
+          },
+          {
+            "name": "employeeIds",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated list of employee IDs",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceSummaryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get count summary of employee presence states",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/history": {
+      "get": {
+        "operationId": "AttendanceQueryController_getMyDailyRecords",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Daily records retrieved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get my daily records",
+        "tags": [
+          "Attendance Queries"
+        ]
+      }
+    },
+    "/api/v1/attendances/today": {
+      "get": {
+        "operationId": "AttendanceQueryController_getTodayAttendance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayAttendanceEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user's today attendance status",
+        "tags": [
+          "Attendance Queries"
         ]
       }
     },
@@ -8212,1067 +9922,6 @@
         ]
       }
     },
-    "/api/v1/attendances/check": {
-      "post": {
-        "operationId": "AttendanceCommandController_checkAttendanceFromWeb",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "date": {
-                    "type": "string",
-                    "example": "2026-03-14"
-                  },
-                  "session": {
-                    "type": "string",
-                    "enum": [
-                      "morning",
-                      "noon",
-                      "afternoon"
-                    ]
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "checkin",
-                      "checkout",
-                      "check",
-                      "note"
-                    ]
-                  },
-                  "note": {
-                    "type": "string"
-                  },
-                  "latitude": {
-                    "type": "string"
-                  },
-                  "longitude": {
-                    "type": "string"
-                  },
-                  "location": {
-                    "type": "string"
-                  },
-                  "imageSource": {
-                    "type": "string",
-                    "enum": [
-                      "camera",
-                      "upload"
-                    ]
-                  },
-                  "lunchDutyType": {
-                    "type": "string",
-                    "enum": [
-                      "indoor",
-                      "outdoor"
-                    ]
-                  },
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
-                "required": [
-                  "date",
-                  "session",
-                  "type"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttendanceEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Check attendance (web app format)",
-        "tags": [
-          "Attendance Commands"
-        ]
-      }
-    },
-    "/api/v1/attendances": {
-      "post": {
-        "operationId": "AttendanceCommandController_createEvent",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "check_in",
-                      "check_out",
-                      "break_start",
-                      "break_end"
-                    ]
-                  },
-                  "location": {
-                    "type": "string"
-                  },
-                  "latitude": {
-                    "type": "string"
-                  },
-                  "longitude": {
-                    "type": "string"
-                  },
-                  "note": {
-                    "type": "string"
-                  },
-                  "imageSource": {
-                    "type": "string",
-                    "enum": [
-                      "camera",
-                      "upload"
-                    ]
-                  },
-                  "lunchDutyType": {
-                    "type": "string",
-                    "enum": [
-                      "indoor",
-                      "outdoor"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttendanceEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create an attendance event (check-in/out, etc.)",
-        "tags": [
-          "Attendance Commands"
-        ]
-      },
-      "get": {
-        "operationId": "AttendanceQueryController_findAll",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "description": "Free-text search",
-            "schema": {
-              "example": "john",
-              "type": "string"
-            }
-          },
-          {
-            "name": "sort",
-            "required": false,
-            "in": "query",
-            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
-            "schema": {
-              "example": "createdAt:desc",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List attendances with optional date range filter",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/log": {
-      "post": {
-        "deprecated": true,
-        "operationId": "AttendanceCommandController_logEventLegacy",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAttendanceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create attendance event (deprecated)",
-        "tags": [
-          "Attendance Commands"
-        ]
-      }
-    },
-    "/api/v1/attendances/check-in": {
-      "post": {
-        "operationId": "AttendanceCommandController_checkIn",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AttendanceAliasDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Check in (alias)",
-        "tags": [
-          "Attendance Commands"
-        ]
-      }
-    },
-    "/api/v1/attendances/check-out": {
-      "post": {
-        "operationId": "AttendanceCommandController_checkOut",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AttendanceAliasDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Check out (alias)",
-        "tags": [
-          "Attendance Commands"
-        ]
-      }
-    },
-    "/api/v1/attendances/me": {
-      "get": {
-        "operationId": "AttendanceQueryController_getMyAttendance",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "description": "Free-text search",
-            "schema": {
-              "example": "john",
-              "type": "string"
-            }
-          },
-          {
-            "name": "sort",
-            "required": false,
-            "in": "query",
-            "description": "Sorting spec (e.g. 'createdAt:desc' or '-createdAt')",
-            "schema": {
-              "example": "createdAt:desc",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get current user's attendance history",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/checked-in-today": {
-      "get": {
-        "operationId": "AttendanceQueryController_checkedInToday",
-        "parameters": [
-          {
-            "name": "date",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AttendanceListEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List employees checked in today",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/presence": {
-      "get": {
-        "operationId": "AttendanceQueryController_getPresence",
-        "parameters": [
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "description": "Department ID filter",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "locationId",
-            "required": false,
-            "in": "query",
-            "description": "Location ID filter",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Real-time presence status filter",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "BREAK",
-                "UPCOMING",
-                "OFF_DUTY",
-                "LEAVE",
-                "ABSENT"
-              ]
-            }
-          },
-          {
-            "name": "employeeIds",
-            "required": false,
-            "in": "query",
-            "description": "Comma-separated list of employee IDs",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PresenceListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List current employee working presence status",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/presence/summary": {
-      "get": {
-        "operationId": "AttendanceQueryController_getPresenceSummary",
-        "parameters": [
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "description": "Department ID filter",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "locationId",
-            "required": false,
-            "in": "query",
-            "description": "Location ID filter",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Real-time presence status filter",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "BREAK",
-                "UPCOMING",
-                "OFF_DUTY",
-                "LEAVE",
-                "ABSENT"
-              ]
-            }
-          },
-          {
-            "name": "employeeIds",
-            "required": false,
-            "in": "query",
-            "description": "Comma-separated list of employee IDs",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PresenceSummaryResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get count summary of employee presence states",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/history": {
-      "get": {
-        "operationId": "AttendanceQueryController_getMyDailyRecords",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Daily records retrieved"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get my daily records",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/attendances/today": {
-      "get": {
-        "operationId": "AttendanceQueryController_getTodayAttendance",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TodayAttendanceEnvelopeDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get current user's today attendance status",
-        "tags": [
-          "Attendance Queries"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/clock-events": {
-      "post": {
-        "operationId": "TimekeepingController_captureClockEvent",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateClockEventDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Clock event captured"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Capture attendance clock event",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      },
-      "get": {
-        "operationId": "TimekeepingController_listEvents",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "source",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "mobile",
-                "web",
-                "api",
-                "manual"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of clock events"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List attendance clock events",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/corrections": {
-      "post": {
-        "operationId": "TimekeepingController_manualCorrection",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateManualCorrectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Manual correction created"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create manual attendance correction",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/exceptions": {
-      "get": {
-        "operationId": "TimekeepingController_listAttendanceExceptions",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "resolved",
-                "closed"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of exceptions"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List attendance exceptions",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/exceptions/{id}/resolve": {
-      "patch": {
-        "operationId": "TimekeepingController_resolveAttendanceException",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolveAttendanceExceptionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Exception resolved"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Resolve attendance exception",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/summary-overrides": {
-      "post": {
-        "operationId": "TimekeepingController_overrideAttendanceSummary",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OverrideAttendanceSummaryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Summary override saved"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create/update attendance summary override",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
-    "/api/v1/timekeeping/timesheets": {
-      "get": {
-        "operationId": "TimekeepingController_queryAttendanceTimesheet",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "employeeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "YYYY-MM-DD",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "includeUnresolvedAsPayable",
-            "required": false,
-            "in": "query",
-            "description": "When false, unresolved-exception rows are excluded from payable totals",
-            "schema": {
-              "default": false,
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Timesheet summaries"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Query attendance timesheet summaries",
-        "tags": [
-          "Attendance Timekeeping"
-        ]
-      }
-    },
     "/api/v1/overtime/request": {
       "post": {
         "operationId": "OvertimeController_submit",
@@ -10262,6 +10911,78 @@
         ]
       }
     },
+    "/api/v1/payroll/runs/{id}/approve": {
+      "post": {
+        "operationId": "PayrollRunsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve payroll run",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
+    "/api/v1/payroll/runs/{id}/post": {
+      "post": {
+        "operationId": "PayrollRunsController_post",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Post payroll run (final, immutable)",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
     "/api/v1/payroll/dashboard": {
       "get": {
         "operationId": "PayrollDashboardController_getDashboard",
@@ -10749,6 +11470,152 @@
           }
         ],
         "summary": "List tasks assigned to current user",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/delegations": {
+      "get": {
+        "operationId": "TasksController_listDelegations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List active task delegations for current user",
+        "tags": [
+          "Tasks"
+        ]
+      },
+      "post": {
+        "operationId": "TasksController_createDelegation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskDelegationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a task delegation",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/delegations/{id}": {
+      "delete": {
+        "operationId": "TasksController_revokeDelegation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke a task delegation",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/notifications": {
+      "get": {
+        "operationId": "TasksController_listNotifications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List task notifications for current user",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/notifications/{id}/read": {
+      "patch": {
+        "operationId": "TasksController_markNotificationRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark a notification as read",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/notifications/read-all": {
+      "patch": {
+        "operationId": "TasksController_markAllNotificationsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark all notifications as read",
         "tags": [
           "Tasks"
         ]
@@ -11597,152 +12464,6 @@
           }
         ],
         "summary": "List task submission history",
-        "tags": [
-          "Tasks"
-        ]
-      }
-    },
-    "/api/v1/tasks/delegations": {
-      "get": {
-        "operationId": "TasksController_listDelegations",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List active task delegations for current user",
-        "tags": [
-          "Tasks"
-        ]
-      },
-      "post": {
-        "operationId": "TasksController_createDelegation",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskDelegationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a task delegation",
-        "tags": [
-          "Tasks"
-        ]
-      }
-    },
-    "/api/v1/tasks/delegations/{id}": {
-      "delete": {
-        "operationId": "TasksController_revokeDelegation",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revoke a task delegation",
-        "tags": [
-          "Tasks"
-        ]
-      }
-    },
-    "/api/v1/tasks/notifications": {
-      "get": {
-        "operationId": "TasksController_listNotifications",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List task notifications for current user",
-        "tags": [
-          "Tasks"
-        ]
-      }
-    },
-    "/api/v1/tasks/notifications/{id}/read": {
-      "patch": {
-        "operationId": "TasksController_markNotificationRead",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mark a notification as read",
-        "tags": [
-          "Tasks"
-        ]
-      }
-    },
-    "/api/v1/tasks/notifications/read-all": {
-      "patch": {
-        "operationId": "TasksController_markAllNotificationsRead",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mark all notifications as read",
         "tags": [
           "Tasks"
         ]
@@ -16367,25 +17088,21 @@
           "newPassword"
         ]
       },
-      "DepartmentResponseDto": {
+      "UserMeResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "name": {
+          "username": {
             "type": "string"
           },
-          "description": {
+          "email": {
             "type": "string",
             "nullable": true
           },
-          "parentId": {
-            "type": "string",
-            "nullable": true
-          },
-          "employeeCount": {
-            "type": "number"
+          "isSuperAdmin": {
+            "type": "boolean"
           },
           "createdAt": {
             "format": "date-time",
@@ -16394,14 +17111,132 @@
           "updatedAt": {
             "format": "date-time",
             "type": "string"
+          },
+          "employeeUsername": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastLoginAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Last successful login timestamp"
+          },
+          "roles": {
+            "description": "Assigned roles with id and name",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
           }
         },
         "required": [
           "id",
-          "name",
-          "description",
-          "parentId",
-          "employeeCount",
+          "username",
+          "email",
+          "isSuperAdmin",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UserMeEnvelopeResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserMeResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMetaDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "error"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "isSuperAdmin": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeUsername": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastLoginAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Last successful login timestamp"
+          },
+          "roles": {
+            "description": "Assigned roles with id and name",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "isSuperAdmin",
           "createdAt",
           "updatedAt"
         ]
@@ -16446,6 +17281,69 @@
           "requestId",
           "timestamp",
           "pagination"
+        ]
+      },
+      "UserListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginatedMetaDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "error"
+        ]
+      },
+      "DepartmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "employeeCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "parentId",
+          "employeeCount",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "DepartmentListEnvelopeDto": {
@@ -17251,183 +18149,6 @@
           "expiresAt"
         ]
       },
-      "UserMeResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "username": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "isSuperAdmin": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "employeeUsername": {
-            "type": "string"
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "roleIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "avatar": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastLoginAt": {
-            "format": "date-time",
-            "type": "string",
-            "nullable": true,
-            "description": "Last successful login timestamp"
-          },
-          "roles": {
-            "description": "Assigned roles with id and name",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "username",
-          "email",
-          "isSuperAdmin",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UserMeEnvelopeResponseDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserMeResponseDto"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMetaDto"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-          }
-        },
-        "required": [
-          "data",
-          "meta",
-          "error"
-        ]
-      },
-      "UserResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "username": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "isSuperAdmin": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "employeeUsername": {
-            "type": "string"
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "roleIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "avatar": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastLoginAt": {
-            "format": "date-time",
-            "type": "string",
-            "nullable": true,
-            "description": "Last successful login timestamp"
-          },
-          "roles": {
-            "description": "Assigned roles with id and name",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "username",
-          "email",
-          "isSuperAdmin",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UserListResponseDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserResponseDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginatedMetaDto"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-          }
-        },
-        "required": [
-          "data",
-          "meta",
-          "error"
-        ]
-      },
       "UpdateEmployeeContractDto": {
         "type": "object",
         "properties": {
@@ -17992,6 +18713,1001 @@
         "required": [
           "from",
           "to"
+        ]
+      },
+      "CreateClockEventDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "Target employee, optional for self check-in/check-out"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "check_in",
+              "check_out",
+              "break_start",
+              "break_end",
+              "note"
+            ]
+          },
+          "workDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD"
+          },
+          "eventTime": {
+            "type": "string",
+            "description": "ISO timestamp, defaults to current time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "mobile",
+              "web",
+              "api",
+              "manual"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "noon",
+              "afternoon"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "CreateManualCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "Target employee, optional for self check-in/check-out"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "check_in",
+              "check_out",
+              "break_start",
+              "break_end",
+              "note"
+            ]
+          },
+          "workDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD"
+          },
+          "eventTime": {
+            "type": "string",
+            "description": "ISO timestamp, defaults to current time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "mobile",
+              "web",
+              "api",
+              "manual"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "noon",
+              "afternoon"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "correctedAttendanceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "reason"
+        ]
+      },
+      "ResolveAttendanceExceptionDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "closed"
+            ],
+            "default": "resolved"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "OverrideAttendanceSummaryDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "Target employee UUID"
+          },
+          "workDate": {
+            "type": "string",
+            "description": "Target work date YYYY-MM-DD"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "manual_correction",
+              "policy_exception",
+              "data_fix",
+              "reconciliation"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "overriddenStatus": {
+            "type": "string",
+            "enum": [
+              "present",
+              "late",
+              "early_leave",
+              "absent",
+              "leave",
+              "holiday",
+              "off"
+            ]
+          },
+          "overriddenWorkedMinutes": {
+            "type": "number"
+          },
+          "overriddenLateMinutes": {
+            "type": "number"
+          },
+          "overriddenEarlyLeaveMinutes": {
+            "type": "number"
+          },
+          "overriddenOvertimeMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "employeeId",
+          "workDate",
+          "reason"
+        ]
+      },
+      "BatchTimesheetRecordDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "workDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD"
+          },
+          "checkIn": {
+            "type": "string",
+            "description": "HH:mm"
+          },
+          "checkOut": {
+            "type": "string",
+            "description": "HH:mm"
+          }
+        },
+        "required": [
+          "employeeId",
+          "workDate",
+          "checkIn",
+          "checkOut"
+        ]
+      },
+      "BatchTimesheetDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Period in YYYY-MM format"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchTimesheetRecordDto"
+            }
+          }
+        },
+        "required": [
+          "period",
+          "records"
+        ]
+      },
+      "BatchErrorDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "workDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "employeeId",
+          "workDate",
+          "reason"
+        ]
+      },
+      "BatchTimesheetResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchErrorDto"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "failed",
+          "errors"
+        ]
+      },
+      "LockPeriodDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Period in YYYY-MM format"
+          },
+          "remarks": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period"
+        ]
+      },
+      "UnlockPeriodDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Period in YYYY-MM format"
+          },
+          "remarks": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "remarks"
+        ]
+      },
+      "TimesheetWorkspacePeriodTotalsDto": {
+        "type": "object",
+        "properties": {
+          "totalEmployees": {
+            "type": "number"
+          },
+          "completedEmployees": {
+            "type": "number"
+          },
+          "inProgressEmployees": {
+            "type": "number"
+          },
+          "notStartedEmployees": {
+            "type": "number"
+          },
+          "totalWorkedMinutes": {
+            "type": "number"
+          },
+          "totalOtMinutes": {
+            "type": "number"
+          },
+          "totalLateCount": {
+            "type": "number"
+          },
+          "totalLeaveCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalEmployees",
+          "completedEmployees",
+          "inProgressEmployees",
+          "notStartedEmployees",
+          "totalWorkedMinutes",
+          "totalOtMinutes",
+          "totalLateCount",
+          "totalLeaveCount"
+        ]
+      },
+      "TimesheetWorkspaceEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "employeeCode": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "departmentName": {
+            "type": "string",
+            "nullable": true
+          },
+          "workingDays": {
+            "type": "number"
+          },
+          "totalDays": {
+            "type": "number"
+          },
+          "completionRate": {
+            "type": "number"
+          },
+          "lateCount": {
+            "type": "number"
+          },
+          "leaveCount": {
+            "type": "number"
+          },
+          "absentCount": {
+            "type": "number"
+          },
+          "otMinutes": {
+            "type": "number"
+          },
+          "workedMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "employeeCode",
+          "fullName",
+          "departmentName",
+          "workingDays",
+          "totalDays",
+          "completionRate",
+          "lateCount",
+          "leaveCount",
+          "absentCount",
+          "otMinutes",
+          "workedMinutes"
+        ]
+      },
+      "TimesheetWorkspaceRecordDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "workDate": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkIn": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkOut": {
+            "type": "string",
+            "nullable": true
+          },
+          "workedMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "scheduledMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "lateMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "earlyLeaveMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "overtimeMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "isHoliday": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "required": [
+          "employeeId",
+          "workDate",
+          "status",
+          "checkIn",
+          "checkOut",
+          "workedMinutes",
+          "scheduledMinutes",
+          "lateMinutes",
+          "earlyLeaveMinutes",
+          "overtimeMinutes",
+          "isHoliday"
+        ]
+      },
+      "TimesheetWorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "periodStatus": {
+            "type": "string"
+          },
+          "availableActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "totals": {
+            "$ref": "#/components/schemas/TimesheetWorkspacePeriodTotalsDto"
+          },
+          "employees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimesheetWorkspaceEmployeeDto"
+            }
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimesheetWorkspaceRecordDto"
+            }
+          }
+        },
+        "required": [
+          "period",
+          "periodStatus",
+          "availableActions",
+          "totals",
+          "employees",
+          "records"
+        ]
+      },
+      "AttendanceEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "employeeCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "departmentName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "username",
+          "firstName",
+          "lastName",
+          "employeeCode",
+          "avatar",
+          "position",
+          "departmentName"
+        ]
+      },
+      "AttendanceResponseDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "morningCheckin": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "morningCheckout": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "noonCheck": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "afternoonCheckin": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "afternoonCheckout": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "morningCheckinImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "morningCheckoutImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "noonCheckImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "afternoonCheckinImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "afternoonCheckoutImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "lunchDutyType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "indoor",
+              "outdoor"
+            ],
+            "description": "Lunch duty type"
+          },
+          "employee": {
+            "$ref": "#/components/schemas/AttendanceEmployeeDto"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "date",
+          "morningCheckin",
+          "morningCheckout",
+          "noonCheck",
+          "afternoonCheckin",
+          "afternoonCheckout",
+          "morningCheckinImage",
+          "morningCheckoutImage",
+          "noonCheckImage",
+          "afternoonCheckinImage",
+          "afternoonCheckoutImage",
+          "note",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AttendanceEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AttendanceResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMetaDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "error"
+        ]
+      },
+      "CreateAttendanceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "check_in",
+              "check_out",
+              "break_start",
+              "break_end"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "string",
+            "description": "Latitude for field workers"
+          },
+          "longitude": {
+            "type": "string",
+            "description": "Longitude for field workers"
+          },
+          "note": {
+            "type": "string"
+          },
+          "imageSource": {
+            "type": "string",
+            "enum": [
+              "camera",
+              "upload"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "AttendanceAliasDto": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "string"
+          },
+          "longitude": {
+            "type": "string"
+          }
+        }
+      },
+      "AttendanceListEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginatedMetaDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "error"
+        ]
+      },
+      "PresenceItemDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "employeeCode": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "object"
+          },
+          "departmentName": {
+            "type": "object"
+          },
+          "position": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BREAK",
+              "UPCOMING",
+              "OFF_DUTY",
+              "LEAVE",
+              "ABSENT"
+            ]
+          },
+          "sessionId": {
+            "type": "object"
+          },
+          "checkInAt": {
+            "type": "object"
+          },
+          "workingDurationSeconds": {
+            "type": "number"
+          },
+          "shiftId": {
+            "type": "object"
+          },
+          "shiftName": {
+            "type": "object"
+          }
+        }
+      },
+      "PresenceListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PresenceItemDto"
+            }
+          }
+        }
+      },
+      "PresenceSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "number"
+          },
+          "break": {
+            "type": "number"
+          },
+          "upcoming": {
+            "type": "number"
+          },
+          "offDuty": {
+            "type": "number"
+          },
+          "leave": {
+            "type": "number"
+          },
+          "absent": {
+            "type": "number"
+          }
+        }
+      },
+      "TodayShiftDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "startTime",
+          "endTime",
+          "locationName"
+        ]
+      },
+      "PunchDetailDto": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "time",
+          "image",
+          "location"
+        ]
+      },
+      "TodayGeofenceDto": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "string",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "string",
+            "nullable": true
+          },
+          "radiusMeters": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "radiusMeters"
+        ]
+      },
+      "TodayAttendanceResponseDto": {
+        "type": "object",
+        "properties": {
+          "shift": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TodayShiftDto"
+              }
+            ]
+          },
+          "attendanceState": {
+            "type": "string",
+            "enum": [
+              "NO_SHIFT",
+              "READY",
+              "WORKING",
+              "COMPLETED"
+            ]
+          },
+          "checkIn": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PunchDetailDto"
+              }
+            ]
+          },
+          "checkOut": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PunchDetailDto"
+              }
+            ]
+          },
+          "workingDurationSeconds": {
+            "type": "number"
+          },
+          "geofence": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TodayGeofenceDto"
+              }
+            ]
+          },
+          "canCheckIn": {
+            "type": "boolean"
+          },
+          "canCheckOut": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "shift",
+          "attendanceState",
+          "checkIn",
+          "checkOut",
+          "workingDurationSeconds",
+          "geofence",
+          "canCheckIn",
+          "canCheckOut",
+          "warnings"
+        ]
+      },
+      "TodayAttendanceEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TodayAttendanceResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMetaDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "error"
         ]
       },
       "RoleResponseDto": {
@@ -19344,688 +21060,6 @@
           "updatedAt"
         ]
       },
-      "AttendanceEmployeeDto": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
-          },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "employeeCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "avatar": {
-            "type": "string",
-            "nullable": true
-          },
-          "position": {
-            "type": "string",
-            "nullable": true
-          },
-          "departmentName": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "username",
-          "firstName",
-          "lastName",
-          "employeeCode",
-          "avatar",
-          "position",
-          "departmentName"
-        ]
-      },
-      "AttendanceResponseDto": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string"
-          },
-          "morningCheckin": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "morningCheckout": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "noonCheck": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "afternoonCheckin": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "afternoonCheckout": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "morningCheckinImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "morningCheckoutImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "noonCheckImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "afternoonCheckinImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "afternoonCheckoutImage": {
-            "type": "string",
-            "nullable": true
-          },
-          "note": {
-            "type": "string",
-            "nullable": true
-          },
-          "lunchDutyType": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "indoor",
-              "outdoor"
-            ],
-            "description": "Lunch duty type"
-          },
-          "employee": {
-            "$ref": "#/components/schemas/AttendanceEmployeeDto"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username",
-          "date",
-          "morningCheckin",
-          "morningCheckout",
-          "noonCheck",
-          "afternoonCheckin",
-          "afternoonCheckout",
-          "morningCheckinImage",
-          "morningCheckoutImage",
-          "noonCheckImage",
-          "afternoonCheckinImage",
-          "afternoonCheckoutImage",
-          "note",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "AttendanceEnvelopeDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/AttendanceResponseDto"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMetaDto"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-          }
-        },
-        "required": [
-          "data",
-          "meta",
-          "error"
-        ]
-      },
-      "CreateAttendanceDto": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "check_in",
-              "check_out",
-              "break_start",
-              "break_end"
-            ]
-          },
-          "location": {
-            "type": "string"
-          },
-          "latitude": {
-            "type": "string",
-            "description": "Latitude for field workers"
-          },
-          "longitude": {
-            "type": "string",
-            "description": "Longitude for field workers"
-          },
-          "note": {
-            "type": "string"
-          },
-          "imageSource": {
-            "type": "string",
-            "enum": [
-              "camera",
-              "upload"
-            ]
-          }
-        },
-        "required": [
-          "type"
-        ]
-      },
-      "AttendanceAliasDto": {
-        "type": "object",
-        "properties": {
-          "location": {
-            "type": "string"
-          },
-          "note": {
-            "type": "string"
-          },
-          "latitude": {
-            "type": "string"
-          },
-          "longitude": {
-            "type": "string"
-          }
-        }
-      },
-      "AttendanceListEnvelopeDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AttendanceResponseDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginatedMetaDto"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-          }
-        },
-        "required": [
-          "data",
-          "meta",
-          "error"
-        ]
-      },
-      "PresenceItemDto": {
-        "type": "object",
-        "properties": {
-          "employeeId": {
-            "type": "string"
-          },
-          "employeeCode": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "avatar": {
-            "type": "object"
-          },
-          "departmentName": {
-            "type": "object"
-          },
-          "position": {
-            "type": "object"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "BREAK",
-              "UPCOMING",
-              "OFF_DUTY",
-              "LEAVE",
-              "ABSENT"
-            ]
-          },
-          "sessionId": {
-            "type": "object"
-          },
-          "checkInAt": {
-            "type": "object"
-          },
-          "workingDurationSeconds": {
-            "type": "number"
-          },
-          "shiftId": {
-            "type": "object"
-          },
-          "shiftName": {
-            "type": "object"
-          }
-        }
-      },
-      "PresenceListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PresenceItemDto"
-            }
-          }
-        }
-      },
-      "PresenceSummaryResponseDto": {
-        "type": "object",
-        "properties": {
-          "active": {
-            "type": "number"
-          },
-          "break": {
-            "type": "number"
-          },
-          "upcoming": {
-            "type": "number"
-          },
-          "offDuty": {
-            "type": "number"
-          },
-          "leave": {
-            "type": "number"
-          },
-          "absent": {
-            "type": "number"
-          }
-        }
-      },
-      "TodayShiftDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "startTime": {
-            "type": "string"
-          },
-          "endTime": {
-            "type": "string"
-          },
-          "locationName": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "startTime",
-          "endTime",
-          "locationName"
-        ]
-      },
-      "PunchDetailDto": {
-        "type": "object",
-        "properties": {
-          "time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "image": {
-            "type": "string",
-            "nullable": true
-          },
-          "location": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "time",
-          "image",
-          "location"
-        ]
-      },
-      "TodayGeofenceDto": {
-        "type": "object",
-        "properties": {
-          "latitude": {
-            "type": "string",
-            "nullable": true
-          },
-          "longitude": {
-            "type": "string",
-            "nullable": true
-          },
-          "radiusMeters": {
-            "type": "number",
-            "nullable": true
-          }
-        },
-        "required": [
-          "latitude",
-          "longitude",
-          "radiusMeters"
-        ]
-      },
-      "TodayAttendanceResponseDto": {
-        "type": "object",
-        "properties": {
-          "shift": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TodayShiftDto"
-              }
-            ]
-          },
-          "attendanceState": {
-            "type": "string",
-            "enum": [
-              "NO_SHIFT",
-              "READY",
-              "WORKING",
-              "COMPLETED"
-            ]
-          },
-          "checkIn": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PunchDetailDto"
-              }
-            ]
-          },
-          "checkOut": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PunchDetailDto"
-              }
-            ]
-          },
-          "workingDurationSeconds": {
-            "type": "number"
-          },
-          "geofence": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TodayGeofenceDto"
-              }
-            ]
-          },
-          "canCheckIn": {
-            "type": "boolean"
-          },
-          "canCheckOut": {
-            "type": "boolean"
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "shift",
-          "attendanceState",
-          "checkIn",
-          "checkOut",
-          "workingDurationSeconds",
-          "geofence",
-          "canCheckIn",
-          "canCheckOut",
-          "warnings"
-        ]
-      },
-      "TodayAttendanceEnvelopeDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TodayAttendanceResponseDto"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMetaDto"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-          }
-        },
-        "required": [
-          "data",
-          "meta",
-          "error"
-        ]
-      },
-      "CreateClockEventDto": {
-        "type": "object",
-        "properties": {
-          "employeeId": {
-            "type": "string",
-            "description": "Target employee, optional for self check-in/check-out"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "check_in",
-              "check_out",
-              "break_start",
-              "break_end",
-              "note"
-            ]
-          },
-          "workDate": {
-            "type": "string",
-            "description": "YYYY-MM-DD"
-          },
-          "eventTime": {
-            "type": "string",
-            "description": "ISO timestamp, defaults to current time"
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "mobile",
-              "web",
-              "api",
-              "manual"
-            ]
-          },
-          "location": {
-            "type": "string"
-          },
-          "image": {
-            "type": "string"
-          },
-          "note": {
-            "type": "string"
-          },
-          "locationId": {
-            "type": "string"
-          },
-          "session": {
-            "type": "string",
-            "enum": [
-              "morning",
-              "noon",
-              "afternoon"
-            ]
-          }
-        },
-        "required": [
-          "type"
-        ]
-      },
-      "CreateManualCorrectionDto": {
-        "type": "object",
-        "properties": {
-          "employeeId": {
-            "type": "string",
-            "description": "Target employee, optional for self check-in/check-out"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "check_in",
-              "check_out",
-              "break_start",
-              "break_end",
-              "note"
-            ]
-          },
-          "workDate": {
-            "type": "string",
-            "description": "YYYY-MM-DD"
-          },
-          "eventTime": {
-            "type": "string",
-            "description": "ISO timestamp, defaults to current time"
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "mobile",
-              "web",
-              "api",
-              "manual"
-            ]
-          },
-          "location": {
-            "type": "string"
-          },
-          "image": {
-            "type": "string"
-          },
-          "note": {
-            "type": "string"
-          },
-          "locationId": {
-            "type": "string"
-          },
-          "session": {
-            "type": "string",
-            "enum": [
-              "morning",
-              "noon",
-              "afternoon"
-            ]
-          },
-          "reason": {
-            "type": "string"
-          },
-          "correctedAttendanceId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "reason"
-        ]
-      },
-      "ResolveAttendanceExceptionDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "resolved",
-              "closed"
-            ],
-            "default": "resolved"
-          },
-          "note": {
-            "type": "string"
-          }
-        }
-      },
-      "OverrideAttendanceSummaryDto": {
-        "type": "object",
-        "properties": {
-          "employeeId": {
-            "type": "string",
-            "description": "Target employee UUID"
-          },
-          "workDate": {
-            "type": "string",
-            "description": "Target work date YYYY-MM-DD"
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "manual_correction",
-              "policy_exception",
-              "data_fix",
-              "reconciliation"
-            ]
-          },
-          "note": {
-            "type": "string"
-          },
-          "overriddenStatus": {
-            "type": "string",
-            "enum": [
-              "present",
-              "late",
-              "early_leave",
-              "absent",
-              "leave",
-              "holiday",
-              "off"
-            ]
-          },
-          "overriddenWorkedMinutes": {
-            "type": "number"
-          },
-          "overriddenLateMinutes": {
-            "type": "number"
-          },
-          "overriddenEarlyLeaveMinutes": {
-            "type": "number"
-          },
-          "overriddenOvertimeMinutes": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "employeeId",
-          "workDate",
-          "reason"
-        ]
-      },
       "SubmitOvertimeRequestDto": {
         "type": "object",
         "properties": {
@@ -20533,6 +21567,27 @@
           "error"
         ]
       },
+      "CreateTaskDelegationDto": {
+        "type": "object",
+        "properties": {
+          "delegateeUserId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "departmentId": {
+            "type": "string",
+            "description": "When set, creates a department-scoped delegation: grants approval authority over tasks assigned to any employee in this department. Requires admin-level permission. When omitted, delegation is creator-scoped (applies only to tasks created by the delegator)."
+          }
+        },
+        "required": [
+          "delegateeUserId"
+        ]
+      },
       "TaskEnvelopeDto": {
         "type": "object",
         "properties": {
@@ -20822,27 +21877,6 @@
         },
         "required": [
           "content"
-        ]
-      },
-      "CreateTaskDelegationDto": {
-        "type": "object",
-        "properties": {
-          "delegateeUserId": {
-            "type": "string"
-          },
-          "startsAt": {
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": "string"
-          },
-          "departmentId": {
-            "type": "string",
-            "description": "When set, creates a department-scoped delegation: grants approval authority over tasks assigned to any employee in this department. Requires admin-level permission. When omitted, delegation is creator-scoped (applies only to tasks created by the delegator)."
-          }
-        },
-        "required": [
-          "delegateeUserId"
         ]
       },
       "CreateTaskTemplateDto": {

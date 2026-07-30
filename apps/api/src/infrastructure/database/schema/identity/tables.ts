@@ -26,6 +26,8 @@ export const users = pgTable("users", {
 
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  isTotpEnabled: boolean("is_totp_enabled").default(false).notNull(),
+  totpSecret: text("totp_secret"),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
 
   /**

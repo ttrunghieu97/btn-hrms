@@ -87,7 +87,7 @@ Roadmap to L4:
 - [x] Blueprint validated on Attendance & Schedule
 - [x] Audit 1 (Routing & Navigation) and Audit 2 (Module/Dependency) completed
 - [x] Hardening (ESLint, dependency-cruiser, CI gates)
-- [x] Metrics & Freeze v1.0 (Frozen)
+- [ ] Metrics & Freeze v0.1-dev (In Progress)
 
 Feature-sliced layout: `app/` pages; `features/<domain>/{api,queries,schemas,hooks,store,utils}`; `lib/` shared utilities; `api/generated/` orval output (do not edit).
 

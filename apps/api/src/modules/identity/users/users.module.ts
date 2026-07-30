@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { UsersController } from "./users.controller";
 import { PermissionsModule } from "../permissions/permissions.module";
 import { AuthModule } from "../auth/auth.module";
@@ -11,7 +11,7 @@ import { GetCurrentUserProfileUseCase } from "./use-cases/get-current-user-profi
 import { GetUserSecurityUseCase } from "./use-cases/get-user-security.usecase";
 
 @Module({
-  imports: [PermissionsModule, AuthModule],
+  imports: [PermissionsModule, forwardRef(() => AuthModule)],
   controllers: [UsersController],
   providers: [
     UsersRepository,

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
@@ -26,10 +27,14 @@ import { UpdatePayrollRunDto } from "./dto/update-payroll-run.dto";
 import { PayrollRunQueryDto } from "./dto/payroll-run-query.dto";
 import { Idempotent } from "../../../infrastructure/idempotency/idempotency.decorator";
 import {
+  ApprovePayrollRunUseCase,
   CreatePayrollRunUseCase,
   GeneratePayrollRunUseCase,
   GetPayrollRunUseCase,
   ListPayrollRunsUseCase,
+  PostPayrollRunUseCase,
+  RejectPayrollRunUseCase,
+  RequestPayrollApprovalUseCase,
   UpdatePayrollRunUseCase,
 } from "./use-cases/payroll-runs.usecases";
 
@@ -43,6 +48,10 @@ export class PayrollRunsController {
     private readonly createRun: CreatePayrollRunUseCase,
     private readonly updateRun: UpdatePayrollRunUseCase,
     private readonly generateRun: GeneratePayrollRunUseCase,
+    private readonly approveRun: ApprovePayrollRunUseCase,
+    private readonly rejectRun: RejectPayrollRunUseCase,
+    private readonly requestApprovalRun: RequestPayrollApprovalUseCase,
+    private readonly postRun: PostPayrollRunUseCase,
   ) {}
 
   @Get()
@@ -93,6 +102,55 @@ export class PayrollRunsController {
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
   generate(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.generateRun.execute(id);
+  }
+
+  @Post(":id/request-approval")
+  @CheckPolicy(PayrollPolicies.managePeriods)
+  @AuditLog({ action: "payroll_run_request_approval", entity: "payroll_run" })
+  @ApiOperation({ summary: "Submit payroll run for approval" })
+  @ApiOkResponse({ type: PayrollRunEnvelopeDto })
+  requestApproval(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req: any,
+  ) {
+    return this.requestApprovalRun.execute(id, req.user?.id ?? "system");
+  }
+
+  @Post(":id/approve")
+  @CheckPolicy(PayrollPolicies.managePeriods)
+  @AuditLog({ action: "payroll_run_approve", entity: "payroll_run" })
+  @ApiOperation({ summary: "Approve payroll run" })
+  @ApiOkResponse({ type: PayrollRunEnvelopeDto })
+  approve(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req: any,
+  ) {
+    return this.approveRun.execute(id, req.user?.id ?? "system");
+  }
+
+  @Post(":id/reject")
+  @CheckPolicy(PayrollPolicies.managePeriods)
+  @AuditLog({ action: "payroll_run_reject", entity: "payroll_run" })
+  @ApiOperation({ summary: "Reject payroll run (returns to draft)" })
+  @ApiOkResponse({ type: PayrollRunEnvelopeDto })
+  reject(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req: any,
+    @Body() body: { reason: string },
+  ) {
+    return this.rejectRun.execute(id, req.user?.id ?? "system", body.reason);
+  }
+
+  @Post(":id/post")
+  @CheckPolicy(PayrollPolicies.managePeriods)
+  @AuditLog({ action: "payroll_run_post", entity: "payroll_run" })
+  @ApiOperation({ summary: "Post payroll run (final, immutable)" })
+  @ApiOkResponse({ type: PayrollRunEnvelopeDto })
+  post(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req: any,
+  ) {
+    return this.postRun.execute(id, req.user?.id ?? "system");
   }
 }
 

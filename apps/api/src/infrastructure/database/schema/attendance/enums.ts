@@ -114,3 +114,35 @@ export const attendanceExceptionStatusEnum = pgEnum(
   "attendance_exception_status_enum",
   ["pending", "resolved", "closed"],
 );
+
+export const reconciliationStatusEnum = pgEnum("reconciliation_status_enum", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const reconciliationDiffTypeEnum = pgEnum("reconciliation_diff_type_enum", [
+  "MATCH",
+  "MISSING_ATTENDANCE_SNAPSHOT",
+  "MISSING_PAYROLL_INPUT",
+  "REGULAR_HOURS_MISMATCH",
+  "OVERTIME_MISMATCH",
+  "EMPLOYEE_NOT_FOUND",
+  "DUPLICATE_RECORD",
+]);
+
+export const attendanceAdjustmentStatusEnum = pgEnum("attendance_adjustment_status_enum", [
+  "draft",
+  "requested",
+  "under_review",
+  "approved",
+  "rejected",
+  "applied",
+]);
+
+export const attendanceAdjustmentFieldEnum = pgEnum("attendance_adjustment_field_enum", [
+  "REGULAR_HOURS",
+  "OVERTIME_HOURS",
+  "WORKING_DAY_STATUS",
+]);

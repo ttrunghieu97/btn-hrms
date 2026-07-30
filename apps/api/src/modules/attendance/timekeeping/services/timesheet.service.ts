@@ -2,10 +2,6 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { eq } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
-import * as schema from "../../../../infrastructure/database/schema";
 import { CONTRACTS_TOKENS, WorkforceTimeManagementPort } from "../../../../contracts";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { throwBadRequest } from "../../../../shared/utils/http-error";
@@ -28,8 +24,6 @@ import { TimesheetSavedEvent } from "../../../../core/events/events/timesheet-sa
 export class TimesheetService {
   private readonly logger: ContextLogger;
   constructor(
-    @Inject(DATABASE_CONNECTION)
-    private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly periodLockService: AttendancePeriodLockService,
     private readonly recomputeAttendanceDay: RecomputeAttendanceDayUseCase,
@@ -118,9 +112,9 @@ export class TimesheetService {
         record.employeeId,
         record.workDate,
       );
-      for (const event of existing) {
-        await this.db.delete(schema.attendances)
-          .where(eq(schema.attendances.id, event.id));
+      const existingIds = existing.map((e) => e.id);
+      if (existingIds.length > 0) {
+        await this.timekeepingRepo.deleteClockEvents(existingIds);
       }
 
       // Create check-in
@@ -158,3 +152,4 @@ export class TimesheetService {
     return "afternoon";
   }
 }
+

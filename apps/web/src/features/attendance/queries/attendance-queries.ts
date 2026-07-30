@@ -13,8 +13,14 @@ import type {
   AttendanceQueryControllerGetMyAttendanceParams
 } from '@/api/generated/model';
 import { extractList, extractPagination } from '@/lib/api-extract';
-import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
+import {
+  attendanceKeys,
+  type MyAttendanceQueryParams,
+} from '../attendance-keys';
+
+// Re-export for backward compatibility — consumers & generated endpoint hooks
+export type { MyAttendanceQueryParams };
 
 // Idempotency key generator (browser-safe)
 function simpleHash(str: string): string {
@@ -31,21 +37,6 @@ function idempotencyKey(date: string, session: string, type: string): string {
   return simpleHash(`${date}:${session}:${type}`);
 }
 
-const root = createKeyFactory<AttendanceQueryControllerFindAllParams>('attendance');
-
-export type MyAttendanceQueryParams = AttendanceQueryControllerGetMyAttendanceParams & {
-  month?: string;
-};
-
-export const attendanceKeys = {
-  ...root,
-  myMonth: (params?: MyAttendanceQueryParams) =>
-    [...root.all(), 'me', 'month', params] as const,
-  checkedInToday: (params?: AttendanceQueryControllerCheckedInTodayParams) =>
-    [...root.all(), 'checked-in-today', params] as const,
-  todayAttendance: () => ['/api/v1/attendances/today'] as const,
-};
-
 export const attendanceInvalidations = {
   list: async (queryClient: QueryClient) => {
     await queryClient.invalidateQueries({ queryKey: attendanceKeys.lists() });
@@ -54,10 +45,10 @@ export const attendanceInvalidations = {
     await queryClient.invalidateQueries({ queryKey: attendanceKeys.myMonth(params) });
   },
   todayAttendance: async (queryClient: QueryClient) => {
-    await queryClient.invalidateQueries({ queryKey: attendanceKeys.todayAttendance() });
+    await queryClient.invalidateQueries({ queryKey: attendanceKeys.today() });
   },
   all: async (queryClient: QueryClient) => {
-    await queryClient.invalidateQueries({ queryKey: attendanceKeys.all() });
+    await queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
   }
 };
 

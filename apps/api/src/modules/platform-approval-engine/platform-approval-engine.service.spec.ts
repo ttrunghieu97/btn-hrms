@@ -9,6 +9,7 @@ describe(PlatformApprovalEngineService.name, () => {
         status: "pending",
         approverUserId: "approver-1",
       }),
+      isUserActiveDelegateOf: jest.fn().mockResolvedValue(false),
       updateStep: jest.fn(),
       updateRequest: jest.fn(),
       anyPendingStep: jest.fn(),
@@ -27,3 +28,4 @@ describe(PlatformApprovalEngineService.name, () => {
     expect(repo.updateStep).not.toHaveBeenCalled();
   });
 });
+

@@ -34,10 +34,14 @@ import {
   attendanceExceptionTypeEnum,
   attendanceExceptionStatusEnum,
   attendancePeriodLockStatusEnum,
+  reconciliationStatusEnum,
+  reconciliationDiffTypeEnum,
+  attendanceAdjustmentStatusEnum,
+  attendanceAdjustmentFieldEnum,
 } from "./enums";
+import { users } from "../identity/tables";
 import { employees } from "../workforce/tables";
 import { branches, locations } from "../org/tables";
-import { users } from "../identity/tables";
 
 // GPS Logs
 export const gpsLogs = pgTable(
@@ -661,6 +665,34 @@ export const attendancePeriodLocks = pgTable(
 );
 
 /**
+ * Audit trail for period lifecycle transitions.
+ * Every status change creates one row — immutable history.
+ */
+export const attendancePeriodHistory = pgTable(
+  "attendance_period_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    period: text("period").notNull(), // "2026-08"
+    fromStatus: attendancePeriodLockStatusEnum("from_status").notNull(),
+    toStatus: attendancePeriodLockStatusEnum("to_status").notNull(),
+    changedByUserId: uuid("changed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reason: text("reason"),
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPeriod: index("idx_attendance_period_history_period").on(table.period),
+    idxCreatedAt: index("idx_attendance_period_history_created_at").on(table.createdAt),
+  }),
+);
+
+/**
  * Immutable snapshots of monthly timesheet data per employee.
  * Created when a period transitions to CLOSED.
  * Payroll consumes these snapshots instead of querying live attendance data.
@@ -694,5 +726,153 @@ export const timesheetSnapshots = pgTable(
     uqEmployeePeriodVersion: unique(
       "uq_timesheet_snapshots_employee_period_version",
     ).on(table.employeeId, table.period, table.snapshotVersion),
+  }),
+);
+
+/**
+ * Payroll reconciliation runs.
+ * Each run compares attendance snapshot data against payroll results
+ * for a given period. Read-only — never modifies attendance or payroll.
+ */
+export const attendancePayrollReconciliations = pgTable(
+  "attendance_payroll_reconciliations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    period: text("period").notNull(), // "2026-08"
+    status: reconciliationStatusEnum("status")
+      .default("pending")
+      .notNull(),
+
+    totalEmployees: integer("total_employees").default(0).notNull(),
+    matchedCount: integer("matched_count").default(0).notNull(),
+    mismatchCount: integer("mismatch_count").default(0).notNull(),
+
+    checkedByUserId: uuid("checked_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow().notNull(),
+
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+
+    failureReason: text("failure_reason"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPeriod: index("idx_reconciliation_period").on(table.period),
+    idxStatus: index("idx_reconciliation_status").on(table.status),
+  }),
+);
+
+/**
+ * Employee-level reconciliation items.
+ * Each row compares one employee's attendance snapshot vs payroll result.
+ * The diff type explains any mismatch.
+ */
+export const attendancePayrollReconciliationItems = pgTable(
+  "attendance_payroll_reconciliation_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    reconciliationId: uuid("reconciliation_id")
+      .notNull()
+      .references(() => attendancePayrollReconciliations.id, {
+        onDelete: "cascade",
+      }),
+
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+
+    attendanceRegularHours: integer("attendance_regular_hours").default(0).notNull(),
+    payrollRegularHours: integer("payroll_regular_hours").default(0).notNull(),
+
+    attendanceOvertimeHours: integer("attendance_overtime_hours").default(0).notNull(),
+    payrollOvertimeHours: integer("payroll_overtime_hours").default(0).notNull(),
+
+    diffType: reconciliationDiffTypeEnum("diff_type").notNull(),
+
+    checkedAt: timestamp("checked_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxReconciliation: index("idx_reconciliation_items_recon_id").on(table.reconciliationId),
+    idxEmployee: index("idx_reconciliation_items_employee_id").on(table.employeeId),
+  }),
+);
+
+/**
+ * Post-closure attendance adjustments.
+ * Corrections after period closure — never rewrites snapshot.
+ * Creates a new adjustment fact consumed by payroll as delta.
+ */
+export const attendanceAdjustments = pgTable(
+  "attendance_adjustments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    period: text("period").notNull(), // "2026-08"
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+
+    status: attendanceAdjustmentStatusEnum("status")
+      .default("draft")
+      .notNull(),
+
+    reason: text("reason").notNull(),
+
+    requestedByUserId: uuid("requested_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    requestedAt: timestamp("requested_at", { withTimezone: true }),
+
+    approvedByUserId: uuid("approved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+
+    rejectionReason: text("rejection_reason"),
+
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPeriod: index("idx_adjustments_period").on(table.period),
+    idxEmployee: index("idx_adjustments_employee_id").on(table.employeeId),
+    idxStatus: index("idx_adjustments_status").on(table.status),
+  }),
+);
+
+/**
+ * Individual field changes within an adjustment.
+ * Each row represents one delta (e.g., +8 regular hours).
+ */
+export const attendanceAdjustmentItems = pgTable(
+  "attendance_adjustment_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    adjustmentId: uuid("adjustment_id")
+      .notNull()
+      .references(() => attendanceAdjustments.id, { onDelete: "cascade" }),
+
+    fieldName: attendanceAdjustmentFieldEnum("field_name").notNull(),
+    oldValue: integer("old_value").default(0).notNull(),
+    newValue: integer("new_value").default(0).notNull(),
+    delta: integer("delta").default(0).notNull(),
+  },
+  (table) => ({
+    idxAdjustment: index("idx_adjustment_items_adjustment_id").on(table.adjustmentId),
   }),
 );

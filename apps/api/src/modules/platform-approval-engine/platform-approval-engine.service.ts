@@ -93,15 +93,31 @@ export class PlatformApprovalEngineService {
       throwBadRequest("Approval step already decided", ERROR_CODES.APPROVAL_STEP_ALREADY_DECIDED, { stepId: step.id, status: step.status });
     }
     if (step.approverUserId && step.approverUserId !== input.decidedByUserId) {
-      throwBadRequest("Approval step is assigned to another approver", ERROR_CODES.INVALID_REQUEST, { stepId: step.id });
+      // Check if decidedByUserId is an active delegate of step.approverUserId
+      const isDelegate = await this.repo.isUserActiveDelegateOf(
+        input.decidedByUserId,
+        step.approverUserId,
+      );
+      if (!isDelegate) {
+        throwBadRequest(
+          "Approval step is assigned to another approver",
+          ERROR_CODES.INVALID_REQUEST,
+          { stepId: step.id },
+        );
+      }
     }
+
+    const isDelegatedDecision =
+      Boolean(step.approverUserId) && step.approverUserId !== input.decidedByUserId;
 
     const nextStatus = input.decision === "approve" ? "approved" : "rejected";
     await this.repo.updateStep(step.id, {
       status: nextStatus,
       decidedByUserId: input.decidedByUserId,
       decidedAt: new Date(),
-      comment: input.comment ?? null,
+      comment: isDelegatedDecision
+        ? `[Delegated on behalf of ${step.approverUserId}] ${input.comment ?? ""}`.trim()
+        : input.comment ?? null,
     });
 
     if (input.decision === "reject") {
@@ -109,7 +125,7 @@ export class PlatformApprovalEngineService {
         status: "rejected",
         decidedAt: new Date(),
       });
-      return { status: "rejected" as const };
+      return { status: "rejected" as const, delegated: isDelegatedDecision };
     }
 
     // Advance to next step if any pending, else approve request.
@@ -119,7 +135,7 @@ export class PlatformApprovalEngineService {
         status: "approved",
         decidedAt: new Date(),
       });
-      return { status: "approved" as const };
+      return { status: "approved" as const, delegated: isDelegatedDecision };
     }
 
     await this.repo.updateRequest(req.id, {
@@ -127,7 +143,7 @@ export class PlatformApprovalEngineService {
       updatedAt: new Date(),
     });
 
-    return { status: "pending" as const };
+    return { status: "pending" as const, delegated: isDelegatedDecision };
   }
 
   async findPendingStepByApprover(requestId: string, userId: string) {

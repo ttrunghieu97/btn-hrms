@@ -2,13 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { AttendancesRepository } from "../repositories/attendances.repository";
 import { AttendanceSessionRepository } from "../repositories/attendance-session.repository";
 import { CLOCK_PORT, type ClockPort } from "../ports/clock.port";
-import {
-  CONTRACTS_TOKENS,
-  type WorkforceTimeManagementPort,
-  type EmployeeShiftReaderPort,
-  type ILocationReader,
-  LOCATION_READER_PORT,
-} from "../../../../contracts";
+import { CONTRACTS_TOKENS, type WorkforceTimeManagementPort, type EmployeeShiftReaderPort, type ILocationReader } from "../../../../contracts";
+import { LOCATION_READER_PORT } from "../../../../contracts/ports/location-reader.port";
 import { AttendancePolicyService } from "../services/attendance-policy.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";

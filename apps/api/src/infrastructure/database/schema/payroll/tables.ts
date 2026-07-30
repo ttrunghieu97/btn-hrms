@@ -24,6 +24,9 @@ import {
   payslipStatusEnum,
   payrollItemTypeEnum,
   statutoryContributionTypeEnum,
+  payrollCalculationVersionStatusEnum,
+  payrollInputSnapshotStatusEnum,
+  payrollInputTypeEnum,
 } from "./enums";
 import { employmentTypeEnum } from "../workforce/enums";
 
@@ -174,6 +177,21 @@ export const payrollRuns = pgTable(
     }),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     processedAt: timestamp("processed_at", { withTimezone: true }),
+    calculationVersionId: uuid("calculation_version_id").references(
+      () => payrollCalculationVersions.id,
+      { onDelete: "set null" },
+    ),
+    calculationHash: text("calculation_hash"),
+
+    postedByUserId: uuid("posted_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+
+    publicationStatus: text("publication_status").default("pending"),
+    publicationCompletedAt: timestamp("publication_completed_at", { withTimezone: true }),
+    publicationReference: text("publication_reference"),
+
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -362,5 +380,191 @@ export const statutoryContributionRules = pgTable(
       "chk_statutory_rules_effective_range",
       sql`${table.effectiveTo} is null or ${table.effectiveFrom} <= ${table.effectiveTo}`,
     ),
+  }),
+);
+
+/**
+ * Frozen payroll input snapshots.
+ * Captures all attendance/compensation inputs at calculation time.
+ * Ensures reproducibility: a payroll result can always be traced
+ * to the exact input snapshot and rule context that produced it.
+ */
+export const payrollInputSnapshots = pgTable(
+  "payroll_input_snapshots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    payrollRunId: uuid("payroll_run_id")
+      .notNull()
+      .references(() => payrollRuns.id, { onDelete: "cascade" }),
+
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+
+    status: payrollInputSnapshotStatusEnum("status")
+      .default("generating")
+      .notNull(),
+
+    sourceVersions: jsonb("source_versions").notNull(),
+
+    generatedByUserId: uuid("generated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPayrollRun: index("idx_input_snapshots_payroll_run_id").on(table.payrollRunId),
+    idxEmployee: index("idx_input_snapshots_employee_id").on(table.employeeId),
+    uqRunEmployee: unique("uq_input_snapshots_run_employee").on(
+      table.payrollRunId,
+      table.employeeId,
+    ),
+  }),
+);
+
+/**
+ * Individual input values within a snapshot.
+ * Each row stores one typed input (e.g., ATTENDANCE_REGULAR_MINUTES = 9600).
+ */
+export const payrollInputSnapshotItems = pgTable(
+  "payroll_input_snapshot_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    snapshotId: uuid("snapshot_id")
+      .notNull()
+      .references(() => payrollInputSnapshots.id, { onDelete: "cascade" }),
+
+    inputType: payrollInputTypeEnum("input_type").notNull(),
+    value: integer("value").default(0).notNull(),
+    sourceReference: text("source_reference"),
+  },
+  (table) => ({
+    idxSnapshot: index("idx_snapshot_items_snapshot_id").on(table.snapshotId),
+  }),
+);
+
+/**
+ * Calculation rule versions.
+ * Defines which rule set applies to a payroll period.
+ * New versions supersede old ones — historical runs retain their version link.
+ */
+export const payrollCalculationVersions = pgTable(
+  "payroll_calculation_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    code: text("code").notNull().unique(), // "VN_PAYROLL_2026_07"
+    name: text("name").notNull(),
+    description: text("description"),
+
+    status: payrollCalculationVersionStatusEnum("status")
+      .default("draft")
+      .notNull(),
+
+    effectiveFrom: date("effective_from").notNull(),
+    effectiveTo: date("effective_to"),
+
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxStatus: index("idx_calc_versions_status").on(table.status),
+    idxEffective: index("idx_calc_versions_effective_from").on(table.effectiveFrom),
+  }),
+);
+
+/**
+ * Per-run calculation metadata.
+ * Records which rules were executed and their result hash.
+ */
+export const payrollCalculationMetadata = pgTable(
+  "payroll_calculation_metadata",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    payrollRunId: uuid("payroll_run_id")
+      .notNull()
+      .references(() => payrollRuns.id, { onDelete: "cascade" }),
+
+    ruleName: text("rule_name").notNull(), // "OVERTIME_MULTIPLIER"
+    ruleVersion: text("rule_version").notNull(), // "2"
+    resultValue: text("result_value"),
+
+    executedAt: timestamp("executed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPayrollRun: index("idx_calc_metadata_payroll_run_id").on(table.payrollRunId),
+  }),
+);
+
+/**
+ * Immutable audit trail for payroll run approval decisions.
+ * Every approve/reject action is recorded — never overwritten.
+ */
+export const payrollRunApprovalHistory = pgTable(
+  "payroll_run_approval_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    payrollRunId: uuid("payroll_run_id")
+      .notNull()
+      .references(() => payrollRuns.id, { onDelete: "cascade" }),
+
+    action: text("action").notNull(), // "REQUESTED" | "APPROVED" | "REJECTED" | "RESUBMITTED"
+    performedByUserId: uuid("performed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    comment: text("comment"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPayrollRun: index("idx_approval_history_payroll_run_id").on(table.payrollRunId),
+  }),
+);
+
+/**
+ * Audit trail for payroll export/publication operations.
+ * Every export request and result is recorded.
+ */
+export const payrollExportHistory = pgTable(
+  "payroll_export_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    payrollRunId: uuid("payroll_run_id")
+      .notNull()
+      .references(() => payrollRuns.id, { onDelete: "cascade" }),
+
+    action: text("action").notNull(), // "GENERATED" | "PUBLISHED" | "EXPORTED" | "FAILED" | "RETRIED"
+    performedByUserId: uuid("performed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    details: text("details"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    idxPayrollRun: index("idx_export_history_payroll_run_id").on(table.payrollRunId),
   }),
 );

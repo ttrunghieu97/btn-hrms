@@ -15,6 +15,13 @@ import {
 import { employees } from "../workforce/tables";
 import { branches, locations } from "../org/tables";
 import { users } from "../identity/tables";
+import {
+  attendancePeriodHistory,
+  attendancePayrollReconciliations,
+  attendancePayrollReconciliationItems,
+  attendanceAdjustments,
+  attendanceAdjustmentItems,
+} from "./tables";
 import { employeeShiftAssignments } from "../scheduling/tables";
 
 export const gpsLogsRelations = relations(gpsLogs, ({ one }) => ({
@@ -137,6 +144,16 @@ export const attendanceExceptionsRelations = relations(
   }),
 );
 
+export const attendancePeriodHistoryRelations = relations(
+  attendancePeriodHistory,
+  ({ one }) => ({
+    changedByUser: one(users, {
+      fields: [attendancePeriodHistory.changedByUserId],
+      references: [users.id],
+    }),
+  }),
+);
+
 export const attendanceOvertimeRequestsRelations = relations(
   attendanceOvertimeRequests,
   ({ one }) => ({
@@ -161,6 +178,60 @@ export const attendanceSummaryOverridesRelations = relations(
     createdByUser: one(users, {
       fields: [attendanceSummaryOverrides.createdByUserId],
       references: [users.id],
+    }),
+  }),
+);
+
+export const attendancePayrollReconciliationsRelations = relations(
+  attendancePayrollReconciliations,
+  ({ many, one }) => ({
+    items: many(attendancePayrollReconciliationItems),
+    checkedByUser: one(users, {
+      fields: [attendancePayrollReconciliations.checkedByUserId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const attendancePayrollReconciliationItemsRelations = relations(
+  attendancePayrollReconciliationItems,
+  ({ one }) => ({
+    reconciliation: one(attendancePayrollReconciliations, {
+      fields: [attendancePayrollReconciliationItems.reconciliationId],
+      references: [attendancePayrollReconciliations.id],
+    }),
+    employee: one(employees, {
+      fields: [attendancePayrollReconciliationItems.employeeId],
+      references: [employees.id],
+    }),
+  }),
+);
+
+export const attendanceAdjustmentsRelations = relations(
+  attendanceAdjustments,
+  ({ one, many }) => ({
+    employee: one(employees, {
+      fields: [attendanceAdjustments.employeeId],
+      references: [employees.id],
+    }),
+    requestedByUser: one(users, {
+      fields: [attendanceAdjustments.requestedByUserId],
+      references: [users.id],
+    }),
+    approvedByUser: one(users, {
+      fields: [attendanceAdjustments.approvedByUserId],
+      references: [users.id],
+    }),
+    items: many(attendanceAdjustmentItems),
+  }),
+);
+
+export const attendanceAdjustmentItemsRelations = relations(
+  attendanceAdjustmentItems,
+  ({ one }) => ({
+    adjustment: one(attendanceAdjustments, {
+      fields: [attendanceAdjustmentItems.adjustmentId],
+      references: [attendanceAdjustments.id],
     }),
   }),
 );

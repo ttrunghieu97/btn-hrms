@@ -7,6 +7,7 @@ import { UpsertPayrollUseCase } from "./use-cases/upsert-payroll.usecase";
 import { CalculateFinalSettlementUseCase } from "./use-cases/calculate-final-settlement.usecase";
 import { PayrollEmployeeTerminatedSubscriber } from "../interfaces/event-subscribers/employee-terminated.subscriber";
 import { PayrollOffboardingCompletedSubscriber } from "../interfaces/event-subscribers/offboarding-completed.subscriber";
+import { PayrollTimesheetPeriodClosedSubscriber } from "../interfaces/event-subscribers/timesheet-period-closed.subscriber";
 
 @Module({
   controllers: [PayrollController],
@@ -18,6 +19,7 @@ import { PayrollOffboardingCompletedSubscriber } from "../interfaces/event-subsc
     CalculateFinalSettlementUseCase,
     PayrollEmployeeTerminatedSubscriber,
     PayrollOffboardingCompletedSubscriber,
+    PayrollTimesheetPeriodClosedSubscriber,
   ],
 })
 export class PayrollModule {}

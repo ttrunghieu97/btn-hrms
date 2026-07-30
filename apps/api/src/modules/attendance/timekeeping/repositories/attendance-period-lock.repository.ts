@@ -12,12 +12,26 @@ import { attendancePeriodLocks } from "../../../../infrastructure/database/schem
 
 type PeriodLockInsert = typeof schema.attendancePeriodLocks.$inferInsert;
 
+export type PeriodTransitionRecord = {
+  id: string;
+  period: string;
+  fromStatus: string;
+  toStatus: string;
+  changedByUserId: string | null;
+  reason: string | null;
+  createdAt: Date;
+};
+
 @Injectable()
 export class AttendancePeriodLockRepository {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
+
+  async transaction<T>(fn: (tx: PostgresJsDatabase<typeof schema>) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
 
   async findByPeriod(period: string): Promise<AttendancePeriodLock | null> {
     const row = await this.db
@@ -44,7 +58,6 @@ export class AttendancePeriodLockRepository {
         updatedAt: new Date(),
       };
 
-      // Track who performed the action
       if (params.status === "locked" && params.userId) {
         updateData.lockedByUserId = params.userId;
         updateData.lockedAt = new Date();
@@ -65,7 +78,6 @@ export class AttendancePeriodLockRepository {
       return this.toDomain(row!);
     }
 
-    // Create new lock record
     const insertData: PeriodLockInsert = {
       period: params.period,
       status: params.status,
@@ -81,10 +93,6 @@ export class AttendancePeriodLockRepository {
     return this.toDomain(row!);
   }
 
-  /**
-   * Ensure a period lock record exists (defaults to OPEN).
-   * Called when first accessing a period.
-   */
   async ensurePeriod(period: string): Promise<AttendancePeriodLock> {
     const existing = await this.findByPeriod(period);
     if (existing) return existing;
@@ -97,6 +105,42 @@ export class AttendancePeriodLockRepository {
       })
       .returning();
     return this.toDomain(row!);
+  }
+
+  async recordTransition(params: {
+    period: string;
+    fromStatus: AttendancePeriodStatus;
+    toStatus: AttendancePeriodStatus;
+    changedByUserId: string | null;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.db.insert(schema.attendancePeriodHistory).values({
+      period: params.period,
+      fromStatus: params.fromStatus,
+      toStatus: params.toStatus,
+      changedByUserId: params.changedByUserId,
+      reason: params.reason ?? null,
+      metadata: (params.metadata ?? null) as any,
+    });
+  }
+
+  async getHistory(period: string): Promise<PeriodTransitionRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.attendancePeriodHistory)
+      .where(eq(schema.attendancePeriodHistory.period, period))
+      .orderBy(schema.attendancePeriodHistory.createdAt);
+
+    return rows.map((row) => ({
+      id: row.id,
+      period: row.period,
+      fromStatus: row.fromStatus,
+      toStatus: row.toStatus,
+      changedByUserId: row.changedByUserId,
+      reason: row.reason,
+      createdAt: row.createdAt,
+    }));
   }
 
   private toDomain(row: Record<string, any>): AttendancePeriodLock {

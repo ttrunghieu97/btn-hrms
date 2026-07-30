@@ -1,10 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
-import * as schema from "../../../../infrastructure/database/schema";
+import { Injectable } from "@nestjs/common";
 import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import { AttendancePeriodLockService } from "../services/attendance-period-lock.service";
+import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import {
   TimesheetWorkspaceQueryDto,
   TimesheetWorkspaceResponseDto,
@@ -35,10 +32,9 @@ function computeAvailableActions(status: string, isAdmin: boolean): string[] {
 @Injectable()
 export class QueryTimesheetWorkspaceUseCase {
   constructor(
-    @Inject(DATABASE_CONNECTION)
-    private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly periodLockService: AttendancePeriodLockService,
+    private readonly timekeepingRepo: AttendanceTimekeepingRepository,
   ) {}
 
   async execute(query: TimesheetWorkspaceQueryDto): Promise<TimesheetWorkspaceResponseDto> {
@@ -51,24 +47,12 @@ export class QueryTimesheetWorkspaceUseCase {
     const periodLock = await this.periodLockRepo.ensurePeriod(period);
     const availableActions = computeAvailableActions(periodLock.status, true);
 
-    // Fetch employees
-    const conditions: any[] = [];
-    if (query.departmentId) conditions.push(eq(schema.orgAssignments.departmentId, query.departmentId));
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const employeeRows = await this.db
-      .select({
-        id: schema.employees.id,
-        employeeCode: schema.employees.employeeCode,
-        firstName: schema.employees.firstName,
-        lastName: schema.employees.lastName,
-        departmentName: schema.departments.name,
-      })
-      .from(schema.employees)
-      .leftJoin(schema.orgAssignments, eq(schema.orgAssignments.employeeId, schema.employees.id))
-      .leftJoin(schema.departments, eq(schema.departments.id, schema.orgAssignments.departmentId))
-      .where(whereClause)
-      .orderBy(schema.employees.firstName);
+    const { employees: employeeRows, summaries: summaryRows, events: eventRows } =
+      await this.timekeepingRepo.findWorkspaceData({
+        departmentId: query.departmentId,
+        from,
+        to,
+      });
 
     const employeeIds = employeeRows.map((r) => r.id);
     if (employeeIds.length === 0) {
@@ -78,31 +62,6 @@ export class QueryTimesheetWorkspaceUseCase {
         employees: [], records: [],
       };
     }
-
-    // Fetch summaries + events
-    const [summaryRows, eventRows] = await Promise.all([
-      this.db.select({
-        employeeId: schema.attendanceDailySummaries.employeeId,
-        workDate: schema.attendanceDailySummaries.workDate,
-        status: schema.attendanceDailySummaries.status,
-        workedMinutes: schema.attendanceDailySummaries.workedMinutes,
-        scheduledMinutes: schema.attendanceDailySummaries.scheduledMinutes,
-        lateMinutes: schema.attendanceDailySummaries.lateMinutes,
-        earlyLeaveMinutes: schema.attendanceDailySummaries.earlyLeaveMinutes,
-        overtimeMinutes: schema.attendanceDailySummaries.overtimeMinutes,
-        isHoliday: schema.attendanceDailySummaries.isHoliday,
-      })
-        .from(schema.attendanceDailySummaries)
-        .where(inArray(schema.attendanceDailySummaries.employeeId, employeeIds) as any),
-      this.db.select({
-        employeeId: schema.attendances.employeeId,
-        date: schema.attendances.date,
-        type: schema.attendances.type,
-        time: schema.attendances.time,
-      })
-        .from(schema.attendances)
-        .where(inArray(schema.attendances.employeeId, employeeIds) as any),
-    ]);
 
     // Build event map
     const eventMap = new Map<string, { checkIn: string | null; checkOut: string | null }>();
@@ -186,3 +145,4 @@ export class QueryTimesheetWorkspaceUseCase {
     return { totalEmployees: 0, completedEmployees: 0, inProgressEmployees: 0, notStartedEmployees: 0, totalWorkedMinutes: 0, totalOtMinutes: 0, totalLateCount: 0, totalLeaveCount: 0 };
   }
 }
+

@@ -14,18 +14,23 @@ import {
 import { PayrollRunMapper } from "../mappers/payroll-run.mapper";
 import {
   CONTRACTS_TOKENS,
-  TimeManagementPayrollPort,
   AttendanceReadPort,
   ATTENDANCE_PAY_POLICY,
   AttendancePayPolicy,
+  IAttendanceAdjustmentReader,
 } from "../../../../contracts";
+import { ATTENDANCE_ADJUSTMENT_READER } from "../../../../contracts/ports/attendance-adjustment-reader.port";
 import { PayrollGeneratedEvent } from "../../../../core/events/events/payroll-generated.event";
 import { PayrollProcessedEvent } from "../../../../core/events/events/payroll-processed.event";
+import { PayrollApprovedEvent } from "../../../../core/events/events/payroll-approved.event";
+import { PayrollRejectedEvent } from "../../../../core/events/events/payroll-rejected.event";
+import { PayrollPostedEvent } from "../../../../core/events/events/payroll-posted.event";
 import { getScopeId } from "../../../../shared/constants/system";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { PayrollRunQueryDto } from "../dto/payroll-run-query.dto";
 import { CreatePayrollRunDto } from "../dto/create-payroll-run.dto";
 import { UpdatePayrollRunDto } from "../dto/update-payroll-run.dto";
+import { PayrollRunStateMachine } from "../services/payroll-run-state-machine";
 
 type PayslipInput = {
   payrollRunId: string;
@@ -46,13 +51,6 @@ type EmployeeCalculation = {
   overtimeMinutes: number;
   deduction: number;
   absentDays: number;
-  payrollInputs: {
-    type: string;
-    amount?: number;
-    quantity?: number;
-    rate?: number;
-    metadata?: Record<string, unknown>   | null;
-  }[];
 };
 
 @Injectable()
@@ -114,13 +112,14 @@ export class UpdatePayrollRunUseCase {
 export class GeneratePayrollRunUseCase {
   constructor(
     private readonly repo: PayrollRunsRepository,
-    @Inject(CONTRACTS_TOKENS.TIME_MANAGEMENT_PAYROLL_PORT)
-    private readonly payrollInputPort: TimeManagementPayrollPort,
     @Inject(CONTRACTS_TOKENS.ATTENDANCE_READ_PORT)
     private readonly attendanceReadPort: AttendanceReadPort,
     @Inject(ATTENDANCE_PAY_POLICY)
     private readonly payPolicy: AttendancePayPolicy,
+    @Inject(ATTENDANCE_ADJUSTMENT_READER)
+    private readonly adjustmentReader: IAttendanceAdjustmentReader,
     private readonly eventOutbox: EventOutboxService,
+    private readonly stateMachine: PayrollRunStateMachine,
   ) {}
 
   async execute(id: string) {
@@ -173,15 +172,38 @@ export class GeneratePayrollRunUseCase {
       attendanceByEmployee.set(row.employeeId, current);
     }
 
-    const batchPayrollInputs = await this.payrollInputPort.getBatchPayrollInputs({
+    // Path A: resolved truth via AttendanceReadPort + payPolicy
+    // Path B (TimeManagementPayrollAdapter) removed — it derived truth from raw
+    // clock events, producing inconsistent results (S1-4 / PR-2).
+
+    // Load post-closure adjustment deltas (if any)
+    const adjustmentDeltas = await this.adjustmentReader.getAdjustmentDeltas(
+      periodKey,
       employeeIds,
-      period: periodKey,
-    });
+    );
+    const deltaByEmployee = new Map(adjustmentDeltas.map((d) => [d.employeeId, d]));
+
+    // Resolve active calculation version for provenance
+    const calcVersion = await this.repo.findActiveCalculationVersion();
+    const calcVersionId = calcVersion?.id ?? null;
+    const calcVersionCode = calcVersion?.code ?? "unknown";
 
     await this.repo.transaction(async (tx: PayrollRunTransaction) => {
       await this.repo.markRunProcessing(payrollRun.id, tx);
       await this.repo.deleteRunItems(payrollRun.id, tx);
       await this.repo.deleteRunPayslips(payrollRun.id, tx);
+
+      // Capture input snapshots before calculation — freezes what goes into
+      // the payroll engine. Ensures reproducibility: a payroll result can
+      // always be traced to the exact input snapshot that produced it.
+      const inputSnapshotItems: Array<{
+        employeeId: string;
+        workedMinutes: number;
+        overtimeMinutes: number;
+        adjustmentRegular: number;
+        adjustmentOvertime: number;
+        baseSalary: number;
+      }> = [];
 
       const payslipInputs: PayslipInput[] = [];
       const employeeCalculations: EmployeeCalculation[] = [];
@@ -206,7 +228,32 @@ export class GeneratePayrollRunUseCase {
           }
         }
 
+        // Apply post-closure adjustment delta (if any)
+        // Adjustments are approved post-closure corrections — they layer on
+        // top of the immutable snapshot without rewriting it.
+        let adjustmentRegularDelta = 0;
+        let adjustmentOvertimeDelta = 0;
+        const delta = deltaByEmployee.get(employee.id);
+        if (delta) {
+          adjustmentRegularDelta = delta.regularHoursDelta * 60;
+          adjustmentOvertimeDelta = delta.overtimeHoursDelta * 60;
+          totalWorkedMinutes += adjustmentRegularDelta;
+          totalOvertimeMinutes += adjustmentOvertimeDelta;
+        }
+
+        // Capture input snapshot for this employee
         const baseSalary = Number(salary.baseSalary ?? 0);
+        const snapshotRegular = totalWorkedMinutes - adjustmentRegularDelta;
+        const snapshotOvertime = totalOvertimeMinutes - adjustmentOvertimeDelta;
+        inputSnapshotItems.push({
+          employeeId: employee.id,
+          workedMinutes: snapshotRegular,
+          overtimeMinutes: snapshotOvertime,
+          adjustmentRegular: adjustmentRegularDelta,
+          adjustmentOvertime: adjustmentOvertimeDelta,
+          baseSalary,
+        });
+
         const hourlyRate = baseSalary / 160;
         const overtimeAmount = Math.round(
           (totalOvertimeMinutes / 60) * hourlyRate * 1.5,
@@ -218,15 +265,6 @@ export class GeneratePayrollRunUseCase {
         const grossPay = baseSalary + allowance + overtimeAmount;
         const totalDeductions = deduction + taxAmount + insuranceAmount;
         const netPay = grossPay - totalDeductions;
-
-        const rawInputs = batchPayrollInputs.get(employee.id) ?? [];
-        const payrollInputs: EmployeeCalculation['payrollInputs'] = rawInputs.map((i: Record<string, unknown>  ) => ({
-          type: i.type as string,
-          amount: i.amount as number | undefined,
-          quantity: i.quantity as number | undefined,
-          rate: i.rate as number | undefined,
-          metadata: i.metadata as Record<string, unknown>   | null | undefined,
-        }));
 
         payslipInputs.push({
           payrollRunId: payrollRun.id,
@@ -240,6 +278,10 @@ export class GeneratePayrollRunUseCase {
             workedMinutes: totalWorkedMinutes,
             overtimeMinutes: totalOvertimeMinutes,
             absentDays,
+            snapshotWorkedMinutes: totalWorkedMinutes - adjustmentRegularDelta,
+            snapshotOvertimeMinutes: totalOvertimeMinutes - adjustmentOvertimeDelta,
+            adjustmentRegularDelta,
+            adjustmentOvertimeDelta,
           },
         });
 
@@ -251,7 +293,6 @@ export class GeneratePayrollRunUseCase {
           overtimeMinutes: totalOvertimeMinutes,
           deduction,
           absentDays,
-          payrollInputs,
         });
       }
 
@@ -304,22 +345,34 @@ export class GeneratePayrollRunUseCase {
           },
         );
 
-        for (const input of calc.payrollInputs) {
-          allItemValues.push({
-            payrollRunId: payrollRun.id,
-            employeeId: calc.employeeId,
-            payslipId,
-            type: input.type === "overtime_hours" ? "overtime" as const : "earning" as const,
-            code: String(input.type),
-            name: String(input.type),
-            amount: String(input.amount ?? 0),
-            quantity: String(input.quantity ?? 0),
-            rate: input.rate !== undefined ? String(input.rate) : null,
-            metadata: input.metadata ?? null,
-          });
-        }
-
         events.push(new PayrollGeneratedEvent(calc.employeeId, String(payslipId)));
+      }
+
+      // Persist input snapshots (freeze what entered calculation)
+      for (const item of inputSnapshotItems) {
+        const delta = deltaByEmployee.get(item.employeeId);
+        await this.repo.insertInputSnapshot(
+          {
+            payrollRunId: payrollRun.id,
+            employeeId: item.employeeId,
+            status: "ready",
+            sourceVersions: {
+              attendanceSnapshot: periodKey,
+              adjustmentVersion: delta ? 1 : 0,
+              generatedAt: new Date().toISOString(),
+            },
+            generatedByUserId: null,
+            generatedAt: new Date(),
+          },
+          [
+            { inputType: "ATTENDANCE_REGULAR_MINUTES", value: item.workedMinutes, sourceReference: "attendance_policy" },
+            { inputType: "ATTENDANCE_OVERTIME_MINUTES", value: item.overtimeMinutes, sourceReference: "attendance_policy" },
+            ...(item.adjustmentRegular !== 0 ? [{ inputType: "ATTENDANCE_ADJUSTMENT_REGULAR" as const, value: item.adjustmentRegular, sourceReference: "adjustment" }] : []),
+            ...(item.adjustmentOvertime !== 0 ? [{ inputType: "ATTENDANCE_ADJUSTMENT_OVERTIME" as const, value: item.adjustmentOvertime, sourceReference: "adjustment" }] : []),
+            { inputType: "BASE_SALARY" as const, value: item.baseSalary, sourceReference: "salary_structure" },
+          ],
+          tx,
+        );
       }
 
       if (allItemValues.length > 0) {
@@ -328,6 +381,21 @@ export class GeneratePayrollRunUseCase {
 
       for (const event of events) {
         await this.eventOutbox.stage(event, tx);
+      }
+
+      // Update payroll run with calculation provenance
+      if (calcVersionId) {
+        await this.repo.update(payrollRun.id, {
+          calculationVersionId: calcVersionId,
+          calculationHash: simpleHash(JSON.stringify({
+            employeeCount: inputSnapshotItems.length,
+            totalWorkedMinutes: inputSnapshotItems.reduce((s, i) => s + i.workedMinutes, 0),
+            totalOvertimeMinutes: inputSnapshotItems.reduce((s, i) => s + i.overtimeMinutes, 0),
+            adjustmentCount: inputSnapshotItems.filter((i) => i.adjustmentRegular !== 0 || i.adjustmentOvertime !== 0).length,
+            calcVersion: calcVersionCode,
+            calcTimestamp: new Date().toISOString().slice(0, 16),
+          })),
+        } as any);
       }
 
       await this.repo.markRunPendingApproval(payrollRun.id, tx);
@@ -347,5 +415,161 @@ export class GeneratePayrollRunUseCase {
   }
 }
 
+@Injectable()
+export class ApprovePayrollRunUseCase {
+  constructor(
+    private readonly repo: PayrollRunsRepository,
+    private readonly stateMachine: PayrollRunStateMachine,
+    private readonly eventOutbox: EventOutboxService,
+  ) {}
 
+  async execute(id: string, approvedByUserId: string, comment?: string) {
+    const run = await this.repo.findById(id);
+    if (!run) throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, { payrollRunId: id });
 
+    const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
+    this.stateMachine.assertTransition(currentStatus, "approved");
+
+    await this.repo.transaction(async (tx) => {
+      await this.repo.update(id, { status: "approved" } as any);
+      await this.repo.recordApprovalAction(id, "APPROVED", approvedByUserId, comment ?? null, tx);
+
+      await this.eventOutbox.stage(
+        new PayrollApprovedEvent({
+          payrollRunId: id,
+          approvedByUserId,
+          scopeId: getScopeId(),
+        }),
+        tx,
+      );
+    });
+
+    const updated = await this.repo.findById(id);
+    return PayrollRunMapper.toDto(updated!);
+  }
+}
+
+@Injectable()
+export class RejectPayrollRunUseCase {
+  constructor(
+    private readonly repo: PayrollRunsRepository,
+    private readonly stateMachine: PayrollRunStateMachine,
+    private readonly eventOutbox: EventOutboxService,
+  ) {}
+
+  async execute(id: string, rejectedByUserId: string, reason: string) {
+    const run = await this.repo.findById(id);
+    if (!run) throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, { payrollRunId: id });
+
+    const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
+    // rejection transitions to draft (editable state for resubmission)
+    this.stateMachine.assertTransition(currentStatus, "draft");
+
+    await this.repo.transaction(async (tx) => {
+      await this.repo.update(id, { status: "draft" } as any);
+      await this.repo.recordApprovalAction(id, "REJECTED", rejectedByUserId, reason, tx);
+
+      await this.eventOutbox.stage(
+        new PayrollRejectedEvent({
+          payrollRunId: id,
+          rejectedByUserId,
+          reason,
+          scopeId: getScopeId(),
+        }),
+        tx,
+      );
+    });
+
+    const updated = await this.repo.findById(id);
+    return PayrollRunMapper.toDto(updated!);
+  }
+}
+
+@Injectable()
+export class RequestPayrollApprovalUseCase {
+  constructor(
+    private readonly repo: PayrollRunsRepository,
+    private readonly stateMachine: PayrollRunStateMachine,
+  ) {}
+
+  async execute(id: string, requestedByUserId: string) {
+    const run = await this.repo.findById(id);
+    if (!run) throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, { payrollRunId: id });
+
+    const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
+    this.stateMachine.assertTransition(currentStatus, "pending_approval");
+
+    await this.repo.transaction(async (tx) => {
+      await this.repo.update(id, { status: "pending_approval" } as any);
+      await this.repo.recordApprovalAction(id, "REQUESTED", requestedByUserId, null, tx);
+    });
+
+    const updated = await this.repo.findById(id);
+    return PayrollRunMapper.toDto(updated!);
+  }
+}
+
+@Injectable()
+export class PostPayrollRunUseCase {
+  constructor(
+    private readonly repo: PayrollRunsRepository,
+    private readonly stateMachine: PayrollRunStateMachine,
+    private readonly eventOutbox: EventOutboxService,
+  ) {}
+
+  async execute(id: string, postedByUserId: string) {
+    const run = await this.repo.findById(id);
+    if (!run) throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, { payrollRunId: id });
+
+    const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
+    this.stateMachine.assertTransition(currentStatus, "posted");
+
+    // Posting guards — validate preconditions for financial publication
+    if (!run.calculationVersionId) {
+      throwBadRequest(
+        "Payroll run has no calculation version. Generate payroll before posting.",
+        ERROR_CODES.INVALID_REQUEST,
+      );
+    }
+    if (!run.calculationHash) {
+      throwBadRequest(
+        "Payroll run has no calculation hash. Generate payroll before posting.",
+        ERROR_CODES.INVALID_REQUEST,
+      );
+    }
+
+    await this.repo.transaction(async (tx) => {
+      await this.repo.update(id, {
+        status: "posted",
+        postedByUserId,
+        postedAt: new Date(),
+        publicationStatus: "pending",
+      } as any);
+
+      await this.repo.recordApprovalAction(id, "APPROVED", postedByUserId, "Payroll posted", tx);
+
+      await this.eventOutbox.stage(
+        new PayrollPostedEvent({
+          payrollRunId: id,
+          postedByUserId,
+          scopeId: getScopeId(),
+        }),
+        tx,
+      );
+    });
+
+    const updated = await this.repo.findById(id);
+    return PayrollRunMapper.toDto(updated!);
+  }
+}
+
+/** Deterministic simple hash for calculation provenance. */
+function simpleHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(8, "0");
+}

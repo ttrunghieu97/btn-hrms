@@ -2,9 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { customFetch } from '@/lib/fetcher';
 import { unwrapData } from '@/lib/api-extract';
 import { queryPolicyPresets } from '@/lib/query-client';
-import { createKeyFactory } from '@/lib/query-keys';
-
-const attDashKeys = createKeyFactory('attendance-dashboard');
+import { attendanceKeys } from '../attendance-keys';
 
 export interface AttendanceStatsResponseDto {
   summary: {
@@ -48,7 +46,7 @@ export function useAttendanceStatsQuery(month?: string) {
     : undefined;
 
   return useQuery({
-    queryKey: attDashKeys.detail(month ?? 'current'),
+    queryKey: attendanceKeys.dashboard.stats(month),
     queryFn: async ({ signal }) => {
       const searchParams = new URLSearchParams();
       if (params?.month) searchParams.set('month', params.month);

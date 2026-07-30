@@ -236,10 +236,46 @@ export class PlatformApprovalEngineRepository {
     );
   }
 
+  async isUserActiveDelegateOf(delegateeUserId: string, delegatorUserId: string): Promise<boolean> {
+    const row = await this.db.query.taskDelegations.findFirst({
+      where: (t, { and, eq, or, isNull, gt, lte }) =>
+        and(
+          eq(t.delegatorUserId, delegatorUserId),
+          eq(t.delegateeUserId, delegateeUserId),
+          eq(t.isActive, true),
+          or(isNull(t.expiresAt), gt(t.expiresAt, new Date())),
+          or(isNull(t.startsAt), lte(t.startsAt, new Date())),
+        ),
+      columns: { id: true },
+    });
+    return Boolean(row);
+  }
+
+  async findExpiredPendingSteps(slaHoursThreshold: number) {
+    const thresholdDate = new Date(Date.now() - slaHoursThreshold * 3600 * 1000);
+    return this.db.query.approvalSteps.findMany({
+      where: (t, { and, eq, lte }) =>
+        and(eq(t.status, "pending"), lte(t.createdAt, thresholdDate)),
+      with: { request: true },
+    });
+  }
+
+  async autoEscalateStep(stepId: string, note: string) {
+    const [updated] = await this.db
+      .update(approvalSteps)
+      .set({
+        comment: `[SLA Timeout Auto-Escalated] ${note}`,
+      })
+      .where(eq(approvalSteps.id, stepId))
+      .returning();
+    return updated ?? null;
+  }
+
   // ─── Transaction support ────────────────────────────────────────────
 
   async transaction<T>(fn: (tx: AppDatabase) => Promise<T>): Promise<T> {
     return this.db.transaction(fn);
   }
 }
+
 

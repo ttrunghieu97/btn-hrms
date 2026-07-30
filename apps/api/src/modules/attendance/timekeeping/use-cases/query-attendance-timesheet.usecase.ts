@@ -3,7 +3,7 @@ import { AttendanceTimesheetQueryDto } from "../dto/attendance-timesheet-query.d
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
-import { ATTENDANCE_PAY_POLICY, AttendancePayPolicy } from "../../../../contracts";
+import { ATTENDANCE_PAY_POLICY, type AttendancePayPolicy } from "../../../../contracts/ports/attendance-pay-policy.port";
 
 type TimesheetRow = {
   id: string;

@@ -229,6 +229,38 @@ export function registerPayrollEvents(): void {
     requiredFields: ["payrollRunId"],
     strict: true,
   });
+  registerEvent({
+    type: "payroll.approved.v1",
+    version: 1,
+    description: "Emitted when a payroll run is approved",
+    producer: "ApprovePayrollRunUseCase",
+    requiredFields: ["payrollRunId", "approvedByUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "payroll.rejected.v1",
+    version: 1,
+    description: "Emitted when a payroll run is rejected",
+    producer: "RejectPayrollRunUseCase",
+    requiredFields: ["payrollRunId", "rejectedByUserId", "reason"],
+    strict: true,
+  });
+  registerEvent({
+    type: "payroll.posted.v1",
+    version: 1,
+    description: "Emitted when a payroll run is posted (final)",
+    producer: "PostPayrollRunUseCase",
+    requiredFields: ["payrollRunId", "postedByUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "payroll.financial-publication.completed.v1",
+    version: 1,
+    description: "Emitted when payroll financial publication completes",
+    producer: "PostPayrollRunUseCase",
+    requiredFields: ["payrollRunId", "publicationReference"],
+    strict: true,
+  });
 }
 
 export function registerRecruitmentEvents(): void {
@@ -437,6 +469,62 @@ export function registerTimesheetEvents(): void {
     description: "Emitted when an attendance period is closed (final)",
     producer: "PeriodLockService.close",
     requiredFields: ["period", "actorUserId", "remarks", "snapshotCount"],
+    strict: true,
+  });
+  registerEvent({
+    type: "timesheet.period.reopened.v1",
+    version: 1,
+    description: "Emitted when a closed attendance period is reopened (privileged)",
+    producer: "PeriodLockService.reopen",
+    requiredFields: ["period", "actorUserId", "remarks"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.payroll.reconciliation.started.v1",
+    version: 1,
+    description: "Emitted when a payroll reconciliation run starts",
+    producer: "PayrollReconciliationService.runReconciliation",
+    requiredFields: ["period", "reconciliationId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.payroll.reconciliation.completed.v1",
+    version: 1,
+    description: "Emitted when a payroll reconciliation run completes",
+    producer: "PayrollReconciliationService.runReconciliation",
+    requiredFields: ["period", "reconciliationId", "totalEmployees", "matchedCount", "mismatchCount"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.adjustment.requested.v1",
+    version: 1,
+    description: "Emitted when a post-closure adjustment is requested",
+    producer: "AttendanceAdjustmentService.create",
+    requiredFields: ["period", "adjustmentId", "employeeId", "requestedByUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.adjustment.approved.v1",
+    version: 1,
+    description: "Emitted when an adjustment is approved",
+    producer: "AttendanceAdjustmentService.approve",
+    requiredFields: ["adjustmentId", "period", "approvedByUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.adjustment.rejected.v1",
+    version: 1,
+    description: "Emitted when an adjustment is rejected",
+    producer: "AttendanceAdjustmentService.reject",
+    requiredFields: ["adjustmentId", "period", "rejectedByUserId", "reason"],
+    strict: true,
+  });
+  registerEvent({
+    type: "attendance.adjustment.applied.v1",
+    version: 1,
+    description: "Emitted when an approved adjustment is applied",
+    producer: "AttendanceAdjustmentService.apply",
+    requiredFields: ["adjustmentId", "period"],
     strict: true,
   });
 }

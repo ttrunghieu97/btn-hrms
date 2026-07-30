@@ -22,7 +22,7 @@ export class TimesheetWorkspaceEmployeeDto {
   @ApiProperty()
   fullName!: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   departmentName!: string | null;
 
   @ApiProperty()
@@ -57,31 +57,31 @@ export class TimesheetWorkspaceRecordDto {
   @ApiProperty()
   workDate!: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   status!: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   checkIn!: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   checkOut!: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Number, nullable: true })
   workedMinutes!: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Number, nullable: true })
   scheduledMinutes!: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Number, nullable: true })
   lateMinutes!: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Number, nullable: true })
   earlyLeaveMinutes!: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Number, nullable: true })
   overtimeMinutes!: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: Boolean, nullable: true })
   isHoliday!: boolean | null;
 }
 

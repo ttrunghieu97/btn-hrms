@@ -10,14 +10,10 @@ describe(UpsertPayrollUseCase.name, () => {
     const eventOutbox = {
       stage: jest.fn().mockResolvedValue({ id: "out-1" }),
     };
-    const payrollInputPort = {
-      getPayrollInputs: jest.fn().mockResolvedValue([]),
-    };
 
     const useCase = new UpsertPayrollUseCase(
       payrollRepo as any,
       eventOutbox as any,
-      payrollInputPort as any,
       {} as any,
     );
 
