@@ -25,20 +25,20 @@ export class CancelApprovalUseCase {
         : [0];
 
       for (const stepIndex of stepIds) {
-        const step = await this.repo.findStep(approvalRequestId, stepIndex);
+        const step = await this.repo.findStep(approvalRequestId, stepIndex, tx);
         if (step?.status === "pending") {
           await this.repo.updateStep(step.id, {
             status: "skipped",
             decidedByUserId: null,
             decidedAt: new Date(),
-          });
+          }, tx);
         }
       }
 
       await this.repo.updateRequest(approvalRequestId, {
         status: "cancelled",
         decidedAt: new Date(),
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new ApprovalRequestCompletedEvent({

@@ -55,8 +55,9 @@ export class PlatformApprovalEngineRepository {
     subjectId: string;
     requestedByUserId: string | null;
     metadata: Record<string, unknown> | null;
-  }) {
-    const [request] = await this.db
+  }, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    const [request] = await db
       .insert(approvalRequests)
       .values({
         policyId: input.policyId,
@@ -69,14 +70,16 @@ export class PlatformApprovalEngineRepository {
     return request ?? null;
   }
 
-  findRequestById(requestId: string) {
-    return this.db.query.approvalRequests.findFirst({
+  findRequestById(requestId: string, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.query.approvalRequests.findFirst({
       where: eq(approvalRequests.id, requestId),
     });
   }
 
-  findStep(requestId: string, stepIndex: number) {
-    return this.db.query.approvalSteps.findFirst({
+  findStep(requestId: string, stepIndex: number, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.query.approvalSteps.findFirst({
       where: (t, { and, eq }) => and(eq(t.requestId, requestId), eq(t.stepIndex, stepIndex)),
     });
   }
@@ -87,28 +90,33 @@ export class PlatformApprovalEngineRepository {
     status: string;
     approverUserId: string | null;
     payload: unknown;
-  }[]) {
-    return this.db.insert(approvalSteps).values(rows as (typeof approvalSteps.$inferInsert)[]);
+  }[], tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.insert(approvalSteps).values(rows as (typeof approvalSteps.$inferInsert)[]);
   }
 
-  updateStep(stepId: string, patch: Record<string, unknown>) {
-    return this.db.update(approvalSteps).set(patch).where(eq(approvalSteps.id, stepId));
+  updateStep(stepId: string, patch: Record<string, unknown>, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.update(approvalSteps).set(patch).where(eq(approvalSteps.id, stepId));
   }
 
-  async anyPendingStep(requestId: string) {
-    const row = await this.db.query.approvalSteps.findFirst({
+  async anyPendingStep(requestId: string, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    const row = await db.query.approvalSteps.findFirst({
       where: (t, { and, eq }) => and(eq(t.requestId, requestId), eq(t.status, "pending")),
       columns: { id: true },
     });
     return Boolean(row);
   }
 
-  updateRequest(requestId: string, patch: Record<string, unknown>) {
-    return this.db.update(approvalRequests).set(patch).where(eq(approvalRequests.id, requestId));
+  updateRequest(requestId: string, patch: Record<string, unknown>, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.update(approvalRequests).set(patch).where(eq(approvalRequests.id, requestId));
   }
 
-  findRequestBySubject(subjectType: string, subjectId: string) {
-    return this.db.query.approvalRequests.findFirst({
+  findRequestBySubject(subjectType: string, subjectId: string, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.query.approvalRequests.findFirst({
       where: (t, { and, eq }) =>
         and(eq(t.subjectType, subjectType), eq(t.subjectId, subjectId)),
     });

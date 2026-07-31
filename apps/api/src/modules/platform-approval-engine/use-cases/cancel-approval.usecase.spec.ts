@@ -31,8 +31,8 @@ describe("CancelApprovalUseCase", () => {
     repo.findStep.mockResolvedValue({ id: "s", status: "pending" });
     const uc = new CancelApprovalUseCase(repo as any, outbox as any);
     await uc.execute("r");
-    expect(repo.updateStep).toHaveBeenCalledWith("s", expect.objectContaining({ status: "skipped" }));
-    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ status: "cancelled" }));
+    expect(repo.updateStep).toHaveBeenCalledWith("s", expect.objectContaining({ status: "skipped" }), expect.anything());
+    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ status: "cancelled" }), expect.anything());
     expect(outbox.stage).toHaveBeenCalled();
   });
 });

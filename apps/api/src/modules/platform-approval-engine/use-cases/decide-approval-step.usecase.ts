@@ -16,13 +16,13 @@ export class DecideApprovalStepUseCase {
 
   async execute(dto: DecideApprovalStepDto, userId: string) {
     return this.repo.transaction(async (tx) => {
-      const req = await this.repo.findRequestById(dto.requestId);
+      const req = await this.repo.findRequestById(dto.requestId, tx);
       if (!req) throwNotFound("Approval request not found", ERROR_CODES.APPROVAL_REQUEST_NOT_FOUND, { requestId: dto.requestId });
       if (req.status !== "pending") {
         throwBadRequest("Approval request is not pending", ERROR_CODES.APPROVAL_REQUEST_NOT_PENDING, { requestId: dto.requestId, status: req.status });
       }
 
-      const step = await this.repo.findStep(dto.requestId, dto.stepIndex);
+      const step = await this.repo.findStep(dto.requestId, dto.stepIndex, tx);
       if (!step) throwNotFound("Approval step not found", ERROR_CODES.APPROVAL_STEP_NOT_FOUND, { requestId: dto.requestId, stepIndex: dto.stepIndex });
       if (step.status !== "pending") {
         throwBadRequest("Approval step already decided", ERROR_CODES.APPROVAL_STEP_ALREADY_DECIDED, { stepId: step.id, status: step.status });
@@ -37,13 +37,13 @@ export class DecideApprovalStepUseCase {
         decidedByUserId: userId,
         decidedAt: new Date(),
         comment: dto.comment ?? null,
-      });
+      }, tx);
 
       if (dto.decision === "reject") {
         await this.repo.updateRequest(req.id, {
           status: "rejected",
           decidedAt: new Date(),
-        });
+        }, tx);
 
         const decidedEvent = new ApprovalRequestDecidedEvent({
           idempotencyKey: `${req.id}:approval.request.decided`,
@@ -70,12 +70,12 @@ export class DecideApprovalStepUseCase {
         return { status: "rejected" as const };
       }
 
-      const hasPending = await this.repo.anyPendingStep(req.id);
+      const hasPending = await this.repo.anyPendingStep(req.id, tx);
       if (!hasPending) {
         await this.repo.updateRequest(req.id, {
           status: "approved",
           decidedAt: new Date(),
-        });
+        }, tx);
 
         const decidedEvent = new ApprovalRequestDecidedEvent({
           idempotencyKey: `${req.id}:approval.request.decided`,
@@ -105,7 +105,7 @@ export class DecideApprovalStepUseCase {
       await this.repo.updateRequest(req.id, {
         currentStepIndex: dto.stepIndex + 1,
         updatedAt: new Date(),
-      });
+      }, tx);
 
       const decidedEvent = new ApprovalRequestDecidedEvent({
         idempotencyKey: `${req.id}:approval.request.decided`,

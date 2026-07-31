@@ -18,7 +18,7 @@ export class RequestApprovalUseCase {
     if (!policy) throwNotFound("Approval policy not found", ERROR_CODES.APPROVAL_POLICY_NOT_FOUND, { policyId: dto.policyId });
 
     return this.repo.transaction(async (tx) => {
-      const existing = await this.repo.findRequestBySubject(dto.subjectType, dto.subjectId);
+      const existing = await this.repo.findRequestBySubject(dto.subjectType, dto.subjectId, tx);
       if (existing) return existing;
 
       const request = await this.repo.insertRequest({
@@ -27,7 +27,7 @@ export class RequestApprovalUseCase {
         subjectId: dto.subjectId,
         requestedByUserId: dto.requestedByUserId ?? null,
         metadata: dto.metadata ?? null,
-      });
+      }, tx);
 
       if (!request) throw new Error("Failed to create approval request");
 
@@ -46,6 +46,7 @@ export class RequestApprovalUseCase {
           approverUserId: (step?.approverUserId as string) ?? null,
           payload: step ?? null,
         })),
+        tx,
       );
 
       await this.eventOutbox.stage(

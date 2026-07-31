@@ -44,7 +44,7 @@ describe("DecideApprovalStepUseCase", () => {
     const uc = new DecideApprovalStepUseCase(repo as any, outbox as any);
     const result = await uc.execute({ requestId: "r", stepIndex: 0, decision: "reject", comment: "nope" } as any, "user-1");
     expect(result.status).toBe("rejected");
-    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ status: "rejected" }));
+    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ status: "rejected" }), expect.anything());
     expect(outbox.stage).toHaveBeenCalledTimes(2);
   });
 
@@ -68,6 +68,6 @@ describe("DecideApprovalStepUseCase", () => {
     const uc = new DecideApprovalStepUseCase(repo as any, makeOutbox() as any);
     const result = await uc.execute({ requestId: "r", stepIndex: 0, decision: "approve" } as any, "user-1");
     expect(result.status).toBe("pending");
-    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ currentStepIndex: 1 }));
+    expect(repo.updateRequest).toHaveBeenCalledWith("r", expect.objectContaining({ currentStepIndex: 1 }), expect.anything());
   });
 });
