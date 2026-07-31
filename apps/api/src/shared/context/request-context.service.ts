@@ -22,7 +22,6 @@ export type RequestContext = {
   startTime: number;
   method?: string;
   path?: string;
-  dbExecutor?: unknown;
 };
 
 @Injectable()

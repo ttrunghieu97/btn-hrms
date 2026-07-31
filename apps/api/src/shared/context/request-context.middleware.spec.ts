@@ -8,7 +8,6 @@ describe(RequestContextMiddleware.name, () => {
 
     const next = jest.fn(() => {
       expect(requestContext.get()?.requestId).toBeDefined();
-      expect(requestContext.get()?.dbExecutor).toBeUndefined();
       expect(requestContext.get()?.userId).toBeUndefined();
     });
 

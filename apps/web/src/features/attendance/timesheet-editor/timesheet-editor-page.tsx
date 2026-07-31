@@ -128,7 +128,121 @@ function FillHandle({
   );
 }
 
-// ─── Timesheet Detail Rows ────────────────────────────────────────────
+// ─── Timesheet Day Row ────────────────────────────────────────────────
+
+function TimesheetDayRow({
+  day,
+  wd,
+  employeeId,
+  record,
+  dirty,
+  canEdit,
+  onCellChange,
+}: {
+  day: number;
+  wd: string;
+  employeeId: string;
+  record: TimesheetWorkspaceRecord | undefined;
+  dirty: { checkIn: string; checkOut: string } | undefined;
+  canEdit: boolean;
+  onCellChange: (employeeId: string, workDate: string, checkIn: string, checkOut: string) => void;
+}) {
+  const dow = getDayOfWeek(wd);
+  const isWeekend = dow === 0 || dow === 6;
+  const isToday = wd === new Date().toISOString().slice(0, 10);
+  const statusInfo = record?.status ? STATUS_LABEL[record.status] : null;
+  const isDirty = Boolean(dirty);
+  const fill = useFillHandler(employeeId, canEdit, onCellChange);
+
+  const [localIn, setLocalIn] = React.useState(dirty?.checkIn ?? (record?.checkIn ? formatTime(record.checkIn) : ''));
+  const [localOut, setLocalOut] = React.useState(dirty?.checkOut ?? (record?.checkOut ? formatTime(record.checkOut) : ''));
+  const [focused, setFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!focused) {
+      setLocalIn(dirty?.checkIn ?? (record?.checkIn ? formatTime(record.checkIn) : ''));
+      setLocalOut(dirty?.checkOut ?? (record?.checkOut ? formatTime(record.checkOut) : ''));
+    }
+  }, [dirty, focused, record?.checkIn, record?.checkOut]);
+
+  const statusBg = record?.status === 'late' ? 'bg-amber-950/10 border-y border-amber-500/10'
+    : record?.status === 'early_leave' ? 'bg-orange-950/10 border-y border-orange-500/10'
+    : record?.status === 'absent' ? 'bg-red-950/10 border-y border-red-500/10'
+    : record?.status === 'leave' ? 'bg-blue-950/10 border-y border-blue-500/10'
+    : record?.status === 'holiday' ? 'bg-indigo-950/10 border-y border-indigo-500/10'
+    : '';
+  const bg = isDirty
+    ? 'bg-emerald-950/20 border-y border-emerald-500/20'
+    : statusBg
+    || (isToday ? 'bg-slate-800/40' : '')
+    || (isWeekend ? 'bg-slate-800/10' : '');
+
+  return (
+    <tr className={`border-b border-slate-800/40 ${bg}`}>
+      <td className="px-3 py-2 text-xs text-slate-400">{day}</td>
+      <td className="px-3 py-2 text-xs text-slate-500">{DAY_LABELS[dow]}</td>
+      <td className="px-3 py-2">
+        {statusInfo ? (
+          <span className={`text-xs font-semibold ${statusInfo.color}`}>{statusInfo.text}</span>
+        ) : (
+          <span className="text-xs text-slate-600">—</span>
+        )}
+      </td>
+      {canEdit ? (
+        <>
+          <td className="px-2 py-1.5">
+            <div className="group/input relative inline-flex">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={localIn}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
+                  if (/^\d{0,2}:?\d{0,2}$/.test(v)) setLocalIn(v);
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => { setFocused(false); onCellChange(employeeId, wd, localIn, localOut); }}
+                placeholder="HH:mm"
+                className={`w-16 rounded border px-1.5 py-1 text-xs font-mono ${
+                  isDirty ? 'border-emerald-500/40 bg-slate-800' : 'border-transparent bg-transparent'
+                } text-slate-200 focus:border-blue-500/50 focus:bg-slate-800 focus:outline-none`}
+              />
+              {canEdit && localIn && <FillHandle onMouseDown={() => fill.onFillStart(wd, 'checkIn', localIn)} />}
+            </div>
+          </td>
+          <td className="px-2 py-1.5">
+            <div className="group/input relative inline-flex">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={localOut}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
+                  if (/^\d{0,2}:?\d{0,2}$/.test(v)) setLocalOut(v);
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => { setFocused(false); onCellChange(employeeId, wd, localIn, localOut); }}
+                placeholder="HH:mm"
+                className={`w-16 rounded border px-1.5 py-1 text-xs font-mono ${
+                  isDirty ? 'border-emerald-500/40 bg-slate-800' : 'border-transparent bg-transparent'
+                } text-slate-400 focus:border-blue-500/50 focus:bg-slate-800 focus:outline-none`}
+              />
+              {canEdit && localOut && <FillHandle onMouseDown={() => fill.onFillStart(wd, 'checkOut', localOut)} />}
+            </div>
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="px-3 py-2 text-xs text-slate-500">—</td>
+          <td className="px-3 py-2 text-xs text-slate-500">—</td>
+        </>
+      )}
+      <td className="px-3 py-2 text-xs text-slate-500">{record?.workedMinutes ? `${Math.floor(record.workedMinutes / 60)}h${record.workedMinutes % 60}m` : ''}</td>
+    </tr>
+  );
+}
+
+// ─── Timesheet Detail ─────────────────────────────────────────────────
 
 function TimesheetDetail({
   employeeId,
@@ -148,112 +262,22 @@ function TimesheetDetail({
   const days = daysInMonth(period);
   const fill = useFillHandler(employeeId, canEdit, onCellChange);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const rows: React.ReactNode[] = [];
-  let filled = 0;
 
+  const rows: React.ReactNode[] = [];
   for (let d = 1; d <= days; d++) {
     const wd = dayDate(period, d);
-    const record = getRecord(records, employeeId, wd);
     const key = cellKey(employeeId, wd);
-    const dirty = dirtyCells.get(key);
-    const dow = getDayOfWeek(wd);
-    const isWeekend = dow === 0 || dow === 6;
-    const isToday = wd === new Date().toISOString().slice(0, 10);
-    const hasData = record?.status && !['absent', 'leave', 'holiday', 'off'].includes(record.status);
-    if (hasData) filled++;
-
-    const statusInfo = record?.status ? STATUS_LABEL[record.status] : null;
-    const isDirty = Boolean(dirty);
-
-    // Format check-in/check-out from ISO to HH:mm
-    const defaultIn = dirty?.checkIn ?? (record?.checkIn ? formatTime(record.checkIn) : '');
-    const defaultOut = dirty?.checkOut ?? (record?.checkOut ? formatTime(record.checkOut) : '');
-
-    const [localIn, setLocalIn] = React.useState(defaultIn);
-    const [localOut, setLocalOut] = React.useState(defaultOut);
-    const [focused, setFocused] = React.useState(false);
-
-    React.useEffect(() => {
-      if (!focused) {
-        setLocalIn(dirty?.checkIn ?? (record?.checkIn ? formatTime(record.checkIn) : ''));
-        setLocalOut(dirty?.checkOut ?? (record?.checkOut ? formatTime(record.checkOut) : ''));
-      }
-    }, [dirty, focused, record?.checkIn, record?.checkOut]);
-
-    const statusBg = record?.status === 'late' ? 'bg-amber-950/10 border-y border-amber-500/10'
-      : record?.status === 'early_leave' ? 'bg-orange-950/10 border-y border-orange-500/10'
-      : record?.status === 'absent' ? 'bg-red-950/10 border-y border-red-500/10'
-      : record?.status === 'leave' ? 'bg-blue-950/10 border-y border-blue-500/10'
-      : record?.status === 'holiday' ? 'bg-indigo-950/10 border-y border-indigo-500/10'
-      : '';
-    const bg = isDirty
-      ? 'bg-emerald-950/20 border-y border-emerald-500/20'
-      : statusBg
-      || (isToday ? 'bg-slate-800/40' : '')
-      || (isWeekend ? 'bg-slate-800/10' : '');
-
     rows.push(
-      <tr key={wd} className={`border-b border-slate-800/40 ${bg}`}>
-        <td className="px-3 py-2 text-xs text-slate-400">{d}</td>
-        <td className="px-3 py-2 text-xs text-slate-500">{DAY_LABELS[dow]}</td>
-        <td className="px-3 py-2">
-          {statusInfo ? (
-            <span className={`text-xs font-semibold ${statusInfo.color}`}>{statusInfo.text}</span>
-          ) : (
-            <span className="text-xs text-slate-600">—</span>
-          )}
-        </td>
-        {canEdit ? (
-          <>
-            <td className="px-2 py-1.5">
-              <div className="group/input relative inline-flex">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={localIn}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
-                    if (/^\d{0,2}:?\d{0,2}$/.test(v)) setLocalIn(v);
-                  }}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => { setFocused(false); onCellChange(employeeId, wd, localIn, localOut); }}
-                  placeholder="HH:mm"
-                  className={`w-16 rounded border px-1.5 py-1 text-xs font-mono ${
-                    isDirty ? 'border-emerald-500/40 bg-slate-800' : 'border-transparent bg-transparent'
-                  } text-slate-200 focus:border-blue-500/50 focus:bg-slate-800 focus:outline-none`}
-                />
-                {canEdit && localIn && <FillHandle onMouseDown={() => fill.onFillStart(wd, 'checkIn', localIn)} />}
-              </div>
-            </td>
-            <td className="px-2 py-1.5">
-              <div className="group/input relative inline-flex">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={localOut}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
-                    if (/^\d{0,2}:?\d{0,2}$/.test(v)) setLocalOut(v);
-                  }}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => { setFocused(false); onCellChange(employeeId, wd, localIn, localOut); }}
-                  placeholder="HH:mm"
-                  className={`w-16 rounded border px-1.5 py-1 text-xs font-mono ${
-                    isDirty ? 'border-emerald-500/40 bg-slate-800' : 'border-transparent bg-transparent'
-                  } text-slate-400 focus:border-blue-500/50 focus:bg-slate-800 focus:outline-none`}
-                />
-                {canEdit && localOut && <FillHandle onMouseDown={() => fill.onFillStart(wd, 'checkOut', localOut)} />}
-              </div>
-            </td>
-          </>
-        ) : (
-          <>
-            <td className="px-3 py-2 text-xs text-slate-500">—</td>
-            <td className="px-3 py-2 text-xs text-slate-500">—</td>
-          </>
-        )}
-        <td className="px-3 py-2 text-xs text-slate-500">{record?.workedMinutes ? `${Math.floor(record.workedMinutes / 60)}h${record.workedMinutes % 60}m` : ''}</td>
-      </tr>,
+      <TimesheetDayRow
+        key={wd}
+        day={d}
+        wd={wd}
+        employeeId={employeeId}
+        record={getRecord(records, employeeId, wd)}
+        dirty={dirtyCells.get(key)}
+        canEdit={canEdit}
+        onCellChange={onCellChange}
+      />,
     );
   }
 

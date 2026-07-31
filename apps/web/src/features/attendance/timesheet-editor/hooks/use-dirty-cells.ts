@@ -71,11 +71,6 @@ export function useDirtyCells() {
       // Keep failed cells, remove successful ones
       setDirtyCells((prev) => {
         const next = new Map(prev);
-        for (const err of result.errors) {
-          const k = cellKey(err.employeeId, err.workDate);
-          if (!next.has(k)) continue; // already removed
-        }
-        // Remove all successful keys
         const failedKeys = new Set(result.errors.map((e) => cellKey(e.employeeId, e.workDate)));
         next.forEach((_, k) => {
           if (!failedKeys.has(k)) next.delete(k);

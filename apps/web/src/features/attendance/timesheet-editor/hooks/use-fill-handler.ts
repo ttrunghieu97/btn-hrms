@@ -14,12 +14,14 @@ export function useFillHandler(
 ) {
   const [fillRange, setFillRange] = useState<{ from: number; to: number } | null>(null);
   const fillRef = useRef<FillState | null>(null);
+  const fillRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   const onFillStart = useCallback(
     (date: string, field: 'checkIn' | 'checkOut', value: string) => {
       if (!canEdit || !value) return;
       const day = parseInt(date.split('-').pop()!, 10);
       fillRef.current = { sourceDate: date, field, value };
+      fillRangeRef.current = { from: day, to: day };
       setFillRange({ from: day, to: day });
     },
     [canEdit],
@@ -28,6 +30,7 @@ export function useFillHandler(
   const onFillMove = useCallback(
     (day: number) => {
       if (!fillRef.current) return;
+      fillRangeRef.current = { from: fillRangeRef.current?.from ?? day, to: day };
       setFillRange((prev) => {
         if (!prev) return { from: day, to: day };
         return { from: prev.from, to: day };
@@ -39,14 +42,16 @@ export function useFillHandler(
   const onFillEnd = useCallback(
     (allDays: number, period: string) => {
       const state = fillRef.current;
+      const range = fillRangeRef.current ?? { from: parseInt(state?.sourceDate.split('-').pop() ?? '1', 10), to: allDays };
       fillRef.current = null;
+      fillRangeRef.current = null;
       setFillRange(null);
       if (!state) return;
 
-      const range = { from: Math.min(parseInt(state.sourceDate.split('-').pop()!, 10), allDays), to: allDays };
+      // Use the range tracked from mouse movement (fillRange), clamped to month
       const startDay = parseInt(state.sourceDate.split('-').pop()!, 10);
-      const targetStart = Math.min(startDay, startDay);
-      const targetEnd = allDays;
+      const targetStart = Math.max(1, Math.min(startDay, Math.min(range.from, range.to)));
+      const targetEnd = Math.min(allDays, Math.max(range.from, range.to));
 
       for (let d = targetStart; d <= targetEnd; d++) {
         const wd = `${period}-${String(d).padStart(2, '0')}`;
