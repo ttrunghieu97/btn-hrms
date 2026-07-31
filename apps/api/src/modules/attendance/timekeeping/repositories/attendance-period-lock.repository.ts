@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import * as schema from "../../../../infrastructure/database/schema";
 import {
@@ -33,8 +34,9 @@ export class AttendancePeriodLockRepository {
     return this.db.transaction(fn);
   }
 
-  async findByPeriod(period: string): Promise<AttendancePeriodLock | null> {
-    const row = await this.db
+  async findByPeriod(period: string, tx?: AppDatabase): Promise<AttendancePeriodLock | null> {
+    const db = tx ?? this.db;
+    const row = await db
       .select()
       .from(attendancePeriodLocks)
       .where(eq(attendancePeriodLocks.period, period))
@@ -49,8 +51,9 @@ export class AttendancePeriodLockRepository {
     status: AttendancePeriodStatus;
     userId: string | null;
     remarks?: string;
-  }): Promise<AttendancePeriodLock> {
-    const existing = await this.findByPeriod(params.period);
+  }, tx?: AppDatabase): Promise<AttendancePeriodLock> {
+    const db = tx ?? this.db;
+    const existing = await this.findByPeriod(params.period, tx);
 
     if (existing) {
       const updateData: Partial<PeriodLockInsert> = {
@@ -70,7 +73,7 @@ export class AttendancePeriodLockRepository {
         updateData.remarks = params.remarks;
       }
 
-      const [row] = await this.db
+      const [row] = await db
         .update(attendancePeriodLocks)
         .set(updateData)
         .where(eq(attendancePeriodLocks.id, existing.id))
@@ -86,7 +89,7 @@ export class AttendancePeriodLockRepository {
       remarks: params.remarks ?? null,
     };
 
-    const [row] = await this.db
+    const [row] = await db
       .insert(attendancePeriodLocks)
       .values(insertData)
       .returning();
@@ -114,8 +117,9 @@ export class AttendancePeriodLockRepository {
     changedByUserId: string | null;
     reason?: string;
     metadata?: Record<string, unknown>;
-  }): Promise<void> {
-    await this.db.insert(schema.attendancePeriodHistory).values({
+  }, tx?: AppDatabase): Promise<void> {
+    const db = tx ?? this.db;
+    await db.insert(schema.attendancePeriodHistory).values({
       period: params.period,
       fromStatus: params.fromStatus,
       toStatus: params.toStatus,

@@ -101,7 +101,7 @@ export class PeriodLockService {
         status: "locked",
         userId: actorUserId,
         remarks,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -109,7 +109,7 @@ export class PeriodLockService {
         toStatus: "locked",
         changedByUserId: actorUserId,
         reason: remarks,
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodLockedEvent({ period, actorUserId, remarks }),
@@ -129,7 +129,7 @@ export class PeriodLockService {
         status: "open",
         userId: actorUserId,
         remarks,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -137,7 +137,7 @@ export class PeriodLockService {
         toStatus: "open",
         changedByUserId: actorUserId,
         reason: remarks,
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodUnlockedEvent({ period, actorUserId, remarks }),
@@ -161,18 +161,18 @@ export class PeriodLockService {
       );
     }
 
-    // Create immutable snapshot before status transition
-    // If this fails, period remains unchanged — safe to retry
-    const snapshotCount = await this.snapshotService.createSnapshotForPeriod(period, "closed");
-
-    // Atomically commit status transition + history + event
+    // Atomically create snapshot + status transition + history + event.
+    // Snapshot and period close share one transaction — no ghost snapshots
+    // if the transition fails.
     const result = await this.periodLockRepo.transaction(async (tx) => {
+      const snapshotCount = await this.snapshotService.createSnapshotForPeriod(period, "closed", tx);
+
       const r = await this.periodLockRepo.upsert({
         period,
         status: "closed",
         userId: actorUserId,
         remarks,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -181,7 +181,7 @@ export class PeriodLockService {
         changedByUserId: actorUserId,
         reason: remarks,
         metadata: { snapshotCount },
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodClosedEvent({ period, actorUserId, remarks, snapshotCount }),
@@ -208,7 +208,7 @@ export class PeriodLockService {
         period,
         status: "in_review",
         userId: actorUserId,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -216,7 +216,7 @@ export class PeriodLockService {
         toStatus: "in_review",
         changedByUserId: actorUserId,
         reason: "Reviewed",
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodReviewedEvent({ period, actorUserId }),
@@ -235,7 +235,7 @@ export class PeriodLockService {
         period,
         status: "locked",
         userId: actorUserId,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -243,7 +243,7 @@ export class PeriodLockService {
         toStatus: "locked",
         changedByUserId: actorUserId,
         reason: "Approved",
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodApprovedEvent({ period, actorUserId }),
@@ -282,7 +282,7 @@ export class PeriodLockService {
         status: "open",
         userId: actorUserId,
         remarks,
-      });
+      }, tx);
 
       await this.periodLockRepo.recordTransition({
         period,
@@ -291,7 +291,7 @@ export class PeriodLockService {
         changedByUserId: actorUserId,
         reason: remarks,
         metadata: { reopened: true },
-      });
+      }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodReopenedEvent({ period, actorUserId, remarks }),

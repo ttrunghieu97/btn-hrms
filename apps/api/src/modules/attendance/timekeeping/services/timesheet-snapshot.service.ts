@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import {
   ATTENDANCE_READ_PORT,
@@ -41,6 +42,7 @@ export class TimesheetSnapshotService {
   async createSnapshotForPeriod(
     period: string,
     periodStatus: string,
+    tx?: AppDatabase,
   ): Promise<number> {
     const [year, month] = period.split("-").map(Number);
     const daysInMonth = new Date(year!, month!, 0).getDate();
@@ -106,7 +108,7 @@ export class TimesheetSnapshotService {
       }),
     );
 
-    await this.timekeepingRepo.insertTimesheetSnapshots(values as any);
+    await this.timekeepingRepo.insertTimesheetSnapshots(values as any, tx);
     return values.length;
   }
 }

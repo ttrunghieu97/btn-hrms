@@ -625,9 +625,11 @@ export class AttendanceTimekeepingRepository
 
   async insertTimesheetSnapshots(
     values: typeof schema.timesheetSnapshots.$inferInsert[],
+    tx?: AppDatabase,
   ): Promise<void> {
     if (values.length === 0) return;
-    await this.db.insert(schema.timesheetSnapshots).values(values as any);
+    const db = tx ?? this.db;
+    await db.insert(schema.timesheetSnapshots).values(values as any);
   }
 
   async employeeExists(employeeId: string): Promise<boolean> {
