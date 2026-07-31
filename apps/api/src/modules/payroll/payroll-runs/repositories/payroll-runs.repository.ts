@@ -124,7 +124,7 @@ export class PayrollRunsRepository extends BaseRepository<
 
   async insertInputSnapshot(
     snapshot: typeof schema.payrollInputSnapshots.$inferInsert,
-    itemInputs: Array<Omit<typeof schema.payrollInputSnapshotItems.$inferInsert, "snapshotId">>,
+    itemInputs: Omit<typeof schema.payrollInputSnapshotItems.$inferInsert, "snapshotId">[],
     tx: PayrollRunTransaction,
   ) {
     const [created] = await tx.insert(schema.payrollInputSnapshots).values(snapshot).returning();

@@ -31,7 +31,7 @@ export class TotpService {
    * Enables TOTP for user after verifying initial passcode.
    */
   async enableTotp(userId: string, secret: string, passcode: string) {
-    if (!passcode || passcode.length !== 6) {
+    if (passcode?.length !== 6) {
       throwBadRequest("Invalid 6-digit TOTP passcode", ERROR_CODES.INVALID_REQUEST, { userId });
     }
 

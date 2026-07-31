@@ -17,7 +17,7 @@
     "error-contracts:verify": "node ./scripts/generate-error-contract-catalog.cjs --check",
     "typecheck": "pnpm error-contracts:verify && tsc --noEmit",
     "test": "jest --runInBand",
-    "lint": "pnpm error-contracts:verify && eslint --config eslint.arch.config.mjs \"src/**/*.{ts,tsx}\" --max-warnings 1227",
+    "lint": "pnpm error-contracts:verify && eslint --config eslint.arch.config.mjs \"src/**/*.{ts,tsx}\" --max-warnings 0",
     "depcruise": "depcruise --validate .dependency-cruiser.cjs src",
     "authorization:check": "node scripts/validate-authorization.mjs",
     "ci:verify": "pnpm authorization:check && pnpm typecheck && pnpm lint && pnpm depcruise && pnpm build",

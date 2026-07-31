@@ -121,7 +121,7 @@ export class AttendancePeriodLockRepository {
       toStatus: params.toStatus,
       changedByUserId: params.changedByUserId,
       reason: params.reason ?? null,
-      metadata: (params.metadata ?? null) as any,
+      metadata: (params.metadata ?? null),
     });
   }
 

@@ -236,7 +236,7 @@ export class PayrollReconciliationService {
       payrollRegularHours: row.payrollRegularHours,
       attendanceOvertimeHours: row.attendanceOvertimeHours,
       payrollOvertimeHours: row.payrollOvertimeHours,
-      diffType: row.diffType as DiffType,
+      diffType: row.diffType,
     }));
   }
 

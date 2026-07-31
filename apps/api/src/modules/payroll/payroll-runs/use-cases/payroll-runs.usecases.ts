@@ -196,14 +196,14 @@ export class GeneratePayrollRunUseCase {
       // Capture input snapshots before calculation — freezes what goes into
       // the payroll engine. Ensures reproducibility: a payroll result can
       // always be traced to the exact input snapshot that produced it.
-      const inputSnapshotItems: Array<{
+      const inputSnapshotItems: {
         employeeId: string;
         workedMinutes: number;
         overtimeMinutes: number;
         adjustmentRegular: number;
         adjustmentOvertime: number;
         baseSalary: number;
-      }> = [];
+      }[] = [];
 
       const payslipInputs: PayslipInput[] = [];
       const employeeCalculations: EmployeeCalculation[] = [];
@@ -395,7 +395,7 @@ export class GeneratePayrollRunUseCase {
             calcVersion: calcVersionCode,
             calcTimestamp: new Date().toISOString().slice(0, 16),
           })),
-        } as any);
+        });
       }
 
       await this.repo.markRunPendingApproval(payrollRun.id, tx);

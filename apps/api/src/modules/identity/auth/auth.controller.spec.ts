@@ -29,7 +29,7 @@ describe("AuthController refresh", () => {
       { execute: jest.fn() } as any, // securityTimeline
       { execute: jest.fn() } as any, // linkEmail
       { execute: jest.fn() } as any, // ssoLogin
-      { verifyToken: jest.fn() } as any, // googleAuth
+      { verifyToken: jest.fn() }, // googleAuth
       { generateSecret: jest.fn(), enableTotp: jest.fn(), disableTotp: jest.fn() } as any, // totpService
     );
 

@@ -371,6 +371,21 @@
         "contracts",
         "onboarding"
       ]
+    },
+    {
+      "context": "timesheet",
+      "ownerTeam": "platform",
+      "onCall": "platform-oncall",
+      "writeModels": [
+        "timesheet"
+      ],
+      "integrationEntrypoints": [
+        "api"
+      ],
+      "approvedDependencies": [
+        "contracts",
+        "attendance"
+      ]
     }
   ]
 }

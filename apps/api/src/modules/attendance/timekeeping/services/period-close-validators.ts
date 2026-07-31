@@ -25,7 +25,7 @@ export class PendingExceptionValidator implements OnModuleInit {
       const [year, month] = period.split("-").map(Number);
       if (!year || !month) return null;
 
-      const daysInMonth = new Date(year!, month!, 0).getDate();
+      const daysInMonth = new Date(year, month, 0).getDate();
       const from = `${period}-01`;
       const to = `${period}-${String(daysInMonth).padStart(2, "0")}`;
 
