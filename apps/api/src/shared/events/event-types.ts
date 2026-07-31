@@ -230,7 +230,7 @@ export function registerPayrollEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "payroll.approved.v1",
+    type: "payroll.approved",
     version: 1,
     description: "Emitted when a payroll run is approved",
     producer: "ApprovePayrollRunUseCase",
@@ -238,7 +238,7 @@ export function registerPayrollEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "payroll.rejected.v1",
+    type: "payroll.rejected",
     version: 1,
     description: "Emitted when a payroll run is rejected",
     producer: "RejectPayrollRunUseCase",
@@ -246,7 +246,7 @@ export function registerPayrollEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "payroll.posted.v1",
+    type: "payroll.posted",
     version: 1,
     description: "Emitted when a payroll run is posted (final)",
     producer: "PostPayrollRunUseCase",
@@ -254,7 +254,7 @@ export function registerPayrollEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "payroll.financial-publication.completed.v1",
+    type: "payroll.financial-publication.completed",
     version: 1,
     description: "Emitted when payroll financial publication completes",
     producer: "PostPayrollRunUseCase",
@@ -440,7 +440,7 @@ export function registerOffboardingEvents(): void {
 
 export function registerTimesheetEvents(): void {
   registerEvent({
-    type: "timesheet.saved.v1",
+    type: "timesheet.saved",
     version: 1,
     description: "Emitted when timesheet records are batch-saved",
     producer: "TimesheetService.batchSave",
@@ -448,7 +448,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.locked.v1",
+    type: "timesheet.period.locked",
     version: 1,
     description: "Emitted when an attendance period is locked",
     producer: "PeriodLockService.lock",
@@ -456,7 +456,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.unlocked.v1",
+    type: "timesheet.period.unlocked",
     version: 1,
     description: "Emitted when an attendance period is unlocked",
     producer: "PeriodLockService.unlock",
@@ -464,7 +464,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.reviewed.v1",
+    type: "timesheet.period.reviewed",
     version: 1,
     description: "Emitted when an attendance period moves to in_review",
     producer: "PeriodLockService.review",
@@ -472,7 +472,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.approved.v1",
+    type: "timesheet.period.approved",
     version: 1,
     description: "Emitted when an in_review attendance period is approved (locked)",
     producer: "PeriodLockService.approve",
@@ -480,7 +480,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.closed.v1",
+    type: "timesheet.period.closed",
     version: 1,
     description: "Emitted when an attendance period is closed (final)",
     producer: "PeriodLockService.close",
@@ -488,7 +488,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "timesheet.period.reopened.v1",
+    type: "timesheet.period.reopened",
     version: 1,
     description: "Emitted when a closed attendance period is reopened (privileged)",
     producer: "PeriodLockService.reopen",
@@ -496,7 +496,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.payroll.reconciliation.started.v1",
+    type: "attendance.payroll.reconciliation.started",
     version: 1,
     description: "Emitted when a payroll reconciliation run starts",
     producer: "PayrollReconciliationService.runReconciliation",
@@ -504,7 +504,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.payroll.reconciliation.completed.v1",
+    type: "attendance.payroll.reconciliation.completed",
     version: 1,
     description: "Emitted when a payroll reconciliation run completes",
     producer: "PayrollReconciliationService.runReconciliation",
@@ -512,7 +512,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.adjustment.requested.v1",
+    type: "attendance.adjustment.requested",
     version: 1,
     description: "Emitted when a post-closure adjustment is requested",
     producer: "AttendanceAdjustmentService.create",
@@ -520,7 +520,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.adjustment.approved.v1",
+    type: "attendance.adjustment.approved",
     version: 1,
     description: "Emitted when an adjustment is approved",
     producer: "AttendanceAdjustmentService.approve",
@@ -528,7 +528,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.adjustment.rejected.v1",
+    type: "attendance.adjustment.rejected",
     version: 1,
     description: "Emitted when an adjustment is rejected",
     producer: "AttendanceAdjustmentService.reject",
@@ -536,7 +536,7 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
-    type: "attendance.adjustment.applied.v1",
+    type: "attendance.adjustment.applied",
     version: 1,
     description: "Emitted when an approved adjustment is applied",
     producer: "AttendanceAdjustmentService.apply",
