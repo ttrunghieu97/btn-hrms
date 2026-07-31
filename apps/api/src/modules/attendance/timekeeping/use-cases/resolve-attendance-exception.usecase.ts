@@ -4,6 +4,7 @@ import { throwNotFound } from "../../../../shared/utils/http-error";
 import { ResolveAttendanceExceptionDto } from "../dto/resolve-attendance-exception.dto";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import { RecomputeAttendanceDayUseCase } from "./recompute-attendance-day.usecase";
+import { AttendanceDayTransactionService } from "../services/attendance-day-transaction.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 
@@ -13,6 +14,7 @@ export class ResolveAttendanceExceptionUseCase {
   constructor(
     private readonly repo: AttendanceTimekeepingRepository,
     private readonly recomputeAttendanceDay: RecomputeAttendanceDayUseCase,
+    private readonly dayTransaction: AttendanceDayTransactionService,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new ContextLogger(this.requestContext, ResolveAttendanceExceptionUseCase.name);
@@ -34,25 +36,30 @@ export class ResolveAttendanceExceptionUseCase {
       );
     }
 
-    const result = await this.repo.transaction(async () => {
-      const resolved = await this.repo.resolveException(id, {
-        status: dto.status ?? "resolved",
-        resolutionNote: dto.note,
-        resolvedByUserId: actorUserId,
-        resolvedAt: new Date(),
-      });
+    const result = await this.dayTransaction.execute(
+      existing.employeeId,
+      existing.workDate,
+      async (tx) => {
+        const resolved = await this.repo.resolveException(id, {
+          status: dto.status ?? "resolved",
+          resolutionNote: dto.note,
+          resolvedByUserId: actorUserId,
+          resolvedAt: new Date(),
+        }, tx);
 
-      const recomputed = await this.recomputeAttendanceDay.execute(
-        existing.employeeId,
-        existing.workDate,
-      );
+        const recomputed = await this.recomputeAttendanceDay.execute(
+          existing.employeeId,
+          existing.workDate,
+          { tx },
+        );
 
-      return {
-        exception: resolved,
-        summary: recomputed.summary,
-        pendingExceptions: recomputed.exceptions,
-      };
-    });
+        return {
+          exception: resolved,
+          summary: recomputed.summary,
+          pendingExceptions: recomputed.exceptions,
+        };
+      },
+    );
 
     return result;
   }

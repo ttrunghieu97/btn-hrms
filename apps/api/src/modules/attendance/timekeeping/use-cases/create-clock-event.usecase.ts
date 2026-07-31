@@ -9,6 +9,7 @@ import { throwBadRequest } from "../../../../shared/utils/http-error";
 import { CreateClockEventDto } from "../dto/create-clock-event.dto";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import { RecomputeAttendanceDayUseCase } from "./recompute-attendance-day.usecase";
+import { AttendanceDayTransactionService } from "../services/attendance-day-transaction.service";
 import { AttendanceCheckedEvent } from "../../../../core/events/events/attendance-checked.event";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
@@ -20,6 +21,7 @@ export class CreateClockEventUseCase {
   constructor(
     private readonly repo: AttendanceTimekeepingRepository,
     private readonly recomputeAttendanceDay: RecomputeAttendanceDayUseCase,
+    private readonly dayTransaction: AttendanceDayTransactionService,
     @Inject(CONTRACTS_TOKENS.WORKFORCE_TIME_MANAGEMENT_PORT)
     private readonly workforcePort: WorkforceTimeManagementPort,
     private readonly eventOutbox: EventOutboxService,
@@ -55,36 +57,41 @@ export class CreateClockEventUseCase {
       dto.workDate ?? todayDateString();
     const eventTime = dto.eventTime ? new Date(dto.eventTime) : new Date();
 
-    const result = await this.repo.transaction(async (tx) => {
-      const event = await this.repo.createClockEvent({
-        employeeId,
-        type: dto.type,
-        time: eventTime,
-        date: eventDate,
-        source: dto.source ?? "api",
-        location: dto.location,
-        image: dto.image,
-        note: dto.note,
-        locationId: dto.locationId,
-        session: dto.session,
-      });
+    const result = await this.dayTransaction.execute(
+      employeeId,
+      eventDate,
+      async (tx) => {
+        const event = await this.repo.createClockEvent({
+          employeeId,
+          type: dto.type,
+          time: eventTime,
+          date: eventDate,
+          source: dto.source ?? "api",
+          location: dto.location,
+          image: dto.image,
+          note: dto.note,
+          locationId: dto.locationId,
+          session: dto.session,
+        }, tx);
 
-      await this.eventOutbox.stage(
-        new AttendanceCheckedEvent(employeeId, dto.type, eventDate),
-        tx,
-      );
+        await this.eventOutbox.stage(
+          new AttendanceCheckedEvent(employeeId, dto.type, eventDate),
+          tx,
+        );
 
-      const recomputed = await this.recomputeAttendanceDay.execute(
-        employeeId,
-        eventDate,
-      );
+        const recomputed = await this.recomputeAttendanceDay.execute(
+          employeeId,
+          eventDate,
+          { tx },
+        );
 
-      return {
-        event,
-        summary: recomputed.summary,
-        exceptions: recomputed.exceptions,
-      };
-    });
+        return {
+          event,
+          summary: recomputed.summary,
+          exceptions: recomputed.exceptions,
+        };
+      },
+    );
 
     return result;
   }

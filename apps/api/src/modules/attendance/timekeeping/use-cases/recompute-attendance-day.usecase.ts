@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 import { AttendanceTimeCalculationService } from "../services/attendance-time-calculation.service";
 import { AttendanceExceptionDetectorService } from "../services/attendance-exception-detector.service";
@@ -22,17 +23,20 @@ export class RecomputeAttendanceDayUseCase {
   async execute(
     employeeId: string,
     workDate: string,
-    options?: { graceMinutes?: number },
+    options?: { graceMinutes?: number; tx?: AppDatabase },
   ) {
     const graceMinutes = options?.graceMinutes ?? 15;
+    const tx = options?.tx;
 
     const events = await this.repo.findClockEventsByEmployeeDay(
       employeeId,
       workDate,
+      tx,
     );
     const shiftAssignment = await this.repo.findShiftAssignmentForEmployeeDay(
       employeeId,
       workDate,
+      tx,
     );
 
     const computed = this.calculator.compute(
@@ -52,43 +56,41 @@ export class RecomputeAttendanceDayUseCase {
       hasShiftAssignment: Boolean(shiftAssignment),
     });
 
-    const result = await this.repo.transaction(async () => {
-      const summary = await this.repo.upsertAttendanceSummary(
-        employeeId,
-        workDate,
-        {
-          employeeShiftAssignmentId: shiftAssignment?.id ?? null,
-          status: computed.status,
-          scheduledMinutes: computed.scheduledMinutes,
-          workedMinutes: computed.workedMinutes,
-          breakMinutes: computed.breakMinutes,
-          lateMinutes: computed.lateMinutes,
-          earlyLeaveMinutes: computed.earlyLeaveMinutes,
-          overtimeMinutes: computed.overtimeMinutes,
-          anomalyFlags: {
-            ...computed.anomalyFlags,
-            exceptionTypes,
-          },
-          sourceData: computed.sourceData,
+    const summary = await this.repo.upsertAttendanceSummary(
+      employeeId,
+      workDate,
+      {
+        employeeShiftAssignmentId: shiftAssignment?.id ?? null,
+        status: computed.status,
+        scheduledMinutes: computed.scheduledMinutes,
+        workedMinutes: computed.workedMinutes,
+        breakMinutes: computed.breakMinutes,
+        lateMinutes: computed.lateMinutes,
+        earlyLeaveMinutes: computed.earlyLeaveMinutes,
+        overtimeMinutes: computed.overtimeMinutes,
+        anomalyFlags: {
+          ...computed.anomalyFlags,
+          exceptionTypes,
         },
-      );
+        sourceData: computed.sourceData,
+      },
+      tx,
+    );
 
-      if (!summary) {
-        throwInternalServer("Failed to upsert attendance summary", ERROR_CODES.INTERNAL_ERROR);
-      }
+    if (!summary) {
+      throwInternalServer("Failed to upsert attendance summary", ERROR_CODES.INTERNAL_ERROR);
+    }
 
-      const exceptions = await this.repo.replaceExceptionsForEmployeeDay(
-        employeeId,
-        workDate,
-        summary.id,
-        exceptionTypes,
-        events.map((event) => event.id),
-      );
+    const exceptions = await this.repo.replaceExceptionsForEmployeeDay(
+      employeeId,
+      workDate,
+      summary.id,
+      exceptionTypes,
+      events.map((event) => event.id),
+      tx,
+    );
 
-      return { summary, exceptions };
-    });
-
-    return result;
+    return { summary, exceptions };
   }
 }
 

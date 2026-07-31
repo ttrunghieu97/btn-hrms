@@ -1,4 +1,5 @@
 import type * as schema from "../../../../infrastructure/database/schema";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import type { ShiftAssignmentRecord } from "../../../../contracts/ports/employee-shift-reader.port";
 
 export type TimekeepingExceptionType =
@@ -11,7 +12,10 @@ type ExceptionRow = typeof schema.attendanceExceptions.$inferSelect;
 type SummaryRow = typeof schema.attendanceDailySummaries.$inferSelect;
 
 export interface IAttendanceTimekeepingRepository {
-  createClockEvent(values: typeof schema.attendances.$inferInsert): Promise<ClockEventRow | null>;
+  createClockEvent(
+    values: typeof schema.attendances.$inferInsert,
+    tx?: AppDatabase,
+  ): Promise<ClockEventRow | null>;
   listClockEvents(query: {
     employeeId?: string;
     from?: string;
@@ -23,15 +27,18 @@ export interface IAttendanceTimekeepingRepository {
   findClockEventsByEmployeeDay(
     employeeId: string,
     workDate: string,
+    tx?: AppDatabase,
   ): Promise<ClockEventRow[]>;
   findShiftAssignmentForEmployeeDay(
     employeeId: string,
     workDate: string,
+    tx?: AppDatabase,
   ): Promise<ShiftAssignmentRecord | null>;
   upsertAttendanceSummary(
     employeeId: string,
     workDate: string,
     values: Partial<typeof schema.attendanceDailySummaries.$inferInsert>,
+    tx?: AppDatabase,
   ): Promise<SummaryRow | null>;
   replaceExceptionsForEmployeeDay(
     employeeId: string,
@@ -39,6 +46,7 @@ export interface IAttendanceTimekeepingRepository {
     summaryId: string,
     exceptionTypes: TimekeepingExceptionType[],
     relatedEventIds: string[],
+    tx?: AppDatabase,
   ): Promise<ExceptionRow[]>;
   listExceptions(query: {
     employeeId?: string;
@@ -58,6 +66,7 @@ export interface IAttendanceTimekeepingRepository {
       resolvedByUserId: string;
       resolvedAt: Date;
     },
+    tx?: AppDatabase,
   ): Promise<ExceptionRow | null>;
   listTimesheetSummaries(query: {
     employeeId?: string;

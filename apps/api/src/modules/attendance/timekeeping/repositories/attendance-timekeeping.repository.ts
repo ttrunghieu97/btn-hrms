@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import * as schema from "../../../../infrastructure/database/schema";
 import {
   and,
@@ -23,6 +24,15 @@ import {
   IAttendanceTimekeepingRepository,
   TimekeepingExceptionType,
 } from "./attendance-timekeeping.repository.contract";
+
+/** Deterministic int32 hash for advisory lock key (application-layer). */
+export function advisoryKeyHash(employeeId: string): number {
+  let h = 0;
+  for (let i = 0; i < employeeId.length; i++) {
+    h = (Math.imul(31, h) + employeeId.charCodeAt(i)) | 0;
+  }
+  return h | 0;
+}
 
 @Injectable()
 export class AttendanceTimekeepingRepository
@@ -61,7 +71,7 @@ export class AttendanceTimekeepingRepository
     return row ?? null;
   }
 
-  async insertAdjustmentItems(values: Array<typeof schema.attendanceAdjustmentItems.$inferInsert>, tx?: PostgresJsDatabase<typeof schema>) {
+  async insertAdjustmentItems(values: typeof schema.attendanceAdjustmentItems.$inferInsert[], tx?: PostgresJsDatabase<typeof schema>) {
     if (values.length === 0) return;
     const db = tx ?? this.db;
     await db.insert(schema.attendanceAdjustmentItems).values(values as any);
@@ -143,7 +153,7 @@ export class AttendanceTimekeepingRepository
       );
   }
 
-  async insertPayrollReconciliationItems(values: Array<typeof schema.attendancePayrollReconciliationItems.$inferInsert>) {
+  async insertPayrollReconciliationItems(values: typeof schema.attendancePayrollReconciliationItems.$inferInsert[]) {
     if (values.length === 0) return;
     await this.db.insert(schema.attendancePayrollReconciliationItems).values(values as any);
   }
@@ -195,7 +205,7 @@ export class AttendanceTimekeepingRepository
     return Number(result?.value ?? 0);
   }
 
-  async getAllPeriodLocks(): Promise<Array<{ period: string; status: string }>> {
+  async getAllPeriodLocks(): Promise<{ period: string; status: string }[]> {
     return this.db
       .select({ period: schema.attendancePeriodLocks.period, status: schema.attendancePeriodLocks.status })
       .from(schema.attendancePeriodLocks)
@@ -229,8 +239,29 @@ export class AttendanceTimekeepingRepository
     return this.db.transaction(fn);
   }
 
-  async createClockEvent(values: typeof schema.attendances.$inferInsert): Promise<typeof schema.attendances.$inferSelect | null> {
-    const [row] = await this.db
+  /**
+   * Serialize concurrent mutations of the same (employeeId, workDate).
+   * Transaction-scoped advisory lock — auto-released on commit/rollback.
+   * Two-int form: (employeeId hash, workDate numeric) for debuggability.
+   */
+  async acquireAttendanceDayLock(
+    employeeId: string,
+    workDate: string,
+    tx?: AppDatabase,
+  ): Promise<void> {
+    const db = tx ?? this.db;
+    const dateHash = Number(workDate.replaceAll("-", ""));
+    await db.execute(
+      sql`SELECT pg_advisory_xact_lock(${advisoryKeyHash(employeeId)}, ${dateHash})`,
+    );
+  }
+
+  async createClockEvent(
+    values: typeof schema.attendances.$inferInsert,
+    tx?: AppDatabase,
+  ): Promise<typeof schema.attendances.$inferSelect | null> {
+    const db = tx ?? this.db;
+    const [row] = await db
       .insert(schema.attendances)
       .values(values)
       .returning();
@@ -286,8 +317,10 @@ export class AttendanceTimekeepingRepository
   findClockEventsByEmployeeDay(
     employeeId: string,
     workDate: string,
+    tx?: AppDatabase,
   ) {
-    return this.db.query.attendances.findMany({
+    const db = tx ?? this.db;
+    return db.query.attendances.findMany({
       where: and(
         eq(schema.attendances.employeeId, employeeId),
         eq(schema.attendances.date, workDate),
@@ -299,6 +332,7 @@ export class AttendanceTimekeepingRepository
   async findShiftAssignmentForEmployeeDay(
     employeeId: string,
     workDate: string,
+    tx?: AppDatabase,
   ) {
     return this.shiftReader.findShiftAssignmentForEmployeeDay(
       employeeId,
@@ -310,8 +344,10 @@ export class AttendanceTimekeepingRepository
     employeeId: string,
     workDate: string,
     values: Partial<typeof schema.attendanceDailySummaries.$inferInsert>,
+    tx?: AppDatabase,
   ) {
-    const existing = await this.db.query.attendanceDailySummaries.findFirst({
+    const db = tx ?? this.db;
+    const existing = await db.query.attendanceDailySummaries.findFirst({
       where: and(
         eq(schema.attendanceDailySummaries.employeeId, employeeId),
         eq(schema.attendanceDailySummaries.workDate, workDate),
@@ -319,7 +355,7 @@ export class AttendanceTimekeepingRepository
     });
 
     if (existing) {
-      const [updated] = await this.db
+      const [updated] = await db
         .update(schema.attendanceDailySummaries)
         .set({ ...(values), updatedAt: new Date() })
         .where(eq(schema.attendanceDailySummaries.id, existing.id))
@@ -327,7 +363,7 @@ export class AttendanceTimekeepingRepository
       return updated ?? null;
     }
 
-    const [created] = await this.db
+    const [created] = await db
       .insert(schema.attendanceDailySummaries)
       .values({ employeeId, workDate, ...(values) })
       .returning();
@@ -341,8 +377,10 @@ export class AttendanceTimekeepingRepository
     summaryId: string,
     exceptionTypes: TimekeepingExceptionType[],
     relatedEventIds: string[],
+    tx?: AppDatabase,
   ) {
-    await this.db
+    const db = tx ?? this.db;
+    await db
       .delete(schema.attendanceExceptions)
       .where(
         and(
@@ -365,7 +403,7 @@ export class AttendanceTimekeepingRepository
       relatedEventIds,
     })) as any ?? null;
 
-    const rows = await this.db
+    const rows = await db
       .insert(schema.attendanceExceptions)
       .values(values)
       .onConflictDoUpdate({
@@ -480,8 +518,10 @@ export class AttendanceTimekeepingRepository
       resolvedByUserId: string;
       resolvedAt: Date;
     },
+    tx?: AppDatabase,
   ) {
-    const [updated] = await this.db
+    const db = tx ?? this.db;
+    const [updated] = await db
       .update(schema.attendanceExceptions)
       .set({
         status: values.status,
@@ -562,9 +602,10 @@ export class AttendanceTimekeepingRepository
     };
   }
 
-  async deleteClockEvents(ids: string[]): Promise<void> {
+  async deleteClockEvents(ids: string[], tx?: AppDatabase): Promise<void> {
     if (ids.length === 0) return;
-    await this.db.delete(schema.attendances).where(inArray(schema.attendances.id, ids));
+    const db = tx ?? this.db;
+    await db.delete(schema.attendances).where(inArray(schema.attendances.id, ids));
   }
 
   async findEmployeeIdsWithSummariesInRange(from: string, to: string): Promise<string[]> {
@@ -579,11 +620,11 @@ export class AttendanceTimekeepingRepository
       )
       .groupBy(schema.attendanceDailySummaries.employeeId);
 
-    return employeeRows.map((r) => r.employeeId).filter(Boolean) as string[];
+    return employeeRows.map((r) => r.employeeId).filter(Boolean);
   }
 
   async insertTimesheetSnapshots(
-    values: Array<typeof schema.timesheetSnapshots.$inferInsert>,
+    values: typeof schema.timesheetSnapshots.$inferInsert[],
   ): Promise<void> {
     if (values.length === 0) return;
     await this.db.insert(schema.timesheetSnapshots).values(values as any);
@@ -624,14 +665,14 @@ export class AttendanceTimekeepingRepository
   }
 
   async findWorkspaceData(query: { departmentId?: string; from: string; to: string }): Promise<{
-    employees: Array<{
+    employees: {
       id: string;
       employeeCode: string;
       firstName: string;
       lastName: string | null;
       departmentName: string | null;
-    }>;
-    summaries: Array<{
+    }[];
+    summaries: {
       employeeId: string;
       workDate: string;
       status: string | null;
@@ -641,13 +682,13 @@ export class AttendanceTimekeepingRepository
       earlyLeaveMinutes: number | null;
       overtimeMinutes: number | null;
       isHoliday: boolean;
-    }>;
-    events: Array<{
+    }[];
+    events: {
       employeeId: string;
       date: string;
       type: string;
       time: Date | null;
-    }>;
+    }[];
   }> {
     const conditions: SQL[] = [];
     if (query.departmentId) {

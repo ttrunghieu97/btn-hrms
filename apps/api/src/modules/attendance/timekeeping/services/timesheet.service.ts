@@ -8,6 +8,7 @@ import { throwBadRequest } from "../../../../shared/utils/http-error";
 import { AttendancePeriodLockService } from "../services/attendance-period-lock.service";
 import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import { RecomputeAttendanceDayUseCase } from "../use-cases/recompute-attendance-day.usecase";
+import { AttendanceDayTransactionService } from "./attendance-day-transaction.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
@@ -27,6 +28,7 @@ export class TimesheetService {
     private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly periodLockService: AttendancePeriodLockService,
     private readonly recomputeAttendanceDay: RecomputeAttendanceDayUseCase,
+    private readonly dayTransaction: AttendanceDayTransactionService,
     private readonly timekeepingRepo: AttendanceTimekeepingRepository,
     @Inject(CONTRACTS_TOKENS.WORKFORCE_TIME_MANAGEMENT_PORT)
     private readonly workforcePort: WorkforceTimeManagementPort,
@@ -97,7 +99,7 @@ export class TimesheetService {
 
     // Validate employee exists and is eligible
     const employeeContext = await this.workforcePort.getEmployeeContext(record.employeeId);
-    if (!employeeContext || employeeContext.employmentStatus !== "eligible") {
+    if (employeeContext?.employmentStatus !== "eligible") {
       throw new Error(`Employee ${record.employeeId} is not eligible for attendance`);
     }
 
@@ -105,44 +107,50 @@ export class TimesheetService {
     const checkInTime = new Date(`${record.workDate}T${record.checkIn}:00`);
     const checkOutTime = new Date(`${record.workDate}T${record.checkOut}:00`);
 
-    // Run in per-record transaction
-    await this.timekeepingRepo.transaction(async () => {
-      // Delete existing clock events for this employee on this day (replace semantics)
-      const existing = await this.timekeepingRepo.findClockEventsByEmployeeDay(
-        record.employeeId,
-        record.workDate,
-      );
-      const existingIds = existing.map((e) => e.id);
-      if (existingIds.length > 0) {
-        await this.timekeepingRepo.deleteClockEvents(existingIds);
-      }
+    // Run in per-record day transaction (serialized per employee+date)
+    await this.dayTransaction.execute(
+      record.employeeId,
+      record.workDate,
+      async (tx) => {
+        // Delete existing clock events for this employee on this day (replace semantics)
+        const existing = await this.timekeepingRepo.findClockEventsByEmployeeDay(
+          record.employeeId,
+          record.workDate,
+          tx,
+        );
+        const existingIds = existing.map((e) => e.id);
+        if (existingIds.length > 0) {
+          await this.timekeepingRepo.deleteClockEvents(existingIds, tx);
+        }
 
-      // Create check-in
-      await this.timekeepingRepo.createClockEvent({
-        employeeId: record.employeeId,
-        type: "check_in",
-        time: checkInTime,
-        date: record.workDate,
-        source: "manual_hr",
-        session: this.determineSession(record.checkIn),
-      });
+        // Create check-in
+        await this.timekeepingRepo.createClockEvent({
+          employeeId: record.employeeId,
+          type: "check_in",
+          time: checkInTime,
+          date: record.workDate,
+          source: "manual_hr",
+          session: this.determineSession(record.checkIn),
+        }, tx);
 
-      // Create check-out
-      await this.timekeepingRepo.createClockEvent({
-        employeeId: record.employeeId,
-        type: "check_out",
-        time: checkOutTime,
-        date: record.workDate,
-        source: "manual_hr",
-        session: this.determineSession(record.checkOut),
-      });
+        // Create check-out
+        await this.timekeepingRepo.createClockEvent({
+          employeeId: record.employeeId,
+          type: "check_out",
+          time: checkOutTime,
+          date: record.workDate,
+          source: "manual_hr",
+          session: this.determineSession(record.checkOut),
+        }, tx);
 
-      // Recompute daily summary
-      await this.recomputeAttendanceDay.execute(
-        record.employeeId,
-        record.workDate,
-      );
-    });
+        // Recompute daily summary
+        await this.recomputeAttendanceDay.execute(
+          record.employeeId,
+          record.workDate,
+          { tx },
+        );
+      },
+    );
   }
 
   private determineSession(time: string): "morning" | "noon" | "afternoon" {
