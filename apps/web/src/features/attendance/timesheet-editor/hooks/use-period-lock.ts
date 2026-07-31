@@ -17,7 +17,12 @@ export function usePeriodLock() {
       });
       if (!res.ok) {
         const text = await res.text();
-        setLockError(text);
+        let message = text;
+        try {
+          const body = JSON.parse(text);
+          message = body?.message ?? body?.error ?? text;
+        } catch { /* keep raw text */ }
+        setLockError(message);
         return false;
       }
       return true;

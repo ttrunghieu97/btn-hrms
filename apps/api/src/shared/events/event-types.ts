@@ -464,6 +464,22 @@ export function registerTimesheetEvents(): void {
     strict: true,
   });
   registerEvent({
+    type: "timesheet.period.reviewed.v1",
+    version: 1,
+    description: "Emitted when an attendance period moves to in_review",
+    producer: "PeriodLockService.review",
+    requiredFields: ["period", "actorUserId"],
+    strict: true,
+  });
+  registerEvent({
+    type: "timesheet.period.approved.v1",
+    version: 1,
+    description: "Emitted when an in_review attendance period is approved (locked)",
+    producer: "PeriodLockService.approve",
+    requiredFields: ["period", "actorUserId"],
+    strict: true,
+  });
+  registerEvent({
     type: "timesheet.period.closed.v1",
     version: 1,
     description: "Emitted when an attendance period is closed (final)",

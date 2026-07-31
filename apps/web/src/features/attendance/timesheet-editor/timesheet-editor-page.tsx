@@ -620,6 +620,14 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
         </div>
       </div>
 
+      {/* ── Period action error ── */}
+      {pl.lockError && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-800/40 bg-red-950/20 p-3">
+          <p className="text-xs text-red-300">{pl.lockError}</p>
+          <button type="button" onClick={pl.clearLockError} className="text-xs text-slate-500 hover:text-slate-300">✕</button>
+        </div>
+      )}
+
       {/* ── Failed cells ── */}
       {dc.failedCells.length > 0 && (
         <div className="rounded-lg border border-red-800/40 bg-red-950/20 p-4">
