@@ -67,6 +67,8 @@ export const Permissions = {
   ATTENDANCE_TIMESHEET_APPROVE: PermissionRegistry.attendance.timesheetApprove,
   ATTENDANCE_TIMESHEET_IMPORT: PermissionRegistry.attendance.timesheetImport,
   ATTENDANCE_PERIOD_VIEW: PermissionRegistry.attendance.periodView,
+  ATTENDANCE_PERIOD_REVIEW: PermissionRegistry.attendance.periodReview,
+  ATTENDANCE_PERIOD_APPROVE: PermissionRegistry.attendance.periodApprove,
   ATTENDANCE_PERIOD_LOCK: PermissionRegistry.attendance.periodLock,
   ATTENDANCE_PERIOD_UNLOCK: PermissionRegistry.attendance.periodUnlock,
   ATTENDANCE_PERIOD_CLOSE: PermissionRegistry.attendance.periodClose,

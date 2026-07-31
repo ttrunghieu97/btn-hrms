@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { computeAvailableActions } from "../services/period-lock.service";
 import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import { AttendancePeriodLockService } from "../services/attendance-period-lock.service";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
@@ -17,18 +18,6 @@ function daysInMonth(year: number, month: number): number {
   return DAYS_IN_MONTH[month - 1]!;
 }
 
-function computeAvailableActions(status: string, isAdmin: boolean): string[] {
-  switch (status) {
-    case "open": return ["save", "review"];
-    case "in_review": return ["approve", "lock"];
-    case "locked": return ["unlock"];
-    case "payroll_processing": return [];
-    case "payroll_posted": return ["close"];
-    case "closed": return ["reopen"];
-    default: return [];
-  }
-}
-
 @Injectable()
 export class QueryTimesheetWorkspaceUseCase {
   constructor(
@@ -37,7 +26,7 @@ export class QueryTimesheetWorkspaceUseCase {
     private readonly timekeepingRepo: AttendanceTimekeepingRepository,
   ) {}
 
-  async execute(query: TimesheetWorkspaceQueryDto): Promise<TimesheetWorkspaceResponseDto> {
+  async execute(query: TimesheetWorkspaceQueryDto, permissions: string[] = []): Promise<TimesheetWorkspaceResponseDto> {
     const period = query.period;
     const [year, month] = period.split("-").map(Number);
     const lastDay = daysInMonth(year!, month!);
@@ -45,7 +34,7 @@ export class QueryTimesheetWorkspaceUseCase {
     const to = `${period}-${String(lastDay).padStart(2, "0")}`;
 
     const periodLock = await this.periodLockRepo.ensurePeriod(period);
-    const availableActions = computeAvailableActions(periodLock.status, true);
+    const availableActions = computeAvailableActions(periodLock.status, permissions);
 
     const { employees: employeeRows, summaries: summaryRows, events: eventRows } =
       await this.timekeepingRepo.findWorkspaceData({

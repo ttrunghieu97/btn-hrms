@@ -106,6 +106,22 @@ class AttendancePeriodViewPolicyHandler implements PolicyHandler {
   }
 }
 
+class AttendancePeriodReviewPolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodReview";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_REVIEW) ?? false;
+  }
+}
+
+class AttendancePeriodApprovePolicyHandler implements PolicyHandler {
+  readonly policyName = "AttendancePeriodApprove";
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    return user.permissions?.includes(Permissions.ATTENDANCE_PERIOD_APPROVE) ?? false;
+  }
+}
+
 class AttendancePeriodLockPolicyHandler implements PolicyHandler {
   readonly policyName = "AttendancePeriodLock";
   handle(user: AuthUser): boolean {
@@ -139,6 +155,8 @@ export const AttendancePolicies = {
   timesheetApprove: new AttendanceTimesheetApprovePolicyHandler(),
   timesheetImport: new AttendanceTimesheetImportPolicyHandler(),
   periodView: new AttendancePeriodViewPolicyHandler(),
+  periodReview: new AttendancePeriodReviewPolicyHandler(),
+  periodApprove: new AttendancePeriodApprovePolicyHandler(),
   periodLock: new AttendancePeriodLockPolicyHandler(),
   periodUnlock: new AttendancePeriodUnlockPolicyHandler(),
   periodClose: new AttendancePeriodClosePolicyHandler(),

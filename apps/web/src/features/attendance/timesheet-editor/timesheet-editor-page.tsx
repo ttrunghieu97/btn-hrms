@@ -42,6 +42,42 @@ const STATUS_LABEL: Record<string, { text: string; color: string }> = {
   off: { text: 'OFF', color: 'text-slate-500' },
 };
 
+// ─── Close Modal ────────────────────────────────────────────────────────
+
+function CloseModal({ period, onClose, onConfirm }: { period: string; onClose: () => void; onConfirm: (remarks: string) => void }) {
+  const [r, setR] = React.useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-96 rounded-lg border border-slate-700/50 bg-slate-900 p-6 shadow-xl">
+        <h3 className="mb-3 text-base font-bold text-slate-100">Close Period {period}</h3>
+        <p className="mb-3 text-xs text-slate-400">Final closure — no further edits. Create immutable snapshot.</p>
+        <input value={r} onChange={(e) => setR(e.target.value)} placeholder="Remarks (optional)" className="mb-4 w-full rounded-md border border-slate-700/50 bg-slate-800 px-3 py-2 text-sm text-slate-200" />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-slate-700/50 bg-slate-800 px-4 py-1.5 text-sm text-slate-300">Cancel</button>
+          <button type="button" onClick={() => onConfirm(r)} className="rounded-md bg-slate-600 px-4 py-1.5 text-sm font-semibold text-white">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReopenModal({ period, onClose, onConfirm }: { period: string; onClose: () => void; onConfirm: (remarks: string) => void }) {
+  const [r, setR] = React.useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-96 rounded-lg border border-slate-700/50 bg-slate-900 p-6 shadow-xl">
+        <h3 className="mb-3 text-base font-bold text-slate-100">Reopen Period {period}</h3>
+        <input value={r} onChange={(e) => setR(e.target.value)} placeholder="Reason (required)" className="mb-4 w-full rounded-md border border-slate-700/50 bg-slate-800 px-3 py-2 text-sm text-slate-200" />
+        {!r && <p className="mb-2 text-xs text-rose-400">Reason required</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-slate-700/50 bg-slate-800 px-4 py-1.5 text-sm text-slate-300">Cancel</button>
+          <button type="button" disabled={!r} onClick={() => onConfirm(r)} className="rounded-md bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-50">Reopen</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Period Lock Modal ────────────────────────────────────────────────
 
 function LockModal({ period, onClose, onConfirm }: { period: string; onClose: () => void; onConfirm: (remarks: string) => void }) {
@@ -267,6 +303,8 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
   const [deptFilter, setDeptFilter] = React.useState('');
   const [showLock, setShowLock] = React.useState(false);
   const [showUnlock, setShowUnlock] = React.useState(false);
+  const [showClose, setShowClose] = React.useState(false);
+  const [showReopen, setShowReopen] = React.useState(false);
 
   const canEdit = ts.periodStatus === 'open';
   const canLock = ts.periodStatus === 'open';
@@ -325,6 +363,28 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
     const ok = await pl.unlock(ts.period, remarks);
     if (ok) ts.reload();
     setShowUnlock(false);
+  }, [pl, ts]);
+
+  const handleClose = React.useCallback(async (remarks: string) => {
+    const ok = await pl.close(ts.period, remarks);
+    if (ok) ts.reload();
+    setShowClose(false);
+  }, [pl, ts]);
+
+  const handleReopen = React.useCallback(async (remarks: string) => {
+    const ok = await pl.reopen(ts.period, remarks);
+    if (ok) ts.reload();
+    setShowReopen(false);
+  }, [pl, ts]);
+
+  const handleReview = React.useCallback(async () => {
+    const ok = await pl.review(ts.period);
+    if (ok) ts.reload();
+  }, [pl, ts]);
+
+  const handleApprove = React.useCallback(async () => {
+    const ok = await pl.approve(ts.period);
+    if (ok) ts.reload();
   }, [pl, ts]);
 
   // Select first employee when list loads
@@ -395,17 +455,19 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
             <button type="button" onClick={handleSave} disabled={dc.saving || dc.dirtyCount === 0}
               className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-50 hover:bg-emerald-500">{dc.saving ? 'Saving...' : `Save Changes (${dc.dirtyCount})`}</button>
           )}
-          {ts.availableActions.includes('review') && <button type="button" className="rounded-md border border-amber-500/50 bg-amber-950/30 px-4 py-1.5 text-sm font-semibold text-amber-400">Review Period</button>}
-          {ts.availableActions.includes('approve') && <button type="button" className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-500">Approve</button>}
+          {ts.availableActions.includes('review') && <button type="button" onClick={handleReview} className="rounded-md border border-amber-500/50 bg-amber-950/30 px-4 py-1.5 text-sm font-semibold text-amber-400">Review Period</button>}
+          {ts.availableActions.includes('approve') && <button type="button" onClick={handleApprove} className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-500">Approve</button>}
           {ts.availableActions.includes('lock') && <button type="button" onClick={() => setShowLock(true)} className="rounded-md bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-amber-500">Lock Period</button>}
           {ts.availableActions.includes('unlock') && <button type="button" onClick={() => setShowUnlock(true)} className="rounded-md border border-rose-600/50 bg-rose-950/30 px-4 py-1.5 text-sm font-semibold text-rose-400 hover:bg-rose-950/50">Unlock</button>}
-          {ts.availableActions.includes('close') && <button type="button" onClick={() => setShowUnlock(true)} className="rounded-md bg-slate-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-500">Close Period</button>}
-          {ts.availableActions.includes('reopen') && <button type="button" className="rounded-md border border-orange-600/50 bg-orange-950/30 px-4 py-1.5 text-sm font-semibold text-orange-400">Reopen</button>}
+          {ts.availableActions.includes('close') && <button type="button" onClick={() => setShowClose(true)} className="rounded-md bg-slate-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-500">Close Period</button>}
+          {ts.availableActions.includes('reopen') && <button type="button" onClick={() => setShowReopen(true)} className="rounded-md border border-orange-600/50 bg-orange-950/30 px-4 py-1.5 text-sm font-semibold text-orange-400">Reopen</button>}
         </div>
       </div>
 
       {showLock && <LockModal period={ts.period} onClose={() => setShowLock(false)} onConfirm={handleLock} />}
       {showUnlock && <UnlockModal period={ts.period} onClose={() => setShowUnlock(false)} onConfirm={handleUnlock} />}
+      {showClose && <CloseModal period={ts.period} onClose={() => setShowClose(false)} onConfirm={handleClose} />}
+      {showReopen && <ReopenModal period={ts.period} onClose={() => setShowReopen(false)} onConfirm={handleReopen} />}
 
       {/* ── Period Dashboard (server-driven) ── */}
       {ts.totals ? (

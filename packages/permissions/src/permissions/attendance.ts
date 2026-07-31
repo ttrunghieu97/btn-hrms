@@ -11,6 +11,8 @@ export const attendance = {
   timesheetApprove: 'attendance:timesheet:approve',
   timesheetImport: 'attendance:timesheet:import',
   periodView: 'attendance:period:view',
+  periodReview: 'attendance:period:review',
+  periodApprove: 'attendance:period:approve',
   periodLock: 'attendance:period:lock',
   periodUnlock: 'attendance:period:unlock',
   periodClose: 'attendance:period:close',

@@ -229,6 +229,38 @@ export class TimekeepingController {
     return this.toPeriodLockResponse(lock);
   }
 
+  @Post("period-locks/review")
+  @CheckPolicy(AttendancePolicies.periodReview)
+  @AuditLog({ action: "period_lock_review", entity: "attendance" })
+  @ApiOperation({ summary: "Mark period as in_review" })
+  @ApiOkResponse({ description: "Period moved to in_review" })
+  async reviewPeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: LockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.review(
+      req.user.id,
+      dto.period,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
+  @Post("period-locks/approve")
+  @CheckPolicy(AttendancePolicies.periodApprove)
+  @AuditLog({ action: "period_lock_approve", entity: "attendance" })
+  @ApiOperation({ summary: "Approve period — transitions to locked" })
+  @ApiOkResponse({ description: "Period approved and locked" })
+  async approvePeriod(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() dto: LockPeriodDto,
+  ) {
+    const lock = await this.periodLockService.approve(
+      req.user.id,
+      dto.period,
+    );
+    return this.toPeriodLockResponse(lock);
+  }
+
   @Post("period-locks/reopen")
   @CheckPolicy(AttendancePolicies.periodClose)
   @AuditLog({ action: "period_lock_reopen", entity: "attendance" })
@@ -251,9 +283,10 @@ export class TimekeepingController {
   @ApiOperation({ summary: "Get timesheet workspace data for a period" })
   @ApiOkResponse({ type: TimesheetWorkspaceResponseDto })
   async getTimesheetWorkspace(
+    @Request() req: ExpressRequest & { user: AuthUser },
     @Query() query: TimesheetWorkspaceQueryDto,
   ): Promise<TimesheetWorkspaceResponseDto> {
-    return this.queryTimesheetWorkspace.execute(query);
+    return this.queryTimesheetWorkspace.execute(query, req.user.permissions);
   }
 
   @Get("period-locks/:period")
