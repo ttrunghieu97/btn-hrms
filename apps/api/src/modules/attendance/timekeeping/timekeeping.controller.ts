@@ -15,6 +15,8 @@ import { AuthUser } from "../../../core/security/types/auth-user.interface";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { AttendancePolicies } from "../../../core/security/policies/attendance.policy";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
+import { throwInternalServer } from "../../../shared/utils/http-error";
+import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { AttendanceClockEventQueryDto } from "./dto/attendance-clock-event-query.dto";
 import { AttendanceExceptionQueryDto } from "./dto/attendance-exception-query.dto";
 import { AttendanceTimesheetQueryDto } from "./dto/attendance-timesheet-query.dto";
@@ -38,6 +40,7 @@ import { PeriodLockService } from "./services/period-lock.service";
 import { PayrollReconciliationService } from "./services/payroll-reconciliation.service";
 import { AttendanceAdjustmentService } from "./services/attendance-adjustment.service";
 import { AttendanceHealthService } from "./services/attendance-health.service";
+import { AttendancePeriodLockRepository } from "./repositories/attendance-period-lock.repository";
 import type { PeriodTransitionRecord } from "./repositories/attendance-period-lock.repository";
 import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-workspace.usecase";
 import {
@@ -46,6 +49,8 @@ import {
   LockPeriodDto,
   UnlockPeriodDto,
   PeriodLockResponseDto,
+  EmployeeVerificationDto,
+  EmployeeVerificationListDto,
 } from "./dto/timesheet.dto";
 import {
   TimesheetWorkspaceQueryDto,
@@ -67,6 +72,7 @@ export class TimekeepingController {
     private readonly attendanceCapturePolicy: AttendanceCapturePolicyService,
     private readonly timesheetService: TimesheetService,
     private readonly periodLockService: PeriodLockService,
+    private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly queryTimesheetWorkspace: QueryTimesheetWorkspaceUseCase,
     private readonly payrollReconciliationService: PayrollReconciliationService,
     private readonly adjustmentService: AttendanceAdjustmentService,
@@ -276,6 +282,69 @@ export class TimekeepingController {
       dto.remarks,
     );
     return this.toPeriodLockResponse(lock);
+  }
+
+  @Get("period-locks/:period/employees")
+  @CheckPolicy(AttendancePolicies.report)
+  @ApiOperation({ summary: "List employee verification status for a period" })
+  @ApiOkResponse({ type: EmployeeVerificationListDto })
+  async listEmployeeVerification(
+    @Param("period") period: string,
+  ): Promise<EmployeeVerificationListDto> {
+    const rows = await this.periodLockRepo.listEmployeeVerification(period);
+    return {
+      period,
+      employees: rows.map((r) => ({
+        employeeId: r.employeeId,
+        status: r.status,
+        verifiedByUserId: r.verifiedByUserId ?? null,
+        verifiedAt: r.verifiedAt ? r.verifiedAt.toISOString() : null,
+      })),
+    };
+  }
+
+  @Post("period-locks/:period/employees/:employeeId/verify")
+  @CheckPolicy(AttendancePolicies.periodApprove)
+  @AuditLog({ action: "period_employee_verify", entity: "attendance" })
+  @ApiOperation({ summary: "Mark employee timesheet as done (verified)" })
+  @ApiOkResponse({ type: EmployeeVerificationDto })
+  async verifyEmployee(
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Param("period") period: string,
+    @Param("employeeId") employeeId: string,
+  ): Promise<EmployeeVerificationDto> {
+    await this.periodLockRepo.ensureEmployeeVerification(period, employeeId);
+    const row = await this.periodLockRepo.markEmployeeVerified(period, employeeId, req.user.id);
+    if (!row) {
+      throwInternalServer("Failed to verify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
+    }
+    return {
+      employeeId: row.employeeId,
+      status: row.status,
+      verifiedByUserId: row.verifiedByUserId ?? null,
+      verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
+    };
+  }
+
+  @Post("period-locks/:period/employees/:employeeId/unverify")
+  @CheckPolicy(AttendancePolicies.periodApprove)
+  @AuditLog({ action: "period_employee_unverify", entity: "attendance" })
+  @ApiOperation({ summary: "Revert employee timesheet back to draft" })
+  @ApiOkResponse({ type: EmployeeVerificationDto })
+  async unverifyEmployee(
+    @Param("period") period: string,
+    @Param("employeeId") employeeId: string,
+  ): Promise<EmployeeVerificationDto> {
+    const row = await this.periodLockRepo.unverifyEmployee(period, employeeId);
+    if (!row) {
+      throwInternalServer("Failed to unverify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
+    }
+    return {
+      employeeId: row.employeeId,
+      status: row.status,
+      verifiedByUserId: null,
+      verifiedAt: null,
+    };
   }
 
   @Get("timesheet-workspace")

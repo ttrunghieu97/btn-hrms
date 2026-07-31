@@ -11,7 +11,7 @@ import { TimesheetService } from "./services/timesheet.service";
 import { PeriodLockService } from "./services/period-lock.service";
 import { TimesheetSnapshotService } from "./services/timesheet-snapshot.service";
 import { AttendanceDayTransactionService } from "./services/attendance-day-transaction.service";
-import { PendingExceptionValidator } from "./services/period-close-validators";
+import { PendingExceptionValidator, PendingEmployeeVerificationValidator } from "./services/period-close-validators";
 import { PayrollReconciliationService } from "./services/payroll-reconciliation.service";
 import { AttendanceAdjustmentService } from "./services/attendance-adjustment.service";
 import { AttendanceHealthService } from "./services/attendance-health.service";
@@ -39,6 +39,7 @@ import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-work
     PeriodLockService,
     TimesheetSnapshotService,
     PendingExceptionValidator,
+    PendingEmployeeVerificationValidator,
     PayrollReconciliationService,
     AttendanceAdjustmentService,
     AttendanceHealthService,

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
+import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import {
   ATTENDANCE_READ_PORT,
   AttendanceReadPort,
@@ -28,6 +29,7 @@ export type TimesheetSnapshotData = {
 export class TimesheetSnapshotService {
   constructor(
     private readonly timekeepingRepo: AttendanceTimekeepingRepository,
+    private readonly periodLockRepo: AttendancePeriodLockRepository,
     @Inject(ATTENDANCE_READ_PORT)
     private readonly attendanceRead: AttendanceReadPort,
   ) {}
@@ -49,8 +51,15 @@ export class TimesheetSnapshotService {
     const from = `${period}-01`;
     const to = `${period}-${String(daysInMonth).padStart(2, "0")}`;
 
-    // Get employee IDs with attendance data in this period
-    const employeeIds = await this.timekeepingRepo.findEmployeeIdsWithSummariesInRange(from, to);
+    // Only HR-verified (done) employees enter the snapshot. Close is blocked
+    // while drafts remain, so this normally equals all employees with data —
+    // but guards periods closed before this feature or drafts that slipped in.
+    const verified = await this.periodLockRepo.listEmployeeVerification(period, tx);
+    const doneIds = new Set(
+      verified.filter((v) => v.status === "done").map((v) => v.employeeId),
+    );
+    const employeeIds = (await this.timekeepingRepo.findEmployeeIdsWithSummariesInRange(from, to))
+      .filter((id) => doneIds.has(id));
 
     if (employeeIds.length === 0) return 0;
 

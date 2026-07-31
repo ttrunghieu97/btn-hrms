@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
@@ -9,7 +9,10 @@ import {
   AttendancePeriodLock,
   ATTENDANCE_PERIOD_STATUS_OPEN,
 } from "../services/attendance-period-lock.service";
-import { attendancePeriodLocks } from "../../../../infrastructure/database/schema/attendance/tables";
+import {
+  attendancePeriodLocks,
+  attendancePeriodEmployeeVerification,
+} from "../../../../infrastructure/database/schema/attendance/tables";
 
 type PeriodLockInsert = typeof schema.attendancePeriodLocks.$inferInsert;
 
@@ -145,6 +148,83 @@ export class AttendancePeriodLockRepository {
       reason: row.reason,
       createdAt: row.createdAt,
     }));
+  }
+
+  // ─── Employee verification status ──────────────────────────────────
+
+  async ensureEmployeeVerification(
+    period: string,
+    employeeId: string,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const existing = await db.query.attendancePeriodEmployeeVerification.findFirst({
+      where: and(
+        eq(attendancePeriodEmployeeVerification.period, period),
+        eq(attendancePeriodEmployeeVerification.employeeId, employeeId),
+      ),
+    });
+    if (existing) return existing;
+
+    const [row] = await db
+      .insert(attendancePeriodEmployeeVerification)
+      .values({ period, employeeId })
+      .returning();
+    return row ?? null;
+  }
+
+  async markEmployeeVerified(
+    period: string,
+    employeeId: string,
+    userId: string,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .update(attendancePeriodEmployeeVerification)
+      .set({ status: "done", verifiedByUserId: userId, verifiedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(attendancePeriodEmployeeVerification.period, period),
+        eq(attendancePeriodEmployeeVerification.employeeId, employeeId),
+      ))
+      .returning();
+    return row ?? null;
+  }
+
+  async unverifyEmployee(
+    period: string,
+    employeeId: string,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .update(attendancePeriodEmployeeVerification)
+      .set({ status: "draft", verifiedByUserId: null, verifiedAt: null, updatedAt: new Date() })
+      .where(and(
+        eq(attendancePeriodEmployeeVerification.period, period),
+        eq(attendancePeriodEmployeeVerification.employeeId, employeeId),
+      ))
+      .returning();
+    return row ?? null;
+  }
+
+  async listEmployeeVerification(period: string, tx?: AppDatabase) {
+    const db = tx ?? this.db;
+    return db.query.attendancePeriodEmployeeVerification.findMany({
+      where: eq(attendancePeriodEmployeeVerification.period, period),
+    });
+  }
+
+  async countUnverifiedInPeriod(period: string, tx?: AppDatabase): Promise<number> {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .select({ value: count() })
+      .from(attendancePeriodEmployeeVerification)
+      .where(and(
+        eq(attendancePeriodEmployeeVerification.period, period),
+        eq(attendancePeriodEmployeeVerification.status, "draft"),
+      ));
+    return Number(row?.value ?? 0);
   }
 
   private toDomain(row: Record<string, any>): AttendancePeriodLock {

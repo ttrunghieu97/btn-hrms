@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
+import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import { registerCloseValidator } from "./period-lock.service";
 
 /**
@@ -34,6 +35,28 @@ export class PendingExceptionValidator implements OnModuleInit {
         return `Period has ${pendingCount} unresolved attendance exception(s)`;
       }
 
+      return null;
+    });
+  }
+}
+
+/**
+ * Blocks close while any employee with attendance data is still draft.
+ * HR must verify (mark done) every employee before the period can close —
+ * snapshots only include done employees.
+ */
+@Injectable()
+export class PendingEmployeeVerificationValidator implements OnModuleInit {
+  constructor(
+    private readonly periodLockRepo: AttendancePeriodLockRepository,
+  ) {}
+
+  onModuleInit() {
+    registerCloseValidator(async (period: string) => {
+      const unverified = await this.periodLockRepo.countUnverifiedInPeriod(period);
+      if (unverified > 0) {
+        return `Period has ${unverified} employee(s) not yet verified`;
+      }
       return null;
     });
   }

@@ -36,6 +36,9 @@ export class QueryTimesheetWorkspaceUseCase {
     const periodLock = await this.periodLockRepo.ensurePeriod(period);
     const availableActions = computeAvailableActions(periodLock.status, permissions);
 
+    const verificationRows = await this.periodLockRepo.listEmployeeVerification(period);
+    const verificationMap = new Map(verificationRows.map((v) => [v.employeeId, v.status]));
+
     const { employees: employeeRows, summaries: summaryRows, events: eventRows } =
       await this.timekeepingRepo.findWorkspaceData({
         departmentId: query.departmentId,
@@ -112,6 +115,7 @@ export class QueryTimesheetWorkspaceUseCase {
         completionRate: s.totalDays > 0 ? Math.round((s.workingDays / s.totalDays) * 100) : 0,
         lateCount: s.lateCount, leaveCount: s.leaveCount, absentCount: s.absentCount,
         otMinutes: s.otMinutes, workedMinutes: s.workedMinutes,
+        verificationStatus: verificationMap.get(r.id) ?? "draft",
       };
     });
 

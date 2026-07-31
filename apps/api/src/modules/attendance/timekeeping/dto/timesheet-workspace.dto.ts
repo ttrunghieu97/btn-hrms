@@ -48,6 +48,9 @@ export class TimesheetWorkspaceEmployeeDto {
 
   @ApiProperty()
   workedMinutes!: number;
+
+  @ApiProperty({ description: "HR verification status for the period", enum: ["draft", "done"] })
+  verificationStatus!: "draft" | "done";
 }
 
 export class TimesheetWorkspaceRecordDto {

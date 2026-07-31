@@ -21,7 +21,7 @@ export type CloseValidationResult = {
 
 export type PeriodAction = "review" | "approve" | "lock" | "unlock" | "close" | "reopen";
 
-const PERIOD_CLOSE_VALIDATORS: ((period: string) => Promise<string | null>)[] = [];
+export const PERIOD_CLOSE_VALIDATORS: ((period: string) => Promise<string | null>)[] = [];
 
 /**
  * Register a close validator. Called before a period transitions to CLOSED.

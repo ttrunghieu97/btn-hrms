@@ -100,6 +100,11 @@ export const attendancePeriodLockStatusEnum = pgEnum("attendance_period_lock_sta
   "closed",
 ]);
 
+export const attendancePeriodEmployeeVerificationStatusEnum = pgEnum(
+  "attendance_period_employee_verification_status_enum",
+  ["draft", "done"],
+);
+
 export const lunchDutyTypeEnum = pgEnum("lunch_duty_type_enum", [
   "indoor",
   "outdoor",

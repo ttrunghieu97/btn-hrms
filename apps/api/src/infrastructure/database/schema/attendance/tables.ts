@@ -34,6 +34,7 @@ import {
   attendanceExceptionTypeEnum,
   attendanceExceptionStatusEnum,
   attendancePeriodLockStatusEnum,
+  attendancePeriodEmployeeVerificationStatusEnum,
   reconciliationStatusEnum,
   reconciliationDiffTypeEnum,
   attendanceAdjustmentStatusEnum,
@@ -689,6 +690,44 @@ export const attendancePeriodHistory = pgTable(
   (table) => ({
     idxPeriod: index("idx_attendance_period_history_period").on(table.period),
     idxCreatedAt: index("idx_attendance_period_history_created_at").on(table.createdAt),
+  }),
+);
+
+/**
+ * Per-employee verification status within a period.
+ * HR marks an employee done after checking/editing their timesheet.
+ * Period close is blocked until every employee with attendance data is done;
+ * snapshots only include done employees.
+ */
+export const attendancePeriodEmployeeVerification = pgTable(
+  "attendance_period_employee_verification",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    period: text("period").notNull(), // "2026-08"
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    status: attendancePeriodEmployeeVerificationStatusEnum("status")
+      .default("draft")
+      .notNull(),
+    verifiedByUserId: uuid("verified_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    uqPeriodEmployee: unique(
+      "uq_attendance_period_employee_verification",
+    ).on(table.period, table.employeeId),
+    idxPeriod: index(
+      "idx_attendance_period_employee_verification_period",
+    ).on(table.period),
   }),
 );
 

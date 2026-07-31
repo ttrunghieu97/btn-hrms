@@ -97,6 +97,30 @@ export class BatchTimesheetResponseDto {
   errors!: BatchErrorDto[];
 }
 
+// ─── Employee Verification DTOs ───────────────────────────────────────
+
+export class EmployeeVerificationDto {
+  @ApiProperty()
+  employeeId!: string;
+
+  @ApiProperty({ enum: ["draft", "done"] })
+  status!: "draft" | "done";
+
+  @ApiProperty({ type: String, nullable: true })
+  verifiedByUserId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  verifiedAt!: string | null;
+}
+
+export class EmployeeVerificationListDto {
+  @ApiProperty()
+  period!: string;
+
+  @ApiProperty({ type: [EmployeeVerificationDto] })
+  employees!: EmployeeVerificationDto[];
+}
+
 export class PeriodLockResponseDto {
   @ApiProperty()
   id!: string;

@@ -17,6 +17,7 @@ import { branches, locations } from "../org/tables";
 import { users } from "../identity/tables";
 import {
   attendancePeriodHistory,
+  attendancePeriodEmployeeVerification,
   attendancePayrollReconciliations,
   attendancePayrollReconciliationItems,
   attendanceAdjustments,
@@ -232,6 +233,20 @@ export const attendanceAdjustmentItemsRelations = relations(
     adjustment: one(attendanceAdjustments, {
       fields: [attendanceAdjustmentItems.adjustmentId],
       references: [attendanceAdjustments.id],
+    }),
+  }),
+);
+
+export const attendancePeriodEmployeeVerificationRelations = relations(
+  attendancePeriodEmployeeVerification,
+  ({ one }) => ({
+    employee: one(employees, {
+      fields: [attendancePeriodEmployeeVerification.employeeId],
+      references: [employees.id],
+    }),
+    verifiedByUser: one(users, {
+      fields: [attendancePeriodEmployeeVerification.verifiedByUserId],
+      references: [users.id],
     }),
   }),
 );

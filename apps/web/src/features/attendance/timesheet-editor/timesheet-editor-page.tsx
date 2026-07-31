@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useTimesheet } from './hooks/use-timesheet';
 import { useDirtyCells } from './hooks/use-dirty-cells';
 import { usePeriodLock } from './hooks/use-period-lock';
+import { useVerifyEmployee } from './hooks/use-verify-employee';
 import { useFillHandler } from './hooks/use-fill-handler';
 import { daysInMonth, cellKey } from './types';
 import type { TimesheetWorkspaceRecord, PeriodStatus } from './types';
@@ -321,6 +322,7 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
   const ts = useTimesheet(defaultPeriod);
   const dc = useDirtyCells();
   const pl = usePeriodLock();
+  const ve = useVerifyEmployee(ts.reload);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
@@ -566,6 +568,7 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
                   <span className="flex shrink-0 flex-col items-end gap-0.5">
                     <span className={`text-xs font-semibold ${pct === 100 ? 'text-emerald-400' : pct > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{emp.workingDays}/{emp.totalDays}</span>
                     <span className={`text-[9px] font-medium uppercase ${pct === 100 ? 'text-emerald-500' : pct > 0 ? 'text-amber-500' : 'text-slate-600'}`}>{pct === 100 ? 'COMPLETE' : pct > 0 ? 'IN PROGRESS' : 'NOT STARTED'}</span>
+                    <span className={`rounded px-1 text-[9px] font-semibold uppercase ${emp.verificationStatus === 'done' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/40 text-slate-400'}`}>{emp.verificationStatus === 'done' ? 'DONE' : 'DRAFT'}</span>
                   </span>
                 </button>
               );
@@ -598,6 +601,14 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
                     <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${selected.completionRate}%` }} />
                   </div>
                   <span className="text-slate-400">{selected.workingDays}/{selected.totalDays}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${selected.verificationStatus === 'done' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/40 text-slate-400'}`}>{selected.verificationStatus === 'done' ? 'DONE' : 'DRAFT'}</span>
+                  {selected.verificationStatus === 'done' ? (
+                    <button type="button" onClick={() => ve.unverify(ts.period, selected.id)} disabled={ve.verifying}
+                      className="rounded-md border border-rose-600/50 bg-rose-950/30 px-3 py-1 text-xs font-semibold text-rose-400 hover:bg-rose-950/50 disabled:opacity-50">Unverify</button>
+                  ) : (
+                    <button type="button" onClick={() => ve.verify(ts.period, selected.id)} disabled={ve.verifying}
+                      className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">{ve.verifying ? 'Saving...' : 'Mark Done'}</button>
+                  )}
                 </div>
               </div>
               {/* Table */}
@@ -625,6 +636,13 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
         <div className="flex items-center justify-between gap-3 rounded-lg border border-red-800/40 bg-red-950/20 p-3">
           <p className="text-xs text-red-300">{pl.lockError}</p>
           <button type="button" onClick={pl.clearLockError} className="text-xs text-slate-500 hover:text-slate-300">✕</button>
+        </div>
+      )}
+
+      {ve.verifyError && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-800/40 bg-red-950/20 p-3">
+          <p className="text-xs text-red-300">{ve.verifyError}</p>
+          <button type="button" onClick={ve.clearVerifyError} className="text-xs text-slate-500 hover:text-slate-300">✕</button>
         </div>
       )}
 

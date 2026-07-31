@@ -5,6 +5,7 @@ export interface TimesheetWorkspaceEmployee {
   workingDays: number; totalDays: number; completionRate: number;
   lateCount: number; leaveCount: number; absentCount: number;
   otMinutes: number; workedMinutes: number;
+  verificationStatus: 'draft' | 'done';
 }
 
 export interface TimesheetWorkspacePeriodTotals {
