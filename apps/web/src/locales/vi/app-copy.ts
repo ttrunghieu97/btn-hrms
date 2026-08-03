@@ -2278,7 +2278,26 @@ export const assetManagementUiCopy = {
     returnTitle: 'Thu hồi tài sản',
     returnDescription: 'Thu hồi tài sản đang sử dụng.',
     toastSuccess: 'Đã cấp phát tài sản',
-    toastSuccessReturn: 'Đã thu hồi tài sản'
+    toastSuccessReturn: 'Đã thu hồi tài sản',
+    historyTitle: 'Lịch sử tài sản',
+    historyEmpty: 'Chưa có lịch sử nào cho tài sản này.',
+    historyColumns: {
+      kind: 'Sự kiện',
+      occurredAt: 'Thời gian',
+      detail: 'Chi tiết',
+      actor: 'Người thực hiện'
+    },
+    historyKind: {
+      created: 'Tạo mới',
+      received: 'Nhập kho',
+      reserved: 'Đặt trước',
+      issued: 'Cấp phát',
+      returned: 'Thu hồi',
+      transferred: 'Điều chuyển',
+      maintenance: 'Bảo trì',
+      disposed: 'Thanh lý',
+      adjusted: 'Điều chỉnh'
+    }
   },
   assetStatus: {
     available: 'Sẵn sàng',

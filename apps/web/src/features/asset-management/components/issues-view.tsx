@@ -3,19 +3,25 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
-import { issuesQueryOptions, assetUnitsQueryOptions } from '../api/queries';
+import {
+  issuesQueryOptions,
+  assetUnitsQueryOptions,
+  assetHistoryQueryOptions,
+} from '../api/queries';
 import { formatDateVN } from '@/lib/date';
 import { useIssueAsset, useReturnAsset } from '../api/mutations';
 import type {
   AssetIssueListFilters,
   AssetUnitListFilters,
 } from '../queries/asset-queries';
-import { extractList, extractPagination } from '@/lib/api-extract';
+import { extractList, extractPagination, unwrapData } from '@/lib/api-extract';
 import {
   ISSUE_LINE_STATUS_MAP,
+  HISTORY_KIND_MAP,
   type AssetIssueRow,
   type AssetIssueLineRow,
   type AssetUnitRow,
+  type AssetHistoryEntryRow,
 } from './status-maps';
 import {
   notifyMutationError,
@@ -101,6 +107,15 @@ export function AssetIssuesView() {
 
   const issueMutation = useIssueAsset();
   const returnMutation = useReturnAsset();
+
+  const [historyAssetId, setHistoryAssetId] = React.useState<string | null>(null);
+  const { data: historyData, isFetching: historyLoading } = useQuery(
+    assetHistoryQueryOptions(historyAssetId ?? ''),
+  );
+  const historyEntries = React.useMemo(() => {
+    const result = unwrapData<{ entries: AssetHistoryEntryRow[] }>(historyData);
+    return result?.entries ?? [];
+  }, [historyData]);
 
   // find the currently-selected unit's assetTypeId + tracked flag for the dto
   const selectedUnit = units.find((u) => u.id === issueUnitId);
@@ -345,9 +360,20 @@ export function AssetIssuesView() {
                     {(row.lines ?? []).length > 0
                       ? (row.lines ?? []).map((l) => l.assetId ?? l.assetTypeId ?? l.id).join(', ')
                       : '—'}
-                    <div className='text-xs text-muted-foreground'>
+                    <div className='mt-1 flex flex-wrap items-center gap-1.5'>
                       {(row.lines ?? []).map((l) => (
-                        <StatusBadge key={l.id} status={l.status ?? ''} mapping={ISSUE_LINE_STATUS_MAP} />
+                        <div key={l.id} className='flex items-center gap-1.5'>
+                          <StatusBadge status={l.status ?? ''} mapping={ISSUE_LINE_STATUS_MAP} />
+                          {l.assetId && (
+                            <button
+                              type='button'
+                              className='text-xs text-primary underline-offset-2 hover:underline'
+                              onClick={() => setHistoryAssetId(l.assetId!)}
+                            >
+                              {copy.historyTitle}
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </TableCell>
@@ -386,6 +412,44 @@ export function AssetIssuesView() {
           </Button>
         </div>
       ) : null}
+
+      <Dialog open={!!historyAssetId} onOpenChange={(open) => !open && setHistoryAssetId(null)}>
+        <DialogContent className='sm:max-w-[520px]'>
+          <DialogHeader>
+            <DialogTitle>{copy.historyTitle}</DialogTitle>
+            <DialogDescription>
+              {historyAssetId ? `${historyAssetId}` : '—'}
+            </DialogDescription>
+          </DialogHeader>
+          {historyLoading ? (
+            <div className='flex justify-center py-8'>
+              <Icons.spinner className='h-5 w-5 animate-spin' />
+            </div>
+          ) : historyEntries.length === 0 ? (
+            <p className='py-6 text-center text-sm text-muted-foreground'>{copy.historyEmpty}</p>
+          ) : (
+            <div className='max-h-[50vh] space-y-3 overflow-y-auto'>
+              {historyEntries.map((h) => (
+                <div
+                  key={h.id ?? `${h.kind}-${h.occurredAt}`}
+                  className='flex items-start gap-3 rounded-md border p-3'
+                >
+                  <div className='mt-0.5 shrink-0'>
+                    <StatusBadge status={h.kind ?? ''} mapping={HISTORY_KIND_MAP} />
+                  </div>
+                  <div className='min-w-0 flex-1 text-sm'>
+                    <p className='break-words text-muted-foreground'>{h.detail ?? '—'}</p>
+                    <p className='mt-0.5 text-xs text-muted-foreground'>
+                      {h.occurredAt ? formatDateVN(h.occurredAt) : '—'}
+                      {h.actorUserId ? ` · ${h.actorUserId.slice(0, 8)}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

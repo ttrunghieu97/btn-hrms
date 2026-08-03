@@ -26,6 +26,33 @@ export const ISSUE_LINE_STATUS_MAP: StatusMap = {
   returned: { label: assetManagementUiCopy.issueLineStatus.returned, variant: 'outline' },
 };
 
+export const HISTORY_KIND_MAP: StatusMap = {
+  created: { label: assetManagementUiCopy.issues.historyKind.created, variant: 'default' },
+  received: { label: assetManagementUiCopy.issues.historyKind.received, variant: 'default' },
+  reserved: { label: assetManagementUiCopy.issues.historyKind.reserved, variant: 'secondary' },
+  issued: { label: assetManagementUiCopy.issues.historyKind.issued, variant: 'secondary' },
+  returned: { label: assetManagementUiCopy.issues.historyKind.returned, variant: 'outline' },
+  transferred: { label: assetManagementUiCopy.issues.historyKind.transferred, variant: 'secondary' },
+  maintenance: { label: assetManagementUiCopy.issues.historyKind.maintenance, variant: 'outline' },
+  disposed: { label: assetManagementUiCopy.issues.historyKind.disposed, variant: 'destructive' },
+  adjusted: { label: assetManagementUiCopy.issues.historyKind.adjusted, variant: 'outline' },
+};
+
+export interface AssetHistoryEntryRow {
+  id: string;
+  kind?: string;
+  assetId?: string;
+  assetTypeId?: string;
+  issueId?: string | null;
+  issueLineId?: string | null;
+  employeeId?: string | null;
+  quantityDelta?: number | null;
+  detail?: string | null;
+  occurredAt?: string;
+  actorUserId?: string | null;
+  createdAt?: string;
+}
+
 export interface AssetTypeRow {
   id: string;
   name?: string;
