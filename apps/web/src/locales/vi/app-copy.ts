@@ -2249,12 +2249,21 @@ export const assetManagementUiCopy = {
     },
     fields: {
       reason: 'Lý do yêu cầu',
-      neededBy: 'Cần trước ngày'
+      neededBy: 'Cần trước ngày',
+      assetType: 'Loại tài sản',
+      quantity: 'Số lượng'
     },
     actions: {
       submit: 'Gửi yêu cầu',
-      cancel: 'Hủy yêu cầu'
-    }
+      cancel: 'Hủy yêu cầu',
+      submitConfirm: 'Xác nhận gửi yêu cầu?',
+      cancelConfirm: 'Hủy yêu cầu này?'
+    },
+    dialogTitle: 'Tạo yêu cầu tài sản',
+    dialogDescription: 'Nhập loại tài sản và số lượng cần yêu cầu.',
+    toastSuccess: 'Đã tạo yêu cầu',
+    toastSuccessSubmit: 'Đã gửi yêu cầu',
+    toastSuccessCancel: 'Đã hủy yêu cầu'
   },
   issues: {
     title: 'Cấp phát tài sản',

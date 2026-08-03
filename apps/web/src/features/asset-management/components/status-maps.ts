@@ -87,6 +87,15 @@ export interface AssetRequestRow {
   reason?: string | null;
   neededByDate?: string | null;
   createdAt?: string;
+  lines?: AssetRequestLineRow[];
+}
+
+export interface AssetRequestLineRow {
+  id: string;
+  requestId?: string;
+  assetTypeId?: string;
+  quantity?: number;
+  note?: string | null;
 }
 
 export interface AssetIssueRow {
