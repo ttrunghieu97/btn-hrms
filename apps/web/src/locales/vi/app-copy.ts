@@ -2233,7 +2233,13 @@ export const assetManagementUiCopy = {
     fields: {
       quantity: 'Số lượng',
       reason: 'Lý do'
-    }
+    },
+    dialogTitle: 'Nhập kho',
+    dialogDescription: 'Nhập thêm tài sản vào kho.',
+    adjustTitle: 'Điều chỉnh kho',
+    adjustDescription: 'Điều chỉnh tồn kho theo delta (+/-).',
+    toastSuccess: 'Đã nhập kho',
+    toastSuccessAdjust: 'Đã điều chỉnh kho'
   },
   requests: {
     title: 'Yêu cầu tài sản',
