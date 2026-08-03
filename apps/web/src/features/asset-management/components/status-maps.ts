@@ -67,12 +67,16 @@ export interface AssetIssueRow {
   employeeId?: string;
   issuedAt?: string;
   createdAt?: string;
+  lines?: AssetIssueLineRow[];
 }
 
 export interface AssetIssueLineRow {
   id: string;
   issueId?: string;
   assetUnitId?: string;
+  assetId?: string | null;
+  assetTypeId?: string;
+  quantity?: number;
   status?: string;
   returnedAt?: string | null;
 }

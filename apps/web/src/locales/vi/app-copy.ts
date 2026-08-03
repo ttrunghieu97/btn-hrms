@@ -2269,8 +2269,16 @@ export const assetManagementUiCopy = {
     },
     fields: {
       condition: 'Tình trạng',
-      notes: 'Ghi chú'
-    }
+      notes: 'Ghi chú',
+      assetUnit: 'Tài sản',
+      quantity: 'Số lượng'
+    },
+    dialogTitle: 'Cấp phát tài sản',
+    dialogDescription: 'Tạo phiếu cấp phát tài sản cho nhân viên.',
+    returnTitle: 'Thu hồi tài sản',
+    returnDescription: 'Thu hồi tài sản đang sử dụng.',
+    toastSuccess: 'Đã cấp phát tài sản',
+    toastSuccessReturn: 'Đã thu hồi tài sản'
   },
   assetStatus: {
     available: 'Sẵn sàng',
