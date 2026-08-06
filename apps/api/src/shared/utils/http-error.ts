@@ -11,7 +11,7 @@ import { type ErrorCode } from "../constants/error-codes";
 
 export type ErrorPayload = {
   message: string;
-  error: ErrorCode | string;
+  error: string;
   details?: unknown;
 };
 
@@ -20,7 +20,12 @@ export function buildError(
   error: ErrorCode | string,
   details?: unknown,
 ): ErrorPayload {
-  return { message, error, details };
+  // For custom error strings, sanitize them
+  return {
+    message: message || 'An error occurred',
+    error: error || 'error',
+    details,
+  };
 }
 
 export const errorBuilders = {
@@ -31,6 +36,8 @@ export const errorBuilders = {
   unauthorized: (message: string, error: string, details?: unknown) =>
     buildError(message, error, details),
   badRequest: (message: string, error: string, details?: unknown) =>
+    buildError(message, error, details),
+  conflict: (message: string, error: string, details?: unknown) =>
     buildError(message, error, details),
 };
 

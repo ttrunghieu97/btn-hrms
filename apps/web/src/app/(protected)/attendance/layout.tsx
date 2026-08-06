@@ -34,25 +34,12 @@ export default function AttendanceLayout({ children }: { children: React.ReactNo
   ]);
 
   const tabs = [
-    { href: '/attendance', label: 'Chấm công của tôi' },
-    { href: '/attendance/history', label: 'Lịch sử chấm công' },
-    { href: '/attendance/summary', label: 'Tổng hợp công', adminOnly: true },
-    { href: '/attendance/management', label: 'Quản lý chấm công', adminOnly: true },
-    { href: '/attendance/analytics', label: 'Báo cáo & Phân tích', adminOnly: true },
-    { href: '/attendance/management/timesheet', label: 'Timesheet', visible: canTimesheet },
+    { href: '/attendance/management/timesheet', label: 'Timesheet' },
   ];
-
-  const visibleTabs = tabs
-    .filter((tab) => {
-      if ('visible' in tab) return tab.visible;
-      if (tab.adminOnly) return canAdmin;
-      return true;
-    })
-    .map(({ href, label }) => ({ href, label } as const));
 
   return (
     <div className='flex min-h-0 flex-1 flex-col'>
-      <DomainHeader tabs={visibleTabs} />
+      <DomainHeader tabs={tabs} />
       <div className='flex min-h-0 flex-1 flex-col p-4 md:px-6'>
         <ErrorBoundary feature='attendance'>{children}</ErrorBoundary>
       </div>

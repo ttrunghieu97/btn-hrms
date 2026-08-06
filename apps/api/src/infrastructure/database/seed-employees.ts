@@ -50,7 +50,6 @@ async function seedEmployees() {
           username: emp.username, email: emp.email, passwordHash,
           isActive: true, isSuperAdmin: emp.username === "admin",
         }).returning())[0]!.id;
-        console.log(`  Created user: ${emp.username}`);
       }
 
       // Get existing employee record (skip if already exists)

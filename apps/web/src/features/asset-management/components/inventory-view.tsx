@@ -49,7 +49,9 @@ export function InventoryView() {
   const filters: AssetInventoryListFilters = {
     page: params.page,
     limit: 20,
-    ...(params.status ? { status: params.status as any } : {}),
+    ...(params.status
+      ? { status: params.status as "active" | "retired" }
+      : {}),
   };
 
   const { data, error, isLoading, refetch } = useQuery(

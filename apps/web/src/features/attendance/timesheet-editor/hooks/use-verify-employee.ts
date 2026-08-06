@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { showToast } from '@/lib/toast';
 
 const BASE_URL = '/api/v1/timekeeping/period-locks';
 
@@ -17,14 +18,21 @@ export function useVerifyEmployee(reload: () => Promise<void>) {
       if (!res.ok) {
         const text = await res.text();
         let message = text;
-        try { const body = JSON.parse(text); message = body?.message ?? body?.error ?? text; } catch { /* keep raw */ }
+        try {
+          const parsed = JSON.parse(text);
+          const errObj = parsed?.error ?? parsed;
+          message = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message ?? text);
+        } catch { /* keep raw */ }
         setVerifyError(message);
+        showToast.error(message);
         return false;
       }
       await reload();
       return true;
     } catch (err: any) {
-      setVerifyError(err?.message ?? `Failed to ${action} employee`);
+      const msg = err?.message ?? `Failed to ${action} employee`;
+      setVerifyError(msg);
+      showToast.error(msg);
       return false;
     } finally {
       setVerifying(false);

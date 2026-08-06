@@ -23,7 +23,7 @@ export class ReconcileAttendanceDayUseCase {
 
     const events = employeeId
       ? await this.eventRepo.findByEmployeeAndRange(employeeId, dayStart, dayEnd)
-      : [];
+      : await this.eventRepo.findByEmployeeIdsAndRange([], dayStart, dayEnd);
 
     const assignments: AssignmentWindow[] = [];
     if (employeeId) {

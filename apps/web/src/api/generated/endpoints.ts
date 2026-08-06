@@ -148,6 +148,8 @@ import type {
   EmployeeStatusHistoryEnvelopeDto,
   EmployeeTimelineControllerFindAllParams,
   EmployeeUsernameCheckEnvelopeDto,
+  EmployeeVerificationDto,
+  EmployeeVerificationListDto,
   EmployeesControllerFindAllParams,
   EmployeesControllerFindOneParams,
   EnrollEmployeeDto,
@@ -14768,6 +14770,172 @@ export const useTimekeepingControllerClosePeriod = <TError = unknown,
     }
 
 /**
+ * @summary Mark period as in_review
+ */
+export type timekeepingControllerReviewPeriodResponse200 = {
+  data: void
+  status: 200
+}
+
+export type timekeepingControllerReviewPeriodResponseSuccess = (timekeepingControllerReviewPeriodResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerReviewPeriodResponse = (timekeepingControllerReviewPeriodResponseSuccess)
+
+export const getTimekeepingControllerReviewPeriodUrl = () => {
+
+
+
+
+  return `/api/v1/timekeeping/period-locks/review`
+}
+
+export const timekeepingControllerReviewPeriod = async (lockPeriodDto: LockPeriodDto, options?: RequestInit): Promise<timekeepingControllerReviewPeriodResponse> => {
+
+  return customFetch<timekeepingControllerReviewPeriodResponse>(getTimekeepingControllerReviewPeriodUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lockPeriodDto,)
+  }
+);}
+
+
+
+
+export const getTimekeepingControllerReviewPeriodMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>, TError,{data: LockPeriodDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>, TError,{data: LockPeriodDto}, TContext> => {
+
+const mutationKey = ['timekeepingControllerReviewPeriod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>, {data: LockPeriodDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  timekeepingControllerReviewPeriod(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TimekeepingControllerReviewPeriodMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>>
+    export type TimekeepingControllerReviewPeriodMutationBody = LockPeriodDto
+    export type TimekeepingControllerReviewPeriodMutationError = unknown
+
+    /**
+ * @summary Mark period as in_review
+ */
+export const useTimekeepingControllerReviewPeriod = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>, TError,{data: LockPeriodDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof timekeepingControllerReviewPeriod>>,
+        TError,
+        {data: LockPeriodDto},
+        TContext
+      > => {
+      return useMutation(getTimekeepingControllerReviewPeriodMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Approve period — transitions to locked
+ */
+export type timekeepingControllerApprovePeriodResponse200 = {
+  data: void
+  status: 200
+}
+
+export type timekeepingControllerApprovePeriodResponseSuccess = (timekeepingControllerApprovePeriodResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerApprovePeriodResponse = (timekeepingControllerApprovePeriodResponseSuccess)
+
+export const getTimekeepingControllerApprovePeriodUrl = () => {
+
+
+
+
+  return `/api/v1/timekeeping/period-locks/approve`
+}
+
+export const timekeepingControllerApprovePeriod = async (lockPeriodDto: LockPeriodDto, options?: RequestInit): Promise<timekeepingControllerApprovePeriodResponse> => {
+
+  return customFetch<timekeepingControllerApprovePeriodResponse>(getTimekeepingControllerApprovePeriodUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lockPeriodDto,)
+  }
+);}
+
+
+
+
+export const getTimekeepingControllerApprovePeriodMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>, TError,{data: LockPeriodDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>, TError,{data: LockPeriodDto}, TContext> => {
+
+const mutationKey = ['timekeepingControllerApprovePeriod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>, {data: LockPeriodDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  timekeepingControllerApprovePeriod(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TimekeepingControllerApprovePeriodMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>>
+    export type TimekeepingControllerApprovePeriodMutationBody = LockPeriodDto
+    export type TimekeepingControllerApprovePeriodMutationError = unknown
+
+    /**
+ * @summary Approve period — transitions to locked
+ */
+export const useTimekeepingControllerApprovePeriod = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>, TError,{data: LockPeriodDto}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof timekeepingControllerApprovePeriod>>,
+        TError,
+        {data: LockPeriodDto},
+        TContext
+      > => {
+      return useMutation(getTimekeepingControllerApprovePeriodMutationOptions(options), queryClient);
+    }
+
+/**
  * @summary Reopen a closed attendance period (privileged)
  */
 export type timekeepingControllerReopenPeriodResponse200 = {
@@ -14848,6 +15016,360 @@ export const useTimekeepingControllerReopenPeriod = <TError = unknown,
         TContext
       > => {
       return useMutation(getTimekeepingControllerReopenPeriodMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary List employee verification status for a period
+ */
+export type timekeepingControllerListEmployeeVerificationResponse200 = {
+  data: EmployeeVerificationListDto
+  status: 200
+}
+
+export type timekeepingControllerListEmployeeVerificationResponseSuccess = (timekeepingControllerListEmployeeVerificationResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerListEmployeeVerificationResponse = (timekeepingControllerListEmployeeVerificationResponseSuccess)
+
+export const getTimekeepingControllerListEmployeeVerificationUrl = (period: string,) => {
+
+
+
+
+  return `/api/v1/timekeeping/period-locks/${period}/employees`
+}
+
+export const timekeepingControllerListEmployeeVerification = async (period: string, options?: RequestInit): Promise<timekeepingControllerListEmployeeVerificationResponse> => {
+
+  return customFetch<timekeepingControllerListEmployeeVerificationResponse>(getTimekeepingControllerListEmployeeVerificationUrl(period),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getTimekeepingControllerListEmployeeVerificationInfiniteQueryKey = (period: string,) => {
+    return [
+    'infinite', `/api/v1/timekeeping/period-locks/${period}/employees`
+    ] as const;
+    }
+
+export const getTimekeepingControllerListEmployeeVerificationQueryKey = (period: string,) => {
+    return [
+    `/api/v1/timekeeping/period-locks/${period}/employees`
+    ] as const;
+    }
+
+
+export const getTimekeepingControllerListEmployeeVerificationInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>, TError = unknown>(period: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTimekeepingControllerListEmployeeVerificationInfiniteQueryKey(period);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>> = ({ signal }) => timekeepingControllerListEmployeeVerification(period, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(period), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TimekeepingControllerListEmployeeVerificationInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>
+export type TimekeepingControllerListEmployeeVerificationInfiniteQueryError = unknown
+
+
+export function useTimekeepingControllerListEmployeeVerificationInfinite<TData = InfiniteData<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>, TError = unknown>(
+ period: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>,
+          TError,
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTimekeepingControllerListEmployeeVerificationInfinite<TData = InfiniteData<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>,
+          TError,
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTimekeepingControllerListEmployeeVerificationInfinite<TData = InfiniteData<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List employee verification status for a period
+ */
+
+export function useTimekeepingControllerListEmployeeVerificationInfinite<TData = InfiniteData<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getTimekeepingControllerListEmployeeVerificationInfiniteQueryOptions(period,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const getTimekeepingControllerListEmployeeVerificationQueryOptions = <TData = Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError = unknown>(period: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTimekeepingControllerListEmployeeVerificationQueryKey(period);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>> = ({ signal }) => timekeepingControllerListEmployeeVerification(period, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(period), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TimekeepingControllerListEmployeeVerificationQueryResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>>
+export type TimekeepingControllerListEmployeeVerificationQueryError = unknown
+
+
+export function useTimekeepingControllerListEmployeeVerification<TData = Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError = unknown>(
+ period: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>,
+          TError,
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTimekeepingControllerListEmployeeVerification<TData = Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>,
+          TError,
+          Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTimekeepingControllerListEmployeeVerification<TData = Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List employee verification status for a period
+ */
+
+export function useTimekeepingControllerListEmployeeVerification<TData = Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError = unknown>(
+ period: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof timekeepingControllerListEmployeeVerification>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getTimekeepingControllerListEmployeeVerificationQueryOptions(period,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * @summary Mark employee timesheet as done (verified)
+ */
+export type timekeepingControllerVerifyEmployeeResponse200 = {
+  data: EmployeeVerificationDto
+  status: 200
+}
+
+export type timekeepingControllerVerifyEmployeeResponseSuccess = (timekeepingControllerVerifyEmployeeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerVerifyEmployeeResponse = (timekeepingControllerVerifyEmployeeResponseSuccess)
+
+export const getTimekeepingControllerVerifyEmployeeUrl = (period: string,
+    employeeId: string,) => {
+
+
+
+
+  return `/api/v1/timekeeping/period-locks/${period}/employees/${employeeId}/verify`
+}
+
+export const timekeepingControllerVerifyEmployee = async (period: string,
+    employeeId: string, options?: RequestInit): Promise<timekeepingControllerVerifyEmployeeResponse> => {
+
+  return customFetch<timekeepingControllerVerifyEmployeeResponse>(getTimekeepingControllerVerifyEmployeeUrl(period,employeeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTimekeepingControllerVerifyEmployeeMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>, TError,{period: string;employeeId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>, TError,{period: string;employeeId: string}, TContext> => {
+
+const mutationKey = ['timekeepingControllerVerifyEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>, {period: string;employeeId: string}> = (props) => {
+          const {period,employeeId} = props ?? {};
+
+          return  timekeepingControllerVerifyEmployee(period,employeeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TimekeepingControllerVerifyEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>>
+
+    export type TimekeepingControllerVerifyEmployeeMutationError = unknown
+
+    /**
+ * @summary Mark employee timesheet as done (verified)
+ */
+export const useTimekeepingControllerVerifyEmployee = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>, TError,{period: string;employeeId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof timekeepingControllerVerifyEmployee>>,
+        TError,
+        {period: string;employeeId: string},
+        TContext
+      > => {
+      return useMutation(getTimekeepingControllerVerifyEmployeeMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Revert employee timesheet back to draft
+ */
+export type timekeepingControllerUnverifyEmployeeResponse200 = {
+  data: EmployeeVerificationDto
+  status: 200
+}
+
+export type timekeepingControllerUnverifyEmployeeResponseSuccess = (timekeepingControllerUnverifyEmployeeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerUnverifyEmployeeResponse = (timekeepingControllerUnverifyEmployeeResponseSuccess)
+
+export const getTimekeepingControllerUnverifyEmployeeUrl = (period: string,
+    employeeId: string,) => {
+
+
+
+
+  return `/api/v1/timekeeping/period-locks/${period}/employees/${employeeId}/unverify`
+}
+
+export const timekeepingControllerUnverifyEmployee = async (period: string,
+    employeeId: string, options?: RequestInit): Promise<timekeepingControllerUnverifyEmployeeResponse> => {
+
+  return customFetch<timekeepingControllerUnverifyEmployeeResponse>(getTimekeepingControllerUnverifyEmployeeUrl(period,employeeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTimekeepingControllerUnverifyEmployeeMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>, TError,{period: string;employeeId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>, TError,{period: string;employeeId: string}, TContext> => {
+
+const mutationKey = ['timekeepingControllerUnverifyEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>, {period: string;employeeId: string}> = (props) => {
+          const {period,employeeId} = props ?? {};
+
+          return  timekeepingControllerUnverifyEmployee(period,employeeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TimekeepingControllerUnverifyEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>>
+
+    export type TimekeepingControllerUnverifyEmployeeMutationError = unknown
+
+    /**
+ * @summary Revert employee timesheet back to draft
+ */
+export const useTimekeepingControllerUnverifyEmployee = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>, TError,{period: string;employeeId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof timekeepingControllerUnverifyEmployee>>,
+        TError,
+        {period: string;employeeId: string},
+        TContext
+      > => {
+      return useMutation(getTimekeepingControllerUnverifyEmployeeMutationOptions(options), queryClient);
     }
 
 /**
@@ -34467,6 +34989,88 @@ export const usePayrollRunsControllerGenerate = <TError = unknown,
     }
 
 /**
+ * @summary Submit payroll run for approval
+ */
+export type payrollRunsControllerRequestApprovalResponse200 = {
+  data: PayrollRunEnvelopeDto
+  status: 200
+}
+
+export type payrollRunsControllerRequestApprovalResponseSuccess = (payrollRunsControllerRequestApprovalResponse200) & {
+  headers: Headers;
+};
+;
+
+export type payrollRunsControllerRequestApprovalResponse = (payrollRunsControllerRequestApprovalResponseSuccess)
+
+export const getPayrollRunsControllerRequestApprovalUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/payroll/runs/${id}/request-approval`
+}
+
+export const payrollRunsControllerRequestApproval = async (id: string, options?: RequestInit): Promise<payrollRunsControllerRequestApprovalResponse> => {
+
+  return customFetch<payrollRunsControllerRequestApprovalResponse>(getPayrollRunsControllerRequestApprovalUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPayrollRunsControllerRequestApprovalMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['payrollRunsControllerRequestApproval'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  payrollRunsControllerRequestApproval(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayrollRunsControllerRequestApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>>
+
+    export type PayrollRunsControllerRequestApprovalMutationError = unknown
+
+    /**
+ * @summary Submit payroll run for approval
+ */
+export const usePayrollRunsControllerRequestApproval = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof payrollRunsControllerRequestApproval>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getPayrollRunsControllerRequestApprovalMutationOptions(options), queryClient);
+    }
+
+/**
  * @summary Approve payroll run
  */
 export type payrollRunsControllerApproveResponse200 = {
@@ -34546,6 +35150,88 @@ export const usePayrollRunsControllerApprove = <TError = unknown,
         TContext
       > => {
       return useMutation(getPayrollRunsControllerApproveMutationOptions(options), queryClient);
+    }
+
+/**
+ * @summary Reject payroll run (returns to draft)
+ */
+export type payrollRunsControllerRejectResponse200 = {
+  data: PayrollRunEnvelopeDto
+  status: 200
+}
+
+export type payrollRunsControllerRejectResponseSuccess = (payrollRunsControllerRejectResponse200) & {
+  headers: Headers;
+};
+;
+
+export type payrollRunsControllerRejectResponse = (payrollRunsControllerRejectResponseSuccess)
+
+export const getPayrollRunsControllerRejectUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/payroll/runs/${id}/reject`
+}
+
+export const payrollRunsControllerReject = async (id: string, options?: RequestInit): Promise<payrollRunsControllerRejectResponse> => {
+
+  return customFetch<payrollRunsControllerRejectResponse>(getPayrollRunsControllerRejectUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPayrollRunsControllerRejectMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerReject>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerReject>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['payrollRunsControllerReject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payrollRunsControllerReject>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  payrollRunsControllerReject(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayrollRunsControllerRejectMutationResult = NonNullable<Awaited<ReturnType<typeof payrollRunsControllerReject>>>
+
+    export type PayrollRunsControllerRejectMutationError = unknown
+
+    /**
+ * @summary Reject payroll run (returns to draft)
+ */
+export const usePayrollRunsControllerReject = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRunsControllerReject>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof payrollRunsControllerReject>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getPayrollRunsControllerRejectMutationOptions(options), queryClient);
     }
 
 /**

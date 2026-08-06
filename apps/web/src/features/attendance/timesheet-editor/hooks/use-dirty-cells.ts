@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { cellKey, type BatchRecord, type BatchSavePayload, type BatchSaveResponse, type DirtyCell, type FailedCell } from '../types';
+import { showToast } from '@/lib/toast';
 
 const BATCH_URL = '/api/v1/timekeeping/timesheets/batch';
 
@@ -62,7 +63,14 @@ export function useDirtyCells() {
 
       if (!res.ok) {
         const text = await res.text();
-        return { success: 0, failed: records.length, errors: [{ employeeId: '', workDate: '', reason: text }] };
+        let message = text;
+        try {
+          const parsed = JSON.parse(text);
+          const errObj = parsed?.error ?? parsed;
+          message = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message ?? text);
+        } catch { /* keep raw text */ }
+        showToast.error(message);
+        return { success: 0, failed: records.length, errors: [{ employeeId: '', workDate: '', reason: message }] };
       }
 
       const body = await res.json();
@@ -79,6 +87,11 @@ export function useDirtyCells() {
       });
 
       setFailedCells(result.errors);
+      if (result.errors.length > 0) {
+        showToast.error(`Lưu thất bại ${result.errors.length} ô.`, {
+          description: result.errors.map((e) => `${e.workDate}: ${e.reason}`).join('; '),
+        });
+      }
       return result;
     } finally {
       setSaving(false);

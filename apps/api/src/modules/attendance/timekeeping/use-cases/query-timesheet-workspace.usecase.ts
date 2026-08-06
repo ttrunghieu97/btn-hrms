@@ -89,6 +89,10 @@ export class QueryTimesheetWorkspaceUseCase {
         lateMinutes: row.lateMinutes ? Number(row.lateMinutes) : null,
         earlyLeaveMinutes: row.earlyLeaveMinutes ? Number(row.earlyLeaveMinutes) : null,
         overtimeMinutes: row.overtimeMinutes ? Number(row.overtimeMinutes) : null,
+        personalBreakMinutes: row.personalBreakMinutes ? Number(row.personalBreakMinutes) : null,
+        lunchDutyMinutes: row.lunchDutyMinutes ? Number(row.lunchDutyMinutes) : null,
+        nightShiftDutyCount: row.nightShiftDutyCount ? Number(row.nightShiftDutyCount) : null,
+        waterBoothDutyCount: row.waterBoothDutyCount ? Number(row.waterBoothDutyCount) : null,
         isHoliday: row.isHoliday,
       });
       // Aggregate per employee

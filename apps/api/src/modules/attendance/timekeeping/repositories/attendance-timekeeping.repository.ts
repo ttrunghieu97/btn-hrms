@@ -683,6 +683,10 @@ export class AttendanceTimekeepingRepository
       lateMinutes: number | null;
       earlyLeaveMinutes: number | null;
       overtimeMinutes: number | null;
+      personalBreakMinutes: number | null;
+      lunchDutyMinutes: number | null;
+      nightShiftDutyCount: string | number | null;
+      waterBoothDutyCount: string | number | null;
       isHoliday: boolean;
     }[];
     events: {
@@ -728,6 +732,10 @@ export class AttendanceTimekeepingRepository
           lateMinutes: schema.attendanceDailySummaries.lateMinutes,
           earlyLeaveMinutes: schema.attendanceDailySummaries.earlyLeaveMinutes,
           overtimeMinutes: schema.attendanceDailySummaries.overtimeMinutes,
+          personalBreakMinutes: schema.attendanceDailySummaries.personalBreakMinutes,
+          lunchDutyMinutes: schema.attendanceDailySummaries.lunchDutyMinutes,
+          nightShiftDutyCount: schema.attendanceDailySummaries.nightShiftDutyCount,
+          waterBoothDutyCount: schema.attendanceDailySummaries.waterBoothDutyCount,
           isHoliday: schema.attendanceDailySummaries.isHoliday,
         })
         .from(schema.attendanceDailySummaries)

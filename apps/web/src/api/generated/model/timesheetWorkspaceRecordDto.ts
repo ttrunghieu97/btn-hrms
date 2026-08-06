@@ -26,5 +26,13 @@ export interface TimesheetWorkspaceRecordDto {
   /** @nullable */
   overtimeMinutes: number | null;
   /** @nullable */
+  personalBreakMinutes: number | null;
+  /** @nullable */
+  lunchDutyMinutes: number | null;
+  /** @nullable */
+  nightShiftDutyCount: number | null;
+  /** @nullable */
+  waterBoothDutyCount: number | null;
+  /** @nullable */
   isHoliday: boolean | null;
 }

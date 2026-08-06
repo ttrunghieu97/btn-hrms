@@ -55,17 +55,17 @@ export class AttendanceEventRepository {
     from: Date,
     to: Date,
   ): Promise<AttendanceEventRow[]> {
-    if (!employeeIds.length) return [];
+    const conditions = [
+      gte(attendanceEvents.timestamp, from),
+      lte(attendanceEvents.timestamp, to),
+    ];
+    if (employeeIds.length > 0) {
+      conditions.push(inArray(attendanceEvents.employeeId, employeeIds));
+    }
     return this.db
       .select()
       .from(attendanceEvents)
-      .where(
-        and(
-          inArray(attendanceEvents.employeeId, employeeIds),
-          gte(attendanceEvents.timestamp, from),
-          lte(attendanceEvents.timestamp, to),
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(attendanceEvents.timestamp);
   }
 

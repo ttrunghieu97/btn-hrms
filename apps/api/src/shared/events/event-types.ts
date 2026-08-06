@@ -453,7 +453,7 @@ export function registerTimesheetEvents(): void {
     description: "Emitted when an attendance period is locked",
     producer: "PeriodLockService.lock",
     requiredFields: ["period", "actorUserId"],
-    strict: true,
+    strict: false,
   });
   registerEvent({
     type: "timesheet.period.unlocked",

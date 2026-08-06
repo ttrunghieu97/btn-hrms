@@ -43,7 +43,15 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
       const res = await fetch(`${WS_URL}?${params}`);
 
       if (!res.ok) {
-        setError(`Failed to load workspace: ${res.status}`);
+        const text = await res.text();
+        let message = `Failed to load workspace: ${res.status}`;
+        try {
+          const parsed = JSON.parse(text);
+          const errObj = parsed?.error ?? parsed;
+          const extracted = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message);
+          if (extracted) message = extracted;
+        } catch { /* fallback to status text */ }
+        setError(message);
         return;
       }
 

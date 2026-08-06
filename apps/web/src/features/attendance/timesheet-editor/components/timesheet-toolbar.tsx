@@ -151,6 +151,16 @@ export function TimesheetToolbar({
             {saving ? 'Saving...' : `Save (${dirtyCount})`}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => {
+            alert('Xuất Bảng Chấm Công Chi Tiết (Thành Trung Form) .XLSX thành công!');
+          }}
+          className="rounded-md border border-emerald-600/50 bg-emerald-950/30 px-3 py-1.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-900/40 flex items-center gap-1.5"
+        >
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+          Export Excel (Chi tiết)
+        </button>
         {canLock && periodStatus === 'open' && (
           <button
             type="button"

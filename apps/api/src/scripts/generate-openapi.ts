@@ -59,8 +59,6 @@ async function generateOpenApi() {
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, JSON.stringify(document, null, 2), "utf8");
   await app.close();
-
-  console.log(`OpenAPI written to ${outputPath}`);
 }
 
 void (async () => {

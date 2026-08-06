@@ -1,5 +1,5 @@
 import { AttendanceDayTransactionService } from "./attendance-day-transaction.service";
-import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
+import { type AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
 
 describe(AttendanceDayTransactionService.name, () => {
   it("acquires advisory lock then runs fn inside the transaction", async () => {

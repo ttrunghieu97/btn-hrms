@@ -27,19 +27,21 @@ export interface TimesheetWorkspaceRecord {
   status: string | null;
   checkIn: string | null;
   checkOut: string | null;
+  checkInMorning?: string | null;
+  checkOutMorning?: string | null;
+  checkInAfternoon?: string | null;
+  checkOutAfternoon?: string | null;
+  note?: string | null;
   workedMinutes: number | null;
   scheduledMinutes: number | null;
   lateMinutes: number | null;
   earlyLeaveMinutes: number | null;
   overtimeMinutes: number | null;
+  personalBreakMinutes: number | null;
+  lunchDutyMinutes: number | null;
+  nightShiftDutyCount: number | null;
+  waterBoothDutyCount: number | null;
   isHoliday: boolean | null;
-}
-
-export interface TimesheetWorkspaceResponse {
-  period: string;
-  periodStatus: PeriodStatus;
-  employees: TimesheetWorkspaceEmployee[];
-  records: TimesheetWorkspaceRecord[];
 }
 
 export type PeriodStatus = 'open' | 'in_review' | 'locked' | 'payroll_processing' | 'payroll_posted' | 'closed';

@@ -8,6 +8,8 @@ import { useVerifyEmployee } from './hooks/use-verify-employee';
 import { useFillHandler } from './hooks/use-fill-handler';
 import { daysInMonth, cellKey } from './types';
 import type { TimesheetWorkspaceRecord, PeriodStatus } from './types';
+import { TimesheetEnhancedDashboard } from './components/timesheet-enhanced-dashboard';
+import { TimesheetEnhancedDayRow } from './components/timesheet-enhanced-day-row';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -238,7 +240,32 @@ function TimesheetDayRow({
           <td className="px-3 py-2 text-xs text-slate-500">—</td>
         </>
       )}
-      <td className="px-3 py-2 text-xs text-slate-500">{record?.workedMinutes ? `${Math.floor(record.workedMinutes / 60)}h${record.workedMinutes % 60}m` : ''}</td>
+      <td className="px-3 py-2 text-xs font-mono text-emerald-400">
+        {record?.overtimeMinutes ? `${Math.floor(record.overtimeMinutes / 60)}h${record.overtimeMinutes % 60}m` : '—'}
+      </td>
+      <td className="px-3 py-2 text-xs font-mono text-amber-400">
+        {record?.lateMinutes || record?.earlyLeaveMinutes ? (
+          <span>
+            {record.lateMinutes ? `+${record.lateMinutes}m ` : ''}
+            {record.earlyLeaveMinutes ? `-${record.earlyLeaveMinutes}m` : ''}
+          </span>
+        ) : (
+          '—'
+        )}
+      </td>
+      <td className="px-3 py-2 text-xs text-slate-400">
+        {record?.personalBreakMinutes ? `${record.personalBreakMinutes}m` : '—'}
+      </td>
+      <td className="px-3 py-2 text-xs text-slate-400">
+        {record?.note ? (
+          <span title={record.note} className="cursor-help text-blue-400">📝</span>
+        ) : (
+          '—'
+        )}
+      </td>
+      <td className="px-3 py-2 text-xs font-semibold text-slate-200">
+        {record?.workedMinutes ? `${Math.floor(record.workedMinutes / 60)}h${record.workedMinutes % 60}m` : '—'}
+      </td>
     </tr>
   );
 }
@@ -290,9 +317,8 @@ function TimesheetDetail({
         if (!fill.fillRange || !containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         const relY = e.clientY - rect.top;
-        // Determine target day from mouse position (crude approximation via scroll + row height)
-        const headerH = 36; // approx header height
-        const rowH = 36; // approx row height
+        const headerH = 36;
+        const rowH = 36;
         const targetDay = Math.min(days, Math.max(1, Math.floor((relY - headerH) / rowH) + 1));
         fill.onFillMove(targetDay);
       }}
@@ -302,12 +328,16 @@ function TimesheetDetail({
     <table className="w-full border-collapse">
       <thead>
         <tr className="sticky top-0 bg-slate-800/90 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          <th className="px-3 py-2 text-left">Date</th>
-          <th className="px-3 py-2 text-left">Day</th>
-          <th className="px-3 py-2">Status</th>
-          <th className="px-3 py-2">Check-in</th>
-          <th className="px-3 py-2">Check-out</th>
-          <th className="px-3 py-2">Worked</th>
+          <th className="px-3 py-2 text-left">Ngày</th>
+          <th className="px-3 py-2 text-left">Thứ</th>
+          <th className="px-3 py-2">Trạng thái</th>
+          <th className="px-3 py-2">Giờ đến</th>
+          <th className="px-3 py-2">Giờ về</th>
+          <th className="px-3 py-2">Tăng ca (OT)</th>
+          <th className="px-3 py-2">Muộn / Sớm</th>
+          <th className="px-3 py-2">Việc riêng</th>
+          <th className="px-3 py-2">Ghi chú</th>
+          <th className="px-3 py-2">Tổng giờ</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -631,36 +661,6 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
         </div>
       </div>
 
-      {/* ── Period action error ── */}
-      {pl.lockError && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-800/40 bg-red-950/20 p-3">
-          <p className="text-xs text-red-300">{pl.lockError}</p>
-          <button type="button" onClick={pl.clearLockError} className="text-xs text-slate-500 hover:text-slate-300">✕</button>
-        </div>
-      )}
-
-      {ve.verifyError && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-800/40 bg-red-950/20 p-3">
-          <p className="text-xs text-red-300">{ve.verifyError}</p>
-          <button type="button" onClick={ve.clearVerifyError} className="text-xs text-slate-500 hover:text-slate-300">✕</button>
-        </div>
-      )}
-
-      {/* ── Failed cells ── */}
-      {dc.failedCells.length > 0 && (
-        <div className="rounded-lg border border-red-800/40 bg-red-950/20 p-4">
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-red-400">
-            Failed ({dc.failedCells.length})
-          </h4>
-          <div className="space-y-1">
-            {dc.failedCells.map((f, i) => (
-              <p key={i} className="text-xs text-slate-400">
-                {f.employeeId.slice(0, 8)} · {f.workDate} — {f.reason}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

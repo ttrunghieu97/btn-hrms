@@ -84,6 +84,18 @@ export class TimesheetWorkspaceRecordDto {
   @ApiProperty({ type: Number, nullable: true })
   overtimeMinutes!: number | null;
 
+  @ApiProperty({ type: Number, nullable: true })
+  personalBreakMinutes!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  lunchDutyMinutes!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  nightShiftDutyCount!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  waterBoothDutyCount!: number | null;
+
   @ApiProperty({ type: Boolean, nullable: true })
   isHoliday!: boolean | null;
 }

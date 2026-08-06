@@ -5,6 +5,7 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { TimesheetWorkspaceEmployeeDtoVerificationStatus } from './timesheetWorkspaceEmployeeDtoVerificationStatus';
 
 export interface TimesheetWorkspaceEmployeeDto {
   id: string;
@@ -20,4 +21,6 @@ export interface TimesheetWorkspaceEmployeeDto {
   absentCount: number;
   otMinutes: number;
   workedMinutes: number;
+  /** HR verification status for the period */
+  verificationStatus: TimesheetWorkspaceEmployeeDtoVerificationStatus;
 }

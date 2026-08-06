@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { showToast } from '@/lib/toast';
 
 const LOCKS_URL = '/api/v1/timekeeping/period-locks';
 
@@ -19,15 +20,19 @@ export function usePeriodLock() {
         const text = await res.text();
         let message = text;
         try {
-          const body = JSON.parse(text);
-          message = body?.message ?? body?.error ?? text;
+          const parsed = JSON.parse(text);
+          const errObj = parsed?.error ?? parsed;
+          message = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message ?? text);
         } catch { /* keep raw text */ }
         setLockError(message);
+        showToast.error(message);
         return false;
       }
       return true;
     } catch (err: any) {
-      setLockError(err?.message ?? `Failed to ${endpoint} period`);
+      const msg = err?.message ?? `Failed to ${endpoint} period`;
+      setLockError(msg);
+      showToast.error(msg);
       return false;
     } finally {
       setLocking(false);

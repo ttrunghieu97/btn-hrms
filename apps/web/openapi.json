@@ -5104,6 +5104,66 @@
         ]
       }
     },
+    "/api/v1/timekeeping/period-locks/review": {
+      "post": {
+        "operationId": "TimekeepingController_reviewPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period moved to in_review"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark period as in_review",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/approve": {
+      "post": {
+        "operationId": "TimekeepingController_approvePeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period approved and locked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve period — transitions to locked",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
     "/api/v1/timekeeping/period-locks/reopen": {
       "post": {
         "operationId": "TimekeepingController_reopenPeriod",
@@ -5129,6 +5189,130 @@
           }
         ],
         "summary": "Reopen a closed attendance period (privileged)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees": {
+      "get": {
+        "operationId": "TimekeepingController_listEmployeeVerification",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List employee verification status for a period",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees/{employeeId}/verify": {
+      "post": {
+        "operationId": "TimekeepingController_verifyEmployee",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark employee timesheet as done (verified)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees/{employeeId}/unverify": {
+      "post": {
+        "operationId": "TimekeepingController_unverifyEmployee",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revert employee timesheet back to draft",
         "tags": [
           "Attendance Timekeeping"
         ]
@@ -10911,6 +11095,42 @@
         ]
       }
     },
+    "/api/v1/payroll/runs/{id}/request-approval": {
+      "post": {
+        "operationId": "PayrollRunsController_requestApproval",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit payroll run for approval",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
     "/api/v1/payroll/runs/{id}/approve": {
       "post": {
         "operationId": "PayrollRunsController_approve",
@@ -10942,6 +11162,42 @@
           }
         ],
         "summary": "Approve payroll run",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
+    "/api/v1/payroll/runs/{id}/reject": {
+      "post": {
+        "operationId": "PayrollRunsController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject payroll run (returns to draft)",
         "tags": [
           "Payroll Runs"
         ]
@@ -19028,6 +19284,53 @@
           "remarks"
         ]
       },
+      "EmployeeVerificationDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "done"
+            ]
+          },
+          "verifiedByUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "employeeId",
+          "status",
+          "verifiedByUserId",
+          "verifiedAt"
+        ]
+      },
+      "EmployeeVerificationListDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "employees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeVerificationDto"
+            }
+          }
+        },
+        "required": [
+          "period",
+          "employees"
+        ]
+      },
       "TimesheetWorkspacePeriodTotalsDto": {
         "type": "object",
         "properties": {
@@ -19106,6 +19409,14 @@
           },
           "workedMinutes": {
             "type": "number"
+          },
+          "verificationStatus": {
+            "type": "string",
+            "description": "HR verification status for the period",
+            "enum": [
+              "draft",
+              "done"
+            ]
           }
         },
         "required": [
@@ -19120,7 +19431,8 @@
           "leaveCount",
           "absentCount",
           "otMinutes",
-          "workedMinutes"
+          "workedMinutes",
+          "verificationStatus"
         ]
       },
       "TimesheetWorkspaceRecordDto": {
@@ -19164,6 +19476,22 @@
             "type": "number",
             "nullable": true
           },
+          "personalBreakMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "lunchDutyMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "nightShiftDutyCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "waterBoothDutyCount": {
+            "type": "number",
+            "nullable": true
+          },
           "isHoliday": {
             "type": "boolean",
             "nullable": true
@@ -19180,6 +19508,10 @@
           "lateMinutes",
           "earlyLeaveMinutes",
           "overtimeMinutes",
+          "personalBreakMinutes",
+          "lunchDutyMinutes",
+          "nightShiftDutyCount",
+          "waterBoothDutyCount",
           "isHoliday"
         ]
       },

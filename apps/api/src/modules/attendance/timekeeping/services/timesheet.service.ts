@@ -69,10 +69,12 @@ export class TimesheetService {
       }
     }
 
-    // 3. Publish domain event
-    await this.eventOutbox.stage(
-      new TimesheetSavedEvent({ period: dto.period, recordCount: dto.records.length, actorUserId }),
-    );
+    // 3. Publish domain event if any record was updated successfully
+    if (successCount > 0) {
+      await this.eventOutbox.stage(
+        new TimesheetSavedEvent({ period: dto.period, recordCount: successCount, actorUserId }),
+      );
+    }
 
     return {
       success: successCount,

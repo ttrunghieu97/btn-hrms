@@ -30,13 +30,12 @@ async function generateErrorContracts() {
       );
     }
 
-    console.log(`Error contract manifest is up to date: ${outputPath}`);
+    console.log(`Error contract manifest is up to date`);
     return;
   }
 
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, nextContent, "utf8");
-  console.log(`Error contract manifest written to ${outputPath}`);
 }
 
 void (async () => {

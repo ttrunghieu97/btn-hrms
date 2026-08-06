@@ -121,11 +121,9 @@ async function seedRoles() {
 
   try {
     // 1. Permissions
-    console.log("  Permissions...");
     await db.insert(permissionsTable).values(PERMISSIONS).onConflictDoNothing();
 
     // 2. Roles + role permissions
-    console.log("  Roles...");
     const allowedCodes = SYSTEM_ROLES.map((r) => r.code);
 
     // Remove roles that are no longer in SYSTEM_ROLES
