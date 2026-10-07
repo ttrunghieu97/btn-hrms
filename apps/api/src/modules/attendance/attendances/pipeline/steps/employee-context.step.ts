@@ -1,7 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { VerificationStep, StepResult } from "../verification-step.interface";
 import type { AttendanceVerificationContext } from "../verification-context";
-import { CONTRACTS_TOKENS, type WorkforceTimeManagementPort } from "../../../../../contracts";
+import { CONTRACTS_TOKENS } from "../../../../../contracts/contracts.tokens";
+import type { WorkforceTimeManagementPort } from "../../../../../contracts/ports/workforce-time-management.port";
 import { AttendancePolicyService } from "../../services/attendance-policy.service";
 import { throwBadRequest } from "../../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../../shared/constants/error-codes";

@@ -42,13 +42,14 @@
     "deployment:backup:minio": "node scripts/deployment/backup-minio.mjs"
   },
   "devDependencies": {
-    "@oxlint/migrate": "^1.80.0",
-    "oxfmt": "^0.65.0",
-    "oxlint": "^1.80.0",
-    "oxlint-tsgolint": "^7.0.2001"
+    "@oxlint/migrate": "^1.87.0",
+    "@swc/jest": "^0.2.39",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003"
   },
   "dependencies": {
-    "dotenv": "^17.3.1",
-    "js-yaml": "^5.2.1"
+    "dotenv": "^18.0.5",
+    "js-yaml": "^5.4.3"
   }
 }

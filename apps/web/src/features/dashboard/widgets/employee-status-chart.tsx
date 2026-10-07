@@ -99,7 +99,7 @@ function EmployeeStatusChart({ widget }: { widget: DashboardWidgetDto }) {
                 fontSize={12}
                 fontWeight={500}
                 fill="currentColor"
-                formatter={(v: number) => v.toString()}
+                formatter={(v: any) => String(v ?? '')}
               />
               {chartData.map((entry: { name: string; fill: string }, i: number) => (
                 <Cell key={`cell-${i}`} fill={entry.fill} />

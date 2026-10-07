@@ -24,7 +24,10 @@ export class PlatformWorkflowEngineRepository {
     transitions: Record<string, unknown>;
   }) {
     const existing = await this.db.query.workflowDefinitions.findFirst({
-      where: (t, { and, eq }) => and(eq(t.key, input.key), eq(t.version, input.version)),
+      where: and(
+        eq(workflowDefinitions.key, input.key),
+        eq(workflowDefinitions.version, input.version),
+      ),
     });
 
     if (!existing) {
@@ -61,8 +64,11 @@ export class PlatformWorkflowEngineRepository {
 
   getActiveDefinition(key: string) {
     return this.db.query.workflowDefinitions.findFirst({
-      where: (t, { and, eq }) => and(eq(t.key, key), eq(t.isActive, true)),
-      orderBy: (t) => [desc(t.version)],
+      where: and(
+        eq(workflowDefinitions.key, key),
+        eq(workflowDefinitions.isActive, true),
+      ),
+      orderBy: [desc(workflowDefinitions.version)],
     });
   }
 

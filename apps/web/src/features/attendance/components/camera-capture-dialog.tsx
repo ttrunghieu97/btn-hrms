@@ -48,7 +48,7 @@ function validateImageFile(file: File) {
 const scanLineKeyframes = {
   animate: {
     y: ['-100%', '100%'],
-    transition: { duration: 2.2, repeat: Infinity, ease: 'linear' },
+    transition: { duration: 2.2, repeat: Infinity, ease: 'linear' as const },
   },
 };
 

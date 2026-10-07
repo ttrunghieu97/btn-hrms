@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
 import type { AppDatabase } from "@/infrastructure/database/database-client.type";
 import * as schema from "@/infrastructure/database/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import type { assetApprovalLinks as assetApprovalLinksTable } from "@/infrastructure/database/schema/asset-approval/tables";
 
@@ -40,8 +40,10 @@ export class AssetApprovalLinkRepository {
     subjectId: string,
   ): Promise<AssetApprovalLink | null> {
     const row = await this.db.query.assetApprovalLinks.findFirst({
-      where: (t, { and, eq: eqFn }) =>
-        and(eqFn(t.subjectType, subjectType), eqFn(t.subjectId, subjectId)),
+      where: and(
+        eq(schema.assetApprovalLinks.subjectType, subjectType),
+        eq(schema.assetApprovalLinks.subjectId, subjectId),
+      ),
     });
     return row ?? null;
   }

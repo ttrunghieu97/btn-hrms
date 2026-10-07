@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import { and, eq, inArray } from "drizzle-orm";
 import { IEmployeeReader } from "../ports/employee-reader.port";
 import { EmployeesRepository, type EmployeeWithRelations } from "../../modules/workforce/employees/repositories/employees.repository";
+import { employees, orgAssignments } from "../../infrastructure/database/schema";
 
 const PII_FIELDS = [
   "identityNumber",
@@ -53,22 +55,20 @@ export class EmployeeReaderAdapter implements IEmployeeReader {
   }
 
   async findActiveEmployees(departmentId?: string): Promise<any[]> {
+    const activeStatuses = ["working", "probation"] as const;
+    const statusCond = inArray(employees.status, activeStatuses as any);
+    const whereCond = departmentId
+      ? and(statusCond, eq(employees.departmentId, departmentId))
+      : statusCond;
     const rows = await this.repo.findManyRaw({
-      where: (employees, { eq, and, inArray }) => {
-        const activeStatuses = ["working", "probation"] as const;
-        const statusCond = inArray(employees.status, activeStatuses);
-        return departmentId
-          ? and(statusCond, eq(employees.departmentId, departmentId))
-          : statusCond;
-      },
+      where: whereCond as any,
       with: {
         department: true,
         orgAssignments: {
-          where: (item, { eq }) => eq(item.isCurrent, true),
+          where: eq(orgAssignments.isCurrent, true) as any,
         },
       },
     });
     return rows.map(stripPii);
   }
 }
-

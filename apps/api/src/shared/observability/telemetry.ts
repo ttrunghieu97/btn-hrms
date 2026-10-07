@@ -57,7 +57,7 @@ export async function setupTelemetry(): Promise<void> {
       exporter: metricExporter,
       exportIntervalMillis: 10000,
     }),
-    logRecordProcessor: new SimpleLogRecordProcessor(logExporter),
+    logRecordProcessor: new SimpleLogRecordProcessor({ exporter: logExporter }),
     instrumentations: [getNodeAutoInstrumentations()],
   });
 

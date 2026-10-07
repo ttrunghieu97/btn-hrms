@@ -1,11 +1,12 @@
 import {  Inject , Injectable } from "@nestjs/common";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../infrastructure/database/database.provider";
 import { AppDatabase } from "../../../infrastructure/database/database-client.type";
 import {
   approvalPolicies,
   approvalRequests,
   approvalSteps,
+  taskDelegations,
 } from "../../../infrastructure/database/schema";
 
 @Injectable()
@@ -23,9 +24,11 @@ export class PlatformApprovalEngineRepository {
 
   findActivePolicyByKey(key: string) {
     return this.db.query.approvalPolicies.findFirst({
-      where: (t, { and, eq }) =>
-        and(eq(t.key, key), eq(t.isActive, true)),
-      orderBy: (t, { desc }) => [desc(t.version)],
+      where: and(
+        eq(approvalPolicies.key, key),
+        eq(approvalPolicies.isActive, true),
+      ),
+      orderBy: [desc(approvalPolicies.version)],
     });
   }
 
@@ -80,7 +83,10 @@ export class PlatformApprovalEngineRepository {
   findStep(requestId: string, stepIndex: number, tx?: AppDatabase) {
     const db = tx ?? this.db;
     return db.query.approvalSteps.findFirst({
-      where: (t, { and, eq }) => and(eq(t.requestId, requestId), eq(t.stepIndex, stepIndex)),
+      where: and(
+        eq(approvalSteps.requestId, requestId),
+        eq(approvalSteps.stepIndex, stepIndex),
+      ),
     });
   }
 
@@ -115,7 +121,10 @@ export class PlatformApprovalEngineRepository {
   async anyPendingStep(requestId: string, tx?: AppDatabase) {
     const db = tx ?? this.db;
     const row = await db.query.approvalSteps.findFirst({
-      where: (t, { and, eq }) => and(eq(t.requestId, requestId), eq(t.status, "pending")),
+      where: and(
+        eq(approvalSteps.requestId, requestId),
+        eq(approvalSteps.status, "pending"),
+      ),
       columns: { id: true },
     });
     return Boolean(row);
@@ -129,19 +138,20 @@ export class PlatformApprovalEngineRepository {
   findRequestBySubject(subjectType: string, subjectId: string, tx?: AppDatabase) {
     const db = tx ?? this.db;
     return db.query.approvalRequests.findFirst({
-      where: (t, { and, eq }) =>
-        and(eq(t.subjectType, subjectType), eq(t.subjectId, subjectId)),
+      where: and(
+        eq(approvalRequests.subjectType, subjectType),
+        eq(approvalRequests.subjectId, subjectId),
+      ),
     });
   }
 
   findPendingStepByApprover(requestId: string, userId: string) {
     return this.db.query.approvalSteps.findFirst({
-      where: (t, { and, eq }) =>
-        and(
-          eq(t.requestId, requestId),
-          eq(t.status, "pending"),
-          eq(t.approverUserId, userId),
-        ),
+      where: and(
+        eq(approvalSteps.requestId, requestId),
+        eq(approvalSteps.status, "pending"),
+        eq(approvalSteps.approverUserId, userId),
+      ),
     });
   }
 
@@ -258,14 +268,13 @@ export class PlatformApprovalEngineRepository {
 
   async isUserActiveDelegateOf(delegateeUserId: string, delegatorUserId: string): Promise<boolean> {
     const row = await this.db.query.taskDelegations.findFirst({
-      where: (t, { and, eq, or, isNull, gt, lte }) =>
-        and(
-          eq(t.delegatorUserId, delegatorUserId),
-          eq(t.delegateeUserId, delegateeUserId),
-          eq(t.isActive, true),
-          or(isNull(t.expiresAt), gt(t.expiresAt, new Date())),
-          or(isNull(t.startsAt), lte(t.startsAt, new Date())),
-        ),
+      where: and(
+        eq(taskDelegations.delegatorUserId, delegatorUserId),
+        eq(taskDelegations.delegateeUserId, delegateeUserId),
+        eq(taskDelegations.isActive, true),
+        or(isNull(taskDelegations.expiresAt), gt(taskDelegations.expiresAt, new Date())),
+        or(isNull(taskDelegations.startsAt), lte(taskDelegations.startsAt, new Date())),
+      ),
       columns: { id: true },
     });
     return Boolean(row);
@@ -274,8 +283,10 @@ export class PlatformApprovalEngineRepository {
   async findExpiredPendingSteps(slaHoursThreshold: number) {
     const thresholdDate = new Date(Date.now() - slaHoursThreshold * 3600 * 1000);
     return this.db.query.approvalSteps.findMany({
-      where: (t, { and, eq, lte }) =>
-        and(eq(t.status, "pending"), lte(t.createdAt, thresholdDate)),
+      where: and(
+        eq(approvalSteps.status, "pending"),
+        lte(approvalSteps.createdAt, thresholdDate),
+      ),
       with: { request: true },
     });
   }

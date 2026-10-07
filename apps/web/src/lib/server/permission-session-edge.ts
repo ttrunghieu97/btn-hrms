@@ -121,7 +121,7 @@ export async function decodePermissions(
     const isValid = await globalThis.crypto.subtle.verify(
       'HMAC',
       key,
-      sigBytes,
+      sigBytes as unknown as BufferSource,
       enc.encode(payloadB64),
     );
     if (!isValid) return null;

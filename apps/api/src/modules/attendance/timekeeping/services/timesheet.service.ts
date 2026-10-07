@@ -2,7 +2,8 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { CONTRACTS_TOKENS, WorkforceTimeManagementPort } from "../../../../contracts";
+import { CONTRACTS_TOKENS } from "../../../../contracts/contracts.tokens";
+import type { WorkforceTimeManagementPort } from "../../../../contracts/ports/workforce-time-management.port";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { throwBadRequest } from "../../../../shared/utils/http-error";
 import { AttendancePeriodLockService } from "../services/attendance-period-lock.service";
