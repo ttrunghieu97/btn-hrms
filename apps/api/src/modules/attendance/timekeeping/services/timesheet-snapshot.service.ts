@@ -1,0 +1,129 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
+import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
+import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
+import {
+  ATTENDANCE_READ_PORT,
+  AttendanceReadPort,
+} from "../../../../contracts/ports/attendance-read.port";
+
+export type TimesheetSnapshotData = {
+  period: string;
+  employeeId: string;
+  workingDays: number;
+  workedMinutes: number;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  overtimeMinutes: number;
+};
+
+/**
+ * Creates immutable snapshots of resolved Attendance Truth when a period
+ * transitions to CLOSED. Snapshots are consumed by Payroll and downstream.
+ *
+ * Uses AttendanceReadPort (published contract) to fetch resolved truth
+ * instead of querying base tables directly — ensures overrides and
+ * exception resolutions are included (Rule #5, Rule #6).
+ */
+@Injectable()
+export class TimesheetSnapshotService {
+  constructor(
+    private readonly timekeepingRepo: AttendanceTimekeepingRepository,
+    private readonly periodLockRepo: AttendancePeriodLockRepository,
+    @Inject(ATTENDANCE_READ_PORT)
+    private readonly attendanceRead: AttendanceReadPort,
+  ) {}
+
+  /**
+   * Create snapshot for all employees in a period.
+   * Called when period transitions to CLOSED.
+   *
+   * Consumes resolved truth via AttendanceReadPort — captures overrides,
+   * exceptions, and policy results (not base summaries).
+   */
+  async createSnapshotForPeriod(
+    period: string,
+    periodStatus: string,
+    tx?: AppDatabase,
+  ): Promise<number> {
+    const [year, month] = period.split("-").map(Number);
+    const daysInMonth = new Date(year!, month!, 0).getDate();
+    const from = `${period}-01`;
+    const to = `${period}-${String(daysInMonth).padStart(2, "0")}`;
+
+    // Only HR-verified (done) employees enter the snapshot. Close is blocked
+    // while drafts remain, so this normally equals all employees with data —
+    // but guards periods closed before this feature or drafts that slipped in.
+    const verified = await this.periodLockRepo.listEmployeeVerification(period, tx);
+    const allIdsInRange = await this.timekeepingRepo.findEmployeeIdsWithSummariesInRange(from, to);
+    const doneIds = new Set(
+      verified.filter((v) => v.status === "done").map((v) => v.employeeId),
+    );
+    const employeeIds = verified.length > 0
+      ? allIdsInRange.filter((id) => doneIds.has(id))
+      : allIdsInRange;
+
+    if (employeeIds.length === 0) return 0;
+
+    // Fetch resolved truth via published contract
+    // mergeOverride() applies: override > summary > computation
+    const summaries = await this.attendanceRead.getEffectiveDailySummaries(
+      employeeIds,
+      from,
+      to,
+    );
+
+    // Group by employee and aggregate resolved values
+    const grouped = new Map<
+      string,
+      {
+        workingDays: number;
+        workedMinutes: number;
+        lateMinutes: number;
+        earlyLeaveMinutes: number;
+        overtimeMinutes: number;
+      }
+    >();
+
+    for (const row of summaries) {
+      const existing = grouped.get(row.employeeId) ?? {
+        workingDays: 0,
+        workedMinutes: 0,
+        lateMinutes: 0,
+        earlyLeaveMinutes: 0,
+        overtimeMinutes: 0,
+      };
+      const isWorkingDay =
+        row.status &&
+        !["absent", "leave", "holiday", "off"].includes(row.status);
+      if (isWorkingDay) existing.workingDays++;
+      existing.workedMinutes += row.workedMinutes;
+      existing.lateMinutes += row.lateMinutes;
+      existing.earlyLeaveMinutes += row.earlyLeaveMinutes;
+      existing.overtimeMinutes += row.overtimeMinutes;
+      grouped.set(row.employeeId, existing);
+    }
+
+    // Batch insert immutable snapshots with incremented version for lineage
+    const currentMaxVersion = await this.timekeepingRepo.getMaxSnapshotVersion(period, tx);
+    const nextVersion = currentMaxVersion + 1;
+
+    const values = Array.from(grouped.entries()).map(
+      ([employeeId, data]) => ({
+        period,
+        employeeId,
+        snapshotVersion: nextVersion,
+        workingDays: data.workingDays,
+        workedMinutes: data.workedMinutes,
+        lateMinutes: data.lateMinutes,
+        earlyLeaveMinutes: data.earlyLeaveMinutes,
+        overtimeMinutes: data.overtimeMinutes,
+        periodStatusAtSnapshot: periodStatus,
+      }),
+    );
+
+    await this.timekeepingRepo.insertTimesheetSnapshots(values as any, tx);
+    return values.length;
+  }
+}
+

@@ -1,0 +1,18 @@
+meta {
+  name: POST add comment
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/{{id}}/comments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"content":"Hello"}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: GET by id
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/departments/{{id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

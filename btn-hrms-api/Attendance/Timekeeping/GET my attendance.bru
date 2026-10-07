@@ -1,0 +1,18 @@
+meta {
+  name: GET my attendance
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/attendances/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+query {
+  page: 1\n  limit: 20
+}

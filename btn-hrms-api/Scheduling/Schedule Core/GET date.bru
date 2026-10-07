@@ -1,0 +1,14 @@
+meta {
+  name: GET date
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

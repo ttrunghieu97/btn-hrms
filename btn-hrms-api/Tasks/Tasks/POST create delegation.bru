@@ -1,0 +1,18 @@
+meta {
+  name: POST create delegation
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/delegations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"delegateFromId":"{{uid}}","delegateToId":"{{uid2}}"}
+}

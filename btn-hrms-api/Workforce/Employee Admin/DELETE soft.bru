@@ -1,0 +1,14 @@
+meta {
+  name: DELETE soft
+  type: http
+}
+
+delete {
+  url: {{base_url}}/api/v1/employees/{{id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

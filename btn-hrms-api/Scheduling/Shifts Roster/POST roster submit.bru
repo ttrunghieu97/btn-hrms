@@ -1,0 +1,18 @@
+meta {
+  name: POST roster submit
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/roster/submit
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"fromDate":"2026-07-06"}
+}

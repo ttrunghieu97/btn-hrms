@@ -1,0 +1,14 @@
+meta {
+  name: GET by employee
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/payroll/{{eid}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

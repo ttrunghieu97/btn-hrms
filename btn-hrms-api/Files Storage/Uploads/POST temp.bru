@@ -1,0 +1,18 @@
+meta {
+  name: POST temp
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/uploads/temp
+  body: multipart-form
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:multipart-form {
+  file: @file(doc.pdf)
+}

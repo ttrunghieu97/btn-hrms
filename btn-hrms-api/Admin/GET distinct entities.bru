@@ -1,0 +1,14 @@
+meta {
+  name: GET distinct entities
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/admin/activities/entities
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

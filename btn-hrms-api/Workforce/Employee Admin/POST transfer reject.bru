@@ -1,0 +1,18 @@
+meta {
+  name: POST transfer reject
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/transfers/{{iid}}/reject
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"note":"no"}
+}

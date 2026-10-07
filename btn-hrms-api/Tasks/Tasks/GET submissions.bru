@@ -1,0 +1,14 @@
+meta {
+  name: GET submissions
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/{{id}}/submissions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

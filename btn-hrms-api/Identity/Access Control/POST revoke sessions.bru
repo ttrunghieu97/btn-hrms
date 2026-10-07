@@ -1,0 +1,14 @@
+meta {
+  name: POST revoke sessions
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/{{userId}}/sessions/revoke
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: GET my summary
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/me/summary
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

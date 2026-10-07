@@ -1,0 +1,18 @@
+meta {
+  name: POST instantiate
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/task-templates/{{id}}/instantiate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"assigneeId":"{{eid}}"}
+}

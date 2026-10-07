@@ -1,0 +1,958 @@
+import { Inject, Injectable } from "@nestjs/common";
+import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { AppDatabase } from "../../../../infrastructure/database/database-client.type";
+import * as schema from "../../../../infrastructure/database/schema";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+  SQL,
+} from "drizzle-orm";
+import {
+  type EmployeeShiftReaderPort,
+  EMPLOYEE_SHIFT_READER_PORT,
+} from "../../../../contracts/ports/employee-shift-reader.port";
+import {
+  IAttendanceTimekeepingRepository,
+  TimekeepingExceptionType,
+} from "./attendance-timekeeping.repository.contract";
+
+/** Deterministic int32 hash for advisory lock key (application-layer). */
+export function advisoryKeyHash(employeeId: string): number {
+  let h = 0;
+  for (let i = 0; i < employeeId.length; i++) {
+    h = (Math.imul(31, h) + employeeId.charCodeAt(i)) | 0;
+  }
+  return h | 0;
+}
+
+@Injectable()
+export class AttendanceTimekeepingRepository
+  implements IAttendanceTimekeepingRepository
+{
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: PostgresJsDatabase<typeof schema>,
+    @Inject(EMPLOYEE_SHIFT_READER_PORT)
+    private readonly shiftReader: EmployeeShiftReaderPort,
+  ) {}
+
+  // ─── Adjustment, Reconciliation, and Validator Repository Methods ─────────
+
+  async findPeriodLock(period: string) {
+    return this.db.query.attendancePeriodLocks.findFirst({
+      where: eq(schema.attendancePeriodLocks.period, period),
+    });
+  }
+
+  async findSnapshot(period: string, employeeId: string) {
+    return this.db.query.timesheetSnapshots.findFirst({
+      where: and(
+        eq(schema.timesheetSnapshots.period, period),
+        eq(schema.timesheetSnapshots.employeeId, employeeId),
+      ),
+    });
+  }
+
+  async insertAdjustment(values: typeof schema.attendanceAdjustments.$inferInsert, tx?: PostgresJsDatabase<typeof schema>) {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .insert(schema.attendanceAdjustments)
+      .values(values)
+      .returning();
+    return row ?? null;
+  }
+
+  async insertAdjustmentItems(values: typeof schema.attendanceAdjustmentItems.$inferInsert[], tx?: PostgresJsDatabase<typeof schema>) {
+    if (values.length === 0) return;
+    const db = tx ?? this.db;
+    await db.insert(schema.attendanceAdjustmentItems).values(values as any);
+  }
+
+  async updateAdjustment(id: string, patch: Partial<typeof schema.attendanceAdjustments.$inferInsert>, tx?: PostgresJsDatabase<typeof schema>) {
+    const db = tx ?? this.db;
+    const [updated] = await db
+      .update(schema.attendanceAdjustments)
+      .set(patch as any)
+      .where(eq(schema.attendanceAdjustments.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  async findAdjustmentById(id: string) {
+    return this.db.query.attendanceAdjustments.findFirst({
+      where: eq(schema.attendanceAdjustments.id, id),
+      with: { items: true },
+    });
+  }
+
+  async listAdjustments(period?: string, employeeId?: string) {
+    const conditions: SQL[] = [];
+    if (period) conditions.push(eq(schema.attendanceAdjustments.period, period));
+    if (employeeId) conditions.push(eq(schema.attendanceAdjustments.employeeId, employeeId));
+
+    return this.db
+      .select()
+      .from(schema.attendanceAdjustments)
+      .where(conditions.length === 0 ? undefined : conditions.length === 1 ? conditions[0] : and(...conditions));
+  }
+
+  async findAppliedAdjustmentsWithItems(period: string, employeeId: string) {
+    return this.db.query.attendanceAdjustments.findMany({
+      where: and(
+        eq(schema.attendanceAdjustments.period, period),
+        eq(schema.attendanceAdjustments.employeeId, employeeId),
+        eq(schema.attendanceAdjustments.status, "applied"),
+      ),
+      with: { items: true },
+    });
+  }
+
+  async findAppliedAdjustmentsForEmployees(period: string, employeeIds: string[]) {
+    if (!employeeIds.length) return [];
+    return this.db.query.attendanceAdjustments.findMany({
+      where: and(
+        eq(schema.attendanceAdjustments.period, period),
+        inArray(schema.attendanceAdjustments.employeeId, employeeIds),
+        eq(schema.attendanceAdjustments.status, "applied"),
+      ),
+      with: { items: true },
+    });
+  }
+
+  async insertPayrollReconciliationRun(values: typeof schema.attendancePayrollReconciliations.$inferInsert) {
+    const [row] = await this.db
+      .insert(schema.attendancePayrollReconciliations)
+      .values(values)
+      .returning();
+    return row ?? null;
+  }
+
+  async updatePayrollReconciliationRun(id: string, patch: Partial<typeof schema.attendancePayrollReconciliations.$inferInsert>) {
+    const [updated] = await this.db
+      .update(schema.attendancePayrollReconciliations)
+      .set(patch as any)
+      .where(eq(schema.attendancePayrollReconciliations.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  async findTimesheetSnapshotsForPeriod(period: string) {
+    return this.db
+      .select()
+      .from(schema.timesheetSnapshots)
+      .where(eq(schema.timesheetSnapshots.period, period));
+  }
+
+  async findPayrollItemsForEmployees(employeeIds: string[]) {
+    if (employeeIds.length === 0) return [];
+    return this.db
+      .select()
+      .from(schema.payrollItems)
+      .where(
+        and(
+          inArray(schema.payrollItems.employeeId, employeeIds),
+          eq(schema.payrollItems.metadata, sql`'{"source": "attendance_summary"}'::jsonb`),
+        ),
+      );
+  }
+
+  async insertPayrollReconciliationItems(values: typeof schema.attendancePayrollReconciliationItems.$inferInsert[]) {
+    if (values.length === 0) return;
+    await this.db.insert(schema.attendancePayrollReconciliationItems).values(values as any);
+  }
+
+  async findPayrollReconciliation(id: string) {
+    return this.db.query.attendancePayrollReconciliations.findFirst({
+      where: eq(schema.attendancePayrollReconciliations.id, id),
+    });
+  }
+
+  async listPayrollReconciliationItems(reconciliationId: string, diffType?: string) {
+    const conditions: SQL[] = [
+      eq(schema.attendancePayrollReconciliationItems.reconciliationId, reconciliationId),
+    ];
+    if (diffType) {
+      conditions.push(eq(schema.attendancePayrollReconciliationItems.diffType, diffType as any));
+    }
+
+    return this.db
+      .select()
+      .from(schema.attendancePayrollReconciliationItems)
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+  }
+
+  async listPayrollReconciliations(period?: string) {
+    const conditions: SQL[] = [];
+    if (period) {
+      conditions.push(eq(schema.attendancePayrollReconciliations.period, period));
+    }
+
+    return this.db
+      .select()
+      .from(schema.attendancePayrollReconciliations)
+      .where(conditions.length === 0 ? undefined : conditions.length === 1 ? conditions[0] : and(...conditions))
+      .orderBy(sql`${schema.attendancePayrollReconciliations.checkedAt} DESC`);
+  }
+
+  async countPendingExceptionsInRange(from: string, to: string): Promise<number> {
+    const [result] = await this.db
+      .select({ value: count() })
+      .from(schema.attendanceExceptions)
+      .where(
+        and(
+          eq(schema.attendanceExceptions.status, "pending"),
+          gte(schema.attendanceExceptions.workDate, from),
+          lte(schema.attendanceExceptions.workDate, to),
+        ),
+      );
+    return Number(result?.value ?? 0);
+  }
+
+  async getAllPeriodLocks(): Promise<{ period: string; status: string }[]> {
+    return this.db
+      .select({ period: schema.attendancePeriodLocks.period, status: schema.attendancePeriodLocks.status })
+      .from(schema.attendancePeriodLocks)
+      .orderBy(schema.attendancePeriodLocks.period);
+  }
+
+  async countPendingAdjustments(period: string): Promise<number> {
+    const result = await this.db
+      .select({ value: count() })
+      .from(schema.attendanceAdjustments)
+      .where(
+        and(
+          eq(schema.attendanceAdjustments.period, period),
+          eq(schema.attendanceAdjustments.status, "requested"),
+        ),
+      );
+    return Number(result[0]?.value ?? 0);
+  }
+
+  async findLatestReconciliation(period: string) {
+    const [row] = await this.db
+      .select()
+      .from(schema.attendancePayrollReconciliations)
+      .where(eq(schema.attendancePayrollReconciliations.period, period))
+      .orderBy(sql`${schema.attendancePayrollReconciliations.checkedAt} DESC`)
+      .limit(1);
+    return row ?? null;
+  }
+
+  async transaction<T>(fn: (tx: PostgresJsDatabase<typeof schema>) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
+
+  /**
+   * Serialize concurrent mutations of the same (employeeId, workDate).
+   * Transaction-scoped advisory lock — auto-released on commit/rollback.
+   * Two-int form: (employeeId hash, workDate numeric) for debuggability.
+   */
+  async acquireAttendanceDayLock(
+    employeeId: string,
+    workDate: string,
+    tx?: AppDatabase,
+  ): Promise<void> {
+    const db = tx ?? this.db;
+    const dateHash = Number(workDate.replaceAll("-", ""));
+    await db.execute(
+      sql`SELECT pg_advisory_xact_lock(${advisoryKeyHash(employeeId)}, ${dateHash})`,
+    );
+  }
+
+  async createClockEvent(
+    values: typeof schema.attendances.$inferInsert,
+    tx?: AppDatabase,
+  ): Promise<typeof schema.attendances.$inferSelect | null> {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .insert(schema.attendances)
+      .values(values)
+      .returning();
+    return row ?? null;
+  }
+
+  async upsertSessionClockEvent(params: {
+    employeeId: string;
+    workDate: string;
+    session: "morning" | "afternoon";
+    type: "check_in" | "check_out";
+    timeStr: string | null;
+  }) {
+    const { employeeId, workDate, session, type, timeStr } = params;
+    await this.db.delete(schema.attendances).where(
+      and(
+        eq(schema.attendances.employeeId, employeeId),
+        eq(schema.attendances.date, workDate),
+        eq(schema.attendances.session, session),
+        eq(schema.attendances.type, type),
+      ),
+    );
+
+    if (!timeStr || !timeStr.trim() || timeStr.trim() === "-") {
+      return null;
+    }
+
+    const t = timeStr.trim();
+    let eventTime: Date;
+    if (t.includes("T")) {
+      eventTime = new Date(t);
+    } else {
+      const parts = t.split(":");
+      const h = parseInt(parts[0] ?? "0", 10);
+      const m = parseInt(parts[1] ?? "0", 10);
+      eventTime = new Date(`${workDate}T${String(isNaN(h) ? 0 : h).padStart(2, "0")}:${String(isNaN(m) ? 0 : m).padStart(2, "0")}:00`);
+    }
+
+    const [row] = await this.db.insert(schema.attendances).values({
+      employeeId,
+      date: workDate,
+      session,
+      type,
+      time: eventTime,
+      source: "manual",
+    }).returning();
+    return row ?? null;
+  }
+
+  async listClockEvents(query: {
+    employeeId?: string;
+    from?: string;
+    to?: string;
+    source?: "mobile" | "web" | "api" | "manual";
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    rows: unknown[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { page = 1, limit = 20, employeeId, from, to, source } = query;
+    const offset = (page - 1) * limit;
+
+    const conditions: SQL[] = [];
+    if (employeeId) conditions.push(eq(schema.attendances.employeeId, employeeId));
+    if (from) conditions.push(gte(schema.attendances.date, from));
+    if (to) conditions.push(lte(schema.attendances.date, to));
+    if (source) conditions.push(eq(schema.attendances.source, source));
+    const where = conditions.length === 0 ? undefined : conditions.length === 1 ? conditions[0] : and(...conditions);
+
+    const rows = await this.db.query.attendances.findMany({
+      where,
+      with: {
+        employee: { with: { department: true } },
+      },
+      orderBy: [desc(schema.attendances.time)],
+      limit,
+      offset,
+    });
+
+    const [totalResult] = await this.db
+      .select({ value: count() })
+      .from(schema.attendances)
+      .where(where);
+
+    return {
+      rows,
+      total: Number(totalResult?.value ?? 0),
+      page,
+      limit,
+    };
+  }
+
+  findClockEventsByEmployeeDay(
+    employeeId: string,
+    workDate: string,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    return db.query.attendances.findMany({
+      where: and(
+        eq(schema.attendances.employeeId, employeeId),
+        eq(schema.attendances.date, workDate),
+      ),
+      orderBy: [schema.attendances.time],
+    });
+  }
+
+  async findShiftAssignmentForEmployeeDay(
+    employeeId: string,
+    workDate: string,
+    tx?: AppDatabase,
+  ) {
+    return this.shiftReader.findShiftAssignmentForEmployeeDay(
+      employeeId,
+      workDate,
+    );
+  }
+
+  async upsertAttendanceSummary(
+    employeeId: string,
+    workDate: string,
+    values: Partial<typeof schema.attendanceDailySummaries.$inferInsert>,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const existing = await db.query.attendanceDailySummaries.findFirst({
+      where: and(
+        eq(schema.attendanceDailySummaries.employeeId, employeeId),
+        eq(schema.attendanceDailySummaries.workDate, workDate),
+      ),
+    });
+
+    if (existing) {
+      const [updated] = await db
+        .update(schema.attendanceDailySummaries)
+        .set({ ...(values), updatedAt: new Date() })
+        .where(eq(schema.attendanceDailySummaries.id, existing.id))
+        .returning();
+      return updated ?? null;
+    }
+
+    const [created] = await db
+      .insert(schema.attendanceDailySummaries)
+      .values({ employeeId, workDate, ...(values) })
+      .returning();
+
+    return created ?? null;
+  }
+
+  async replaceExceptionsForEmployeeDay(
+    employeeId: string,
+    workDate: string,
+    summaryId: string,
+    exceptionTypes: TimekeepingExceptionType[],
+    relatedEventIds: string[],
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    await db
+      .delete(schema.attendanceExceptions)
+      .where(
+        and(
+          eq(schema.attendanceExceptions.employeeId, employeeId),
+          eq(schema.attendanceExceptions.workDate, workDate),
+          eq(schema.attendanceExceptions.status, "pending"),
+        ),
+      );
+
+    if (exceptionTypes.length === 0) {
+      return [];
+    }
+
+    const values = exceptionTypes.map((type) => ({
+      employeeId,
+      attendanceDailySummaryId: summaryId,
+      workDate,
+      type,
+      status: "pending" as const,
+      relatedEventIds,
+    })) as any ?? null;
+
+    const rows = await db
+      .insert(schema.attendanceExceptions)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [
+          schema.attendanceExceptions.employeeId,
+          schema.attendanceExceptions.workDate,
+          schema.attendanceExceptions.type,
+        ],
+        set: {
+          attendanceDailySummaryId: summaryId,
+          status: "pending",
+          relatedEventIds,
+          updatedAt: new Date(),
+          resolutionNote: null,
+          resolvedByUserId: null,
+          resolvedAt: null,
+        },
+      })
+      .returning();
+
+    return rows;
+  }
+
+  async listExceptions(query: {
+    employeeId?: string;
+    departmentId?: string;
+    from?: string;
+    to?: string;
+    status?: "pending" | "resolved" | "closed";
+    page?: number;
+    limit?: number;
+  }) {
+    const {
+      employeeId,
+      departmentId,
+      from,
+      to,
+      status,
+      page = 1,
+      limit = 20,
+    } = query;
+
+    const offset = (page - 1) * limit;
+
+    let scopedEmployeeIds: string[] | null = null;
+    if (departmentId) {
+      const employees = await this.db.query.employees.findMany({
+        where: eq(schema.employees.departmentId, departmentId),
+        columns: { id: true },
+      });
+      scopedEmployeeIds = employees.map((item) => item.id);
+      if (scopedEmployeeIds.length === 0) {
+        return { rows: [], total: 0, page, limit };
+      }
+    }
+
+    const conditions: SQL[] = [];
+    if (employeeId)
+      conditions.push(eq(schema.attendanceExceptions.employeeId, employeeId));
+    if (status) conditions.push(eq(schema.attendanceExceptions.status, status));
+    if (from) conditions.push(gte(schema.attendanceExceptions.workDate, from));
+    if (to) conditions.push(lte(schema.attendanceExceptions.workDate, to));
+    if (scopedEmployeeIds) {
+      conditions.push(
+        inArray(schema.attendanceExceptions.employeeId, scopedEmployeeIds),
+      );
+    }
+
+    const where = conditions.length === 0 ? undefined : conditions.length === 1 ? conditions[0] : and(...conditions);
+
+    const rows = await this.db.query.attendanceExceptions.findMany({
+      where,
+      with: {
+        employee: { with: { department: true } },
+        attendanceSummary: true,
+        resolvedByUser: {
+          columns: { id: true, username: true, email: true },
+        },
+      },
+      orderBy: [
+        desc(schema.attendanceExceptions.workDate),
+        desc(schema.attendanceExceptions.createdAt),
+      ],
+      limit,
+      offset,
+    });
+
+    const [totalResult] = await this.db
+      .select({ value: count() })
+      .from(schema.attendanceExceptions)
+      .where(where);
+
+    return {
+      rows,
+      total: Number(totalResult?.value ?? 0),
+      page,
+      limit,
+    };
+  }
+
+  async getExceptionById(id: string) {
+    return this.db.query.attendanceExceptions.findFirst({
+      where: eq(schema.attendanceExceptions.id, id),
+    }) as any ?? null;
+  }
+
+  async resolveException(
+    id: string,
+    values: {
+      status: "resolved" | "closed";
+      resolutionNote?: string;
+      resolvedByUserId: string;
+      resolvedAt: Date;
+    },
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [updated] = await db
+      .update(schema.attendanceExceptions)
+      .set({
+        status: values.status,
+        resolutionNote: values.resolutionNote,
+        resolvedByUserId: values.resolvedByUserId,
+        resolvedAt: values.resolvedAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.attendanceExceptions.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
+  async listTimesheetSummaries(query: {
+    employeeId?: string;
+    departmentId?: string;
+    from: string;
+    to: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    rows: unknown[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { employeeId, departmentId, from, to, page = 1, limit = 20 } = query;
+    const offset = (page - 1) * limit;
+
+    let scopedEmployeeIds: string[] | null = null;
+    if (departmentId) {
+      const employees = await this.db.query.employees.findMany({
+        where: eq(schema.employees.departmentId, departmentId),
+        columns: { id: true },
+      });
+      scopedEmployeeIds = employees.map((item) => item.id);
+      if (scopedEmployeeIds.length === 0) {
+        return { rows: [], total: 0, page, limit };
+      }
+    }
+
+    const conditions: SQL[] = [
+      gte(schema.attendanceDailySummaries.workDate, from),
+      lte(schema.attendanceDailySummaries.workDate, to),
+    ];
+    if (employeeId) {
+      conditions.push(eq(schema.attendanceDailySummaries.employeeId, employeeId));
+    }
+    if (scopedEmployeeIds) {
+      conditions.push(
+        inArray(schema.attendanceDailySummaries.employeeId, scopedEmployeeIds),
+      );
+    }
+
+    const where = conditions.length === 1 ? conditions[0] : and(...conditions);
+
+    const rows = await this.db.query.attendanceDailySummaries.findMany({
+      where,
+      with: {
+        employee: { with: { department: true } },
+        exceptions: true,
+      },
+      orderBy: [desc(schema.attendanceDailySummaries.workDate)],
+      limit,
+      offset,
+    });
+
+    const [totalResult] = await this.db
+      .select({ value: count() })
+      .from(schema.attendanceDailySummaries)
+      .where(where);
+
+    return {
+      rows,
+      total: Number(totalResult?.value ?? 0),
+      page,
+      limit,
+    };
+  }
+
+  async deleteClockEvents(ids: string[], tx?: AppDatabase): Promise<void> {
+    if (ids.length === 0) return;
+    const db = tx ?? this.db;
+    await db.delete(schema.attendances).where(inArray(schema.attendances.id, ids));
+  }
+
+  async findEmployeeIdsWithSummariesInRange(from: string, to: string): Promise<string[]> {
+    const employeeRows = await this.db
+      .select({ employeeId: schema.attendanceDailySummaries.employeeId })
+      .from(schema.attendanceDailySummaries)
+      .where(
+        and(
+          sql`${schema.attendanceDailySummaries.workDate} >= ${from}`,
+          sql`${schema.attendanceDailySummaries.workDate} <= ${to}`,
+        ),
+      )
+      .groupBy(schema.attendanceDailySummaries.employeeId);
+
+    return employeeRows.map((r) => r.employeeId).filter(Boolean);
+  }
+
+  async insertTimesheetSnapshots(
+    values: typeof schema.timesheetSnapshots.$inferInsert[],
+    tx?: AppDatabase,
+  ): Promise<void> {
+    if (values.length === 0) return;
+    const db = tx ?? this.db;
+    await db.insert(schema.timesheetSnapshots).values(values as any);
+  }
+
+  async getMaxSnapshotVersion(period: string, tx?: AppDatabase): Promise<number> {
+    const db = tx ?? this.db;
+    const [row] = await db
+      .select({ maxVersion: sql<number>`COALESCE(MAX(${schema.timesheetSnapshots.snapshotVersion}), 0)` })
+      .from(schema.timesheetSnapshots)
+      .where(eq(schema.timesheetSnapshots.period, period));
+    return Number(row?.maxVersion ?? 0);
+  }
+
+  async employeeExists(employeeId: string): Promise<boolean> {
+    const row = await this.db.query.employees.findFirst({
+      where: eq(schema.employees.id, employeeId),
+      columns: { id: true },
+    });
+    return !!row;
+  }
+
+  async findOverride(employeeId: string, workDate: string) {
+    return this.db.query.attendanceSummaryOverrides.findFirst({
+      where: and(
+        eq(schema.attendanceSummaryOverrides.employeeId, employeeId),
+        eq(schema.attendanceSummaryOverrides.workDate, workDate),
+      ),
+    });
+  }
+
+  async updateOverride(id: string, values: Record<string, unknown>) {
+    const [updated] = await this.db
+      .update(schema.attendanceSummaryOverrides)
+      .set(values as any)
+      .where(eq(schema.attendanceSummaryOverrides.id, id))
+      .returning();
+    return updated;
+  }
+
+  async insertOverride(values: Record<string, unknown>) {
+    const [created] = await this.db
+      .insert(schema.attendanceSummaryOverrides)
+      .values(values as any)
+      .returning();
+    return created;
+  }
+
+  async findWorkspaceData(query: { departmentId?: string; from: string; to: string }): Promise<{
+    employees: {
+      id: string;
+      employeeCode: string;
+      firstName: string;
+      lastName: string | null;
+      departmentName: string | null;
+      jobTitle: string | null;
+      baseSalary: string | null;
+    }[];
+    summaries: {
+      employeeId: string;
+      workDate: string;
+      status: string | null;
+      workedMinutes: number | null;
+      scheduledMinutes: number | null;
+      breakMinutes: number | null;
+      lateMinutes: number | null;
+      earlyLeaveMinutes: number | null;
+      overtimeMinutes: number | null;
+      personalBreakMinutes: number | null;
+      lunchDutyMinutes: number | null;
+      nightShiftDutyCount: string | number | null;
+      waterBoothDutyCount: string | number | null;
+      isHoliday: boolean;
+      note?: string | null;
+    }[];
+    events: {
+      employeeId: string;
+      date: string;
+      type: string;
+      time: Date | null;
+      session?: string | null;
+    }[];
+    allowances: {
+      employeeId: string;
+      type: string;
+      amount: string;
+    }[];
+  }> {
+    const conditions: SQL[] = [];
+    if (query.departmentId) {
+      conditions.push(eq(schema.orgAssignments.departmentId, query.departmentId));
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const employeeRows = await this.db
+      .select({
+        id: schema.employees.id,
+        employeeCode: schema.employees.employeeCode,
+        firstName: schema.employees.firstName,
+        lastName: schema.employees.lastName,
+        departmentName: schema.departments.name,
+        jobTitle: schema.orgAssignments.jobTitle,
+        baseSalary: schema.salaryStructures.baseSalary,
+      })
+      .from(schema.employees)
+      .leftJoin(
+        schema.orgAssignments,
+        and(
+          eq(schema.orgAssignments.employeeId, schema.employees.id),
+          eq(schema.orgAssignments.isCurrent, true),
+        ),
+      )
+      .leftJoin(schema.departments, eq(schema.departments.id, schema.orgAssignments.departmentId))
+      .leftJoin(
+        schema.salaryStructures,
+        and(
+          eq(schema.salaryStructures.employeeId, schema.employees.id),
+          eq(schema.salaryStructures.isCurrent, true),
+        ),
+      )
+      .where(whereClause)
+      .orderBy(schema.employees.firstName);
+
+    const employeeIds = employeeRows.map((r) => r.id);
+    if (employeeIds.length === 0) {
+      return { employees: [], summaries: [], events: [], allowances: [] };
+    }
+
+    const [summaryRows, eventRows, allowanceRows, overrideRows] = await Promise.all([
+      this.db
+        .select({
+          employeeId: schema.attendanceDailySummaries.employeeId,
+          workDate: schema.attendanceDailySummaries.workDate,
+          status: schema.attendanceDailySummaries.status,
+          workedMinutes: schema.attendanceDailySummaries.workedMinutes,
+          scheduledMinutes: schema.attendanceDailySummaries.scheduledMinutes,
+          breakMinutes: schema.attendanceDailySummaries.breakMinutes,
+          lateMinutes: schema.attendanceDailySummaries.lateMinutes,
+          earlyLeaveMinutes: schema.attendanceDailySummaries.earlyLeaveMinutes,
+          overtimeMinutes: schema.attendanceDailySummaries.overtimeMinutes,
+          personalBreakMinutes: schema.attendanceDailySummaries.personalBreakMinutes,
+          lunchDutyMinutes: schema.attendanceDailySummaries.lunchDutyMinutes,
+          nightShiftDutyCount: schema.attendanceDailySummaries.nightShiftDutyCount,
+          waterBoothDutyCount: schema.attendanceDailySummaries.waterBoothDutyCount,
+          isHoliday: schema.attendanceDailySummaries.isHoliday,
+        })
+        .from(schema.attendanceDailySummaries)
+        .where(
+          and(
+            inArray(schema.attendanceDailySummaries.employeeId, employeeIds),
+            gte(schema.attendanceDailySummaries.workDate, query.from),
+            lte(schema.attendanceDailySummaries.workDate, query.to),
+          ),
+        ),
+      this.db
+        .select({
+          employeeId: schema.attendances.employeeId,
+          date: schema.attendances.date,
+          type: schema.attendances.type,
+          time: schema.attendances.time,
+          session: schema.attendances.session,
+        })
+        .from(schema.attendances)
+        .where(
+          and(
+            inArray(schema.attendances.employeeId, employeeIds),
+            gte(schema.attendances.date, query.from),
+            lte(schema.attendances.date, query.to),
+          ),
+        ),
+      this.db
+        .select({
+          employeeId: schema.allowances.employeeId,
+          type: schema.allowances.type,
+          amount: schema.allowances.amount,
+        })
+        .from(schema.allowances)
+        .where(
+          and(
+            inArray(schema.allowances.employeeId, employeeIds),
+            or(
+              isNull(schema.allowances.effectiveTo),
+              gte(schema.allowances.effectiveTo, query.from),
+            ),
+            lte(schema.allowances.effectiveFrom, query.to),
+          ),
+        ),
+      this.db
+        .select({
+          employeeId: schema.attendanceSummaryOverrides.employeeId,
+          workDate: schema.attendanceSummaryOverrides.workDate,
+          overriddenStatus: schema.attendanceSummaryOverrides.overriddenStatus,
+          overriddenWorkedMinutes: schema.attendanceSummaryOverrides.overriddenWorkedMinutes,
+          overriddenLateMinutes: schema.attendanceSummaryOverrides.overriddenLateMinutes,
+          overriddenEarlyLeaveMinutes: schema.attendanceSummaryOverrides.overriddenEarlyLeaveMinutes,
+          overriddenOvertimeMinutes: schema.attendanceSummaryOverrides.overriddenOvertimeMinutes,
+          note: schema.attendanceSummaryOverrides.note,
+        })
+        .from(schema.attendanceSummaryOverrides)
+        .where(
+          and(
+            inArray(schema.attendanceSummaryOverrides.employeeId, employeeIds),
+            gte(schema.attendanceSummaryOverrides.workDate, query.from),
+            lte(schema.attendanceSummaryOverrides.workDate, query.to),
+          ),
+        ),
+    ]);
+
+    const summaryMap = new Map<string, {
+      employeeId: string;
+      workDate: string;
+      status: string | null;
+      workedMinutes: number | null;
+      scheduledMinutes: number | null;
+      breakMinutes: number | null;
+      lateMinutes: number | null;
+      earlyLeaveMinutes: number | null;
+      overtimeMinutes: number | null;
+      personalBreakMinutes: number | null;
+      lunchDutyMinutes: number | null;
+      nightShiftDutyCount: string | number | null;
+      waterBoothDutyCount: string | number | null;
+      isHoliday: boolean;
+      note?: string | null;
+    }>();
+
+    for (const s of summaryRows) {
+      summaryMap.set(`${s.employeeId}_${s.workDate}`, { ...s, note: null });
+    }
+
+    for (const ov of overrideRows) {
+      const key = `${ov.employeeId}_${ov.workDate}`;
+      const existing = summaryMap.get(key);
+      if (existing) {
+        summaryMap.set(key, {
+          ...existing,
+          status: ov.overriddenStatus ?? existing.status,
+          workedMinutes: ov.overriddenWorkedMinutes != null ? ov.overriddenWorkedMinutes : existing.workedMinutes,
+          lateMinutes: ov.overriddenLateMinutes != null ? ov.overriddenLateMinutes : existing.lateMinutes,
+          earlyLeaveMinutes: ov.overriddenEarlyLeaveMinutes != null ? ov.overriddenEarlyLeaveMinutes : existing.earlyLeaveMinutes,
+          overtimeMinutes: ov.overriddenOvertimeMinutes != null ? ov.overriddenOvertimeMinutes : existing.overtimeMinutes,
+          note: ov.note ?? existing.note,
+        });
+      } else {
+        summaryMap.set(key, {
+          employeeId: ov.employeeId,
+          workDate: ov.workDate,
+          status: ov.overriddenStatus ?? "present",
+          workedMinutes: ov.overriddenWorkedMinutes ?? 0,
+          scheduledMinutes: 480,
+          breakMinutes: null,
+          lateMinutes: ov.overriddenLateMinutes ?? 0,
+          earlyLeaveMinutes: ov.overriddenEarlyLeaveMinutes ?? 0,
+          overtimeMinutes: ov.overriddenOvertimeMinutes ?? 0,
+          personalBreakMinutes: null,
+          lunchDutyMinutes: null,
+          nightShiftDutyCount: null,
+          waterBoothDutyCount: null,
+          isHoliday: false,
+          note: ov.note ?? null,
+        });
+      }
+    }
+
+    return {
+      employees: employeeRows,
+      summaries: Array.from(summaryMap.values()),
+      events: eventRows,
+      allowances: allowanceRows,
+    };
+  }
+}
+

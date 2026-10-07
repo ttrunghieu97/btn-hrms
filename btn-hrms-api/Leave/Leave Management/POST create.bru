@@ -1,0 +1,18 @@
+meta {
+  name: POST create
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/leave-requests
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"typeId":"{{tid}}","startDate":"2026-07-10"}
+}

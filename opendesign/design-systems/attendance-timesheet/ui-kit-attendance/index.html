@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bảng công tháng 2026-09 — LV831202 | BTN HRMS</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="../assets/icons/favicon.ico" />
+
+  <!-- Google Fonts: Geist Sans & Geist Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Canonical Design System Tokens -->
+  <link rel="stylesheet" href="../tokens/colors_and_type.css" />
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--fs-sm);
+      line-height: 1.5;
+      color: var(--fg-1);
+      background-color: var(--surface-page);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-feature-settings: "tnum" on, "zero" on;
+    }
+
+    /* ── Internal Workspace Container (No Outer App Shell) ─────────── */
+    .workspace-root {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      height: 100vh;
+      overflow: hidden;
+      padding: 6px 12px;
+      gap: 6px;
+    }
+
+    /* Top Period Toolbar */
+    .toolbar-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--fg-2);
+      margin-bottom: 1px;
+      user-select: text;
+    }
+
+    .breadcrumbs a {
+      color: var(--fg-2);
+      text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+      color: var(--fg-1);
+    }
+
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      user-select: text;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 9px;
+      font-size: 11.5px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      user-select: none;
+      font-family: var(--font-sans);
+    }
+
+    .btn-primary {
+      background: var(--accent-1);
+      color: #ffffff;
+      border-color: var(--accent-1);
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .btn-primary {
+      color: #09090b;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-1-hover);
+    }
+
+    .btn-outline {
+      background: var(--surface-card);
+      border-color: var(--border-subtle);
+      color: var(--fg-1);
+    }
+
+    .btn-outline:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-medium);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg-1);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-subtle);
+    }
+
+    .btn-sm {
+      height: 26px;
+      padding: 0 7px;
+      font-size: 11px;
+    }
+
+    .btn-xs {
+      height: 23px;
+      padding: 0 6px;
+      font-size: 10.5px;
+      border-radius: var(--radius-xs);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: var(--radius-xs);
+      font-size: 10.5px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .badge-ok {
+      background: var(--status-ok-bg);
+      color: var(--status-ok-text);
+      border: 1px solid var(--status-ok-border);
+    }
+
+    .badge-warn {
+      background: var(--status-warn-bg);
+      color: var(--status-warn-text);
+      border: 1px solid var(--status-warn-border);
+    }
+
+    .badge-gray {
+      background: var(--surface-subtle);
+      color: var(--fg-2);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .badge-outline {
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-2);
+      background: transparent;
+    }
+
+    /* Pulse Green Dot */
+    .dot-live {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-ok);
+      animation: dotPulse 1.8s infinite;
+    }
+
+    @keyframes dotPulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Auto-save status indicator */
+    .autosave-pill {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--status-ok-text);
+      background: var(--status-ok-bg);
+      border: 1px solid var(--status-ok-border);
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    /* ── Split Workspace (Left Sidebar + Right Area) ─────────────────── */
+    .workspace-main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    /* Left Employee Sidebar (285px) */
+    .employee-sidebar {
+      width: 285px;
+      flex-shrink: 0;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-2xs);
+      overflow: hidden;
+      transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s, margin 0.2s;
+    }
+
+    .employee-sidebar.collapsed {
+      width: 0;
+      opacity: 0;
+      margin-right: -10px;
+      pointer-events: none;
+      border: none;
+    }
+
+    .sidebar-period-bar {
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: var(--surface-header);
+    }
+
+    .period-switcher-box {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--surface-card);
+      overflow: hidden;
+      height: 23px;
+    }
+
+    .period-switcher-box .btn {
+      height: 23px;
+      padding: 0 5px;
+      font-size: 10.5px;
+      border-radius: 0;
+      border: none;
+    }
+
+    .period-switcher-box .period-val {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 0 5px;
+      color: var(--fg-1);
+    }
+
+    .period-switch-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 4px;
+      border-radius: var(--radius-sm);
+    }
+
+    .period-switch-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--status-ok-text, #059669);
+      font-family: var(--font-mono);
+      transition: color 0.15s ease;
+    }
+
+    .period-switch-label.is-closed {
+      color: var(--fg-2, #71717a);
+    }
+
+    .toggle-switch {
+      width: 28px;
+      height: 16px;
+      background: #d4d4d8;
+      border-radius: 9999px;
+      position: relative;
+      transition: background-color 0.2s ease;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    [data-theme="dark"] .toggle-switch {
+      background: #3f3f46;
+    }
+
+    .toggle-switch.is-active {
+      background: #10b981;
+    }
+
+    .toggle-knob {
+      width: 12px;
+      height: 12px;
+      background: #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+
+    .toggle-switch.is-active .toggle-knob {
+      transform: translateX(12px);
+    }
+
+    .action-btn-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sidebar-search-area {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--surface-header);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--surface-page);
+      font-size: 11px;
+      color: var(--fg-1);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--fg-1);
+    }
+
+    .dept-select {
+      width: 100%;
+      height: 26px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--surface-page);
+      font-size: 11px;
+      color: var(--fg-1);
+      padding: 0 6px;
+      outline: none;
+    }
+
+    .employee-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .emp-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      border-left: 2.5px solid transparent;
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.1s ease;
+      color: inherit;
+    }
+
+    .emp-item:hover {
+      background: var(--surface-subtle);
+    }
+
+    .emp-item.active {
+      background: var(--surface-subtle);
+      border-left-color: var(--fg-1);
+    }
+
+    .emp-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-xs);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--fg-1);
+      flex-shrink: 0;
+    }
+
+    .emp-item.active .emp-avatar {
+      background: var(--accent-1);
+      color: #ffffff;
+      border-color: var(--accent-1);
+    }
+
+    [data-theme="dark"] .emp-item.active .emp-avatar {
+      color: #09090b;
+    }
+
+    /* Right Main Timesheet Section */
+    .timesheet-section {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      overflow: hidden;
+    }
+
+    /* ── KPI SLIP TABLE (EXACTLY MATCHING Untitled.png - 2 ROWS MULTI-COLUMN) ── */
+    .kpi-slip-wrapper {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-2xs);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .kpi-slip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3.5px 10px;
+      background: var(--surface-header);
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 8px;
+      font-size: 11px;
+      flex-wrap: wrap;
+      user-select: text;
+    }
+
+    .slip-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      user-select: text;
+    }
+
+    .slip-meta-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      user-select: text;
+    }
+
+    .slip-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      user-select: text;
+    }
+
+    .meta-label {
+      color: var(--fg-3);
+      font-weight: 500;
+      font-size: 11px;
+      user-select: text;
+    }
+
+    .meta-val {
+      color: var(--fg-1);
+      user-select: text;
+    }
+
+    .meta-divider {
+      color: var(--border-medium);
+      user-select: none;
+    }
+
+    .slip-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .kpi-table-scroll {
+      overflow-x: auto;
+    }
+
+    .kpi-slip-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      white-space: nowrap;
+      table-layout: fixed;
+      min-width: 1038px;
+      user-select: text;
+    }
+
+    .kpi-slip-table td {
+      border: 1px solid var(--border-subtle);
+      padding: 2.5px 6px;
+      vertical-align: middle;
+      line-height: 1.25;
+      user-select: text;
+    }
+
+    .kpi-lbl {
+      font-weight: 500;
+      color: var(--fg-2);
+      background: var(--surface-subtle);
+      white-space: nowrap;
+      user-select: text;
+    }
+
+    .kpi-qty {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--fg-1);
+      text-align: right;
+      padding-left: 6px;
+      padding-right: 8px;
+    }
+
+    .kpi-amt {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      color: var(--fg-1);
+      text-align: right;
+      padding-left: 6px;
+      padding-right: 8px;
+    }
+
+    .kpi-lbl-bonus {
+      background: var(--surface-subtle);
+      color: var(--fg-2);
+      font-weight: 500;
+    }
+
+    .kpi-amt-bonus {
+      background: transparent;
+      color: var(--fg-1);
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-align: right;
+    }
+
+    .kpi-lbl-total {
+      background: var(--surface-subtle);
+      color: var(--fg-1);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .kpi-amt-total {
+      background: var(--surface-subtle);
+      color: var(--fg-1);
+      font-weight: 800;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: -0.01em;
+      text-align: right;
+      padding-right: 10px;
+    }
+
+    /* ── Daily Spreadsheet Grid (30 Days) ──────────────────────────── */
+    .grid-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-2xs);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .grid-scroll-pane {
+      overflow: auto;
+      flex: 1;
+      height: 100%;
+    }
+
+    .timesheet-grid-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 12.5px;
+      min-width: 1080px;
+      table-layout: fixed;
+    }
+
+    .timesheet-grid-table th,
+    .timesheet-grid-table td {
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 2px 4px;
+      text-align: center;
+      height: 26px;
+      vertical-align: middle;
+    }
+
+    .timesheet-grid-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      user-select: text;
+    }
+
+    .timesheet-grid-table th {
+      background: var(--surface-header);
+      color: var(--fg-2);
+      font-weight: 600;
+      font-size: 11.5px;
+      line-height: 1.25;
+      text-transform: none;
+      letter-spacing: normal;
+      user-select: text;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      white-space: normal;
+      word-break: keep-all;
+      height: 26px;
+    }
+
+    .timesheet-grid-table tr.subhead-row th {
+      top: 26px;
+      font-size: 11px;
+      white-space: nowrap;
+      padding: 1px 3px;
+      height: 24px;
+    }
+
+    /* Sticky Columns */
+    .col-sticky-date {
+      position: sticky;
+      left: 0;
+      z-index: 12;
+      background: var(--surface-card);
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+    }
+
+    .col-sticky-day {
+      position: sticky;
+      left: 44px;
+      z-index: 12;
+      background: var(--surface-card);
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+      border-right: 2px solid var(--border-medium) !important;
+      box-shadow: 2px 0 3px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .timesheet-grid-table th.col-sticky-date,
+    .timesheet-grid-table th.col-sticky-day {
+      background: var(--surface-header);
+      z-index: 20;
+    }
+
+    /* Sunday row default background across all columns including sticky */
+    .timesheet-grid-table tbody tr.row-sunday td {
+      background-color: rgba(140, 140, 150, 0.05);
+    }
+    .timesheet-grid-table tbody tr.row-sunday td.col-sticky-date,
+    .timesheet-grid-table tbody tr.row-sunday td.col-sticky-day {
+      background-color: #fafafb;
+    }
+    [data-theme="dark"] .timesheet-grid-table tbody tr.row-sunday td.col-sticky-date,
+    [data-theme="dark"] .timesheet-grid-table tbody tr.row-sunday td.col-sticky-day {
+      background-color: #151518;
+    }
+
+    /* 100% UNIFORM HOVER COLOR ACROSS ALL CELLS (Ngày, Thứ, and all remaining cols) */
+    .timesheet-grid-table tbody tr:hover td {
+      background-color: var(--surface-subtle) !important;
+    }
+    [data-theme="dark"] .timesheet-grid-table tbody tr:hover td {
+      background-color: var(--surface-subtle) !important;
+    }
+
+    /* 100% UNIFORM ACTIVE ROW COLOR ACROSS ALL CELLS (Ngày, Thứ, and all remaining cols) */
+    .timesheet-grid-table tbody tr.row-active td {
+      background-color: #e8f0fe !important;
+    }
+    [data-theme="dark"] .timesheet-grid-table tbody tr.row-active td {
+      background-color: #1e293b !important;
+    }
+
+    /* Active row + hover: uniform across all cells */
+    .timesheet-grid-table tbody tr.row-active:hover td {
+      background-color: #dbeafe !important;
+    }
+    [data-theme="dark"] .timesheet-grid-table tbody tr.row-active:hover td {
+      background-color: #27354f !important;
+    }
+
+    .timesheet-grid-table tfoot td {
+      background: var(--surface-header);
+      font-weight: 700;
+      border-top: 2px solid var(--border-medium);
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+    }
+
+    /* Inline editable cell */
+    .cell-inline-input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-align: center;
+      color: inherit;
+      outline: none;
+      padding: 0;
+      border-radius: var(--radius-xs);
+    }
+
+    .cell-inline-input.cell-note-input {
+      text-align: left;
+      padding: 0 6px;
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+    }
+
+    .cell-inline-input:focus {
+      background: var(--surface-card);
+      box-shadow: inset 0 0 0 2px var(--accent-1);
+    }
+
+    /* Keyboard navigation hints */
+    .grid-footer-hints {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      font-size: 10.5px;
+      color: var(--fg-3);
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-header);
+      flex-shrink: 0;
+    }
+
+    .kbd-tag {
+      display: inline-block;
+      padding: 0 4px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-page);
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--fg-2);
+    }
+
+    /* Modal Dialog */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      width: 100%;
+      max-width: 440px;
+      overflow: hidden;
+      animation: modalSlide 0.12s ease-out;
+    }
+
+    @keyframes modalSlide {
+      from { transform: scale(0.97); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-footer {
+      padding: 8px 14px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      background: var(--surface-header);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fg-2);
+    }
+
+    .form-input {
+      height: 28px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--surface-page);
+      color: var(--fg-1);
+      padding: 0 8px;
+      font-size: 11.5px;
+      outline: none;
+    }
+
+    /* ── Tweaks Floating Panel (make-tweakable skill) ── */
+    .tweaks-trigger-btn {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      height: 32px;
+      padding: 0 10px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--fg-1);
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      z-index: 90;
+      transition: all 0.15s;
+    }
+
+    .tweaks-trigger-btn:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-medium);
+    }
+
+    .tweaks-panel {
+      position: fixed;
+      bottom: 52px;
+      right: 14px;
+      width: 290px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 95;
+      display: none;
+      flex-direction: column;
+      animation: modalSlide 0.12s ease-out;
+      font-size: 11.5px;
+    }
+
+    .tweaks-panel.open {
+      display: flex;
+    }
+
+    .tweaks-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-header);
+    }
+
+    .tweaks-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--fg-1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tweaks-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .tweak-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tweak-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--fg-2);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .tweak-select, .tweak-input {
+      height: 28px;
+      padding: 0 6px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--surface-page);
+      color: var(--fg-1);
+      font-size: 11px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Internal Workspace Container -->
+  <div class="workspace-root">
+
+    <!-- Split Workspace -->
+    <div class="workspace-main">
+
+      <!-- Left Employee Sidebar (Exact 10 Employees from Customer's Real List) -->
+      <aside class="employee-sidebar" id="empSidebar">
+        <!-- Month Navigator at Top of Sidebar -->
+        <div class="sidebar-period-bar">
+          <div class="period-switcher-box">
+            <button class="btn btn-ghost" onclick="notify('Đã chuyển sang xem tháng 2026-08')" title="Tháng trước">← Trước</button>
+            <span class="period-val mono">2026-09</span>
+            <button class="btn btn-ghost" onclick="notify('Đã chuyển sang xem tháng 2026-10')" title="Tháng sau">Sau →</button>
+          </div>
+          <div class="period-switch-wrap" onclick="handlePeriodSwitchClick()" title="Kỳ công đang Mở · Bấm để Đóng kỳ công" id="periodSwitchWrap">
+            <span class="period-switch-label mono" id="periodSwitchLabel">Mở</span>
+            <div class="toggle-switch is-active" id="periodSwitchToggle">
+              <span class="toggle-knob"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-search-area">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--fg-2);">Danh sách nhân sự</span>
+            <span class="badge badge-gray mono" id="empCountText">10</span>
+          </div>
+          <input
+            type="text"
+            id="empSearchInput"
+            placeholder="Tìm tên / mã NV…"
+            class="search-input"
+            oninput="handleSearchEmp(this.value)"
+          />
+          <select id="deptFilter" class="dept-select" onchange="handleDeptFilter(this.value)">
+            <option value="ALL">Tất cả phòng ban</option>
+            <option value="IT">Kỹ thuật - IT</option>
+            <option value="KD">Phòng Kinh doanh</option>
+            <option value="HR">Phòng Hành chính Nhân sự</option>
+            <option value="NONE">Chưa gán</option>
+          </select>
+        </div>
+
+        <div class="employee-list-scroll" id="empListContainer">
+          <!-- Rendered dynamically with 10 employees -->
+        </div>
+      </aside>
+
+      <!-- Right Timesheet Workspace -->
+      <section class="timesheet-section">
+
+        <!-- ── KPI SLIP TABLE (EXACT REDESIGN OF Untitled.png - 2 ROWS MULTI-COLUMN) ── -->
+        <div class="kpi-slip-wrapper">
+          <!-- Profile Bar Header -->
+          <div class="kpi-slip-header">
+            <div class="slip-header-left">
+              <button class="btn btn-outline btn-sm" onclick="toggleSidebar()" id="sidebarToggleBtn" title="Thu gọn / mở rộng danh sách nhân sự" style="gap: 5px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                <span>Thu gọn</span>
+              </button>
+              <div class="slip-meta-group">
+                <span class="slip-meta-item">
+                  <span class="meta-label">Tên nhân viên:</span>
+                  <span class="meta-val font-semibold" id="slipName">Lifecycle Test831202</span>
+                  <span class="badge badge-gray mono" id="slipEmpCode">LV831202</span>
+                </span>
+                <span class="meta-divider">·</span>
+                <span class="slip-meta-item">
+                  <span class="meta-label">Bộ phận:</span>
+                  <span class="meta-val" id="slipDept">Chưa gán phòng ban</span>
+                </span>
+                <span class="meta-divider">·</span>
+                <span class="slip-meta-item">
+                  <span class="meta-label">LCB:</span>
+                  <span class="meta-val mono" id="slipLCB">0 đ</span>
+                </span>
+                <span class="meta-divider">·</span>
+                <span class="slip-meta-item">
+                  <span class="meta-label">Đơn giá/ngày:</span>
+                  <span class="meta-val mono font-semibold" id="slipRate">350.000 đ</span>
+                </span>
+              </div>
+            <div class="slip-header-right">
+              <span class="badge badge-warn" id="slipStatusBadge">Chưa chốt</span>
+              <button class="btn btn-primary btn-xs" id="verifyEmpBtn" onclick="toggleVerifyCurrentEmployee()" title="Chốt công cá nhân cho nhân sự này" style="gap: 3px; font-weight: 600;">
+                🔒 Chốt cá nhân
+              </button>
+              <div class="dropdown-wrapper" style="position: relative; display: inline-block;">
+                <button class="btn btn-outline btn-xs" onclick="togglePrintDropdown(event)" title="Tùy chọn In / Xuất PDF" style="gap: 3px;">
+                  🖨️ In / PDF <span style="font-size: 9px; opacity: 0.7;">▾</span>
+                </button>
+                <div id="printDropdownMenu" style="display: none; position: absolute; right: 0; top: calc(100% + 4px); background: var(--bg-2); border: 1px solid var(--border-1); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 100; min-width: 130px; padding: 4px;">
+                  <button onclick="notify('Đang in phiếu công cá nhân...'); window.print(); closePrintDropdown();" style="display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none; border: none; padding: 6px 10px; font-size: 11px; cursor: pointer; border-radius: 4px; color: var(--fg-1);" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background='none'">
+                    👤 In cá nhân
+                  </button>
+                  <button onclick="notify('Đang chuẩn bị in toàn bộ nhân sự...'); window.print(); closePrintDropdown();" style="display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none; border: none; padding: 6px 10px; font-size: 11px; cursor: pointer; border-radius: 4px; color: var(--fg-1);" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background='none'">
+                    👥 In toàn bộ
+                  </button>
+                </div>
+              </div>
+              <button class="btn btn-ghost btn-xs" onclick="toggleTheme()" id="themeBtn" title="Đổi theme Sáng / Tối" style="padding: 0 5px; font-size: 12px;">◑</button>
+            </div>
+          </div>
+
+          <!-- 2-Row Multi-Column KPI Slip Grid matching Untitled.png -->
+          <div class="kpi-table-scroll">
+            <table class="kpi-slip-table" style="min-width: 1180px;">
+              <colgroup>
+                <col style="width: 80px;">
+                <col style="width: 38px;">
+                <col style="width: 85px;">
+                <col style="width: 82px;">
+                <col style="width: 38px;">
+                <col style="width: 85px;">
+                <col style="width: 82px;">
+                <col style="width: 46px;">
+                <col style="width: 95px;">
+                <col style="width: 72px;">
+                <col style="width: 46px;">
+                <col style="width: 78px;">
+                <col style="width: 82px;">
+                <col style="width: 85px;">
+                <col style="width: 76px;">
+                <col style="width: 38px;">
+                <col style="width: 95px;">
+              </colgroup>
+              <tbody>
+                <!-- Dòng 1: Công chính -> Công Chủ nhật -> Trực trưa 25K -> Trực 35K -> Trách nhiệm -> Chuyên cần -->
+                <tr>
+                  <td class="kpi-lbl">Công chính:</td>
+                  <td class="kpi-qty" id="slipMainWork">26.00</td>
+                  <td class="kpi-amt font-semibold" id="slipMainAmount">9.100.000 đ</td>
+
+                  <td class="kpi-lbl">Công Chủ nhật:</td>
+                  <td class="kpi-qty" id="slipSunWork">0.00</td>
+                  <td class="kpi-amt" id="slipSunAmount">0 đ</td>
+
+                  <td class="kpi-lbl">Trực trưa 25K:</td>
+                  <td class="kpi-qty" id="slipNoon25Work">0.0</td>
+                  <td class="kpi-amt" id="slipNoon25Amount">0 đ</td>
+
+                  <td class="kpi-lbl">Trực 35K:</td>
+                  <td class="kpi-qty" id="slipNoon35Work">0.0</td>
+                  <td class="kpi-amt" id="slipNoon35Amount">0 đ</td>
+
+                  <td class="kpi-lbl">Trách nhiệm:</td>
+                  <td class="kpi-amt" id="slipResponsibility">0 đ</td>
+
+                  <td class="kpi-lbl">Chuyên cần:</td>
+                  <td class="kpi-qty" id="slipChuyenCanQty">1.00</td>
+                  <td class="kpi-amt font-semibold" id="slipChuyenCan">500.000 đ</td>
+                </tr>
+
+                <!-- Dòng 2: Giờ tăng ca -> Không đủ công -> Trực đêm -> Đứng nước -> BH + Công đoàn -> Tổng -->
+                <tr>
+                  <td class="kpi-lbl">Giờ tăng ca:</td>
+                  <td class="kpi-qty" id="slipOtHours">0.0h</td>
+                  <td class="kpi-amt" id="slipOtAmount">0 đ</td>
+
+                  <td class="kpi-lbl">Không đủ công:</td>
+                  <td class="kpi-qty text-warn" id="slipDeficitHours">0h</td>
+                  <td class="kpi-amt text-warn" id="slipDeficitAmount">0 đ</td>
+
+                  <td class="kpi-lbl">Trực đêm:</td>
+                  <td class="kpi-qty text-success font-medium" id="slipNightCount">14 đêm</td>
+                  <td class="kpi-amt text-success font-semibold" id="slipNightAmount">+2.100.000 đ</td>
+
+                  <td class="kpi-lbl">Đứng nước:</td>
+                  <td class="kpi-qty" id="slipWaterCount">0 lần</td>
+                  <td class="kpi-amt" style="color: var(--fg-2);">0 đ</td>
+
+                  <td class="kpi-lbl">BH + Công đoàn:</td>
+                  <td class="kpi-amt text-danger font-medium" id="slipInsurance">-533.000 đ</td>
+
+                  <td class="kpi-lbl kpi-lbl-total">Tổng:</td>
+                  <td class="kpi-amt kpi-amt-total font-bold" id="slipTotalNet" colspan="2">11.167.000 đ</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── 30-Day Daily Timesheet Grid ────────────────────────────── -->
+        <div class="grid-card">
+          <div class="grid-scroll-pane">
+            <table class="timesheet-grid-table">
+              <colgroup>
+                <col style="width: 44px;">
+                <col style="width: 44px;">
+                <col style="width: 56px;">
+                <col style="width: 56px;">
+                <col style="width: 56px;">
+                <col style="width: 56px;">
+                <col style="width: 62px;">
+                <col style="width: 62px;">
+                <col style="width: 62px;">
+                <col style="width: 62px;">
+                <col style="width: 44px;">
+                <col style="width: 44px;">
+                <col style="width: 70px;">
+                <col style="width: 56px;">
+                <col style="width: 64px;">
+                <col style="width: 56px;">
+                <col style="width: 56px;">
+                <col style="width: 140px;">
+              </colgroup>
+              <thead>
+                <!-- Row 1: Groups & Pinned Columns -->
+                <tr>
+                  <th rowspan="2" class="col-sticky-date">Ngày</th>
+                  <th rowspan="2" class="col-sticky-day">Thứ</th>
+                  <th colspan="2">Ca sáng</th>
+                  <th colspan="2">Ca chiều</th>
+                  <th colspan="4">Nghỉ &amp; Trực</th>
+                  <th colspan="2">Tổng giờ</th>
+                  <th rowspan="2">Công chính<br><span style="font-size: 9px; font-weight: normal; text-transform: lowercase;">chuẩn 8h</span></th>
+                  <th rowspan="2">Tăng ca<br><span style="font-size: 9px; font-weight: normal; text-transform: lowercase;">giờ</span></th>
+                  <th rowspan="2">Thiếu công<br><span style="font-size: 9px; font-weight: normal; text-transform: lowercase;">giờ</span></th>
+                  <th rowspan="2">Trực đêm<br><span style="font-size: 9px; font-weight: normal; text-transform: lowercase;">lần</span></th>
+                  <th rowspan="2">Đứng nước<br><span style="font-size: 9px; font-weight: normal; text-transform: lowercase;">lần</span></th>
+                  <th rowspan="2" style="text-align: left; padding-left: 10px;">Trạng thái &amp; Ghi chú</th>
+                </tr>
+                <!-- Row 2: Sub-columns -->
+                <tr class="subhead-row">
+                  <th>Vào</th>
+                  <th>Ra</th>
+                  <th>Vào</th>
+                  <th>Ra</th>
+                  <th>Nghỉ trưa</th>
+                  <th>Việc riêng</th>
+                  <th>Trực trưa</th>
+                  <th>Trực 35k</th>
+                  <th>Giờ</th>
+                  <th>Phút</th>
+                </tr>
+              </thead>
+              <tbody id="gridTbody">
+                <!-- Populated via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+  </div>
+
+  <!-- ── Audited Adjustment Modal ────────────────────────────────────── -->
+  <div class="modal-overlay" id="adjModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 13px; font-weight: 700;">Điều chỉnh giờ công kiểm toán</h2>
+          <p class="mono" style="font-size: 11px; color: var(--fg-2);">
+            <span id="dlgEmp">Lifecycle Test831202</span> · Ngày: <span id="dlgDate" style="font-weight: 600; color: var(--fg-1);">2026-09-04</span>
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeAdjModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Trạng thái công</label>
+          <select id="dlgStatus" class="form-input">
+            <option value="present">Công thường (Có mặt)</option>
+            <option value="late">Đi muộn</option>
+            <option value="early_leave">Về sớm</option>
+            <option value="leave">Nghỉ phép</option>
+            <option value="holiday">Nghỉ lễ</option>
+            <option value="off">Nghỉ tuần</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tổng giờ làm việc thực tế (giờ)</label>
+          <input type="number" id="dlgHours" class="form-input mono" step="0.5" min="0" max="24" value="8.0" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Lý do điều chỉnh (Bắt buộc Audit)</label>
+          <select id="dlgReason" class="form-input">
+            <option value="manual_correction">HR nhập thủ công / Quên quẹt thẻ</option>
+            <option value="policy_exception">Ngoại lệ chính sách / Công tác</option>
+            <option value="data_fix">Sửa lỗi thiết bị chấm công</option>
+            <option value="reconciliation">Đối soát dữ liệu kỳ công</option>
+            <option value="other">Khác</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ghi chú chi tiết</label>
+          <input type="text" id="dlgNote" class="form-input" placeholder="Nhập lý do đối soát chi tiết nếu có..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="closeAdjModal()">Hủy</button>
+        <button class="btn btn-primary btn-sm" onclick="saveAdjModal()">Lưu công đối soát</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Close Period Modal ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="closeModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 style="font-size: 13px; font-weight: 700;">Chốt bảng công tháng 2026-09</h2>
+        <button class="btn btn-ghost btn-sm" onclick="closeCloseModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="padding: 10px; background: var(--surface-subtle); border-radius: var(--radius-sm); font-size: 11px; line-height: 1.5; color: var(--fg-2);">
+          Kỳ công <strong>tháng 2026-09</strong> sẽ được chốt và đóng băng dữ liệu để chuyển giao cho phân hệ Tính lương (Payroll).
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú chốt kỳ (Tùy chọn)</label>
+          <input type="text" id="closeRemarksInput" class="form-input" placeholder="Ví dụ: Đã đối soát xong bảng công ngày 30/09" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="closeCloseModal()">Hủy</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmClose()">Xác nhận Chốt kỳ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Reopen Period Modal ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="reopenModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 style="font-size: 13px; font-weight: 700;">Mở lại bảng công tháng 2026-09</h2>
+        <button class="btn btn-ghost btn-sm" onclick="closeReopenModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); font-size: 11px; line-height: 1.5; color: #b91c1c;">
+          ⚠️ <strong>Cảnh báo:</strong> Mở lại kỳ công đã chốt sẽ ghi nhật ký kiểm toán (Audit Trail) để đảm bảo tính minh bạch.
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label class="form-label">Lý do mở lại kỳ công <span style="color: var(--danger, #ef4444)">*</span></label>
+          <input type="text" id="reopenRemarksInput" class="form-input" placeholder="Ví dụ: Cần điều chỉnh bổ sung công cho nhân sự..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="closeReopenModal()">Hủy</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmReopen()">Xác nhận Mở lại</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Script Logic ────────────────────────────────────────────────── -->
+  <script>
+    const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+    // 10 Exact Employees from Customer's Real Data
+    const EMPLOYEES = [
+      {
+        id: "emp-gp79594",
+        initials: "HL",
+        fullName: "Lê Hoàng Long",
+        employeeCode: "GP79594",
+        departmentName: "Kỹ thuật - IT",
+        deptCode: "IT",
+        workingDays: 26,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 14,
+      },
+      {
+        id: "emp-lv208686",
+        initials: "LT",
+        fullName: "Lifecycle Test208686",
+        employeeCode: "LV208686",
+        departmentName: "Chưa gán",
+        deptCode: "NONE",
+        workingDays: 0,
+        totalDays: 30,
+        statusText: "Chưa chấm công",
+        statusType: "gray",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 0,
+      },
+      {
+        id: "emp-lv312850",
+        initials: "LT",
+        fullName: "Lifecycle Test312850",
+        employeeCode: "LV312850",
+        departmentName: "Chưa gán",
+        deptCode: "NONE",
+        workingDays: 0,
+        totalDays: 30,
+        statusText: "Chưa chấm công",
+        statusType: "gray",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 0,
+      },
+      {
+        id: "emp-lv579857",
+        initials: "LT",
+        fullName: "Lifecycle Test579857",
+        employeeCode: "LV579857",
+        departmentName: "Chưa gán",
+        deptCode: "NONE",
+        workingDays: 0,
+        totalDays: 30,
+        statusText: "Chưa chấm công",
+        statusType: "gray",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 0,
+      },
+      {
+        id: "474b05c0-29d8-424d-9045-4e41db06184e",
+        initials: "LT",
+        fullName: "Lifecycle Test831202",
+        employeeCode: "LV831202",
+        departmentName: "Chưa gán phòng ban",
+        deptCode: "NONE",
+        workingDays: 26,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 0,
+        ratePerDay: 350000,
+        dutyNightCount: 14,
+      },
+      {
+        id: "emp-lv867167",
+        initials: "LT",
+        fullName: "Lifecycle Test867167",
+        employeeCode: "LV867167",
+        departmentName: "Chưa gán",
+        deptCode: "NONE",
+        workingDays: 0,
+        totalDays: 30,
+        statusText: "Chưa chấm công",
+        statusType: "gray",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 0,
+      },
+      {
+        id: "emp-gp37667",
+        initials: "VA",
+        fullName: "Nguyễn Văn An",
+        employeeCode: "GP37667",
+        departmentName: "Phòng Kinh doanh",
+        deptCode: "KD",
+        workingDays: 26,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 14,
+      },
+      {
+        id: "emp-gp89487",
+        initials: "MT",
+        fullName: "Phạm Minh Tuấn",
+        employeeCode: "GP89487",
+        departmentName: "Kỹ thuật - IT",
+        deptCode: "IT",
+        workingDays: 24,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 12,
+      },
+      {
+        id: "emp-gp14187",
+        initials: "TH",
+        fullName: "Tề Trung Hiếu",
+        employeeCode: "GP14187",
+        departmentName: "Kỹ thuật - IT",
+        deptCode: "IT",
+        workingDays: 29,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 4200000,
+        ratePerDay: 161540,
+        dutyNightCount: 14,
+      },
+      {
+        id: "emp-gp41530",
+        initials: "TM",
+        fullName: "Trần Thị Mai",
+        employeeCode: "GP41530",
+        departmentName: "Phòng Hành chính Nhân sự",
+        deptCode: "HR",
+        workingDays: 26,
+        totalDays: 30,
+        statusText: "Thiếu dữ liệu",
+        statusType: "warn",
+        baseSalary: 0,
+        ratePerDay: 250000,
+        dutyNightCount: 14,
+      }
+    ];
+
+    // Daily records for active employee (LV831202) exactly matching user's data
+    let dailyRecords = [];
+    const PERIOD = "2026-09";
+
+    // Setup 30 days
+    for (let day = 1; day <= 30; day++) {
+      const dateStr = `${PERIOD}-${String(day).padStart(2, '0')}`;
+      const dow = new Date(`${dateStr}T00:00:00`).getDay();
+      const isSunday = (dow === 0);
+
+      // Night shift logic: Day 1-8, 10-15 = 14 nights (Day 9 is off)
+      const hasNight = (day <= 8 || (day >= 10 && day <= 15)) ? 1 : 0;
+      // Water booth logic: Day 1-13 = 13 times
+      const hasWater = (day <= 13) ? 1 : 0;
+
+      if (isSunday) {
+        dailyRecords.push({
+          day,
+          dateStr,
+          dow,
+          status: 'off',
+          inM: '—',
+          outM: '—',
+          inA: '—',
+          outA: '—',
+          breakNoon: '',
+          personalLeave: '',
+          dutyNoon: '',
+          duty30k: '',
+          workedMinutes: 0,
+          otHours: 0,
+          nightShift: hasNight ? String(hasNight) : '',
+          waterBooth: hasWater ? String(hasWater) : '',
+          note: 'Nghỉ tuần',
+        });
+      } else {
+        const isSept4 = (day === 4);
+        const workedMins = 480;
+        const otH = 0;
+        const outAfternoon = '17:30';
+
+        dailyRecords.push({
+          day,
+          dateStr,
+          dow,
+          status: 'present',
+          inM: '08:00',
+          outM: '12:00',
+          inA: '13:30',
+          outA: outAfternoon,
+          breakNoon: '',
+          personalLeave: '',
+          dutyNoon: '',
+          duty30k: '',
+          workedMinutes: workedMins,
+          otHours: otH,
+          nightShift: hasNight ? String(hasNight) : '',
+          waterBooth: hasWater ? String(hasWater) : '',
+          note: '',
+        });
+      }
+    }
+
+    // Default to LV831202 (index 4)
+    let selectedEmp = EMPLOYEES[4];
+    let activeEditingRecord = null;
+    let autoSaveTimer = null;
+
+    function formatVND(num) {
+      return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
+    }
+
+    function init() {
+      renderEmployeeList();
+      renderGrid();
+      updateKpiTable();
+    }
+
+    function renderEmployeeList() {
+      const container = document.getElementById('empListContainer');
+      container.innerHTML = '';
+
+      const query = document.getElementById('empSearchInput').value.trim().toLowerCase();
+      const dept = document.getElementById('deptFilter').value;
+
+      const filtered = EMPLOYEES.filter(emp => {
+        const matchesQuery = emp.fullName.toLowerCase().includes(query) ||
+                             emp.employeeCode.toLowerCase().includes(query);
+        const matchesDept = (dept === 'ALL' || emp.deptCode === dept);
+        return matchesQuery && matchesDept;
+      });
+
+      document.getElementById('empCountText').innerText = `${filtered.length}`;
+
+      filtered.forEach(emp => {
+        const isSelected = emp.employeeCode === selectedEmp.employeeCode;
+        const item = document.createElement('div');
+        item.className = `emp-item ${isSelected ? 'active' : ''}`;
+        item.onclick = () => selectEmployee(emp);
+
+        const isVerified = !!verifiedEmpMap[emp.employeeCode];
+        const statusText = isVerified ? 'Đã chốt' : (emp.workingDays === 0 ? 'Chưa chấm công' : 'Chưa chốt');
+        const badgeClass = isVerified ? 'badge-ok' : (emp.workingDays === 0 ? 'badge-gray' : 'badge-warn');
+
+        item.innerHTML = `
+          <div class="emp-avatar">${emp.initials}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--fg-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${emp.fullName}
+            </div>
+            <div class="mono" style="font-size: 10px; color: var(--fg-3);">
+              ${emp.employeeCode} · ${emp.departmentName}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div class="mono" style="font-size: 11px; font-weight: 700;">${emp.workingDays}/${emp.totalDays}</div>
+            <span class="badge ${badgeClass}" style="font-size: 9px; padding: 1px 4px;">${statusText}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function handleSearchEmp() {
+      renderEmployeeList();
+    }
+
+    function handleDeptFilter() {
+      renderEmployeeList();
+    }
+
+    function selectEmployee(emp) {
+      selectedEmp = emp;
+      renderEmployeeList();
+      updateKpiTable();
+      triggerAutoSave(`Đã chuyển sang nhân viên: ${emp.fullName} (${emp.employeeCode})`);
+    }
+
+    function parseDurationToMins(val) {
+      if (!val) return 0;
+      const str = String(val).trim();
+      if (!str) return 0;
+      if (str.includes(':')) {
+        const [h, m] = str.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      }
+      const num = parseFloat(str);
+      if (isNaN(num)) return 0;
+      return Math.round(num * 60);
+    }
+
+    function parsePunchTimeToMins(val) {
+      if (!val) return null;
+      const str = String(val).trim();
+      if (!str || str === '—' || str === '-') return null;
+      if (str.includes(':')) {
+        const [h, m] = str.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      }
+      return null;
+    }
+
+    function recomputeRowMinutes(r) {
+      const inM = parsePunchTimeToMins(r.inM);
+      const outM = parsePunchTimeToMins(r.outM);
+      const inA = parsePunchTimeToMins(r.inA);
+      const outA = parsePunchTimeToMins(r.outA);
+
+      const breakNoon = parseDurationToMins(r.breakNoon);
+      const personalLeave = parseDurationToMins(r.personalLeave);
+      const dutyNoon = parseDurationToMins(r.dutyNoon);
+      const duty30k = parseDurationToMins(r.duty30k);
+
+      let total = 0;
+      let hasAny = false;
+      if (inM != null && outM != null && outM > inM) {
+        total += (outM - inM);
+        hasAny = true;
+      }
+      if (inA != null && outA != null && outA > inA) {
+        total += (outA - inA);
+        hasAny = true;
+      }
+      if (inM != null && outA != null && outM == null && inA == null && outA > inM) {
+        total += Math.max(0, (outA - inM) - 90);
+        hasAny = true;
+      }
+
+      if (!hasAny) {
+        r.workedMinutes = 0;
+        r.otHours = 0;
+        r.deficitMinutes = 0;
+        r.cong = 0;
+        return;
+      }
+
+      const netWorked = Math.max(0, total - personalLeave - breakNoon - dutyNoon - duty30k);
+      r.workedMinutes = netWorked;
+
+      // Bậc thang tính công:
+      // < 4h (240p): 0 công, thiếu công = netWorked, tăng ca = 0
+      // 4h <= netWorked < 8h (480p): 0.5 công, thiếu công = netWorked - 240, tăng ca = 0
+      // >= 8h: 1.0 công, thiếu công = 0, tăng ca = netWorked - 480
+      if (netWorked < 240) {
+        r.cong = 0;
+        r.deficitMinutes = netWorked;
+        r.otHours = 0;
+      } else if (netWorked < 480) {
+        r.cong = 0.5;
+        r.deficitMinutes = netWorked - 240;
+        r.otHours = 0;
+      } else {
+        r.cong = 1.0;
+        r.deficitMinutes = 0;
+        r.otHours = (netWorked - 480) / 60;
+      }
+    }
+
+    /* ── Update KPI Table Matching Agreed Business Rules ── */
+    function updateKpiTable() {
+      const emp = selectedEmp;
+      document.getElementById('slipName').innerText = emp.fullName;
+      const codeEl = document.getElementById('slipEmpCode');
+      if (codeEl) codeEl.innerText = emp.employeeCode;
+      document.getElementById('slipDept').innerText = emp.departmentName;
+      document.getElementById('slipLCB').innerText = formatVND(emp.baseSalary);
+      document.getElementById('slipRate').innerText = formatVND(emp.ratePerDay);
+
+      updateVerifyButtonAndBadge();
+
+      let totalMins = 0;
+      let totalOtHours = 0;
+      let totalDeficitMins = 0;
+      let mainWorkCount = 0;
+      let sunWorkCount = 0;
+      let totalNight = 0;
+      let totalWater = 0;
+      let totalNoon25Hours = 0;
+      let totalNoon35Hours = 0;
+      let fullCongDays = 0;
+
+      dailyRecords.forEach(r => {
+        recomputeRowMinutes(r);
+        const isSun = (r.dow === 0);
+
+        if (isSun) {
+          mainWorkCount += r.cong;
+          sunWorkCount += r.cong;
+        } else {
+          mainWorkCount += r.cong;
+        }
+
+        if (r.cong >= 1.0) {
+          fullCongDays++;
+        }
+
+        totalMins += r.workedMinutes;
+        totalOtHours += r.otHours;
+        totalDeficitMins += (r.deficitMinutes || 0);
+        totalNight += (parseFloat(r.nightShift) || 0);
+        totalWater += (parseFloat(r.waterBooth) || 0);
+        totalNoon25Hours += parseDurationToMins(r.dutyNoon) / 60;
+        totalNoon35Hours += parseDurationToMins(r.duty30k) / 60;
+      });
+
+      const totalDeficitHours = totalDeficitMins / 60;
+
+      const mainAmount = Math.round(mainWorkCount * emp.ratePerDay);
+      const sunAmount = Math.round(sunWorkCount * emp.ratePerDay);
+      const noon25Amount = Math.round(totalNoon25Hours * 25000);
+      const noon35Amount = Math.round(totalNoon35Hours * 35000);
+      const nightDutyAmount = Math.round(totalNight * 150000);
+      const waterDutyAmount = 0;
+      const otAmount = Math.round(totalOtHours * 25000);
+      const deficitAmount = Math.round(totalDeficitHours * (emp.ratePerDay / 8));
+      const chuyenCan = fullCongDays >= 26 ? 500000 : 0;
+      const insurance = emp.baseSalary > 0 ? Math.round(emp.baseSalary * 0.105 + 50000) : 533000;
+
+      const totalNet = mainAmount + sunAmount + noon25Amount + noon35Amount + nightDutyAmount + waterDutyAmount + otAmount + deficitAmount + chuyenCan - insurance;
+
+      // Row 1 Values:
+      document.getElementById('slipMainWork').innerText = mainWorkCount.toFixed(2);
+      document.getElementById('slipMainAmount').innerText = formatVND(mainAmount);
+      document.getElementById('slipSunWork').innerText = sunWorkCount.toFixed(2);
+      document.getElementById('slipSunAmount').innerText = formatVND(sunAmount);
+      document.getElementById('slipNoon25Work').innerText = totalNoon25Hours > 0 ? totalNoon25Hours.toFixed(1) : '0.0';
+      document.getElementById('slipNoon25Amount').innerText = formatVND(noon25Amount);
+      document.getElementById('slipNoon35Work').innerText = totalNoon35Hours > 0 ? totalNoon35Hours.toFixed(1) : '0.0';
+      document.getElementById('slipNoon35Amount').innerText = formatVND(noon35Amount);
+      document.getElementById('slipResponsibility').innerText = '0 đ';
+      const chuyenCanQtyEl = document.getElementById('slipChuyenCanQty');
+      if (chuyenCanQtyEl) chuyenCanQtyEl.innerText = chuyenCan > 0 ? '1.00' : '0.00';
+      document.getElementById('slipChuyenCan').innerText = formatVND(chuyenCan);
+
+      // Row 2 Values:
+      document.getElementById('slipOtHours').innerText = `${totalOtHours.toFixed(1)}h`;
+      document.getElementById('slipOtAmount').innerText = formatVND(otAmount);
+      document.getElementById('slipDeficitHours').innerText = `${totalDeficitHours.toFixed(1)}h`;
+      document.getElementById('slipDeficitAmount').innerText = formatVND(deficitAmount);
+      document.getElementById('slipNightCount').innerText = `${totalNight} đêm`;
+      document.getElementById('slipNightAmount').innerText = `+${formatVND(nightDutyAmount)}`;
+      document.getElementById('slipWaterCount').innerText = `${totalWater} lần`;
+      document.getElementById('slipInsurance').innerText = `-${formatVND(insurance)}`;
+      const totalNetEl = document.getElementById('slipTotalNet');
+      if (totalNetEl) totalNetEl.innerText = formatVND(totalNet);
+
+      // Footer summary (if present)
+      const sumHoursEl = document.getElementById('sumHours');
+      if (sumHoursEl) {
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        sumHoursEl.innerText = String(h);
+        document.getElementById('sumMinutes').innerText = String(m).padStart(2, '0');
+        document.getElementById('sumMain').innerText = mainWorkCount.toFixed(1);
+        document.getElementById('sumOt').innerText = `${totalOtHours.toFixed(1)}h`;
+        document.getElementById('sumNight').innerText = String(totalNight);
+        document.getElementById('sumWater').innerText = String(totalWater);
+      }
+    }
+
+    let activeRowIdx = 0;
+
+    function setActiveRow(idx) {
+      activeRowIdx = idx;
+      const rows = document.querySelectorAll('#gridTbody tr');
+      rows.forEach((tr, i) => {
+        if (i === idx) tr.classList.add('row-active');
+        else tr.classList.remove('row-active');
+      });
+    }
+
+    /* ── Render 30-Day Grid ── */
+    function renderGrid() {
+      const tbody = document.getElementById('gridTbody');
+      tbody.innerHTML = '';
+
+      dailyRecords.forEach((r, idx) => {
+        recomputeRowMinutes(r);
+        const tr = document.createElement('tr');
+        const isSun = (r.dow === 0);
+        if (isSun) tr.className = 'row-sunday';
+
+        tr.onclick = () => setActiveRow(idx);
+        tr.ondblclick = () => openAdjModal(r);
+
+        const hours = Math.floor(r.workedMinutes / 60);
+        const mins = r.workedMinutes % 60;
+        const mainWork = r.cong >= 1 ? '1' : r.cong > 0 ? '0.5' : '—';
+        const deficitText = r.deficitMinutes > 0 ? `${Math.floor(r.deficitMinutes / 60)}:${String(r.deficitMinutes % 60).padStart(2, '0')}` : '—';
+
+        tr.innerHTML = `
+          <td class="col-sticky-date mono" style="font-weight: 700; font-size: 12.5px;">${String(r.day).padStart(2, '0')}</td>
+          <td class="col-sticky-day" style="font-weight: 600; font-size: 12px; ${isSun ? 'color: var(--status-danger-text); font-weight: 700;' : ''}">${DAY_NAMES[r.dow]}</td>
+
+          <!-- In/Out Punches with Auto-save on change -->
+          <td><input class="cell-inline-input" value="${r.inM}" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'inM', this.value)" /></td>
+          <td><input class="cell-inline-input" value="${r.outM}" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'outM', this.value)" /></td>
+          <td><input class="cell-inline-input" value="${r.inA}" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'inA', this.value)" /></td>
+          <td><input class="cell-inline-input" value="${r.outA}" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'outA', this.value)" /></td>
+
+          <!-- Breaks: Cho phép điền Nghỉ trưa, Việc riêng, Trực trưa, Trực 35k -->
+          <td><input class="cell-inline-input mono" value="${r.breakNoon || ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'breakNoon', this.value)" /></td>
+          <td><input class="cell-inline-input mono" value="${r.personalLeave || ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'personalLeave', this.value)" /></td>
+          <td><input class="cell-inline-input mono" value="${r.dutyNoon || ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'dutyNoon', this.value)" /></td>
+          <td><input class="cell-inline-input mono" value="${r.duty30k || ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'duty30k', this.value)" /></td>
+
+          <!-- Totals -->
+          <td class="mono" style="font-weight: 600;">${r.workedMinutes > 0 ? hours : '—'}</td>
+          <td class="mono" style="color: var(--fg-2);">${r.workedMinutes > 0 ? String(mins).padStart(2, '0') : '—'}</td>
+
+          <!-- Work counts -->
+          <td class="mono" style="font-weight: 700; ${r.cong >= 1 ? 'color: var(--status-ok-text);' : ''}">${mainWork}</td>
+          <td class="mono" style="${r.otHours > 0 ? 'font-weight: 700; color: var(--status-info-text);' : 'color: var(--fg-3);'}">${r.otHours > 0 ? r.otHours.toFixed(1) : '—'}</td>
+          <td class="mono">${r.deficitMinutes > 0 ? `<span class="badge badge-warn" style="font-size: 10.5px; padding: 1px 4px;">${deficitText}</span>` : '—'}</td>
+
+          <!-- Duties: Cho phép điền Trực đêm, Đứng nước -->
+          <td><input class="cell-inline-input mono" style="${(r.nightShift && r.nightShift !== '0' && r.nightShift !== 0) ? 'font-weight: 700; color: var(--fg-1);' : 'color: var(--fg-3);'}" value="${(r.nightShift && r.nightShift !== '0' && r.nightShift !== 0) ? r.nightShift : ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'nightShift', this.value)" /></td>
+          <td><input class="cell-inline-input mono" style="${(r.waterBooth && r.waterBooth !== '0' && r.waterBooth !== 0) ? 'font-weight: 700; color: var(--fg-1);' : 'color: var(--fg-3);'}" value="${(r.waterBooth && r.waterBooth !== '0' && r.waterBooth !== 0) ? r.waterBooth : ''}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'waterBooth', this.value)" /></td>
+
+          <!-- Status & Notes -->
+          <td style="text-align: left; padding: 0 4px;">
+            <input class="cell-inline-input cell-note-input" value="${r.note || (isSun ? 'Nghỉ tuần' : '')}" placeholder="" onfocus="setActiveRow(${idx})" onchange="handleCellEdit(${idx}, 'note', this.value)" />
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Maintain active row highlight
+      setActiveRow(activeRowIdx);
+    }
+
+    /* ── Auto-save implementation ── */
+    function handleCellEdit(rowIdx, field, val) {
+      dailyRecords[rowIdx][field] = val.trim();
+      recomputeRowMinutes(dailyRecords[rowIdx]);
+      renderGrid();
+      updateKpiTable();
+      triggerAutoSave(`Đã tự động lưu ô ngày ${dailyRecords[rowIdx].dateStr}`);
+    }
+
+    function triggerAutoSave(msg = 'Đã tự động lưu') {
+      const btn = document.getElementById('manualSaveBtn');
+      if (btn) btn.innerText = '⏳ Đang lưu…';
+
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        if (btn) btn.innerText = '💾 Lưu';
+      }, 400);
+    }
+
+    let verifiedEmpMap = {};
+
+    function toggleVerifyCurrentEmployee() {
+      const isVerified = !!verifiedEmpMap[selectedEmp.employeeCode];
+      if (isVerified) {
+        verifiedEmpMap[selectedEmp.employeeCode] = false;
+        notify(`Đã mở chốt bảng công cho ${selectedEmp.fullName}`);
+      } else {
+        verifiedEmpMap[selectedEmp.employeeCode] = true;
+        notify(`Đã chốt bảng công cho ${selectedEmp.fullName}`);
+      }
+      updateVerifyButtonAndBadge();
+      renderEmployeeList();
+    }
+
+    function updateVerifyButtonAndBadge() {
+      const isVerified = !!verifiedEmpMap[selectedEmp.employeeCode];
+      const btn = document.getElementById('verifyEmpBtn');
+      const badge = document.getElementById('slipStatusBadge');
+      if (btn) {
+        btn.innerHTML = isVerified ? '🔓 Mở chốt' : '🔒 Chốt cá nhân';
+        btn.className = isVerified ? 'btn btn-outline btn-xs' : 'btn btn-primary btn-xs';
+        btn.title = isVerified ? 'Mở chốt để chỉnh sửa bảng công' : 'Chốt công cá nhân cho nhân sự này';
+      }
+      if (badge) {
+        badge.innerText = isVerified ? 'Đã chốt' : (selectedEmp.workingDays === 0 ? 'Chưa chấm công' : 'Chưa chốt');
+        badge.className = isVerified ? 'badge badge-ok' : (selectedEmp.workingDays === 0 ? 'badge badge-gray' : 'badge badge-warn');
+      }
+    }
+
+    function togglePrintDropdown(e) {
+      e.stopPropagation();
+      const m = document.getElementById('printDropdownMenu');
+      if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function closePrintDropdown() {
+      const m = document.getElementById('printDropdownMenu');
+      if (m) m.style.display = 'none';
+    }
+    document.addEventListener('click', closePrintDropdown);
+
+    /* ── Modal Operations ── */
+    function openAdjModal(record) {
+      activeEditingRecord = record;
+      document.getElementById('dlgEmp').innerText = selectedEmp.fullName;
+      document.getElementById('dlgDate').innerText = record.dateStr;
+      document.getElementById('dlgHours').value = (record.workedMinutes / 60).toFixed(1);
+      document.getElementById('dlgStatus').value = record.status;
+      document.getElementById('dlgNote').value = record.note || '';
+      document.getElementById('adjModal').classList.add('open');
+    }
+
+    function closeAdjModal() {
+      document.getElementById('adjModal').classList.remove('open');
+    }
+
+    function saveAdjModal() {
+      if (!activeEditingRecord) return;
+      const h = parseFloat(document.getElementById('dlgHours').value) || 0;
+      activeEditingRecord.workedMinutes = Math.round(h * 60);
+      activeEditingRecord.status = document.getElementById('dlgStatus').value;
+      activeEditingRecord.note = document.getElementById('dlgNote').value;
+      activeEditingRecord.otHours = h > 8 ? h - 8 : 0;
+
+      renderGrid();
+      updateKpiTable();
+      closeAdjModal();
+      triggerAutoSave(`Đã lưu kiểm toán ngày ${activeEditingRecord.dateStr}`);
+    }
+
+    let isPeriodOpen = true;
+
+    function handlePeriodSwitchClick() {
+      if (isPeriodOpen) {
+        openCloseModal();
+      } else {
+        openReopenModal();
+      }
+    }
+
+    function updatePeriodSwitchUI() {
+      const wrap = document.getElementById('periodSwitchWrap');
+      const label = document.getElementById('periodSwitchLabel');
+      const toggle = document.getElementById('periodSwitchToggle');
+      if (wrap && label && toggle) {
+        if (isPeriodOpen) {
+          label.innerText = 'Mở';
+          label.className = 'period-switch-label mono';
+          toggle.classList.add('is-active');
+          wrap.title = 'Kỳ công đang Mở · Bấm để Đóng kỳ công';
+        } else {
+          label.innerText = 'Đóng';
+          label.className = 'period-switch-label is-closed mono';
+          toggle.classList.remove('is-active');
+          wrap.title = 'Kỳ công đang Đóng · Bấm để Mở lại kỳ công';
+        }
+      }
+    }
+
+    function openCloseModal() {
+      document.getElementById('closeModal').classList.add('open');
+    }
+
+    function closeCloseModal() {
+      document.getElementById('closeModal').classList.remove('open');
+    }
+
+    function confirmClose() {
+      closeCloseModal();
+      isPeriodOpen = false;
+      updatePeriodSwitchUI();
+      triggerAutoSave('Đã chốt và đóng kỳ công tháng 2026-09!');
+    }
+
+    function openReopenModal() {
+      const input = document.getElementById('reopenRemarksInput');
+      if (input) input.value = '';
+      document.getElementById('reopenModal').classList.add('open');
+    }
+
+    function closeReopenModal() {
+      document.getElementById('reopenModal').classList.remove('open');
+    }
+
+    function confirmReopen() {
+      const reason = (document.getElementById('reopenRemarksInput')?.value || '').trim();
+      if (!reason) {
+        alert('Vui lòng nhập lý do mở lại kỳ công');
+        return;
+      }
+      closeReopenModal();
+      isPeriodOpen = true;
+      updatePeriodSwitchUI();
+      triggerAutoSave(`Đã mở lại kỳ công: ${reason}`);
+    }
+
+    function toggleSidebar() {
+      document.getElementById('empSidebar').classList.toggle('collapsed');
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const cur = html.getAttribute('data-theme') || 'light';
+      const nxt = cur === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', nxt);
+      triggerAutoSave(`Đã chuyển theme ${nxt === 'dark' ? 'Tối' : 'Sáng'}`);
+    }
+
+    function notify(msg) {
+      triggerAutoSave(msg);
+    }
+
+    /* ── Tweaks Panel Logic (make-tweakable skill) ── */
+    const TWEAKS_STORAGE_KEY = 'btn_hrms_timesheet_tweaks_v5';
+    let tweaksState = {
+      theme: 'light',
+      density: '26px',
+      ratePerDay: 350000,
+      nightDutyRate: 100000,
+      chuyenCanBonus: 500000,
+    };
+
+    function loadTweaks() {
+      try {
+        const saved = localStorage.getItem(TWEAKS_STORAGE_KEY);
+        if (saved) {
+          tweaksState = { ...tweaksState, ...JSON.parse(saved) };
+        }
+      } catch (e) {}
+
+      document.getElementById('tweakDensity').value = tweaksState.density;
+      document.getElementById('tweakRate').value = tweaksState.ratePerDay;
+      document.getElementById('tweakRateLabel').innerText = formatVND(tweaksState.ratePerDay);
+      document.getElementById('tweakNightDuty').value = tweaksState.nightDutyRate;
+      document.getElementById('tweakNightDutyLabel').innerText = formatVND(tweaksState.nightDutyRate);
+      document.getElementById('tweakChuyenCan').checked = (tweaksState.chuyenCanBonus > 0);
+
+      applyTweaks();
+    }
+
+    function applyTweaks() {
+      // Density
+      document.querySelectorAll('.timesheet-grid-table td').forEach(td => {
+        td.style.height = tweaksState.density;
+      });
+
+      // Update rate per day for selected employee
+      if (selectedEmp) {
+        selectedEmp.ratePerDay = tweaksState.ratePerDay;
+      }
+
+      updateKpiTable();
+      try {
+        localStorage.setItem(TWEAKS_STORAGE_KEY, JSON.stringify(tweaksState));
+      } catch (e) {}
+    }
+
+    function handleTweakDensity(val) {
+      tweaksState.density = val;
+      applyTweaks();
+      triggerAutoSave('Đã đổi mật độ hiển thị bảng');
+    }
+
+    function handleTweakRate(val) {
+      const num = parseInt(val, 10) || 350000;
+      tweaksState.ratePerDay = num;
+      document.getElementById('tweakRateLabel').innerText = formatVND(num);
+      applyTweaks();
+      triggerAutoSave(`Đơn giá ngày: ${formatVND(num)}`);
+    }
+
+    function handleTweakNightDuty(val) {
+      const num = parseInt(val, 10) || 100000;
+      tweaksState.nightDutyRate = num;
+      document.getElementById('tweakNightDutyLabel').innerText = formatVND(num);
+      applyTweaks();
+      triggerAutoSave(`Phụ cấp trực đêm: ${formatVND(num)}`);
+    }
+
+    function handleTweakChuyenCan(checked) {
+      tweaksState.chuyenCanBonus = checked ? 500000 : 0;
+      applyTweaks();
+      triggerAutoSave(checked ? 'Đã bật chuyên cần +500.000 đ' : 'Đã tắt thưởng chuyên cần');
+    }
+
+    function resetTweaks() {
+      tweaksState = {
+        theme: 'light',
+        density: '29px',
+        ratePerDay: 350000,
+        nightDutyRate: 100000,
+        chuyenCanBonus: 500000,
+      };
+      loadTweaks();
+      triggerAutoSave('Đã khôi phục thông số mặc định');
+    }
+
+    function toggleTweaksPanel() {
+      const p = document.getElementById('tweaksPanel');
+      p.classList.toggle('open');
+      const isOpen = p.classList.contains('open');
+      try {
+        window.parent.postMessage({ type: isOpen ? 'tweaks-activated' : 'tweaks-deactivated' }, '*');
+      } catch (e) {}
+    }
+
+    // Handshake with OpenDesign host frame
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'activate' || e.data?.type === 'open-tweaks') {
+        document.getElementById('tweaksPanel').classList.add('open');
+      } else if (e.data?.type === 'deactivate' || e.data?.type === 'close-tweaks') {
+        document.getElementById('tweaksPanel').classList.remove('open');
+      }
+    });
+
+    try {
+      window.parent.postMessage({ type: 'tweaks-available' }, '*');
+    } catch (e) {}
+
+    window.addEventListener('DOMContentLoaded', () => {
+      init();
+      loadTweaks();
+    });
+  </script>
+
+  <!-- ── Floating Tweaks Button & Panel ─────────────────────────────── -->
+  <button class="tweaks-trigger-btn" onclick="toggleTweaksPanel()" title="Mở bảng tinh chỉnh trực tiếp">
+    <span>⚙️</span>
+    <span>Tweaks</span>
+  </button>
+
+  <div class="tweaks-panel" id="tweaksPanel">
+    <div class="tweaks-header">
+      <div class="tweaks-title">
+        <span>⚙️</span>
+        <span>Tweaks (Công cụ chỉnh trực tiếp)</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleTweaksPanel()" style="font-size: 13px; padding: 0 4px;">✕</button>
+    </div>
+
+    <div class="tweaks-body">
+      <div class="tweak-row">
+        <label class="tweak-label">
+          <span>Mật độ hàng (Row Density)</span>
+        </label>
+        <select id="tweakDensity" class="tweak-select" onchange="handleTweakDensity(this.value)">
+          <option value="27px" selected>Chuẩn vừa khít cả tháng (27px)</option>
+          <option value="25px">Nhỏ gọn (Compact - 25px)</option>
+          <option value="29px">Thoáng (Relaxed - 29px)</option>
+        </select>
+      </div>
+
+      <div class="tweak-row">
+        <label class="tweak-label">
+          <span>Đơn giá ngày công</span>
+          <span id="tweakRateLabel" class="mono font-semibold">350.000 đ</span>
+        </label>
+        <input
+          type="range"
+          id="tweakRate"
+          min="150000"
+          max="500000"
+          step="10000"
+          value="350000"
+          style="width: 100%; cursor: pointer;"
+          oninput="handleTweakRate(this.value)"
+        />
+      </div>
+
+      <div class="tweak-row">
+        <label class="tweak-label">
+          <span>Mức phụ cấp trực đêm</span>
+          <span id="tweakNightDutyLabel" class="mono font-semibold">100.000 đ</span>
+        </label>
+        <input
+          type="range"
+          id="tweakNightDuty"
+          min="80000"
+          max="200000"
+          step="10000"
+          value="100000"
+          style="width: 100%; cursor: pointer;"
+          oninput="handleTweakNightDuty(this.value)"
+        />
+      </div>
+
+      <div class="tweak-row" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 4px 0;">
+        <label class="tweak-label" style="margin: 0; cursor: pointer;" for="tweakChuyenCan">
+          Thưởng chuyên cần (+500k)
+        </label>
+        <input
+          type="checkbox"
+          id="tweakChuyenCan"
+          checked
+          style="cursor: pointer;"
+          onchange="handleTweakChuyenCan(this.checked)"
+        />
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; pt-2; border-top: 1px solid var(--border-subtle); margin-top: 4px;">
+        <button class="btn btn-ghost btn-sm" onclick="resetTweaks()" style="font-size: 10.5px; padding: 0 4px; color: var(--fg-3);">
+          Đặt lại mặc định
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="toggleTheme()" style="font-size: 10.5px;">
+          Đổi Sáng/Tối
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

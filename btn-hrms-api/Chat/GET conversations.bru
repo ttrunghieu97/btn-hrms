@@ -1,0 +1,14 @@
+meta {
+  name: GET conversations
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/chat/conversations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

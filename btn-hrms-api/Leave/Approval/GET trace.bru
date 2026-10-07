@@ -1,0 +1,14 @@
+meta {
+  name: GET trace
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/leave/{{id}}/trace
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

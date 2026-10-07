@@ -1,0 +1,18 @@
+meta {
+  name: PUT requirements
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}/requirements
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"requirements":[]}
+}

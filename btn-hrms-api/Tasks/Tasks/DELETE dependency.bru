@@ -1,0 +1,14 @@
+meta {
+  name: DELETE dependency
+  type: http
+}
+
+delete {
+  url: {{base_url}}/api/v1/tasks/{{id}}/dependencies/{{did}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

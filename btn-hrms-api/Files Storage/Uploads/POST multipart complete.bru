@@ -1,0 +1,18 @@
+meta {
+  name: POST multipart complete
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/uploads/multipart/complete
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"uploadId":"{{uid}}","parts":[]}
+}

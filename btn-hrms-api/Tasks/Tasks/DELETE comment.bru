@@ -1,0 +1,14 @@
+meta {
+  name: DELETE comment
+  type: http
+}
+
+delete {
+  url: {{base_url}}/api/v1/tasks/{{id}}/comments/{{cid}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,14 @@
+meta {
+  name: GET history
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/employees/{{eid}}/contract/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

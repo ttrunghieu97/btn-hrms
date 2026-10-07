@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft-2020-12/schema",
+  "title": "Architecture Baseline",
+  "description": "Architectural debt baseline for @project/api. Each entry is a known, tolerated violation. Policy: no new debt beyond this list. Each entry must include a one-line justification.",
+  "type": "object",
+  "required": ["metadata", "direct-db", "adapter-dip", "boundary"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["created", "policy"],
+      "properties": {
+        "created": { "type": "string", "format": "date" },
+        "policy": { "type": "string", "enum": ["no-new-debt"] },
+        "updated": { "type": "string", "format": "date" }
+      },
+      "additionalProperties": false
+    },
+    "direct-db": {
+      "description": "Files permitted to inject DATABASE_CONNECTION directly, grouped by role.",
+      "type": "object",
+      "required": ["system", "repositories", "use-cases", "integration", "subscribers", "shared", "adapters"],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z-]+$": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "reason"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^src/" },
+              "reason": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "adapter-dip": {
+      "description": "Dependency Inversion violations: adapters importing concrete repositories instead of ports.",
+      "type": "object",
+      "required": ["warned"],
+      "properties": {
+        "warned": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "reason"],
+            "properties": {
+              "from": { "type": "string", "pattern": "^src/" },
+              "to": { "type": "string", "pattern": "^src/" },
+              "reason": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "boundary": {
+      "description": "Boundary violations: schema imports outside repositories, cross-context repository imports.",
+      "type": "object",
+      "required": ["violations"],
+      "properties": {
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["signature", "reason"],
+            "properties": {
+              "signature": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

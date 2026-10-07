@@ -1,0 +1,14 @@
+meta {
+  name: POST lock
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}/lock
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

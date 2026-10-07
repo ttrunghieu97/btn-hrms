@@ -1,0 +1,36 @@
+# Outbox / Event Bus Alert Rules
+# Phase: P5.1 — Operations Foundation
+
+groups:
+  - name: outbox
+    interval: 1m
+    rules:
+      - alert: OutboxBacklogGrowing
+        expr: |
+          outbox_pending_events_total > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox backlog: {{ $value | humanize }} pending events"
+          description: "Over 1000 pending outbox events. Check dispatcher."
+
+      - alert: OutboxOldEvents
+        expr: |
+          outbox_oldest_unpublished_age_ms > 60000
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox event stuck for {{ div $value 1000 | humanize }}s"
+          description: "Oldest unpublished outbox event exceeds 60s."
+
+      - alert: OutboxDeadLetterSpike
+        expr: |
+          rate(outbox_events_dead_letter_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox dead-letter events detected"
+          description: "Events being moved to dead-letter queue."

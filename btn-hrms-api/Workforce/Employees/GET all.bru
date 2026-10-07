@@ -1,0 +1,18 @@
+meta {
+  name: GET all
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/employees
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+query {
+  page: 1\n  limit: 20
+}

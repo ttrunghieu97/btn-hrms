@@ -1,0 +1,14 @@
+meta {
+  name: DELETE
+  type: http
+}
+
+delete {
+  url: {{base_url}}/api/v1/employees/{{eid}}/documents/{{did}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "attendance_period_locks" ADD CONSTRAINT "chk_attendance_period_locks_period_format" CHECK ("attendance_period_locks"."period" ~ '^\d{4}-(?:0[1-9]|1[0-2])$');

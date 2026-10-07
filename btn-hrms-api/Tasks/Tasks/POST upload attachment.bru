@@ -1,0 +1,18 @@
+meta {
+  name: POST upload attachment
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/{{id}}/attachments/upload
+  body: multipart-form
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:multipart-form {
+  file: @file(doc.pdf)
+}

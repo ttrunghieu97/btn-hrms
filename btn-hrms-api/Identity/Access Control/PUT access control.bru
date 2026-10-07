@@ -1,0 +1,18 @@
+meta {
+  name: PUT access control
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/{{userId}}/access-control
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"roleIds":["{{role_id}}"],"permissionCodes":[]}
+}

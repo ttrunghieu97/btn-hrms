@@ -1,0 +1,14 @@
+meta {
+  name: GET checked in today
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/checked-in-today
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

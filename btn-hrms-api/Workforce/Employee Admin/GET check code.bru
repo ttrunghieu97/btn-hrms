@@ -1,0 +1,14 @@
+meta {
+  name: GET check code
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/employees/check-code?employeeCode={{code}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

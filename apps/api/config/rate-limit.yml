@@ -1,0 +1,109 @@
+version: 1
+policies:
+  # ── Auth ───────────────────────────────────────────────────────────────────
+  # Brute-force protection on login/refresh. Email-based key so repeated
+  # failures against the same account are blocked regardless of source IP.
+  auth_login:
+    limit: 10
+    windowSeconds: 60
+    algorithm: FIXED_WINDOW
+    keyStrategy: EMAIL
+    prefix: ratelimit:auth:login
+    resetStrategy:
+      resetStrategy: NONE
+    backoff:
+      - threshold: 5
+        durationSeconds: 30
+      - threshold: 10
+        durationSeconds: 300
+
+  auth_refresh:
+    limit: 20
+    windowSeconds: 60
+    algorithm: FIXED_WINDOW
+    keyStrategy: TOKEN_FAMILY
+    prefix: ratelimit:auth:refresh
+    resetStrategy:
+      resetStrategy: DECAY
+      factor: 0.5
+
+  # ── Attendance ─────────────────────────────────────────────────────────────
+  # Check-in/check-out is high-frequency but should still be bounded.
+  attendance_check:
+    limit: 30
+    windowSeconds: 60
+    algorithm: SLIDING_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:attendance:check
+    resetStrategy:
+      resetStrategy: NONE
+
+  # ── Chat ───────────────────────────────────────────────────────────────────
+  # Per-user message rate to prevent spam.
+  chat_send:
+    limit: 60
+    windowSeconds: 60
+    algorithm: SLIDING_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:chat:send
+    resetStrategy:
+      resetStrategy: DECAY
+      factor: 0.5
+    backoff:
+      - threshold: 50
+        durationSeconds: 10
+      - threshold: 60
+        durationSeconds: 60
+
+  # ── File Upload ────────────────────────────────────────────────────────────
+  # Aggressive rate limit — uploads are expensive and rarely legitimate in bulk.
+  file_upload:
+    limit: 10
+    windowSeconds: 60
+    algorithm: FIXED_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:file:upload
+    resetStrategy:
+      resetStrategy: NONE
+    backoff:
+      - threshold: 5
+        durationSeconds: 60
+      - threshold: 10
+        durationSeconds: 600
+
+  # ── Payroll ────────────────────────────────────────────────────────────────
+  # Payroll operations are sensitive — strict limits.
+  payroll_view:
+    limit: 30
+    windowSeconds: 300
+    algorithm: FIXED_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:payroll:view
+    resetStrategy:
+      resetStrategy: NONE
+
+  payroll_edit:
+    limit: 10
+    windowSeconds: 300
+    algorithm: FIXED_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:payroll:edit
+    resetStrategy:
+      resetStrategy: NONE
+    backoff:
+      - threshold: 5
+        durationSeconds: 120
+      - threshold: 10
+        durationSeconds: 600
+
+  # ── API General ────────────────────────────────────────────────────────────
+  # Catch-all for endpoints not covered by specific policies.
+  api_default:
+    limit: 120
+    windowSeconds: 60
+    algorithm: FIXED_WINDOW
+    keyStrategy: SID
+    prefix: ratelimit:api:default
+    resetStrategy:
+      resetStrategy: DECAY
+      factor: 0.5

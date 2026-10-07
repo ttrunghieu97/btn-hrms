@@ -1,0 +1,18 @@
+meta {
+  name: POST approve
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/approval/inbox/{{id}}/approve
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"note":"OK"}
+}

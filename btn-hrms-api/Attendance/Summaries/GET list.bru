@@ -1,0 +1,14 @@
+meta {
+  name: GET list
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/attendance-summaries
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

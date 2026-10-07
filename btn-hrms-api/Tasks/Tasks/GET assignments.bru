@@ -1,0 +1,14 @@
+meta {
+  name: GET assignments
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/{{id}}/assignments
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

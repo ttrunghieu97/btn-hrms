@@ -1,0 +1,18 @@
+meta {
+  name: POST request transfer
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/transfers
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"targetDepartmentId":"{{did}}"}
+}

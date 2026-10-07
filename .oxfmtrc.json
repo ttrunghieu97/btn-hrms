@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/out/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/drizzle/**",
+    "**/generated/**",
+    "**/.turbo/**",
+    "**/tmp/**",
+    "**/*.md",
+    "**/tasks/**",
+    "**/docs/**",
+    "**/openspec/**",
+    "**/opendesign/**",
+    "**/*.html"
+  ]
+}

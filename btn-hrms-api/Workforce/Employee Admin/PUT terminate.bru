@@ -1,0 +1,18 @@
+meta {
+  name: PUT terminate
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/employees/{{id}}/terminate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"terminationDate":"2026-07-15"}
+}

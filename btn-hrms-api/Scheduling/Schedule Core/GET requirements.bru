@@ -1,0 +1,14 @@
+meta {
+  name: GET requirements
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/scheduling/dates/{{date}}/requirements
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

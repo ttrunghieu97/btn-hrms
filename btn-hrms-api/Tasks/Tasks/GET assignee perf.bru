@@ -1,0 +1,14 @@
+meta {
+  name: GET assignee perf
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/tasks/reports/assignee-performance
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

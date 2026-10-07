@@ -1,0 +1,307 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './responsive.css';
+@import './components.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@import './theme.css';
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  :root {
+    /* Responsive spacing scale */
+    --page-padding: clamp(1rem, 2vw, 2rem);
+    --section-gap: clamp(1rem, 1.5vw, 1.5rem);
+    --card-padding: clamp(1rem, 1.5vw, 1.5rem);
+  }
+
+  /* Global scrollbar styling to match ScrollArea */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+/* View Transition Wave Effect */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+@keyframes reveal {
+  from {
+    clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+    opacity: 0.7;
+  }
+  to {
+    clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
+    opacity: 1;
+  }
+}
+
+html.theme-micro-transition,
+html.theme-micro-transition *,
+html.theme-micro-transition *::before,
+html.theme-micro-transition *::after {
+  transition: background-color 100ms ease-out,
+    color 100ms ease-out,
+    border-color 100ms ease-out !important;
+}
+
+::view-transition-new(root) {
+  animation: reveal 0.4s ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  html.theme-micro-transition,
+  html.theme-micro-transition *,
+  html.theme-micro-transition *::before,
+  html.theme-micro-transition *::after {
+    transition: none !important;
+  }
+}
+
+/* ── Timesheet Table Compact Excel Grid ── */
+.timesheet-grid-table tbody tr {
+  height: 22px !important;
+}
+
+.timesheet-grid-table tbody td {
+  padding: 0 !important;
+  height: 22px !important;
+  line-height: 22px !important;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.timesheet-grid-table tbody td.col-sticky-date,
+.timesheet-grid-table tbody td.col-sticky-day {
+  background-color: #ffffff;
+}
+
+.dark .timesheet-grid-table tbody td.col-sticky-date,
+.dark .timesheet-grid-table tbody td.col-sticky-day,
+[data-theme='dark'] .timesheet-grid-table tbody td.col-sticky-date,
+[data-theme='dark'] .timesheet-grid-table tbody td.col-sticky-day {
+  background-color: #18181b;
+}
+
+/* No hover background inside cells - clean like Excel */
+.timesheet-grid-table tbody tr:hover > td {
+  background-color: transparent;
+}
+
+/* ── Excel Crosshair: Active Row Highlight (Faint & Subtle) ── */
+.timesheet-grid-table tbody tr.row-active > td {
+  background-color: #f1f5f9;
+}
+
+.dark .timesheet-grid-table tbody tr.row-active > td,
+[data-theme='dark'] .timesheet-grid-table tbody tr.row-active > td {
+  background-color: #27272a;
+}
+
+/* Row Headers (Ngày & Thứ) shaded like Excel row number headers */
+.timesheet-grid-table tbody tr.row-active > td.col-sticky-date,
+.timesheet-grid-table tbody tr.row-active > td.col-sticky-day {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.dark .timesheet-grid-table tbody tr.row-active > td.col-sticky-date,
+.dark .timesheet-grid-table tbody tr.row-active > td.col-sticky-day,
+[data-theme='dark'] .timesheet-grid-table tbody tr.row-active > td.col-sticky-date,
+[data-theme='dark'] .timesheet-grid-table tbody tr.row-active > td.col-sticky-day {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* ── Excel Crosshair: Active Column Highlight (Faint & Subtle) ── */
+.timesheet-grid-table tbody td.excel-col-active {
+  background-color: #f1f5f9;
+}
+
+.dark .timesheet-grid-table tbody td.excel-col-active,
+[data-theme='dark'] .timesheet-grid-table tbody td.excel-col-active {
+  background-color: #27272a;
+}
+
+/* Column Header in thead shaded darker like Excel column letters (A, B, C...) */
+.timesheet-grid-table thead th.excel-col-active {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.dark .timesheet-grid-table thead th.excel-col-active,
+[data-theme='dark'] .timesheet-grid-table thead th.excel-col-active {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* ── Intersection of Active Row & Active Column (slightly deeper tint) ── */
+.timesheet-grid-table tbody tr.row-active > td.excel-col-active {
+  background-color: #e2e8f0;
+}
+
+.dark .timesheet-grid-table tbody tr.row-active > td.excel-col-active,
+[data-theme='dark'] .timesheet-grid-table tbody tr.row-active > td.excel-col-active {
+  background-color: #334155;
+}
+
+/* ── Excel-Style Active Cell Selection (border flush on cell perimeter with corner handle) ── */
+.timesheet-grid-table tbody td.excel-active-cell {
+  background-color: #ffffff !important;
+  outline: 2px solid #16a34a !important;
+  outline-offset: -2px !important;
+  z-index: 25 !important;
+  position: relative !important;
+}
+
+.dark .timesheet-grid-table tbody td.excel-active-cell,
+[data-theme='dark'] .timesheet-grid-table tbody td.excel-active-cell {
+  background-color: #18181b !important;
+}
+
+.timesheet-grid-table tbody td.excel-active-cell::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 5px;
+  height: 5px;
+  background-color: #16a34a;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* Clean seamless input inside Excel cell */
+.timesheet-grid-table tbody td input {
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  background: #ffffff !important;
+  padding: 0 4px !important;
+  line-height: 22px !important;
+  margin: 0 !important;
+}
+
+.dark .timesheet-grid-table tbody td input,
+[data-theme='dark'] .timesheet-grid-table tbody td input {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+/* ── Sunday Row default background ── */
+.timesheet-grid-table tbody tr.row-sunday td {
+  background-color: #fafafa !important;
+}
+
+.dark .timesheet-grid-table tbody tr.row-sunday td,
+[data-theme='dark'] .timesheet-grid-table tbody tr.row-sunday td {
+  background-color: #202024 !important;
+}
+
+/* ── Timesheet Table & KPI Slip Crisp Spreadsheet Gridlines ── */
+.timesheet-grid-table th,
+.timesheet-grid-table td,
+.kpi-slip-table td {
+  border-color: #e4e4e7 !important;
+}
+
+.dark .timesheet-grid-table th,
+.dark .timesheet-grid-table td,
+.dark .kpi-slip-table td,
+[data-theme='dark'] .timesheet-grid-table th,
+[data-theme='dark'] .timesheet-grid-table td,
+[data-theme='dark'] .kpi-slip-table td {
+  border-color: #27272a !important;
+}
+
+.timesheet-grid-table th.col-divider-r,
+.timesheet-grid-table td.col-divider-r {
+  border-right: 2px solid #d4d4d8 !important;
+}
+
+.dark .timesheet-grid-table th.col-divider-r,
+.dark .timesheet-grid-table td.col-divider-r,
+[data-theme='dark'] .timesheet-grid-table th.col-divider-r,
+[data-theme='dark'] .timesheet-grid-table td.col-divider-r {
+  border-right: 2px solid #3f3f46 !important;
+}
+
+/* ── Employee Sidebar Smooth Collapse (matching OpenDesign Wireframe) ── */
+.employee-sidebar-panel {
+  width: 285px;
+  min-width: 285px;
+  max-width: 285px;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, margin-right 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  will-change: width, opacity, margin-right;
+}
+
+.employee-sidebar-panel.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  margin-right: 0 !important;
+  border-color: transparent !important;
+  pointer-events: none !important;
+}
+
+.employee-sidebar-inner {
+  width: 285px;
+  min-width: 285px;
+  max-width: 285px;
+  flex-shrink: 0;
+}
+
+

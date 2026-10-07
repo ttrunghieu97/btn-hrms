@@ -1,0 +1,14 @@
+meta {
+  name: POST replay
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/admin/events/dead-letters/{{id}}/replay
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

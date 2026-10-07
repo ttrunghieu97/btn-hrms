@@ -1,0 +1,18 @@
+meta {
+  name: POST deny
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/schedule-requests/{{id}}/deny
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"reason":"No"}
+}

@@ -1,0 +1,18 @@
+meta {
+  name: POST create grant
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/grants
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"targetUserId":"{{uid}}","permissionCode":"code","reason":"r"}
+}

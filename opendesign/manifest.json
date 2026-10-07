@@ -1,0 +1,58 @@
+{
+  "generated": "2026-09-09T00:46:00.000Z",
+  "sections": [
+    {
+      "id": "design-systems",
+      "label": "Design Systems",
+      "groups": [
+        {
+          "slug": "attendance-timesheet",
+          "files": [
+            {
+              "label": "ui-kit-attendance/index.html (Redesign: Clean Minimal shadcn/ui Timesheet 2026-09 LV831202)",
+              "path": "design-systems/attendance-timesheet/ui-kit-attendance/index.html"
+            },
+            {
+              "label": "tokens/colors_and_type.css",
+              "path": "design-systems/attendance-timesheet/tokens/colors_and_type.css"
+            },
+            {
+              "label": "README.md",
+              "path": "design-systems/attendance-timesheet/README.md"
+            },
+            {
+              "label": "SKILL.md",
+              "path": "design-systems/attendance-timesheet/SKILL.md"
+            }
+          ]
+        },
+        {
+          "slug": "shadcn-default",
+          "files": [
+            {
+              "label": "ui-kit-hrms/index.html (Showcase Tr\u1eafng/\u0110en shadcn)",
+              "path": "design-systems/shadcn-default/ui-kit-hrms/index.html"
+            },
+            {
+              "label": "tokens/colors_and_type.css",
+              "path": "design-systems/shadcn-default/tokens/colors_and_type.css"
+            },
+            {
+              "label": "README.md",
+              "path": "design-systems/shadcn-default/README.md"
+            },
+            {
+              "label": "SKILL.md",
+              "path": "design-systems/shadcn-default/SKILL.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mockups",
+      "label": "Mockups",
+      "groups": []
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+meta {
+  name: PUT equipment handover
+  type: http
+}
+
+put {
+  url: {{base_url}}/api/v1/employees/{{id}}/equipment-handover
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"equipmentItems":[]}
+}

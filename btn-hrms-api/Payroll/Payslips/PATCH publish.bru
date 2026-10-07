@@ -1,0 +1,14 @@
+meta {
+  name: PATCH publish
+  type: http
+}
+
+patch {
+  url: {{base_url}}/api/v1/payslips/{{id}}/publish
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

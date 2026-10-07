@@ -1,0 +1,14 @@
+meta {
+  name: GET all
+  type: http
+}
+
+get {
+  url: {{base_url}}/api/v1/locations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

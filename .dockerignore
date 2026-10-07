@@ -1,0 +1,48 @@
+# ── Dependencies ──────────────────────────────
+node_modules
+**/node_modules
+
+# ── Build outputs ─────────────────────────────
+dist
+**/dist
+.next
+**/.next
+out
+**/out
+build
+**/build
+
+# ── Large generated files (not needed for build) ──
+apps/web/openapi.json
+apps/web/error-contracts.manifest.json
+**/*.tsbuildinfo
+openspec/
+
+# ── Data / logs / databases ───────────────────
+*.log
+data
+apps/api/storage
+
+# ── Environment files ─────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Git and editor files ──────────────────────
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# ── Agent / tooling files ─────────────────────
+.agents/
+.claude/
+.codex/
+skills-lock.json
+
+# ── Temporary files and caches ────────────────
+.turbo
+.cache
+coverage
+**/.swc

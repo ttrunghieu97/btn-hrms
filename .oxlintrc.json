@@ -1,0 +1,309 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [],
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  "options": {
+    "typeAware": true
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/out/**",
+    "**/build/**",
+    "**/drizzle/**",
+    "**/generated/**",
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "scripts/**",
+    "src/api/generated/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "rules": {
+        "no-var": "error",
+        "prefer-const": "error",
+        "eqeqeq": [
+          "error",
+          "always",
+          {
+            "null": "ignore"
+          }
+        ],
+        "no-duplicate-imports": "error",
+        "no-template-curly-in-string": "error",
+        "no-console": [
+          "error",
+          {
+            "allow": [
+              "warn",
+              "error"
+            ]
+          }
+        ],
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_",
+            "destructuredArrayIgnorePattern": "^_",
+            "ignoreRestSiblings": true
+          }
+        ],
+        "typescript/no-explicit-any": "error",
+        "typescript/no-non-null-assertion": "error",
+        "typescript/consistent-type-imports": [
+          "error",
+          {
+            "prefer": "type-imports",
+            "fixStyle": "inline-type-imports"
+          }
+        ],
+        "typescript/array-type": [
+          "error",
+          {
+            "default": "array"
+          }
+        ],
+        "typescript/no-inferrable-types": "error",
+        "typescript/no-duplicate-enum-values": "error",
+        "typescript/await-thenable": "error",
+        "typescript/only-throw-error": "error",
+        "typescript/prefer-promise-reject-errors": "error",
+        "typescript/no-unnecessary-type-assertion": "error"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "test/**",
+        "src/infrastructure/database/schema/**/*.ts",
+        "**/drizzle/**"
+      ],
+      "rules": {
+        "no-console": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "scripts/**",
+        "src/scripts/**"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "src/core/security/**/*.ts",
+        "src/shared/**/*.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "warn",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "src/infrastructure/database/seed*.ts",
+        "src/infrastructure/database/seed-*.ts"
+      ],
+      "rules": {
+        "no-console": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "src/shared/workflow/**/*.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts"
+      ],
+      "rules": {
+        "no-duplicate-imports": "off",
+        "no-console": "off",
+        "no-unused-vars": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "test/**",
+        "src/infrastructure/database/schema/**/*.ts",
+        "**/drizzle/**"
+      ],
+      "rules": {
+        "no-console": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off"
+      },
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "files": [
+        "src/features/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "Feature layer must not call fetch directly. Use generated API client through domain query/service modules."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/lib/fetcher",
+                "importNames": [
+                  "customFetch"
+                ],
+                "message": "Feature layer must not import customFetch. Use generated API client only."
+              },
+              {
+                "name": "axios",
+                "message": "Feature layer must not import axios. Use generated API client only."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "axios",
+                  "axios/*"
+                ],
+                "message": "Feature layer must not use axios. Use generated API client only."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/app/**/*.{ts,tsx}",
+        "src/features/**/*.{ts,tsx}",
+        "src/components/**/*.{ts,tsx}",
+        "src/lib/**/*.{ts,tsx}",
+        "src/config/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/constants/mock-api",
+                "message": "Production surface must not import mock modules."
+              },
+              {
+                "name": "@/constants/mock-api-users",
+                "message": "Production surface must not import mock modules."
+              },
+              {
+                "name": "@faker-js/faker",
+                "message": "Production surface must not import demo/mock tooling."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@/features/react-query-demo",
+                  "@/features/react-query-demo/**"
+                ],
+                "message": "Production surface must not import demo features."
+              },
+              {
+                "group": [
+                  "**/*demo*",
+                  "**/*mock*",
+                  "**/fixtures/**"
+                ],
+                "message": "Production surface must not import demo/mock modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/app/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/*",
+                  "!@/features/*/server"
+                ],
+                "message": "Pages/Routes must only import from the feature public API facade (@/features/name) or server facade (@/features/name/server)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

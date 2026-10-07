@@ -1,0 +1,18 @@
+meta {
+  name: POST multipart init
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/uploads/multipart/init
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"fileName":"big.mp4"}
+}

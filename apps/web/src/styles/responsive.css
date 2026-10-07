@@ -1,0 +1,56 @@
+/* Responsive system — used alongside Tailwind v4 */
+
+/* Container-driven page wrapper */
+.rpi-page-container {
+  container-type: inline-size;
+  container-name: page-content;
+  width: 100%;
+}
+
+/* Responsive spacing */
+.rpi-gap { gap: var(--section-gap); }
+.rpi-padding { padding: var(--page-padding); }
+
+/* Responsive grid */
+.rpi-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--section-gap);
+}
+
+.rpi-grid-span-2 {
+  grid-column: span 2;
+}
+
+/* Container query scopes */
+.rpi-table-scope {
+  container-type: inline-size;
+  container-name: data-table;
+}
+
+/* Card view — hidden on wide */
+.rpi-card-view { display: none; }
+.rpi-table-full { display: block; }
+
+/* Responsive column priority — hide supporting columns on very narrow */
+@container data-table (max-width: 400px) {
+  .rpi-priority-supporting { display: none; }
+  .rpi-priority-rich { display: none; }
+}
+
+@container data-table (min-width: 401px) and (max-width: 600px) {
+  .rpi-priority-rich { display: none; }
+}
+
+@container data-table (max-width: 600px) {
+  .rpi-table-full { display: none; }
+  .rpi-card-view { display: block; }
+}
+
+@container data-table (min-width: 601px) and (max-width: 900px) {
+  .rpi-priority-rich { display: none; }
+}
+
+@container data-table (min-width: 901px) {
+  .rpi-card-view { display: none; }
+}

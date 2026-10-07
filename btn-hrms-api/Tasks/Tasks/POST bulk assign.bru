@@ -1,0 +1,18 @@
+meta {
+  name: POST bulk assign
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/tasks/bulk-assign
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"taskIds":["a"],"assigneeId":"{{aid}}"}
+}

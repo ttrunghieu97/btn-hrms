@@ -1,0 +1,18 @@
+meta {
+  name: POST schedule termination
+  type: http
+}
+
+post {
+  url: {{base_url}}/api/v1/employees/{{id}}/schedule-termination
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {"effectiveDate":"2026-08-01"}
+}
