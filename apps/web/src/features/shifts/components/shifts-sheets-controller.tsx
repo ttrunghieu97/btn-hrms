@@ -3,8 +3,16 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseAsString, useQueryStates } from 'nuqs';
-import { TemplateFormSheet } from './template-form-sheet';
-import { AssignmentFormSheet } from './assignment-form-sheet';
+import dynamic from 'next/dynamic';
+
+const TemplateFormSheet = dynamic(
+  () => import('./template-form-sheet').then((mod) => mod.TemplateFormSheet),
+  { ssr: false }
+);
+const AssignmentFormSheet = dynamic(
+  () => import('./assignment-form-sheet').then((mod) => mod.AssignmentFormSheet),
+  { ssr: false }
+);
 import {
   shiftsTemplatesQueryOptions,
   shiftsAssignmentsQueryOptions,

@@ -38,6 +38,7 @@ export function SidebarThemeToggle() {
     return (
       <SidebarMenuButton
         tooltip={appShellCopy.toggleTheme}
+        aria-label={isDark ? appShellCopy.themeLight : appShellCopy.themeDark}
         onClick={isDark ? handleLightClick : handleDarkClick}
       >
         {isDark ? (

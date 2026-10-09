@@ -10,15 +10,29 @@ const MAX_OUTBOX_BACKOFF_MS = 60000;
 const DEFAULT_OUTBOX_LEASE_MS = 30000;
 const DEFAULT_OUTBOX_MAX_ATTEMPTS = 12;
 
-function computeNextAttemptAt(attemptCount: number, attemptedAt: Date) {
-  const multiplier = Math.max(0, attemptCount - 1);
-  const baseDelayMs = Math.min(
-    MAX_OUTBOX_BACKOFF_MS,
-    DEFAULT_OUTBOX_BACKOFF_MS * Math.pow(2, multiplier),
+export interface OutboxBackoffOptions {
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  jitterRatio?: number;
+}
+
+export function computeNextAttemptAt(
+  attemptCount: number,
+  attemptedAt: Date,
+  options?: OutboxBackoffOptions,
+) {
+  const baseDelayMs = options?.baseDelayMs ?? DEFAULT_OUTBOX_BACKOFF_MS;
+  const maxDelayMs = options?.maxDelayMs ?? MAX_OUTBOX_BACKOFF_MS;
+  const jitterRatio = options?.jitterRatio ?? 0.25;
+
+  const multiplier = Math.min(Math.max(0, attemptCount - 1), 10);
+  const baseDelay = Math.min(
+    maxDelayMs,
+    baseDelayMs * Math.pow(2, multiplier),
   );
-  // Add jitter: ±25% of base delay
-  const jitterFactor = 0.75 + Math.random() * 0.5; // 0.75 to 1.25
-  const delayMs = Math.round(baseDelayMs * jitterFactor);
+  // Add jitter: ±jitterRatio of base delay
+  const jitterFactor = (1 - jitterRatio) + Math.random() * (2 * jitterRatio);
+  const delayMs = Math.round(baseDelay * jitterFactor);
   return new Date(attemptedAt.getTime() + delayMs);
 }
 
@@ -236,4 +250,232 @@ export class EventOutboxRepository {
       .returning();
     return row ?? null;
   }
+
+  async recordPermanentFailure(
+    id: string,
+    errorMessage: string,
+    attemptedAt = new Date(),
+  ): Promise<ClaimedOutboxRow | null> {
+    const [row] = await this.db
+      .update(schema.eventOutbox)
+      .set({
+        attemptCount: schema.eventOutbox.maxAttempts,
+        lastAttemptAt: attemptedAt,
+        leaseUntil: markLeaseReleased(),
+        failedAt: attemptedAt,
+        lastError: `permanent_failure: ${errorMessage}`,
+      })
+      .where(eq(schema.eventOutbox.id, id))
+      .returning();
+    return row ? toOutboxRow(row as RawOutboxRow) : null;
+  }
+
+  async recoverExpiredLeases(
+    leaseGraceMs = 0,
+  ): Promise<{ recoveredCount: number; deadLetteredCount: number }> {
+    const graceInterval =
+      leaseGraceMs > 0
+        ? sql`${leaseGraceMs} * interval '1 millisecond'`
+        : sql`interval '0 millisecond'`;
+
+    const result = await this.db.execute(sql`
+      WITH expired AS (
+        SELECT id, attempt_count, max_attempts
+        FROM event_outbox
+        WHERE published_at IS NULL
+          AND failed_at IS NULL
+          AND lease_until IS NOT NULL
+          AND lease_until <= (now() - ${graceInterval})
+        ORDER BY lease_until ASC
+        LIMIT 100
+        FOR UPDATE SKIP LOCKED
+      ),
+      updated AS (
+        UPDATE event_outbox eo
+        SET
+          attempt_count = eo.attempt_count + 1,
+          last_attempt_at = now(),
+          lease_until = NULL,
+          last_error = CASE
+            WHEN eo.attempt_count + 1 >= eo.max_attempts
+            THEN 'lease_expired_exhausted: worker timed out or crashed'
+            ELSE 'lease_expired: reclaimed after worker timeout'
+          END,
+          failed_at = CASE
+            WHEN eo.attempt_count + 1 >= eo.max_attempts
+            THEN now()
+            ELSE NULL
+          END,
+          next_attempt_at = CASE
+            WHEN eo.attempt_count + 1 >= eo.max_attempts
+            THEN now()
+            ELSE now() + interval '5 seconds'
+          END
+        FROM expired
+        WHERE eo.id = expired.id
+        RETURNING eo.id, eo.failed_at
+      )
+      SELECT
+        count(*)::int as total,
+        count(*) FILTER (WHERE failed_at IS NOT NULL)::int as dead_lettered
+      FROM updated
+    `);
+
+    const rows = Array.isArray(result) ? result : (result as any)?.rows ?? [];
+    const row = rows[0] ?? {};
+    return {
+      recoveredCount: Number(row.total ?? 0),
+      deadLetteredCount: Number(row.dead_lettered ?? 0),
+    };
+  }
+
+  async listDeadLetters(options?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<ClaimedOutboxRow[]> {
+    const limit = options?.limit ?? 100;
+    const offset = options?.offset ?? 0;
+    const rows = await this.db
+      .select()
+      .from(schema.eventOutbox)
+      .where(sql`${schema.eventOutbox.failedAt} IS NOT NULL`)
+      .orderBy(sql`${schema.eventOutbox.failedAt} DESC`)
+      .limit(limit)
+      .offset(offset);
+    return rows.map((r) => toOutboxRow(r as RawOutboxRow));
+  }
+
+  async countDeadLetters(): Promise<number> {
+    const [row] = await this.db
+      .select({ count: count() })
+      .from(schema.eventOutbox)
+      .where(sql`${schema.eventOutbox.failedAt} IS NOT NULL`);
+    return Number(row?.count ?? 0);
+  }
+
+  async findDeadLetterById(id: string): Promise<ClaimedOutboxRow | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.eventOutbox)
+      .where(
+        sql`${schema.eventOutbox.id} = ${id} AND ${schema.eventOutbox.failedAt} IS NOT NULL`,
+      )
+      .limit(1);
+    const row = rows[0];
+    return row ? toOutboxRow(row as RawOutboxRow) : null;
+  }
+
+  async replayDeadLetter(
+    id: string,
+    actorUserId?: string | null,
+  ): Promise<ClaimedOutboxRow | null> {
+    const [row] = await this.db
+      .update(schema.eventOutbox)
+      .set({
+        failedAt: null,
+        lastError: null,
+        attemptCount: 0,
+        nextAttemptAt: new Date(),
+        publishedAt: null,
+        leaseUntil: null,
+      })
+      .where(
+        sql`${schema.eventOutbox.id} = ${id} AND ${schema.eventOutbox.failedAt} IS NOT NULL`,
+      )
+      .returning();
+
+    if (row) {
+      await this.auditDlqAction("event_dlq_replay", id, actorUserId ?? null, {
+        eventType: row.eventType,
+        replayedAt: new Date().toISOString(),
+      });
+    }
+    return row ? toOutboxRow(row as RawOutboxRow) : null;
+  }
+
+  async replayAllDeadLetters(actorUserId?: string | null): Promise<number> {
+    const rows = await this.db
+      .update(schema.eventOutbox)
+      .set({
+        failedAt: null,
+        lastError: null,
+        attemptCount: 0,
+        nextAttemptAt: new Date(),
+        publishedAt: null,
+        leaseUntil: null,
+      })
+      .where(
+        sql`${schema.eventOutbox.failedAt} IS NOT NULL AND (${schema.eventOutbox.lastError} IS NULL OR NOT ${schema.eventOutbox.lastError} LIKE 'discarded%')`,
+      )
+      .returning({ id: schema.eventOutbox.id });
+
+    const updatedCount = rows.length;
+    if (updatedCount > 0) {
+      await this.auditDlqAction(
+        "event_dlq_replay_all",
+        null,
+        actorUserId ?? null,
+        {
+          replayedCount: updatedCount,
+          eventIds: rows.map((r) => r.id),
+          replayedAt: new Date().toISOString(),
+        },
+      );
+    }
+    return updatedCount;
+  }
+
+  async discardDeadLetter(
+    id: string,
+    reason?: string,
+    actorUserId?: string | null,
+    permanent = false,
+  ): Promise<ClaimedOutboxRow | null> {
+    const existing = await this.findDeadLetterById(id);
+    if (!existing) return null;
+
+    if (permanent) {
+      await this.db
+        .delete(schema.eventOutbox)
+        .where(eq(schema.eventOutbox.id, id));
+    } else {
+      await this.db
+        .update(schema.eventOutbox)
+        .set({
+          lastError: `discarded: ${reason || "manually discarded by operator"}`,
+          leaseUntil: null,
+        })
+        .where(eq(schema.eventOutbox.id, id));
+    }
+
+    await this.auditDlqAction("event_dlq_discard", id, actorUserId ?? null, {
+      eventType: existing.eventType,
+      reason: reason ?? "manually discarded",
+      permanent,
+      discardedAt: new Date().toISOString(),
+    });
+
+    return existing;
+  }
+
+  async auditDlqAction(
+    action: string,
+    entityId: string | null,
+    actorUserId: string | null,
+    metadata?: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      await this.db.insert(schema.auditLogs).values({
+        actorUserId: actorUserId ?? null,
+        action,
+        entity: "event_outbox",
+        entityId,
+        result: "SUCCESS",
+        metadata: metadata ?? {},
+      });
+    } catch {
+      // Non-fatal if audit write fails in test/isolated environments
+    }
+  }
 }
+

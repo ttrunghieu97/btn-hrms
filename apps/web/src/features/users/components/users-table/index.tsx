@@ -71,12 +71,17 @@ export function UsersTable() {
     );
   }
 
-  if (isLoading || !data) {
+  if (isLoading && !data) {
     return <UsersTableSkeleton />;
   }
 
   return (
-    <DataTable table={table}>
+    <DataTable
+      table={table}
+      isLoading={isLoading}
+      totalRowsLabel='Tổng số người dùng'
+      totalRows={data?.total_users ?? 0}
+    >
       <DataTableToolbar table={table}>
         <UserFormSheetTrigger />
       </DataTableToolbar>

@@ -192,4 +192,84 @@ describe(EventOutboxDispatcherService.name, () => {
       }),
     );
   });
+
+  it("routes permanent errors (schema / validation) immediately to dead letter without retrying", async () => {
+    const outboxRepo = {
+      recoverExpiredLeases: jest.fn().mockResolvedValue({ recoveredCount: 0, deadLetteredCount: 0 }),
+      claimUnpublished: jest.fn().mockResolvedValue([
+        {
+          id: "out-perm-1",
+          eventType: "InvalidEvent",
+          eventVersion: 1,
+          producerContext: "core",
+          attemptCount: 0,
+          maxAttempts: 12,
+          payload: { corrupted: true },
+        },
+      ]),
+      recordPermanentFailure: jest.fn().mockResolvedValue({ id: "out-perm-1" }),
+      recordFailure: jest.fn(),
+      markPublished: jest.fn(),
+      getUnpublishedSummary: jest.fn().mockResolvedValue({
+        unpublishedCount: 0,
+        oldestUnpublishedAgeMs: 0,
+      }),
+    };
+    const eventBus = {
+      publish: jest.fn().mockRejectedValue(new Error("schema validation error: payload malformed")),
+    };
+    const metrics = {
+      setOutboxPendingCount: jest.fn(),
+      setOutboxOldestUnpublishedAge: jest.fn(),
+      incrementOutboxDispatchFailure: jest.fn(),
+      incrementOutboxDeadLetter: jest.fn(),
+    };
+
+    const service = new EventOutboxDispatcherService(
+      outboxRepo as any,
+      eventBus as any,
+      metrics as any,
+      { get: jest.fn() } as any,
+    );
+
+    await service.dispatchOnce();
+
+    expect(outboxRepo.recordPermanentFailure).toHaveBeenCalledWith(
+      "out-perm-1",
+      expect.stringContaining("validation"),
+      expect.any(Date),
+    );
+    expect(outboxRepo.recordFailure).not.toHaveBeenCalled();
+    expect(metrics.incrementOutboxDeadLetter).toHaveBeenCalledWith("InvalidEvent");
+  });
+
+  it("recovers expired worker leases before claiming candidate rows", async () => {
+    const outboxRepo = {
+      recoverExpiredLeases: jest.fn().mockResolvedValue({ recoveredCount: 2, deadLetteredCount: 1 }),
+      claimUnpublished: jest.fn().mockResolvedValue([]),
+      getUnpublishedSummary: jest.fn().mockResolvedValue({
+        unpublishedCount: 0,
+        oldestUnpublishedAgeMs: 0,
+      }),
+    };
+    const eventBus = { publish: jest.fn() };
+    const metrics = {
+      setOutboxPendingCount: jest.fn(),
+      setOutboxOldestUnpublishedAge: jest.fn(),
+      incrementOutboxDispatchFailure: jest.fn(),
+    };
+
+    const service = new EventOutboxDispatcherService(
+      outboxRepo as any,
+      eventBus as any,
+      metrics as any,
+      { get: jest.fn() } as any,
+    );
+
+    const processed = await service.dispatchOnce();
+
+    expect(processed).toBe(0);
+    expect(outboxRepo.recoverExpiredLeases).toHaveBeenCalled();
+    expect(outboxRepo.claimUnpublished).toHaveBeenCalled();
+  });
 });

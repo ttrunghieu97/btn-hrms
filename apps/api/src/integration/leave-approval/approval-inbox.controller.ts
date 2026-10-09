@@ -25,7 +25,7 @@ export class InboxDecisionDto {
 
 @ApiTags("Approval Inbox")
 @ApiBearerAuth()
-@Controller("api/v1/approval/inbox")
+@Controller("approval/inbox")
 export class ApprovalInboxController {
   constructor(
     private readonly inboxService: ApprovalInboxRepository,

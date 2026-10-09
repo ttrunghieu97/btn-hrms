@@ -20,7 +20,6 @@ import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, learningUiCopy } from '@/locales/vi/app-copy';
-import { PageHeader } from '@/components/layout/page-header';
 import { createCourseSchema, type CreateCourseFormValues } from '../schemas/learning.schema';
 import { toast } from 'sonner';
 
@@ -50,26 +49,27 @@ export function CoursesView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={learningUiCopy.description}
-        actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size='sm'>{copy.create}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{copy.create}</DialogTitle><DialogDescription>{learningUiCopy.description}</DialogDescription></DialogHeader>
-              <div className='grid gap-4 py-4'>
-                <div className='grid gap-2'><Label>{commonUiCopy.name}</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-                <div className='grid gap-2'><Label>{commonUiCopy.description}</Label><Textarea value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              </div>
-              <DialogFooter>
-                <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
-                <Button onClick={() => void handleCreate()} disabled={createCourse.isPending}>{commonUiCopy.create}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        }
-      />
+      <div className='flex items-center justify-end gap-4'>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size='sm'>
+              <Icons.add className='mr-1.5 size-4' />
+              {copy.create}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{copy.create}</DialogTitle><DialogDescription>{learningUiCopy.description}</DialogDescription></DialogHeader>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'><Label>{commonUiCopy.name}</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div className='grid gap-2'><Label>{commonUiCopy.description}</Label><Textarea value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            </div>
+            <DialogFooter>
+              <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
+              <Button onClick={() => void handleCreate()} disabled={createCourse.isPending}>{commonUiCopy.create}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
       {rows.length === 0 && !isLoading ? <AppEmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact /> : (
         <div className='rounded-md border'>
           <Table>

@@ -4,6 +4,7 @@ import {
   Headers,
   Post,
 } from "@nestjs/common";
+import { timingSafeEqual } from "crypto";
 import { throwUnauthorized } from "../../shared/utils/http-error";
 import { ERROR_CODES } from "../../shared/constants/error-codes";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -26,7 +27,11 @@ export class InboundAdapterController {
     const secret = String(process.env.WEBHOOK_SECRET || "").trim();
     if (secret) {
       const expectedSignature = signWebhookPayload(secret, JSON.stringify(body ?? {}));
-      if (signature !== expectedSignature) {
+      if (
+        !signature ||
+        Buffer.byteLength(signature) !== Buffer.byteLength(expectedSignature) ||
+        !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+      ) {
         throwUnauthorized(
           "Invalid webhook signature",
           ERROR_CODES.AUTH_TOKEN_INVALID,

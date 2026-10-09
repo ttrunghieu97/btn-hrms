@@ -14,6 +14,12 @@ import { TracingService } from "../../shared/context/tracing.service";
 import { EventDlqController } from "./event-dlq.controller";
 import { isBootstrapFlagEnabled } from "../../shared/config/startup-flags";
 
+import { ListDeadLettersUseCase } from "./use-cases/list-dead-letters.usecase";
+import { GetDeadLetterUseCase } from "./use-cases/get-dead-letter.usecase";
+import { ReplayDeadLetterUseCase } from "./use-cases/replay-dead-letter.usecase";
+import { ReplayAllDeadLettersUseCase } from "./use-cases/replay-all-dead-letters.usecase";
+import { DiscardDeadLetterUseCase } from "./use-cases/discard-dead-letter.usecase";
+
 @Global()
 @Module({
   imports: [EventEmitterModule.forRoot(), MetricsModule],
@@ -45,6 +51,11 @@ import { isBootstrapFlagEnabled } from "../../shared/config/startup-flags";
     TracingService,
     AttendanceCheckedHandler,
     PayrollGeneratedHandler,
+    ListDeadLettersUseCase,
+    GetDeadLetterUseCase,
+    ReplayDeadLetterUseCase,
+    ReplayAllDeadLettersUseCase,
+    DiscardDeadLetterUseCase,
   ],
   exports: [
     EVENT_BUS_TOKEN,
@@ -54,6 +65,11 @@ import { isBootstrapFlagEnabled } from "../../shared/config/startup-flags";
     EventOutboxService,
     EventOutboxDispatcherService,
     TracingService,
+    ListDeadLettersUseCase,
+    GetDeadLetterUseCase,
+    ReplayDeadLetterUseCase,
+    ReplayAllDeadLettersUseCase,
+    DiscardDeadLetterUseCase,
   ],
 })
 export class EventsModule {}

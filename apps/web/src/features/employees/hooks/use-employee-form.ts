@@ -94,7 +94,9 @@ export interface UseEmployeeFormOptions {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: EmployeeResponseDto | null;
+  onCreated?: (employee: EmployeeResponseDto) => void;
 }
+
 
 export interface UseEmployeeFormReturn {
   sheetContentRef: React.RefObject<HTMLDivElement | null>;
@@ -134,7 +136,9 @@ export function useEmployeeForm({
   open,
   onOpenChange,
   employee: employeeProp = null,
+  onCreated,
 }: UseEmployeeFormOptions): UseEmployeeFormReturn {
+
   const sheetContentRef = React.useRef<HTMLDivElement | null>(null);
   const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
   const lastPickerTriggerRef = React.useRef<HTMLElement | null>(null);
@@ -196,8 +200,13 @@ export function useEmployeeForm({
     onSuccess: async (employee) => {
       setIsStagingForSave(false);
       toast.success(feedbackCopy.success.createdNew(feedbackEntity.employee));
-      onOpenChange(false);
+      if (onCreated) {
+        onCreated(employee);
+      } else {
+        onOpenChange(false);
+      }
     },
+
     onError: (error) => {
       setIsStagingForSave(false);
       const fieldErrors = extractApiFieldErrors(error);

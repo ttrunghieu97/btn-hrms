@@ -825,6 +825,16 @@
       "post": {
         "operationId": "AuthController_ssoGoogle",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SsoLoginDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -3437,6 +3447,36 @@
         ]
       }
     },
+    "/api/v1/workflow/tasks/my": {
+      "get": {
+        "operationId": "WorkflowTasksController_myTasks",
+        "parameters": [
+          {
+            "name": "domain",
+            "required": false,
+            "in": "query",
+            "description": "Filter tasks by domain (all, leave, expense, asset, schedule, payroll, attendance, offboarding)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get aggregated actionable workflow tasks for current user",
+        "tags": [
+          "Workflow Tasks"
+        ]
+      }
+    },
     "/api/v1/workforce/locations/list": {
       "get": {
         "operationId": "LocationsController_findList",
@@ -6038,7 +6078,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/AttendanceAliasDto"
               }
@@ -6068,7 +6108,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/AttendanceAliasDto"
               }
@@ -6397,10 +6437,27 @@
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters": {
+    "/api/v1/admin/events/dead-letters": {
       "get": {
         "operationId": "EventDlqController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -6411,13 +6468,77 @@
             "bearer": []
           }
         ],
-        "summary": "List dead-lettered outbox events",
+        "summary": "List dead-lettered outbox events with pagination",
         "tags": [
           "Event DLQ"
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters/{id}/replay": {
+    "/api/v1/admin/events/dead-letters/{id}": {
+      "get": {
+        "operationId": "EventDlqController_inspect",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Inspect a dead-lettered event by ID",
+        "tags": [
+          "Event DLQ"
+        ]
+      },
+      "delete": {
+        "operationId": "EventDlqController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanent",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Discard/delete a dead-lettered event",
+        "tags": [
+          "Event DLQ"
+        ]
+      }
+    },
+    "/api/v1/admin/events/dead-letters/{id}/replay": {
       "post": {
         "operationId": "EventDlqController_replay",
         "parameters": [
@@ -6446,7 +6567,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters/replay-all": {
+    "/api/v1/admin/events/dead-letters/replay-all": {
       "post": {
         "operationId": "EventDlqController_replayAll",
         "parameters": [],
@@ -6461,6 +6582,35 @@
           }
         ],
         "summary": "Reset all dead-lettered events for retry",
+        "tags": [
+          "Event DLQ"
+        ]
+      }
+    },
+    "/api/v1/admin/events/dead-letters/{id}/discard": {
+      "post": {
+        "operationId": "EventDlqController_discard",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Discard a dead-lettered event",
         "tags": [
           "Event DLQ"
         ]
@@ -9862,6 +10012,154 @@
           }
         ],
         "summary": "Get onboarding process detail",
+        "tags": [
+          "Onboarding Processes"
+        ]
+      }
+    },
+    "/api/v1/onboarding/processes/{id}/items/{itemId}/complete": {
+      "post": {
+        "operationId": "BoardingProcessController_completeItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark an onboarding checklist item as completed",
+        "tags": [
+          "Onboarding Processes"
+        ]
+      }
+    },
+    "/api/v1/onboarding/processes/{id}/items/{itemId}/reopen": {
+      "post": {
+        "operationId": "BoardingProcessController_reopenItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reopen a completed onboarding checklist item",
+        "tags": [
+          "Onboarding Processes"
+        ]
+      }
+    },
+    "/api/v1/onboarding/processes/{id}/items/{itemId}/skip": {
+      "post": {
+        "operationId": "BoardingProcessController_skipItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Skip a non-mandatory onboarding checklist item",
+        "tags": [
+          "Onboarding Processes"
+        ]
+      }
+    },
+    "/api/v1/onboarding/processes/{id}/tasks/{taskId}": {
+      "patch": {
+        "operationId": "BoardingProcessController_updateTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Complete, reopen, or skip an onboarding task (alias)",
         "tags": [
           "Onboarding Processes"
         ]
@@ -13752,7 +14050,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox": {
+    "/api/v1/approval/inbox": {
       "get": {
         "operationId": "ApprovalInboxController_list",
         "parameters": [],
@@ -13772,7 +14070,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox/{id}/approve": {
+    "/api/v1/approval/inbox/{id}/approve": {
       "post": {
         "operationId": "ApprovalInboxController_approve",
         "parameters": [
@@ -13811,7 +14109,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox/{id}/reject": {
+    "/api/v1/approval/inbox/{id}/reject": {
       "post": {
         "operationId": "ApprovalInboxController_reject",
         "parameters": [
@@ -13850,7 +14148,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/leave/{id}/trace": {
+    "/api/v1/leave/{id}/trace": {
       "get": {
         "operationId": "LeaveTraceController_trace",
         "parameters": [
@@ -15823,7 +16121,16 @@
       },
       "get": {
         "operationId": "BenefitsController_listEnrollmentsEndpoint",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -17194,6 +17501,11 @@
             "type": "string",
             "example": "password123",
             "description": "User password"
+          },
+          "totpCode": {
+            "type": "string",
+            "example": "123456",
+            "description": "6-digit TOTP MFA passcode if 2FA is enabled"
           }
         },
         "required": [
@@ -17342,6 +17654,23 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "SsoLoginDto": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Google ID Token"
+          },
+          "totpCode": {
+            "type": "string",
+            "example": "123456",
+            "description": "6-digit TOTP MFA passcode if 2FA is enabled"
+          }
+        },
+        "required": [
+          "idToken"
         ]
       },
       "UserMeResponseDto": {
@@ -19844,6 +20173,13 @@
           },
           "longitude": {
             "type": "string"
+          },
+          "imageSource": {
+            "type": "string",
+            "enum": [
+              "camera",
+              "upload"
+            ]
           }
         }
       },

@@ -54,6 +54,13 @@ import type { EmployeeAttachmentIntentPayload } from '../types/employee-attachme
 import { fetchEmployeeTimeline, type TimelineEventDto, type TimelineQueryParams } from '../api/timeline';
 import { contractKeys } from '../api/contract-queries';
 
+import {
+  getEmployeeStatusHistory,
+  rehireEmployee,
+  type RehireEmployeeRequest,
+  type RehireEmployeeResponse,
+} from '../api/employee-lifecycle';
+
 export type Employee = EmployeeResponseDto;
 export type EmployeeListParams = EmployeesControllerFindAllParams;
 export type Position = PositionListItemDto;
@@ -89,7 +96,9 @@ export interface Department {
 export const employeeKeys = {
   ...createKeyFactory<EmployeeListParams>('employees'),
   me: () => ['employees', 'me'] as const,
+  statusHistory: (id: string) => ['employees', id, 'status-history'] as const,
 };
+
 export const departmentKeys = createKeyFactory('departments');
 const positionKeys = createKeyFactory('positions');
 export type TimelineKeyParams = { employeeId: string; types?: string; limit?: number };
@@ -649,12 +658,26 @@ export function useResetEmployeePasswordMutation(
 }
 
 /* ------------------------------------------------------------------ */
+/* Employee Status History Query                                       */
+/* ------------------------------------------------------------------ */
+
+export function useEmployeeStatusHistoryQuery(id: string) {
+  return useQuery({
+    queryKey: employeeKeys.statusHistory(id),
+    queryFn: () => getEmployeeStatusHistory(id),
+    enabled: Boolean(id),
+    ...queryPolicyPresets['employees'],
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /* Change Employee Status                                              */
 /* ------------------------------------------------------------------ */
 
 export interface ChangeEmployeeStatusVariables {
   id: string;
   status: 'working' | 'probation' | 'terminated' | 'leave' | 'suspended' | 'retired';
+  effectiveDate?: string | null;
   reason?: string | null;
 }
 
@@ -663,11 +686,15 @@ export function useChangeEmployeeStatusMutation(
   options?: UseMutationOptions<unknown, Error, ChangeEmployeeStatusVariables, MutationContext>
 ) {
   return useMutation<unknown, Error, ChangeEmployeeStatusVariables, MutationContext>({
-    mutationFn: async ({ id, status, reason }) => {
+    mutationFn: async ({ id, status, effectiveDate, reason }) => {
       return customFetch(`/api/v1/employees/${id}/change-status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, reason }),
+        body: JSON.stringify({
+          status,
+          ...(effectiveDate ? { effectiveDate } : {}),
+          ...(reason ? { reason } : {}),
+        }),
       });
     },
     onMutate: async ({ id, status: _status }) => {
@@ -707,9 +734,36 @@ export function useChangeEmployeeStatusMutation(
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
         queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.statusHistory(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
       ]);
     },
     ...options,
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Rehire Employee Mutation                                           */
+/* ------------------------------------------------------------------ */
+
+export function useRehireEmployeeMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<RehireEmployeeResponse, Error, { id: string; data: RehireEmployeeRequest }>
+) {
+  return useMutation({
+    mutationFn: async ({ id, data }) => {
+      return rehireEmployee(id, data);
+    },
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.statusHistory(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
 

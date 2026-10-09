@@ -149,6 +149,24 @@ const columns: ColumnDef<ContractRow>[] = [
     header: 'Hiệu lực đến', cell: ({ row }) => <span className='text-sm'>{formatDate(row.original.effectiveTo)}</span>,
     meta: { label: 'Hiệu lực đến' },
   },
+  {
+    id: 'actions',
+    header: 'Thao tác',
+    cell: ({ row }) => (
+      <Button
+        variant='ghost'
+        size='sm'
+        className='h-7 px-2 text-xs text-muted-foreground hover:text-foreground'
+        onClick={(e) => {
+          e.stopPropagation();
+          // Handled via row click
+        }}
+      >
+        <Icons.eye className='mr-1 size-3' />
+        Xem chi tiết
+      </Button>
+    ),
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -250,7 +268,25 @@ export function ContractsView() {
 
   return (
     <div className='flex flex-1 flex-col gap-4 min-h-0'>
-      <DataTable table={table} isLoading={isLoading}>
+      {/* Workflow Summary Banner */}
+      <div className='flex flex-col gap-1.5 rounded-lg border border-border/80 bg-muted/20 p-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <Icons.page className='size-4 text-primary' />
+            <span className='font-semibold text-sm text-foreground'>
+              Quản trị Vòng đời Hợp đồng Lao động (Contract Lifecycle)
+            </span>
+          </div>
+          <Badge variant='outline' className='text-xs'>
+            {total} hợp đồng trong hệ thống
+          </Badge>
+        </div>
+        <p className='text-xs text-muted-foreground leading-relaxed'>
+          Theo dõi các loại hợp đồng (Thử việc, Chính thức, Xác định thời hạn), kiểm soát thời hạn hết hạn, tạo phụ lục sửa đổi (amend) và tra cứu lịch sử các phiên bản hợp đồng (V1, V2...). Bấm vào dòng hợp đồng để xem chi tiết.
+        </p>
+      </div>
+
+      <DataTable table={table} isLoading={isLoading} onRowClick={handleRowClick}>
         <DataTableToolbar table={table}>
           <div className='flex items-center gap-2 flex-wrap'>
             <FilterSelect value={params.contractType ?? ''} onValueChange={(v) => setParam('contractType', v)}

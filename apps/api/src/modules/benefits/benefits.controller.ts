@@ -2,10 +2,26 @@ import { Body, Controller, Get, Param, Post, Patch, Query, Request } from "@nest
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../core/security/decorators/check-policy.decorator";
 import { BenefitsPolicies } from "../../core/security/policies/benefits.policy";
-import { CreatePlanUseCase, ListPlansUseCase, GetPlanUseCase, PublishPlanUseCase } from "./plan/use-cases";
-import { EnrollEmployeeUseCase, ApproveEnrollmentUseCase, CancelEnrollmentUseCase, ListEnrollmentsUseCase } from "./enrollment/use-cases";
+import {
+  CreatePlanUseCase,
+  ListPlansUseCase,
+  GetPlanUseCase,
+  PublishPlanUseCase,
+} from "./plan/use-cases";
+import {
+  EnrollEmployeeUseCase,
+  ApproveEnrollmentUseCase,
+  CancelEnrollmentUseCase,
+  ListEnrollmentsUseCase,
+} from "./enrollment/use-cases";
 import { AddDependentUseCase } from "./dependents/use-cases";
-import { CreatePlanDto, EnrollEmployeeDto, AddDependentDto, PlanResponseDto, EnrollmentResponseDto } from "./dto/benefit.dto";
+import {
+  CreatePlanDto,
+  EnrollEmployeeDto,
+  AddDependentDto,
+  PlanResponseDto,
+  EnrollmentResponseDto,
+} from "./dto/benefit.dto";
 
 @ApiTags("Benefits")
 @ApiBearerAuth()
@@ -24,15 +40,42 @@ export class BenefitsController {
     private readonly addDependent: AddDependentUseCase,
   ) {}
 
-  @Post("plans") createPlanEndpoint(@Body() d: CreatePlanDto) { return this.createPlan.execute(d); }
-  @Get("plans") listPlansEndpoint() { return this.listPlans.execute(); }
-  @Get("plans/:id") getPlanEndpoint(@Param("id") id: string) { return this.getPlan.execute(id); }
-  @Post("plans/:id/publish") publishPlanEndpoint(@Param("id") id: string) { return this.publishPlan.execute(id); }
+  @Post("plans") @CheckPolicy(BenefitsPolicies.manage) createPlanEndpoint(
+    @Body() d: CreatePlanDto,
+  ) {
+    return this.createPlan.execute(d);
+  }
+  @Get("plans") listPlansEndpoint() {
+    return this.listPlans.execute();
+  }
+  @Get("plans/:id") getPlanEndpoint(@Param("id") id: string) {
+    return this.getPlan.execute(id);
+  }
+  @Post("plans/:id/publish") @CheckPolicy(BenefitsPolicies.manage) publishPlanEndpoint(
+    @Param("id") id: string,
+  ) {
+    return this.publishPlan.execute(id);
+  }
 
-  @Post("enrollments") enrollEndpoint(@Body() d: EnrollEmployeeDto) { return this.enrollEmployee.execute(d); }
-  @Post("enrollments/:id/approve") approveEndpoint(@Param("id") id: string, @Request() r: any) { return this.approveEnrollment.execute(id, r.user?.userId); }
-  @Post("enrollments/:id/cancel") cancelEndpoint(@Param("id") id: string) { return this.cancelEnrollment.execute(id); }
-  @Get("enrollments") listEnrollmentsEndpoint(@Query("employeeId") employeeId?: string) { return this.listEnrollments.execute(employeeId); }
+  @Post("enrollments") enrollEndpoint(@Body() d: EnrollEmployeeDto) {
+    return this.enrollEmployee.execute(d);
+  }
+  @Post("enrollments/:id/approve") @CheckPolicy(BenefitsPolicies.manage) approveEndpoint(
+    @Param("id") id: string,
+    @Request() r: any,
+  ) {
+    return this.approveEnrollment.execute(id, r.user?.id);
+  }
+  @Post("enrollments/:id/cancel") @CheckPolicy(BenefitsPolicies.manage) cancelEndpoint(
+    @Param("id") id: string,
+  ) {
+    return this.cancelEnrollment.execute(id);
+  }
+  @Get("enrollments") listEnrollmentsEndpoint(@Query("employeeId") employeeId?: string) {
+    return this.listEnrollments.execute(employeeId);
+  }
 
-  @Post("dependents") addDependentEndpoint(@Body() d: AddDependentDto) { return this.addDependent.execute(d); }
+  @Post("dependents") addDependentEndpoint(@Body() d: AddDependentDto) {
+    return this.addDependent.execute(d);
+  }
 }

@@ -101,7 +101,8 @@ import {
   IconActivity,
   IconHeartRateMonitor,
   IconDatabase,
-  IconShieldCheck
+  IconShieldCheck,
+  IconTable
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -241,6 +242,7 @@ export const Icons = {
   forms: IconClipboardText,
   slash: IconSlash,
   calendar: IconCalendar,
+  table: IconTable,
   galleryVerticalEnd: IconStack2,
   moreHorizontal: IconDots,
   camera: IconCamera,

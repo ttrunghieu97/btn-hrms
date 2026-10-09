@@ -1,13 +1,14 @@
-import { envClient } from '@/lib/env.client';
+import { envClient } from "@/lib/env.client";
+import { tokenStore } from "@/lib/token-store";
 
-const BASE = `${envClient.apiBaseUrl}/api/v1/offboarding`;
+const BASE = `${envClient.apiBaseUrl.replace(/\/+$/, "")}/offboarding`;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const token = typeof window !== "undefined" ? tokenStore.get() : null;
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
@@ -35,23 +36,53 @@ export interface OffboardingProcessDetail {
   clearances: unknown[];
 }
 
-export async function fetchOffboardingList(page = 1, limit = 20) {
-  return request<{ rows: OffboardingProcessListItem[]; total: number }>(`?page=${page}&limit=${limit}`);
+export async function fetchOffboardingList(
+  page = 1,
+  limit = 20,
+): Promise<{ rows: OffboardingProcessListItem[]; total: number }> {
+  const json = await request<unknown>(`?page=${page}&limit=${limit}`);
+  if (json && typeof json === "object") {
+    const obj = json as Record<string, unknown>;
+    const meta =
+      ((obj.meta as Record<string, unknown> | undefined)?.pagination as
+        | Record<string, unknown>
+        | undefined) ?? (obj.meta as Record<string, unknown> | undefined);
+    if (Array.isArray(obj.data)) {
+      return {
+        rows: obj.data as OffboardingProcessListItem[],
+        total: Number(meta?.total ?? obj.data.length),
+      };
+    }
+    if (Array.isArray(obj.rows)) {
+      return {
+        rows: obj.rows as OffboardingProcessListItem[],
+        total: Number(obj.total ?? meta?.total ?? obj.rows.length),
+      };
+    }
+  }
+  return { rows: [], total: 0 };
 }
 
-export async function fetchOffboardingDetail(id: string) {
-  return request<OffboardingProcessDetail>(`/${id}`);
+export async function fetchOffboardingDetail(id: string): Promise<OffboardingProcessDetail> {
+  const json = await request<unknown>(`/${id}`);
+  if (json && typeof json === "object") {
+    const obj = json as Record<string, unknown>;
+    if (obj.data && typeof obj.data === "object") {
+      return obj.data as OffboardingProcessDetail;
+    }
+    return obj as unknown as OffboardingProcessDetail;
+  }
+  return json as OffboardingProcessDetail;
 }
 
-export async function completeChecklistItem(
-  processId: string,
-  taskId: string,
-  skip = false,
-) {
-  return request(`/${processId}/tasks/${taskId}`, {
-    method: 'PATCH',
+export async function completeChecklistItem(processId: string, taskId: string, skip = false) {
+  const res = await request<unknown>(`/${processId}/tasks/${taskId}`, {
+    method: "PATCH",
     body: JSON.stringify({ skip }),
   });
+  return res && typeof res === "object" && "data" in res
+    ? (res as Record<string, unknown>).data
+    : res;
 }
 
 export async function decideClearance(
@@ -60,32 +91,44 @@ export async function decideClearance(
   decision: string,
   note?: string,
 ) {
-  return request(`/${processId}/clearances/${department}`, {
-    method: 'POST',
+  const res = await request<unknown>(`/${processId}/clearances/${department}`, {
+    method: "POST",
     body: JSON.stringify({ decision, note }),
   });
+  return res && typeof res === "object" && "data" in res
+    ? (res as Record<string, unknown>).data
+    : res;
 }
 
 export async function scheduleExitInterview(
   processId: string,
   data: { employeeId: string; interviewerUserId: string; scheduledAt: string },
 ) {
-  return request(`/${processId}/exit-interview`, {
-    method: 'POST',
+  const res = await request<unknown>(`/${processId}/exit-interview`, {
+    method: "POST",
     body: JSON.stringify(data),
   });
+  return res && typeof res === "object" && "data" in res
+    ? (res as Record<string, unknown>).data
+    : res;
 }
 
 export async function recordExitInterview(
   processId: string,
   data: { responses?: Record<string, unknown>; notes?: string },
 ) {
-  return request(`/${processId}/exit-interview`, {
-    method: 'PATCH',
+  const res = await request<unknown>(`/${processId}/exit-interview`, {
+    method: "PATCH",
     body: JSON.stringify(data),
   });
+  return res && typeof res === "object" && "data" in res
+    ? (res as Record<string, unknown>).data
+    : res;
 }
 
 export async function completeProcess(processId: string) {
-  return request(`/${processId}/complete`, { method: 'POST' });
+  const res = await request<unknown>(`/${processId}/complete`, { method: "POST" });
+  return res && typeof res === "object" && "data" in res
+    ? (res as Record<string, unknown>).data
+    : res;
 }

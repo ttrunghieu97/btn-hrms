@@ -5,7 +5,7 @@ import { StorageService } from "../../../infrastructure/storage/storage.service"
 import {
   uploadPolicyByPurpose,
 } from "../../../shared/upload/upload-policy";
-import { throwBadRequest } from "../../../shared/utils/http-error";
+import { throwBadRequest, throwForbidden } from "../../../shared/utils/http-error";
 import { ContextLogger } from "../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../shared/context/request-context.service";
 
@@ -46,6 +46,40 @@ export class PresignedUploadUseCase {
 
   async execute(input: PresignedUploadInput): Promise<PresignedUploadResult> {
     const { purpose, ownerType, ownerId, mimeType, size, uploadedBy } = input;
+
+    const actor =
+      typeof this.requestContext?.get === "function"
+        ? this.requestContext.get()
+        : undefined;
+    if (actor && actor.userId) {
+      if (ownerType === "employee") {
+        const isSelf = actor.employeeId && String(actor.employeeId) === String(ownerId);
+        const canManage =
+          actor.isSuperAdmin ||
+          actor.permissions?.some((p) =>
+            ["employees:manage:sensitive", "employees:edit", "sys:all"].includes(p),
+          );
+        if (!isSelf && !canManage) {
+          throwForbidden(
+            "Cannot upload files for another employee without management permissions",
+            "FORBIDDEN",
+          );
+        }
+      } else if (ownerType === "user") {
+        const isSelf = String(actor.userId) === String(ownerId);
+        const canManage =
+          actor.isSuperAdmin ||
+          actor.permissions?.some((p) =>
+            ["users:edit", "sys:all"].includes(p),
+          );
+        if (!isSelf && !canManage) {
+          throwForbidden(
+            "Cannot upload files for another user without management permissions",
+            "FORBIDDEN",
+          );
+        }
+      }
+    }
 
     const purposeConfig = uploadPolicyByPurpose[purpose as keyof typeof uploadPolicyByPurpose];
     if (!purposeConfig) {

@@ -8,9 +8,14 @@ import { Section } from '@/components/layout/section';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { useSalaryStructuresQuery, useCreateSalaryStructureMutation } from '../queries/salary-structure-queries';
 import { SalaryStructuresTable } from '../tables/salary-structures-table';
-import { SalaryStructureDialog } from './salary-structure-dialog';
+import dynamic from 'next/dynamic';
 import type { CreateSalaryStructurePayload } from '../types';
 import { perPageParser, pageParser } from '@/lib/pagination';
+
+const SalaryStructureDialog = dynamic(
+  () => import('./salary-structure-dialog').then((mod) => mod.SalaryStructureDialog),
+  { ssr: false }
+);
 
 export function SalaryStructuresPageClient() {
   const [page] = useQueryState('page', pageParser);

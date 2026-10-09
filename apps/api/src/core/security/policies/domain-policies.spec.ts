@@ -4,6 +4,7 @@ import { BenefitsPolicies } from "./benefits.policy";
 import { ExpensesPolicies } from "./expenses.policy";
 import { LearningPolicies } from "./learning.policy";
 import { PerformancePolicies } from "./performance.policy";
+import { PayrollPolicies } from "./payroll.policy";
 
 function makeUser(permissions: string[] = [], isSuperAdmin = false): AuthUser {
   return {
@@ -99,6 +100,36 @@ describe("Domain Policies Security Verification", () => {
       const user = makeUser([Permissions.PERFORMANCE_MANAGE]);
       expect(PerformancePolicies.access.handle(user)).toBe(true);
       expect(PerformancePolicies.manage.handle(user)).toBe(true);
+    });
+  });
+
+  describe("PayrollPolicies", () => {
+    it("denies access when user has no payroll permissions", () => {
+      const user = makeUser([]);
+      expect(PayrollPolicies.view.handle(user)).toBe(false);
+    });
+
+    it("allows collection route access when user has payroll:view:self", () => {
+      const user = { ...makeUser([Permissions.PAYROLL_VIEW_SELF]), employeeId: "emp-1" };
+      expect(PayrollPolicies.view.handle(user, undefined)).toBe(true);
+    });
+
+    it("allows viewing own payslip where resource.id is payslip UUID and resource.employeeId is employee id", () => {
+      const user = { ...makeUser([Permissions.PAYROLL_VIEW_SELF]), employeeId: "emp-1" };
+      const resource = { id: "payslip-uuid-1", employeeId: "emp-1" };
+      expect(PayrollPolicies.view.handle(user, resource)).toBe(true);
+    });
+
+    it("denies viewing other employee payslip with payroll:view:self", () => {
+      const user = { ...makeUser([Permissions.PAYROLL_VIEW_SELF]), employeeId: "emp-1" };
+      const resource = { id: "payslip-uuid-2", employeeId: "emp-2" };
+      expect(PayrollPolicies.view.handle(user, resource)).toBe(false);
+    });
+
+    it("allows viewing any payslip with payroll:view:all", () => {
+      const user = { ...makeUser([Permissions.PAYROLL_VIEW_ALL]), employeeId: "emp-1" };
+      const resource = { id: "payslip-uuid-2", employeeId: "emp-2" };
+      expect(PayrollPolicies.view.handle(user, resource)).toBe(true);
     });
   });
 });

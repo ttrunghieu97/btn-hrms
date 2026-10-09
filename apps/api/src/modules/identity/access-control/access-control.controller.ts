@@ -10,8 +10,6 @@ import { UpdateUserPermissionsUseCase } from "./use-cases/update-user-permission
 import { UpdateUserAccessControlUseCase } from "./use-cases/update-user-access-control.usecase";
 import { RevokeUserSessionsUseCase } from "./use-cases/revoke-user-sessions.usecase";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { RequirePermission } from "../../../core/security/decorators/require-permission.decorator";
-import { Permissions } from "../../../core/security/permissions/permissions.registry";
 import { type AuthUser } from "../../../core/security/types/auth-user.interface";
 import { CreateAccessGrantRequestDto } from "./dto/create-access-grant.dto";
 import { CreateAccessGrantUseCase } from "./use-cases/create-access-grant.usecase";
@@ -70,7 +68,7 @@ export class AccessControlController {
 
   @Post("grants")
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @RequirePermission(Permissions.EMPLOYEES_MANAGE_SENSITIVE)
+  @CheckPolicy(UserPolicies.managePermissions)
   @AuditLog({ action: "access_grant_create", entity: "user" })
   @ApiOperation({ summary: "Create a temporary direct permission grant" })
   async createGrant(

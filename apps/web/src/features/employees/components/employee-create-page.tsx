@@ -86,8 +86,16 @@ export function EmployeeCreatePage() {
         router.push('/employees');
       }
     },
+    onCreated: (created) => {
+      if (created?.id) {
+        router.push(`/employees/${created.id}`);
+      } else {
+        router.push('/employees');
+      }
+    },
     employee: null,
   });
+
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {

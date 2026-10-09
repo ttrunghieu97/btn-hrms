@@ -15,7 +15,12 @@ class ViewEmployeePolicyHandler implements PolicyHandler {
   handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
     if (user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL)) return true;
-    if (!resource) return false;
+    if (!resource) {
+      return (
+        user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) ||
+        user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SELF)
+      ) ?? false;
+    }
     if (
       user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) &&
       resource.departmentId &&

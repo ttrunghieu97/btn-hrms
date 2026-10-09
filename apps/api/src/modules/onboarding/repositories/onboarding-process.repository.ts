@@ -375,4 +375,41 @@ export class OnboardingProcessRepository {
       })),
     };
   }
+
+  /** Update the status and completion metadata of a checklist item. */
+  async updateChecklistItemStatus(
+    id: string,
+    status: "pending" | "in_progress" | "completed" | "skipped",
+    completedByUserId?: string,
+    notes?: string,
+  ): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(boardingChecklistItems)
+      .set({
+        status,
+        isCompleted: status === "completed",
+        completedAt: status === "completed" ? now : null,
+        completedByUserID: status === "completed" ? completedByUserId ?? null : null,
+        notes: notes !== undefined ? notes : undefined,
+        updatedAt: now,
+      })
+      .where(eq(boardingChecklistItems.id, id));
+  }
+
+  /** Update process status and completion timestamp. */
+  async updateProcessStatus(
+    id: string,
+    status: NonNullable<typeof boardingProcesses.$inferInsert["status"]>,
+    completedAt?: Date | null,
+  ): Promise<void> {
+    await this.db
+      .update(boardingProcesses)
+      .set({
+        status,
+        completedAt: completedAt !== undefined ? completedAt : undefined,
+        updatedAt: new Date(),
+      })
+      .where(eq(boardingProcesses.id, id));
+  }
 }

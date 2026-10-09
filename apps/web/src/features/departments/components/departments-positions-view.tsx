@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { DepartmentsTable } from './departments-table';
 import { PositionsTable } from './positions-table';
-import { PageHeader } from '@/components/layout/page-header';
 import { departmentUiCopy } from '@/lib/app-copy';
 import type { DepartmentRow } from '../queries/department-queries';
 import type { PositionListItemDto } from '@/api/generated/model';
@@ -38,19 +37,15 @@ export function DepartmentsPositionsView() {
     : departmentUiCopy.tabs.addPosition;
 
   return (
-    <div className='flex flex-1 flex-col gap-4'>
-      <PageHeader
-        title={!isPositions ? 'Quản lý phòng ban' : 'Quản lý vị trí'}
-        description={!isPositions ? 'Quản lý cơ cấu phòng ban và phân bổ nhân sự' : 'Quản lý các chức danh và vị trí công việc'}
-        actions={
-          <Button onClick={handleCreateClick} size='sm'>
-            <Icons.add className='mr-1.5 h-4 w-4' />
-            {createLabel}
-          </Button>
-        }
-      />
+    <div className='flex flex-1 flex-col gap-4 min-h-0'>
+      <div className='flex items-center justify-end gap-4'>
+        <Button onClick={handleCreateClick} size='sm'>
+          <Icons.add className='mr-1.5 h-4 w-4' />
+          {createLabel}
+        </Button>
+      </div>
 
-      <div className='flex flex-1 flex-col'>
+      <div className='flex flex-1 flex-col min-h-0 overflow-hidden'>
         {!isPositions ? (
           <DepartmentsTable onRowClick={handleDeptRowClick} />
         ) : (

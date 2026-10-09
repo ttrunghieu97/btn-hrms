@@ -51,10 +51,21 @@ class CancelWorkflowInstancePolicyHandler implements PolicyHandler {
   }
 }
 
+class ViewWorkflowTasksPolicyHandler implements PolicyHandler {
+  readonly policyName = "ViewWorkflowTasks";
+  readonly requiredAnyOfPermissions = [];
+
+  handle(user: AuthUser): boolean {
+    return Boolean(user?.id);
+  }
+}
+
 export const WorkflowPolicies = {
   viewDefinitions: new ViewWorkflowDefinitionsPolicyHandler(),
   viewInstances: new ViewWorkflowInstancesPolicyHandler(),
+  viewTasks: new ViewWorkflowTasksPolicyHandler(),
   startInstance: new StartWorkflowInstancePolicyHandler(),
   transitionInstance: new TransitionWorkflowInstancePolicyHandler(),
   cancelInstance: new CancelWorkflowInstancePolicyHandler(),
 } as const;
+

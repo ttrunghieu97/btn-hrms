@@ -134,6 +134,13 @@
                   },
                   "draftId": {
                     "type": "string"
+                  },
+                  "lunchDutyType": {
+                    "type": "string",
+                    "enum": [
+                      "indoor",
+                      "outdoor"
+                    ]
                   }
                 },
                 "required": [
@@ -818,6 +825,16 @@
       "post": {
         "operationId": "AuthController_ssoGoogle",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SsoLoginDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -5097,6 +5114,66 @@
         ]
       }
     },
+    "/api/v1/timekeeping/period-locks/review": {
+      "post": {
+        "operationId": "TimekeepingController_reviewPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period moved to in_review"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark period as in_review",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/approve": {
+      "post": {
+        "operationId": "TimekeepingController_approvePeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Period approved and locked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve period — transitions to locked",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
     "/api/v1/timekeeping/period-locks/reopen": {
       "post": {
         "operationId": "TimekeepingController_reopenPeriod",
@@ -5122,6 +5199,130 @@
           }
         ],
         "summary": "Reopen a closed attendance period (privileged)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees": {
+      "get": {
+        "operationId": "TimekeepingController_listEmployeeVerification",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List employee verification status for a period",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees/{employeeId}/verify": {
+      "post": {
+        "operationId": "TimekeepingController_verifyEmployee",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark employee timesheet as done (verified)",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
+    "/api/v1/timekeeping/period-locks/{period}/employees/{employeeId}/unverify": {
+      "post": {
+        "operationId": "TimekeepingController_unverifyEmployee",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeVerificationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revert employee timesheet back to draft",
         "tags": [
           "Attendance Timekeeping"
         ]
@@ -5696,6 +5897,13 @@
                       "camera",
                       "upload"
                     ]
+                  },
+                  "lunchDutyType": {
+                    "type": "string",
+                    "enum": [
+                      "indoor",
+                      "outdoor"
+                    ]
                   }
                 }
               }
@@ -5840,7 +6048,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/AttendanceAliasDto"
               }
@@ -5870,7 +6078,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/AttendanceAliasDto"
               }
@@ -6199,7 +6407,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters": {
+    "/api/v1/admin/events/dead-letters": {
       "get": {
         "operationId": "EventDlqController_list",
         "parameters": [],
@@ -6219,7 +6427,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters/{id}/replay": {
+    "/api/v1/admin/events/dead-letters/{id}/replay": {
       "post": {
         "operationId": "EventDlqController_replay",
         "parameters": [
@@ -6248,7 +6456,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/admin/events/dead-letters/replay-all": {
+    "/api/v1/admin/events/dead-letters/replay-all": {
       "post": {
         "operationId": "EventDlqController_replayAll",
         "parameters": [],
@@ -10128,134 +10336,6 @@
         ]
       }
     },
-    "/api/v1/payroll": {
-      "get": {
-        "operationId": "PayrollController_list",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "example": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "example": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "description": "Free-text search",
-            "schema": {
-              "example": "john",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List payroll records",
-        "tags": [
-          "Payroll"
-        ]
-      }
-    },
-    "/api/v1/payroll/{employeeId}": {
-      "get": {
-        "operationId": "PayrollController_getByEmployee",
-        "parameters": [
-          {
-            "name": "employeeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get payroll by employee",
-        "tags": [
-          "Payroll"
-        ]
-      },
-      "patch": {
-        "operationId": "PayrollController_upsert",
-        "parameters": [
-          {
-            "name": "employeeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertPayrollDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Upsert payroll by employee",
-        "tags": [
-          "Payroll"
-        ]
-      }
-    },
     "/api/v1/payroll/periods": {
       "get": {
         "operationId": "PayrollPeriodsController_list",
@@ -10897,6 +10977,42 @@
         ]
       }
     },
+    "/api/v1/payroll/runs/{id}/request-approval": {
+      "post": {
+        "operationId": "PayrollRunsController_requestApproval",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit payroll run for approval",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
     "/api/v1/payroll/runs/{id}/approve": {
       "post": {
         "operationId": "PayrollRunsController_approve",
@@ -10928,6 +11044,42 @@
           }
         ],
         "summary": "Approve payroll run",
+        "tags": [
+          "Payroll Runs"
+        ]
+      }
+    },
+    "/api/v1/payroll/runs/{id}/reject": {
+      "post": {
+        "operationId": "PayrollRunsController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollRunEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject payroll run (returns to draft)",
         "tags": [
           "Payroll Runs"
         ]
@@ -10986,6 +11138,134 @@
         "summary": "Get payroll dashboard overview",
         "tags": [
           "Payroll Dashboard"
+        ]
+      }
+    },
+    "/api/v1/payroll": {
+      "get": {
+        "operationId": "PayrollController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search",
+            "schema": {
+              "example": "john",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List payroll records",
+        "tags": [
+          "Payroll"
+        ]
+      }
+    },
+    "/api/v1/payroll/{employeeId}": {
+      "get": {
+        "operationId": "PayrollController_getByEmployee",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payroll by employee",
+        "tags": [
+          "Payroll"
+        ]
+      },
+      "patch": {
+        "operationId": "PayrollController_upsert",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPayrollDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upsert payroll by employee",
+        "tags": [
+          "Payroll"
         ]
       }
     },
@@ -13482,7 +13762,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox": {
+    "/api/v1/approval/inbox": {
       "get": {
         "operationId": "ApprovalInboxController_list",
         "parameters": [],
@@ -13502,7 +13782,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox/{id}/approve": {
+    "/api/v1/approval/inbox/{id}/approve": {
       "post": {
         "operationId": "ApprovalInboxController_approve",
         "parameters": [
@@ -13541,7 +13821,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/approval/inbox/{id}/reject": {
+    "/api/v1/approval/inbox/{id}/reject": {
       "post": {
         "operationId": "ApprovalInboxController_reject",
         "parameters": [
@@ -13580,7 +13860,7 @@
         ]
       }
     },
-    "/api/v1/api/v1/leave/{id}/trace": {
+    "/api/v1/leave/{id}/trace": {
       "get": {
         "operationId": "LeaveTraceController_trace",
         "parameters": [
@@ -15553,7 +15833,16 @@
       },
       "get": {
         "operationId": "BenefitsController_listEnrollmentsEndpoint",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -16924,6 +17213,11 @@
             "type": "string",
             "example": "password123",
             "description": "User password"
+          },
+          "totpCode": {
+            "type": "string",
+            "example": "123456",
+            "description": "6-digit TOTP MFA passcode if 2FA is enabled"
           }
         },
         "required": [
@@ -17072,6 +17366,23 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "SsoLoginDto": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Google ID Token"
+          },
+          "totpCode": {
+            "type": "string",
+            "example": "123456",
+            "description": "6-digit TOTP MFA passcode if 2FA is enabled"
+          }
+        },
+        "required": [
+          "idToken"
         ]
       },
       "UserMeResponseDto": {
@@ -18888,6 +19199,46 @@
           },
           "overriddenOvertimeMinutes": {
             "type": "number"
+          },
+          "checkInMorning": {
+            "type": "object",
+            "description": "HH:mm or ISO string"
+          },
+          "checkOutMorning": {
+            "type": "object",
+            "description": "HH:mm or ISO string"
+          },
+          "checkInAfternoon": {
+            "type": "object",
+            "description": "HH:mm or ISO string"
+          },
+          "checkOutAfternoon": {
+            "type": "object",
+            "description": "HH:mm or ISO string"
+          },
+          "breakMinutes": {
+            "type": "object",
+            "description": "Lunch break in minutes"
+          },
+          "personalBreakMinutes": {
+            "type": "object",
+            "description": "Personal break in minutes"
+          },
+          "lunchDutyMinutes": {
+            "type": "object",
+            "description": "Lunch duty in minutes"
+          },
+          "duty30kMinutes": {
+            "type": "object",
+            "description": "Duty 30K in minutes"
+          },
+          "nightShiftDutyCount": {
+            "type": "object",
+            "description": "Night shift duty count (0 or 1)"
+          },
+          "waterBoothDutyCount": {
+            "type": "object",
+            "description": "Water booth duty count (0 or 1)"
           }
         },
         "required": [
@@ -19014,6 +19365,53 @@
           "remarks"
         ]
       },
+      "EmployeeVerificationDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "done"
+            ]
+          },
+          "verifiedByUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "employeeId",
+          "status",
+          "verifiedByUserId",
+          "verifiedAt"
+        ]
+      },
+      "EmployeeVerificationListDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "employees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeVerificationDto"
+            }
+          }
+        },
+        "required": [
+          "period",
+          "employees"
+        ]
+      },
       "TimesheetWorkspacePeriodTotalsDto": {
         "type": "object",
         "properties": {
@@ -19066,7 +19464,19 @@
             "type": "string"
           },
           "departmentName": {
-            "type": "object",
+            "type": "string",
+            "nullable": true
+          },
+          "jobTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "baseSalary": {
+            "type": "number",
+            "nullable": true
+          },
+          "responsibilityAllowance": {
+            "type": "number",
             "nullable": true
           },
           "workingDays": {
@@ -19092,6 +19502,14 @@
           },
           "workedMinutes": {
             "type": "number"
+          },
+          "verificationStatus": {
+            "type": "string",
+            "description": "HR verification status for the period",
+            "enum": [
+              "draft",
+              "done"
+            ]
           }
         },
         "required": [
@@ -19106,7 +19524,8 @@
           "leaveCount",
           "absentCount",
           "otMinutes",
-          "workedMinutes"
+          "workedMinutes",
+          "verificationStatus"
         ]
       },
       "TimesheetWorkspaceRecordDto": {
@@ -19119,39 +19538,83 @@
             "type": "string"
           },
           "status": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "checkIn": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "checkOut": {
-            "type": "object",
+            "type": "string",
+            "nullable": true
+          },
+          "checkInMorning": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkOutMorning": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInAfternoon": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkOutAfternoon": {
+            "type": "string",
+            "nullable": true
+          },
+          "breakMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "duty30kMinutes": {
+            "type": "number",
             "nullable": true
           },
           "workedMinutes": {
-            "type": "object",
+            "type": "number",
             "nullable": true
           },
           "scheduledMinutes": {
-            "type": "object",
+            "type": "number",
             "nullable": true
           },
           "lateMinutes": {
-            "type": "object",
+            "type": "number",
             "nullable": true
           },
           "earlyLeaveMinutes": {
-            "type": "object",
+            "type": "number",
             "nullable": true
           },
           "overtimeMinutes": {
-            "type": "object",
+            "type": "number",
+            "nullable": true
+          },
+          "personalBreakMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "lunchDutyMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "nightShiftDutyCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "waterBoothDutyCount": {
+            "type": "number",
             "nullable": true
           },
           "isHoliday": {
-            "type": "object",
+            "type": "boolean",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -19166,6 +19629,10 @@
           "lateMinutes",
           "earlyLeaveMinutes",
           "overtimeMinutes",
+          "personalBreakMinutes",
+          "lunchDutyMinutes",
+          "nightShiftDutyCount",
+          "waterBoothDutyCount",
           "isHoliday"
         ]
       },
@@ -19418,6 +19885,13 @@
           },
           "longitude": {
             "type": "string"
+          },
+          "imageSource": {
+            "type": "string",
+            "enum": [
+              "camera",
+              "upload"
+            ]
           }
         }
       },
@@ -21120,51 +21594,6 @@
           "timestamp"
         ]
       },
-      "UpsertPayrollDto": {
-        "type": "object",
-        "properties": {
-          "salary": {
-            "type": "string",
-            "description": "Base salary as decimal string (e.g. 15000000 or 15000000.00)"
-          },
-          "bonus": {
-            "type": "string"
-          },
-          "deduction": {
-            "type": "string"
-          },
-          "allowance": {
-            "type": "string"
-          },
-          "overtimeAmount": {
-            "type": "string"
-          },
-          "taxAmount": {
-            "type": "string"
-          },
-          "insuranceAmount": {
-            "type": "string"
-          },
-          "netSalary": {
-            "type": "string"
-          },
-          "effectiveFrom": {
-            "type": "string",
-            "description": "ISO date (YYYY-MM-DD)"
-          },
-          "effectiveTo": {
-            "type": "string",
-            "description": "ISO date (YYYY-MM-DD)"
-          },
-          "currency": {
-            "type": "string",
-            "default": "VND"
-          }
-        },
-        "required": [
-          "salary"
-        ]
-      },
       "CreatePayrollPeriodDto": {
         "type": "object",
         "properties": {
@@ -21422,6 +21851,51 @@
             "type": "string"
           }
         }
+      },
+      "UpsertPayrollDto": {
+        "type": "object",
+        "properties": {
+          "salary": {
+            "type": "string",
+            "description": "Base salary as decimal string (e.g. 15000000 or 15000000.00)"
+          },
+          "bonus": {
+            "type": "string"
+          },
+          "deduction": {
+            "type": "string"
+          },
+          "allowance": {
+            "type": "string"
+          },
+          "overtimeAmount": {
+            "type": "string"
+          },
+          "taxAmount": {
+            "type": "string"
+          },
+          "insuranceAmount": {
+            "type": "string"
+          },
+          "netSalary": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "ISO date (YYYY-MM-DD)"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "description": "ISO date (YYYY-MM-DD)"
+          },
+          "currency": {
+            "type": "string",
+            "default": "VND"
+          }
+        },
+        "required": [
+          "salary"
+        ]
       },
       "TaskResponseDto": {
         "type": "object",

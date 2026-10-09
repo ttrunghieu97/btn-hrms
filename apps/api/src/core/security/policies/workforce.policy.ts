@@ -170,12 +170,14 @@ class ViewPayrollPolicyHandler implements PolicyHandler {
       perms.includes(Permissions.PAYROLL_MANAGE)
     )
       return true;
-    if (!resource) return false;
-    const employeeId = resource.id ?? resource.employeeId;
+    if (!resource) {
+      return perms.includes(Permissions.PAYROLL_VIEW_SELF);
+    }
+    const employeeId = resource.employeeId ?? resource.id;
     return (
       perms.includes(Permissions.PAYROLL_VIEW_SELF) &&
-      employeeId &&
-      user.employeeId &&
+      Boolean(employeeId) &&
+      Boolean(user.employeeId) &&
       String(employeeId) === String(user.employeeId)
     );
   }

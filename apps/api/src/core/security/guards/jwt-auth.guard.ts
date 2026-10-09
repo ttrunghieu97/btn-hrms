@@ -39,10 +39,7 @@ export class JwtAuthGuard implements CanActivate {
     const headerToken = this.getBearerToken(request.headers.authorization);
     const accessCookieName =
       this.configService.get<string>("AUTH_ACCESS_COOKIE_NAME") || "access_token";
-    const cookieToken = this.getCookieValue(
-      request.headers.cookie,
-      accessCookieName,
-    );
+    const cookieToken = this.getCookieValue(request.headers.cookie, accessCookieName);
     const token = headerToken ?? cookieToken;
 
     if (!token) {
@@ -57,13 +54,9 @@ export class JwtAuthGuard implements CanActivate {
         secret: this.configService.get<string>("AUTH_JWT_SECRET"),
       });
     } catch {
-      throwUnauthorized(
-        "Invalid or expired token",
-        ERROR_CODES.AUTH_TOKEN_INVALID,
-        {
-          reason: ERROR_REASONS.INVALID_TOKEN,
-        },
-      );
+      throwUnauthorized("Invalid or expired token", ERROR_CODES.AUTH_TOKEN_INVALID, {
+        reason: ERROR_REASONS.INVALID_TOKEN,
+      });
     }
 
     const session = await this.authSessionReader.loadAuthSession(payload.sub);
@@ -114,6 +107,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const authUser: AuthUser = {
       id: dbUser.id,
+      userId: dbUser.id,
       username: dbUser.username,
       employeeId: employeeRow?.id,
       scopeId,

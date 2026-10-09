@@ -6,6 +6,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { usePayrollRunQuery } from '../queries/payroll-run-queries';
 import { PayrollRunStatusBadge } from './payroll-run-status-badge';
+import { PayrollRunWorkflowHero } from './payroll-run-workflow-hero';
 
 const fmtDate = (d: string | null | undefined) =>
   d ? formatDateTimeVN(d) : '\u2014';
@@ -46,50 +47,51 @@ export function PayrollRunDetailPageClient({ runId }: Props) {
   return (
     <div className='space-y-6'>
       <div>
-        <Button variant='ghost' asChild className='mb-2 -ml-2'>
+        <Button variant='ghost' asChild className='mb-2 -ml-2 text-xs'>
           <Link href='/payroll/runs'>
             <Icons.chevronLeft className='mr-1 h-4 w-4' />
-            Quay lại
+            Quay lại danh sách bảng lương
           </Link>
         </Button>
-        <div className='flex items-center gap-3'>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            Bảng lương {run.payrollPeriod?.code ?? ''}
-          </h1>
-          <PayrollRunStatusBadge status={run.status} />
-        </div>
       </div>
 
-      <div className='rounded-lg border p-6'>
-        <h2 className='mb-4 text-lg font-semibold'>Thông tin chung</h2>
-        <dl className='grid grid-cols-2 gap-4'>
+      {/* Visual Payroll Workflow Hero */}
+      <PayrollRunWorkflowHero run={run} />
+
+      <div className='rounded-lg border bg-card p-6 shadow-xs'>
+        <h2 className='mb-4 text-base font-bold'>Thông tin chi tiết bảng lương</h2>
+        <dl className='grid grid-cols-2 md:grid-cols-3 gap-4'>
           <div>
-            <dt className='text-muted-foreground text-sm'>Kỳ lương</dt>
-            <dd className='font-medium'>{run.payrollPeriod?.name ?? '\u2014'}</dd>
+            <dt className='text-muted-foreground text-xs'>Kỳ lương</dt>
+            <dd className='font-medium text-sm'>{run.payrollPeriod?.name ?? '\u2014'}</dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Mã kỳ lương</dt>
-            <dd className='font-medium'>{run.payrollPeriod?.code ?? '\u2014'}</dd>
+            <dt className='text-muted-foreground text-xs'>Mã kỳ lương</dt>
+            <dd className='font-medium text-sm'>{run.payrollPeriod?.code ?? '\u2014'}</dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Trạng thái</dt>
-            <dd><PayrollRunStatusBadge status={run.status} /></dd>
+            <dt className='text-muted-foreground text-xs'>Trạng thái</dt>
+            <dd className='pt-1'><PayrollRunStatusBadge status={run.status} /></dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Ngày tạo</dt>
-            <dd className='font-medium'>{fmtDate(run.createdAt)}</dd>
+            <dt className='text-muted-foreground text-xs'>Ngày tạo</dt>
+            <dd className='font-medium text-sm'>{fmtDate(run.createdAt)}</dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Cập nhật</dt>
-            <dd className='font-medium'>{fmtDate(run.updatedAt)}</dd>
+            <dt className='text-muted-foreground text-xs'>Cập nhật</dt>
+            <dd className='font-medium text-sm'>{fmtDate(run.updatedAt)}</dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Ngày xử lý</dt>
-            <dd className='font-medium'>{fmtDate(run.processedAt)}</dd>
+            <dt className='text-muted-foreground text-xs'>Ngày xử lý</dt>
+            <dd className='font-medium text-sm'>{fmtDate(run.processedAt)}</dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Ghi chú</dt>
-            <dd className='font-medium'>{run.notes ?? '\u2014'}</dd>
+            <dt className='text-muted-foreground text-xs'>Ngày phê duyệt</dt>
+            <dd className='font-medium text-sm'>{fmtDate(run.approvedAt)}</dd>
+          </div>
+          <div className='col-span-2'>
+            <dt className='text-muted-foreground text-xs'>Ghi chú</dt>
+            <dd className='font-medium text-sm'>{run.notes ?? '\u2014'}</dd>
           </div>
         </dl>
       </div>

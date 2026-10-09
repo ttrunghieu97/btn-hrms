@@ -47,6 +47,32 @@ function recordDispatchFailure(metrics: MetricsService) {
   metrics.incrementOutboxDispatchFailure();
 }
 
+export class NonRetryableDispatchError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = "NonRetryableDispatchError";
+  }
+}
+
+export function isPermanentError(error: unknown): boolean {
+  if (error instanceof NonRetryableDispatchError) return true;
+  if (error instanceof TypeError) return true;
+  if (error instanceof SyntaxError) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("schema") ||
+    lower.includes("validation") ||
+    lower.includes("malformed") ||
+    lower.includes("unknown_event") ||
+    lower.includes("unsupported_version") ||
+    lower.includes("canonical_envelope") ||
+    lower.includes("invalid_envelope") ||
+    lower.includes("bad_request") ||
+    lower.includes("permanent")
+  );
+}
+
 function wasFinalAttempt(
   row: ClaimedOutboxRow,
   nextAttemptCount: number,
@@ -68,17 +94,36 @@ async function publishStagedRow(
     await outboxRepo.markPublished(row.id);
     metrics?.incrementOutboxPublished?.(row.eventType);
   } catch (error: unknown) {
-    await outboxRepo.recordFailure(
-      row.id,
-      errorMessage(error, "publish_failed"),
-      attemptedAt,
-      nextAttemptCount,
-      Number(row?.maxAttempts ?? 12),
-    );
-    if (wasFinalAttempt(row, nextAttemptCount)) {
+    if (isPermanentError(error)) {
+      if (typeof outboxRepo.recordPermanentFailure === "function") {
+        await outboxRepo.recordPermanentFailure(
+          row.id,
+          errorMessage(error, "permanent_publish_failure"),
+          attemptedAt,
+        );
+      } else {
+        await outboxRepo.recordFailure(
+          row.id,
+          errorMessage(error, "permanent_publish_failure"),
+          attemptedAt,
+          Number(row?.maxAttempts ?? 12),
+          Number(row?.maxAttempts ?? 12),
+        );
+      }
       metrics?.incrementOutboxDeadLetter?.(row.eventType);
     } else {
-      metrics?.incrementOutboxRetry?.(row.eventType);
+      await outboxRepo.recordFailure(
+        row.id,
+        errorMessage(error, "publish_failed"),
+        attemptedAt,
+        nextAttemptCount,
+        Number(row?.maxAttempts ?? 12),
+      );
+      if (wasFinalAttempt(row, nextAttemptCount)) {
+        metrics?.incrementOutboxDeadLetter?.(row.eventType);
+      } else {
+        metrics?.incrementOutboxRetry?.(row.eventType);
+      }
     }
     throw error;
   }
@@ -132,6 +177,17 @@ async function dispatchBatch(
   metrics: MetricsService,
   limit: number,
 ) {
+  if (typeof outboxRepo.recoverExpiredLeases === "function") {
+    const leaseRecovery = await outboxRepo.recoverExpiredLeases();
+    if (leaseRecovery && leaseRecovery.recoveredCount > 0) {
+      logger.warn({
+        msg: "event_outbox_expired_leases_recovered",
+        recovered: leaseRecovery.recoveredCount,
+        deadLettered: leaseRecovery.deadLetteredCount,
+      });
+    }
+  }
+
   const rows = await outboxRepo.claimUnpublished(limit);
 
   // Per-event-type concurrency throttle

@@ -1,0 +1,92 @@
+import { createWorkflow } from './builder';
+
+export const expensesWorkflow = createWorkflow({
+  id: 'expense-claim',
+  name: 'Đề nghị Thanh toán & Chi phí (Expense Claim)',
+  entity: 'ExpenseClaim',
+  description: 'Quản lý kê khai các khoản chi phí phát sinh, duyệt chi cấp quản lý và hoàn ứng/chi trả của kế toán.',
+  apiBaseUrl: '/api/v1/expenses/claims',
+  initialState: 'draft',
+  states: [
+    {
+      key: 'draft',
+      label: '1. Khởi tạo đề nghị',
+      stepNumber: 1,
+      variant: 'outline',
+      description: 'Nhân viên nhập các khoản chi, đính kèm hóa đơn và chứng từ thanh toán.',
+      responsibleActor: {
+        role: 'employee',
+        label: 'Nhân viên (Người tạo đề nghị)',
+      },
+      actionGuidance: 'Bổ sung đầy đủ các khoản chi và nhấn Nộp đề nghị để gửi lên cấp quản lý xét duyệt.',
+      resultPreview: 'Chuyển sang trạng thái Đang chờ duyệt (Submitted).',
+    },
+    {
+      key: 'submitted',
+      label: '2. Nộp xét duyệt',
+      stepNumber: 2,
+      variant: 'amber',
+      description: 'Đề nghị đang chờ cấp quản lý kiểm tra tính hợp lệ của chi tiêu.',
+      responsibleActor: {
+        role: 'manager',
+        label: 'Quản lý trực tiếp / Ban Giám đốc',
+      },
+      actionGuidance: 'Rà soát tính hợp lệ của khoản chi tiêu, đối chiếu hóa đơn và ra quyết định Phê duyệt hoặc Từ chối.',
+      resultPreview: 'Chuyển sang trạng thái Đã phê duyệt (Approved).',
+    },
+    {
+      key: 'approved',
+      label: '3. Phê duyệt chi phí',
+      stepNumber: 3,
+      variant: 'emerald',
+      description: 'Đề nghị đã được duyệt. Sẵn sàng thực hiện thanh toán/hoàn ứng.',
+      responsibleActor: {
+        role: 'accountant',
+        label: 'Kế toán Thanh toán / Thủ quỹ',
+      },
+      actionGuidance: 'Khoản chi đã được phê duyệt. Thực hiện chuyển khoản hoặc chi tiền mặt cho nhân viên, sau đó bấm Xác nhận chi trả.',
+      resultPreview: 'Chuyển sang trạng thái Đã chi trả (Reimbursed).',
+    },
+    {
+      key: 'reimbursed',
+      label: '4. Chi trả / Hoàn ứng',
+      stepNumber: 4,
+      variant: 'blue',
+      description: 'Tiền đã được thanh toán hoàn tất cho nhân viên.',
+      responsibleActor: {
+        role: 'completed',
+        label: 'Đã hoàn tất quy trình',
+      },
+      actionGuidance: 'Khoản chi phí đã được thanh toán hoàn tất cho nhân viên.',
+      resultPreview: 'Quy trình kết thúc.',
+      isTerminal: true,
+    },
+    {
+      key: 'rejected',
+      label: 'Bị từ chối',
+      stepNumber: 2,
+      variant: 'destructive',
+      description: 'Đề nghị chi tiêu bị từ chối do không hợp lệ.',
+      responsibleActor: {
+        role: 'employee',
+        label: 'Nhân viên (Người tạo đề nghị)',
+      },
+      actionGuidance: 'Đề nghị bị từ chối. Vui lòng xem lý do và tạo đề nghị mới nếu cần.',
+      resultPreview: 'Đóng đề nghị chi tiêu.',
+      isTerminal: true,
+      isFailure: true,
+    },
+  ],
+  actions: [
+    { id: 'submit', label: 'Nộp đề nghị', targetState: 'submitted', actor: 'employee', variant: 'default' },
+    { id: 'approve', label: 'Phê duyệt chi phí', targetState: 'approved', actor: 'manager', variant: 'default' },
+    { id: 'reject', label: 'Từ chối đề nghị', targetState: 'rejected', actor: 'manager', variant: 'destructive' },
+    { id: 'reimburse', label: 'Xác nhận chi trả', targetState: 'reimbursed', actor: 'accountant', variant: 'default' },
+  ],
+  transitions: [
+    { from: 'draft', to: 'submitted', actionId: 'submit', label: 'Nộp đề nghị', actor: 'Nhân viên' },
+    { from: 'submitted', to: 'approved', actionId: 'approve', label: 'Duyệt', actor: 'Quản lý' },
+    { from: 'submitted', to: 'rejected', actionId: 'reject', label: 'Từ chối', actor: 'Quản lý' },
+    { from: 'approved', to: 'reimbursed', actionId: 'reimburse', label: 'Chi trả', actor: 'Kế toán' },
+  ],
+});

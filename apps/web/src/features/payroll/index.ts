@@ -6,3 +6,5 @@ export { PayrollRunDetailPageClient } from './components/payroll-run-detail-page
 export { PayrollRunsPageClient } from './components/payroll-runs-page-client';
 export { SalaryStructuresPageClient } from './components/salary-structures-page-client';
 export { PayrollNav } from './components/payroll-nav';
+export { PayrollRunWorkflowHero } from './components/payroll-run-workflow-hero';
+export { usePayrollRunsQuery } from './queries/payroll-run-queries';

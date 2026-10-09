@@ -19,6 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AgendaViewSwitcher } from '@/components/ui/agenda';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { AttendanceMobileAgenda } from './attendance-mobile-agenda';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -955,6 +958,9 @@ export function DetailSheet({
   }, [isPeriodOpen, onClosePeriod, onReopenPeriod]);
 
   const { selectedEmployee: selected, selectEmployee } = useEmployeeUrlSync({ employees });
+  const isMobile = useIsMobile();
+  const [modeOverride, setModeOverride] = React.useState<'agenda' | 'matrix' | null>(null);
+  const currentMode = modeOverride ?? (isMobile ? 'agenda' : 'matrix');
   const [search, setSearch] = React.useState('');
   const [dept, setDept] = React.useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
@@ -1330,9 +1336,35 @@ export function DetailSheet({
 
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
-      {/* ── Employee panel ── */}
-      <aside
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
+      {/* View Switcher header */}
+      <div className="flex items-center justify-between gap-2 px-1 pt-0.5 sm:px-0 shrink-0">
+        <AgendaViewSwitcher
+          mode={currentMode}
+          onModeChange={setModeOverride}
+          agendaLabel="Lịch trình"
+          matrixLabel="Bảng công"
+        />
+      </div>
+
+      {currentMode === 'agenda' ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-0.5 pb-6">
+          <AttendanceMobileAgenda
+            period={period}
+            employees={employees}
+            selectedEmployee={selected}
+            records={localRecords}
+            canEdit={canEdit}
+            onSelectEmployee={selectEmployee}
+            onAdjust={onAdjust}
+            navigatePeriod={navigatePeriod}
+            periodStatus={periodStatus}
+          />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* ── Employee panel ── */}
+          <aside
         aria-hidden={sidebarCollapsed}
         className={cn(
           'employee-sidebar-panel bg-card border-border flex min-h-0 flex-col overflow-hidden rounded-lg border shadow-xs mr-2.5 max-h-[780px] md:max-h-none print:hidden',
@@ -2233,6 +2265,8 @@ export function DetailSheet({
           </div>
         </div>
       </section>
+        </div>
+      )}
     </div>
   );
 }

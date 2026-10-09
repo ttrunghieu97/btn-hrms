@@ -78,13 +78,16 @@ export function PositionsTable({ onRowClick }: PositionsTableProps) {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !rawData) {
     return <PositionsTableSkeleton />;
   }
 
   return (
     <DataTable
       table={table}
+      isLoading={isLoading}
+      totalRowsLabel='Tổng số vị trí'
+      totalRows={sortedPositions.length}
       onRowClick={onRowClick ? (row) => onRowClick(row.original) : undefined}
     >
       <DataTableToolbar table={table} />

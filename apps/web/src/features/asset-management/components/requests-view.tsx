@@ -42,6 +42,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { AssetRequestDetailDialog } from './asset-request-detail-dialog';
 import {
   Table,
   TableBody,
@@ -95,6 +97,17 @@ export function AssetRequestsView() {
   const [neededBy, setNeededBy] = React.useState('');
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const [confirmAction, setConfirmAction] = React.useState<'submit' | 'cancel' | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
+
+  const stats = React.useMemo(() => {
+    return {
+      total: rows.length,
+      draft: rows.filter((r) => r.status === 'draft').length,
+      pending: rows.filter((r) => r.status === 'pending_approval').length,
+      approved: rows.filter((r) => r.status === 'approved').length,
+      fulfilled: rows.filter((r) => r.status === 'fulfilled').length,
+    };
+  }, [rows]);
 
   const openRow = rows.find((r) => r.id === confirmId);
 
@@ -171,11 +184,44 @@ export function AssetRequestsView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-between'>
-        <h2 className='text-lg font-semibold'>{copy.title}</h2>
+      {/* Workflow Metrics Banner */}
+      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+        <Card className='border-l-4 border-l-slate-400'>
+          <CardContent className='p-3.5'>
+            <div className='text-xs font-medium text-muted-foreground'>Tổng yêu cầu</div>
+            <div className='mt-1 text-2xl font-bold'>{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card className='border-l-4 border-l-amber-500 bg-amber-50/20 dark:bg-amber-950/10'>
+          <CardContent className='p-3.5'>
+            <div className='text-xs font-medium text-amber-700 dark:text-amber-400'>Chờ quản lý duyệt</div>
+            <div className='mt-1 text-2xl font-bold text-amber-900 dark:text-amber-200'>{stats.pending}</div>
+          </CardContent>
+        </Card>
+        <Card className='border-l-4 border-l-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/10'>
+          <CardContent className='p-3.5'>
+            <div className='text-xs font-medium text-indigo-700 dark:text-indigo-400'>Đã duyệt · Chờ cấp phát</div>
+            <div className='mt-1 text-2xl font-bold text-indigo-900 dark:text-indigo-200'>{stats.approved}</div>
+          </CardContent>
+        </Card>
+        <Card className='border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10'>
+          <CardContent className='p-3.5'>
+            <div className='text-xs font-medium text-emerald-700 dark:text-emerald-400'>Đã bàn giao thiết bị</div>
+            <div className='mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-200'>{stats.fulfilled}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className='flex items-center justify-between gap-2'>
+        <div className='text-sm text-muted-foreground'>
+          Nhấp vào bất kỳ hàng nào để kiểm tra tiến trình quy trình và xuất kho thiết bị.
+        </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button size='sm'>{copy.create}</Button>
+            <Button size='sm'>
+              <Icons.add className='mr-2 size-4' />
+              {copy.create}
+            </Button>
           </DialogTrigger>
           <DialogContent className='sm:max-w-[480px]'>
             <form onSubmit={handleCreate} className='space-y-4'>
@@ -250,7 +296,7 @@ export function AssetRequestsView() {
 
       {rows.length === 0 && !isLoading ? (
         <AppEmptyState
-          icon={<Icons.page className='size-10' />}
+          icon={<Icons.laptop className='size-10' />}
           title={copy.empty}
           compact
         />
@@ -259,70 +305,129 @@ export function AssetRequestsView() {
           <Table>
             <TableHeader>
               <TableRow>
-
                 <TableHead>{copy.columns.requester}</TableHead>
                 <TableHead>{copy.columns.assetType}</TableHead>
                 <TableHead>{copy.columns.status}</TableHead>
+                <TableHead>Bước tiếp theo & Người phụ trách</TableHead>
                 <TableHead>{copy.columns.createdAt}</TableHead>
-                <TableHead></TableHead>
-
+                <TableHead className='text-right'>Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id ?? Math.random().toString()}>
+              {rows.map((row) => {
+                let nextStepText = 'Đã hoàn tất quy trình';
+                let nextStepClass = 'text-muted-foreground';
 
-                  <TableCell className='font-medium'>{row.requesterEmployeeId ?? '—'}</TableCell>
-                  <TableCell>
-                    <div className='flex flex-wrap gap-1 text-xs'>
-                      {(row.lines ?? []).map((l) => (
-                        <span key={l.id}>
-                          {l.assetTypeId} × {l.quantity}
-                        </span>
-                      ))}
-                    </div>
-                    {row.reason ? (
-                      <p className='mt-1 text-xs text-muted-foreground'>{row.reason}</p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      status={row.status ?? ''}
-                      mapping={REQUEST_STATUS_MAP}
-                    />
-                  </TableCell>
-                  <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
-                  {row.status === 'draft' && (
+                if (row.status === 'draft') {
+                  nextStepText = 'Nhân viên nộp xét duyệt';
+                  nextStepClass = 'text-blue-600 dark:text-blue-400 font-medium';
+                } else if (row.status === 'pending_approval') {
+                  nextStepText = 'Quản lý thẩm định & duyệt';
+                  nextStepClass = 'text-amber-600 dark:text-amber-400 font-medium';
+                } else if (row.status === 'approved') {
+                  nextStepText = 'IT xuất kho & cấp phát';
+                  nextStepClass = 'text-indigo-600 dark:text-indigo-400 font-semibold';
+                } else if (row.status === 'rejected') {
+                  nextStepText = 'Bị từ chối';
+                  nextStepClass = 'text-destructive';
+                } else if (row.status === 'cancelled') {
+                  nextStepText = 'Đã hủy bỏ';
+                  nextStepClass = 'text-muted-foreground line-through';
+                }
+
+                return (
+                  <TableRow
+                    key={row.id ?? Math.random().toString()}
+                    className='cursor-pointer hover:bg-muted/40 transition-colors'
+                    onClick={() => row.id && setSelectedRequestId(row.id)}
+                  >
+                    <TableCell className='font-medium'>
+                      <div>{row.requesterEmployeeId ?? '—'}</div>
+                      <div className='text-[11px] text-muted-foreground font-mono'>
+                        #{row.id?.slice(0, 8)}
+                      </div>
+                    </TableCell>
                     <TableCell>
-                      <div className='flex items-center gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => {
-                            setConfirmId(row.id);
-                            setConfirmAction('submit');
-                          }}
-                          disabled={submitMutation.isPending}
-                        >
-                          {copy.actions.submit}
-                        </Button>
+                      <div className='flex flex-wrap gap-1 text-xs'>
+                        {(row.lines ?? []).map((l) => (
+                          <span key={l.id} className='inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5'>
+                            {(l.assetTypeId ? l.assetTypeId.slice(0, 8) : '—')}... × {l.quantity}
+                          </span>
+                        ))}
+                      </div>
+                      {row.reason ? (
+                        <p className='mt-1 text-xs text-muted-foreground line-clamp-1'>{row.reason}</p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        status={row.status ?? ''}
+                        mapping={REQUEST_STATUS_MAP}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xs ${nextStepClass}`}>
+                        {nextStepText}
+                      </span>
+                    </TableCell>
+                    <TableCell className='text-xs text-muted-foreground'>
+                      {row.createdAt ? formatDateVN(row.createdAt) : '—'}
+                    </TableCell>
+                    <TableCell className='text-right' onClick={(e) => e.stopPropagation()}>
+                      <div className='flex items-center justify-end gap-1.5'>
                         <Button
                           variant='ghost'
                           size='sm'
-                          onClick={() => {
-                            setConfirmId(row.id);
-                            setConfirmAction('cancel');
-                          }}
-                          disabled={cancelMutation.isPending}
+                          className='h-8 text-xs'
+                          onClick={() => row.id && setSelectedRequestId(row.id)}
                         >
-                          {copy.actions.cancel}
+                          <Icons.eye className='mr-1.5 size-3.5' />
+                          Tiến trình
                         </Button>
+                        {row.status === 'draft' && (
+                          <>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='h-8 text-xs'
+                              onClick={() => {
+                                setConfirmId(row.id);
+                                setConfirmAction('submit');
+                              }}
+                              disabled={submitMutation.isPending}
+                            >
+                              {copy.actions.submit}
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              className='h-8 text-xs text-muted-foreground hover:text-destructive'
+                              onClick={() => {
+                                setConfirmId(row.id);
+                                setConfirmAction('cancel');
+                              }}
+                              disabled={cancelMutation.isPending}
+                            >
+                              {copy.actions.cancel}
+                            </Button>
+                          </>
+                        )}
+                        {row.status === 'approved' && (
+                          <Button
+                            variant='default'
+                            size='sm'
+                            className='h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white'
+                            onClick={() => row.id && setSelectedRequestId(row.id)}
+                          >
+                            <Icons.product className='mr-1.5 size-3.5' />
+                            Cấp phát
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
-                  )}
-
-                </TableRow>
-              ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -338,6 +443,7 @@ export function AssetRequestsView() {
         />
       ) : null}
 
+      {/* Confirmation Dialog */}
       <Dialog
         open={!!confirmId}
         onOpenChange={(open) => {
@@ -376,6 +482,13 @@ export function AssetRequestsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Detailed Workflow Inspection & Fulfillment Dialog */}
+      <AssetRequestDetailDialog
+        requestId={selectedRequestId}
+        open={!!selectedRequestId}
+        onOpenChange={(open) => !open && setSelectedRequestId(null)}
+      />
     </div>
   );
 }

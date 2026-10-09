@@ -65,8 +65,7 @@ export function PostingsView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-between'>
-        <h2 className='text-lg font-semibold'>{copy.title}</h2>
+      <div className='flex items-center justify-end gap-4'>
         <PublishPostingDialog />
       </div>
 

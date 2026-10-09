@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ERROR_CODES } from '../../../../shared/constants/error-codes';
-import { throwBadRequest } from '../../../../shared/utils/http-error';
+import { ERROR_REASONS } from '../../../../shared/constants/error-reasons';
+import { throwBadRequest, throwForbidden } from '../../../../shared/utils/http-error';
 import { AccessControlRepository } from '../repositories/access-control.repository';
+import { RequestContextService } from '../../../../shared/context/request-context.service';
 
 interface CreateAccessGrantCommand {
   actorUserId: string;
@@ -13,9 +15,32 @@ interface CreateAccessGrantCommand {
 
 @Injectable()
 export class CreateAccessGrantUseCase {
-  constructor(private readonly repository: AccessControlRepository) {}
+  constructor(
+    private readonly repository: AccessControlRepository,
+    @Optional() private readonly requestContext?: RequestContextService,
+  ) {}
 
   async execute(command: CreateAccessGrantCommand) {
+    if (command.actorUserId && command.actorUserId === command.targetUserId) {
+      throwForbidden(
+        'You cannot grant permissions to yourself.',
+        ERROR_CODES.PERMISSION_DENIED,
+        { reason: ERROR_REASONS.MISSING_PERMISSION },
+      );
+    }
+
+    const hasSuperAdminPermission =
+      command.permissionCode.toLowerCase() === 'sys:all' ||
+      command.permissionCode.toUpperCase() === 'ALL';
+    const actor = this.requestContext?.get();
+    if (hasSuperAdminPermission && !actor?.isSuperAdmin) {
+      throwForbidden(
+        "Only super administrators can assign the 'sys:all' permission.",
+        ERROR_CODES.PERMISSION_DENIED,
+        { reason: ERROR_REASONS.MISSING_PERMISSION },
+      );
+    }
+
     if (command.expiresAt.getTime() <= Date.now()) {
       throwBadRequest('Grant expiry must be in the future', ERROR_CODES.VALIDATION_ERROR);
     }

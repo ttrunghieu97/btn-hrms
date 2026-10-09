@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PageHeader } from '@/components/layout/page-header';
 import { formatDateVN } from "@/lib/date";
 import {
   Dialog,
@@ -38,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EmptyState } from '@/components/states/empty-state';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, learningUiCopy } from '@/locales/vi/app-copy';
@@ -74,79 +73,75 @@ export function SessionsView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={learningUiCopy.description}
-        actions={
-          <div className='flex items-center gap-2'>
-            {courses.length > 0 ? (
-              <Select
-                value={selectedCourse ?? ''}
-                onValueChange={(val) => void setParams({ courseId: val || null })}
-              >
-                <SelectTrigger className='w-64' aria-label='Chọn khóa học'>
-                  <SelectValue placeholder='Chọn khóa học' />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button size='sm'>
-                  <Icons.add className='mr-1.5 size-4' />
-                  {copy.create}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{copy.create}</DialogTitle>
-                  <DialogDescription>{learningUiCopy.description}</DialogDescription>
-                </DialogHeader>
-                <div className='grid gap-4 py-4'>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='session-title'>{commonUiCopy.name}</Label>
-                    <Input
-                      id='session-title'
-                      value={form.title}
-                      onChange={(e) => setForm({ ...form, title: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='session-scheduled-at'>Thời gian</Label>
-                    <Input
-                      id='session-scheduled-at'
-                      type='datetime-local'
-                      value={form.scheduledAt}
-                      onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant='outline' onClick={() => setOpen(false)}>
-                    {commonUiCopy.cancel}
-                  </Button>
-                  <Button onClick={() => void handleCreate()} disabled={createSession.isPending}>
-                    {createSession.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
-                    {commonUiCopy.create}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        }
-      />
+      <div className='flex flex-wrap items-center justify-between gap-4'>
+        <div>
+          {courses.length > 0 ? (
+            <Select
+              value={selectedCourse ?? ''}
+              onValueChange={(val) => void setParams({ courseId: val || null })}
+            >
+              <SelectTrigger className='w-64' aria-label='Chọn khóa học'>
+                <SelectValue placeholder='Chọn khóa học' />
+              </SelectTrigger>
+              <SelectContent>
+                {courses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size='sm'>
+              <Icons.add className='mr-1.5 size-4' />
+              {copy.create}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{copy.create}</DialogTitle>
+              <DialogDescription>{learningUiCopy.description}</DialogDescription>
+            </DialogHeader>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='session-title'>{commonUiCopy.name}</Label>
+                <Input
+                  id='session-title'
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='session-scheduled-at'>Thời gian</Label>
+                <Input
+                  id='session-scheduled-at'
+                  type='datetime-local'
+                  value={form.scheduledAt}
+                  onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant='outline' onClick={() => setOpen(false)}>
+                {commonUiCopy.cancel}
+              </Button>
+              <Button onClick={() => void handleCreate()} disabled={createSession.isPending}>
+                {createSession.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
+                {commonUiCopy.create}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {!selectedCourse ? (
-        <EmptyState icon={<Icons.page className='size-10' />} title='Chưa có khóa học' compact />
+        <AppEmptyState icon={<Icons.page className='size-10' />} title='Chưa có khóa học' compact />
       ) : rows.length === 0 && !isLoading ? (
-        <EmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
+        <AppEmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
       ) : (
         <div className='rounded-md border overflow-hidden'>
           {/* Mobile cards view */}

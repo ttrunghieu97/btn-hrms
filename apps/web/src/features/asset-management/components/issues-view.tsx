@@ -189,13 +189,14 @@ export function AssetIssuesView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-between'>
-        <h2 className='text-lg font-semibold'>{copy.title}</h2>
-        <div className='flex gap-2'>
-          <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
-            <DialogTrigger asChild>
-              <Button variant='outline' size='sm'>{copy.return}</Button>
-            </DialogTrigger>
+      <div className='flex items-center justify-end gap-2'>
+        <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
+          <DialogTrigger asChild>
+            <Button variant='outline' size='sm'>
+              <Icons.restore className='mr-2 size-4' />
+              {copy.return}
+            </Button>
+          </DialogTrigger>
             <DialogContent className='sm:max-w-[450px]'>
               <form onSubmit={handleReturn} className='space-y-4'>
                 <DialogHeader>
@@ -263,7 +264,10 @@ export function AssetIssuesView() {
 
           <Dialog open={issueOpen} onOpenChange={setIssueOpen}>
             <DialogTrigger asChild>
-              <Button size='sm'>{copy.issue}</Button>
+              <Button size='sm'>
+                <Icons.add className='mr-2 size-4' />
+                {copy.issue}
+              </Button>
             </DialogTrigger>
             <DialogContent className='sm:max-w-[450px]'>
               <form onSubmit={handleIssue} className='space-y-4'>
@@ -333,7 +337,6 @@ export function AssetIssuesView() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
       {rows.length === 0 && !isLoading ? (

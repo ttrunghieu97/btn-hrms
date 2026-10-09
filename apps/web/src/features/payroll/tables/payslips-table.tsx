@@ -2,6 +2,9 @@
 
 import { useDataTable } from '@/hooks/use-data-table';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
+import { Icons } from '@/components/icons';
 import { payslipColumns, onViewPayslipRef, onPublishRef } from './payslip-columns';
 import type { Payslip } from '../types';
 
@@ -33,11 +36,17 @@ export function PayslipsTable({ data, total, loading, onView, onPublish }: Props
     <DataTable
       table={table}
       isLoading={loading}
+      totalRowsLabel='Tổng số phiếu lương'
+      totalRows={total}
       emptyState={
-        <div className='text-muted-foreground p-8 text-center'>
-          Chưa có phiếu lương nào.
-        </div>
+        <AppEmptyState
+          icon={<Icons.page className='size-10' />}
+          title='Chưa có phiếu lương nào'
+          compact
+        />
       }
-    />
+    >
+      <DataTableToolbar table={table} />
+    </DataTable>
   );
 }

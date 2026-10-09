@@ -119,7 +119,7 @@ export function OffboardingView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <h2 className='text-lg font-semibold'>Quy trình Offboarding</h2>
+      <h1 className='text-lg font-semibold'>Quy trình Offboarding</h1>
       <DataTable
         table={table}
         isLoading={isLoading}

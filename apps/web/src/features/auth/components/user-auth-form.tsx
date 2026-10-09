@@ -98,7 +98,11 @@ export default function UserAuthForm() {
                       </field.FieldLabel>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button type='button' tabIndex={-1} className='text-muted-foreground hover:text-foreground transition-colors'>
+                          <button
+                            type='button'
+                            aria-label='Thông tin tên đăng nhập'
+                            className='text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-sm transition-colors'
+                          >
                             <IconInfoCircle className='size-3.5' />
                           </button>
                         </TooltipTrigger>
@@ -139,7 +143,11 @@ export default function UserAuthForm() {
                       </field.FieldLabel>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button type='button' tabIndex={-1} className='text-muted-foreground hover:text-foreground transition-colors'>
+                          <button
+                            type='button'
+                            aria-label='Thông tin mật khẩu'
+                            className='text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-sm transition-colors'
+                          >
                             <IconInfoCircle className='size-3.5' />
                           </button>
                         </TooltipTrigger>

@@ -19,6 +19,8 @@ import { GetPayslipUseCase } from "./use-cases/get-payslip.usecase";
 import { PublishPayslipUseCase } from "./use-cases/publish-payslip.usecase";
 import { QueryScopeService } from "../../../core/security/query-scope.service";
 import { AuthUser } from "../../../core/security/types/auth-user.interface";
+import { Resource } from "../../../core/security/decorators/resource.decorator";
+import { Payroll } from "../../../core/security/types/resource-entities";
 
 @ApiTags("Payslips")
 @ApiBearerAuth()
@@ -40,6 +42,7 @@ export class PayslipsController {
   }
 
   @Get(":id")
+  @Resource(Payroll)
   @CheckPolicy(PayrollPolicies.view)
   @ApiOperation({ summary: "Get payslip by id" })
   get(@Param("id", new ParseUUIDPipe()) id: string) {

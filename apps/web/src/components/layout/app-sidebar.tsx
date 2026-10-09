@@ -153,6 +153,7 @@ export default function AppSidebar({ initialNavData }: { initialNavData?: NavRes
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size='lg'
+                  aria-label={currentUser?.fullName ?? appCopy.nav.items.profile}
                   className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
                 >
                   <UserAvatarProfile className='h-8 w-8 rounded-lg' showInfo={!isCollapsed} user={currentUser} />

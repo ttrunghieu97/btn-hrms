@@ -4,6 +4,8 @@ import { PayrollGeneratedEvent } from "../events/payroll-generated.event";
 import { RequestContextService } from "../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../shared/logging/context-logger";
 
+import { EventIdempotencyRepository } from "../../../infrastructure/repositories/event-idempotency.repository";
+
 @Injectable()
 export class PayrollGeneratedHandler implements OnModuleInit {
   private readonly logger: ContextLogger;
@@ -11,6 +13,7 @@ export class PayrollGeneratedHandler implements OnModuleInit {
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
     private readonly requestContext: RequestContextService,
+    private readonly idempotency?: EventIdempotencyRepository,
   ) {
     this.logger = new ContextLogger(
       this.requestContext,
@@ -22,9 +25,21 @@ export class PayrollGeneratedHandler implements OnModuleInit {
     this.eventBus.on(
       PayrollGeneratedEvent.name,
       async (event: PayrollGeneratedEvent) => {
-        this.logger.log(
-          `Payroll generated: employee=${event.employeeId} payroll=${event.payrollId}`,
-        );
+        const action = async () => {
+          this.logger.log(
+            `Payroll generated: employee=${event.employeeId} payroll=${event.payrollId}`,
+          );
+        };
+
+        if (this.idempotency && (event as any).eventId) {
+          await this.idempotency.runIdempotent(
+            "handler:payroll_generated",
+            (event as any).eventId,
+            action,
+          );
+        } else {
+          await action();
+        }
       },
     );
   }

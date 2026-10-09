@@ -5,6 +5,9 @@ export interface AuthUser {
   /** UUID of the users row */
   id: string;
 
+  /** Alias for id (compatibility) */
+  userId?: string;
+
   username: string;
 
   /** UUID of the linked employee row (optional — system users may not have one) */

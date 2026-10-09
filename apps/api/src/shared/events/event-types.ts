@@ -418,6 +418,22 @@ export function registerOnboardingEvents(): void {
     requiredFields: ["processId", "employeeId", "templateId"],
     strict: false,
   });
+  registerEvent({
+    type: "onboarding.item.completed",
+    version: 1,
+    description: "Emitted when an onboarding checklist item is transitioned (completed, skipped, reopened)",
+    producer: "CompleteOnboardingTaskUseCase",
+    requiredFields: ["processId", "itemId", "status"],
+    strict: false,
+  });
+  registerEvent({
+    type: "onboarding.process.completed",
+    version: 1,
+    description: "Emitted when all onboarding checklist items are finished and the process is completed",
+    producer: "CompleteOnboardingTaskUseCase",
+    requiredFields: ["processId", "employeeId"],
+    strict: false,
+  });
 }
 export function registerOffboardingEvents(): void {
   registerEvent({

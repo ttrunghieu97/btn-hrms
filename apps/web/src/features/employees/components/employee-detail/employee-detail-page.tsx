@@ -22,7 +22,9 @@ import { EmployeeDeleteDialog } from '../dialogs/employee-delete-dialog';
 import { ResetPasswordDialog } from '../dialogs/reset-password-dialog';
 import { TerminateEmployeeDialog } from '../dialogs/lifecycle/terminate-employee-dialog';
 import { EmployeeTabBar } from '../tabs/employee-tab-bar';
+import { EmployeeLifecycleWorkflowHero } from '../workflow/employee-lifecycle-workflow-hero';
 import { OverviewTab } from '../tabs/overview-tab';
+
 import { DocumentsTab } from '../tabs/documents-tab';
 import { EmploymentTab } from '../tabs/employment-tab';
 import { TimelineTab } from '../tabs/timeline-tab';
@@ -720,9 +722,16 @@ Kiểm tra tab "${label}"`);
 
   return (
     <div className='flex flex-1 flex-col gap-4 min-h-0'>
+      <EmployeeLifecycleWorkflowHero
+        employee={currentEmployee}
+        onEditClick={canEdit && !isEditMode ? () => setMode('edit') : undefined}
+        isEditing={isEditMode}
+      />
+
       <div className='rounded-2xl border border-border/40 bg-background shadow-md overflow-hidden'>
         <EmployeeTabBar
           employee={currentEmployee}
+
           activeTab={activeTab}
           onTabChange={(tab) => {
             setActiveTab(tab);

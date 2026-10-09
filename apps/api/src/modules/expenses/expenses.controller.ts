@@ -24,12 +24,18 @@ export class ExpensesController {
     private readonly addItem: AddItemUseCase,
   ) {}
 
-  @Post("claims") create(@Body() d: CreateClaimDto, @Request() r: any) { return this.createClaim.execute(r.user?.userId, d); }
+  @Post("claims") create(@Body() d: CreateClaimDto, @Request() r: any) { return this.createClaim.execute(r.user?.employeeId ?? r.user?.id, d); }
   @Get("claims") list(@Request() r: any) { return this.listClaims.execute(); }
   @Get("claims/:id") get(@Param("id") id: string) { return this.getClaim.execute(id); }
   @Post("claims/:id/submit") submit(@Param("id") id: string) { return this.submitClaim.execute(id); }
-  @Post("claims/:id/approve") approve(@Param("id") id: string, @Request() r: any) { return this.approveClaim.execute(id, r.user?.userId); }
-  @Post("claims/:id/reject") reject(@Param("id") id: string, @Body("reason") reason?: string) { return this.rejectClaim.execute(id, reason); }
-  @Post("claims/:id/reimburse") reimburse(@Param("id") id: string) { return this.reimburseClaim.execute(id); }
+  @Post("claims/:id/approve")
+  @CheckPolicy(ExpensesPolicies.manage)
+  approve(@Param("id") id: string, @Request() r: any) { return this.approveClaim.execute(id, r.user?.id, r.user?.employeeId); }
+  @Post("claims/:id/reject")
+  @CheckPolicy(ExpensesPolicies.manage)
+  reject(@Param("id") id: string, @Body("reason") reason?: string) { return this.rejectClaim.execute(id, reason); }
+  @Post("claims/:id/reimburse")
+  @CheckPolicy(ExpensesPolicies.manage)
+  reimburse(@Param("id") id: string) { return this.reimburseClaim.execute(id); }
   @Post("items") addClaimItem(@Body() d: AddItemDto) { return this.addItem.execute(d); }
 }

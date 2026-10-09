@@ -2,3 +2,8 @@ export { LeaveRequestsTable } from './components/leave-requests-table';
 export { CreateLeaveRequestDialog } from './components/create-leave-request-dialog';
 export { LeavePoliciesView } from './components/leave-policies-view';
 export { LeaveBalanceView } from './components/leave-balance-view';
+export { LeaveWorkflowHero } from './components/leave-workflow-hero';
+export { LeaveTraceTimeline } from './components/leave-trace-timeline';
+export { LeaveRequestDetailDialog } from './components/leave-request-detail-dialog';
+export { LeaveApprovalInboxSection } from './components/leave-approval-inbox-section';
+export { LeaveRequestsPageClient } from './components/leave-requests-page-client';

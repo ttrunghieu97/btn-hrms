@@ -1,10 +1,11 @@
 import { envClient } from '@/lib/env.client';
+import { tokenStore } from '@/lib/token-store';
 import { extractList, extractPagination, unwrapData, type PaginationMeta } from '@/lib/api-extract';
 
-const BASE = `${envClient.apiBaseUrl}/api/v1`;
+const BASE = envClient.apiBaseUrl.replace(/\/+$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const token = typeof window !== 'undefined' ? tokenStore.get() : null;
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {

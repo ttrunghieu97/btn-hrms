@@ -16,6 +16,9 @@ import { DecideClearanceUseCase } from "./use-cases/decide-clearance.usecase";
 import { CompleteProcessUseCase } from "./use-cases/complete-process.usecase";
 import { OffboardingProcessDetailDto } from "./dto/offboarding-process-response.dto";
 import type { ClearanceDepartment, ClearanceDecision } from "./repositories/offboarding.repository";
+import { throwForbidden } from "../../shared/utils/http-error";
+import { ERROR_CODES } from "../../shared/constants/error-codes";
+import type { PolicyHandler } from "../../core/security/policies/policy-handler.interface";
 
 interface AuthRequest extends ExpressRequest {
   user: AuthUser;
@@ -104,6 +107,21 @@ export class OffboardingController {
     @Body() body: { decision: ClearanceDecision; note?: string },
     @Req() req: AuthRequest,
   ) {
+    const policyMap: Record<ClearanceDepartment, PolicyHandler> = {
+      it: OffboardingPolicies.clearanceIT,
+      hr: OffboardingPolicies.clearanceHR,
+      finance: OffboardingPolicies.clearanceFinance,
+      manager: OffboardingPolicies.clearanceManager,
+      security: OffboardingPolicies.clearanceSecurity,
+    };
+    const policy = policyMap[department];
+    if (policy && !policy.handle(req.user)) {
+      throwForbidden(
+        `Insufficient permissions to decide ${department} clearance`,
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+
     const result = await this.decideClearanceUseCase.execute({
       processId: id,
       department,

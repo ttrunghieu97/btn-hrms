@@ -14,6 +14,7 @@ import { getWidgetComponent } from '../widget-registry/widget-registry';
 import type { DashboardLayoutId } from '../dashboard-layouts';
 import { DASHBOARD_LAYOUTS } from '../dashboard-layouts';
 import { dashboardCopy } from '@/locales/vi/dashboard';
+import { TaskOrientedActionCenter } from './task-oriented-action-center';
 
 interface WidgetDashboardProps {
   layoutId: DashboardLayoutId;
@@ -46,8 +47,6 @@ export function WidgetDashboard({ layoutId }: WidgetDashboardProps) {
     );
   }
 
-  const layoutCopy = dashboardCopy.layouts[layoutId];
-
   if (error) {
     return (
       <Card>
@@ -68,30 +67,38 @@ export function WidgetDashboard({ layoutId }: WidgetDashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {isLoading && (
-          <>
-            <WidgetSkeleton />
-            <WidgetSkeleton />
-            <WidgetSkeleton />
-          </>
-        )}
+      {/* Task-Oriented Workflow Action Center (My Tasks, Waiting, Exceptions, Quick Actions) */}
+      <TaskOrientedActionCenter />
 
-        {visibleWidgets.length === 0 && !isLoading && (
-          <div className="col-span-full">
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                {dashboardCopy.common.empty}
-              </CardContent>
-            </Card>
-          </div>
-        )}
+      <div className="border-t border-border/80 pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Số liệu phân tích & Giám sát tổng thể ({layoutId === 'executive' ? 'Executive Overview' : 'Operations Overview'})
+        </h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {isLoading && (
+            <>
+              <WidgetSkeleton />
+              <WidgetSkeleton />
+              <WidgetSkeleton />
+            </>
+          )}
 
-        {visibleWidgets.map((widget) => {
-          const Component = getWidgetComponent(widget.id);
-          if (!Component) return null;
-          return <Component key={widget.id} widget={widget} />;
-        })}
+          {visibleWidgets.length === 0 && !isLoading && (
+            <div className="col-span-full">
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {dashboardCopy.common.empty}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {visibleWidgets.map((widget) => {
+            const Component = getWidgetComponent(widget.id);
+            if (!Component) return null;
+            return <Component key={widget.id} widget={widget} />;
+          })}
+        </div>
       </div>
     </div>
   );

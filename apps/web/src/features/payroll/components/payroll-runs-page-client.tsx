@@ -8,9 +8,17 @@ import { Section } from '@/components/layout/section';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { usePayrollRunsQuery, useCreatePayrollRunMutation, useUpdatePayrollRunMutation, useGeneratePayrollRunMutation } from '../queries/payroll-run-queries';
 import { PayrollRunsTable } from '../tables/payroll-runs-table';
-import { PayrollRunDialog } from './payroll-run-dialog';
-import { GenerateRunDialog } from './generate-run-dialog';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+
+const PayrollRunDialog = dynamic(
+  () => import('./payroll-run-dialog').then((mod) => mod.PayrollRunDialog),
+  { ssr: false }
+);
+const GenerateRunDialog = dynamic(
+  () => import('./generate-run-dialog').then((mod) => mod.GenerateRunDialog),
+  { ssr: false }
+);
 import type { PayrollRun, CreatePayrollRunPayload } from '../types';
 import { perPageParser, pageParser } from '@/lib/pagination';
 

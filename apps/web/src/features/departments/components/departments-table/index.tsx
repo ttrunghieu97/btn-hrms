@@ -79,12 +79,17 @@ export function DepartmentsTable({ onRowClick }: DepartmentsTableProps) {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return <DepartmentsTableSkeleton />;
   }
 
   return (
-    <DataTable table={table} totalRowsLabel='Tổng số phòng ban'>
+    <DataTable
+      table={table}
+      isLoading={isLoading}
+      totalRowsLabel='Tổng số phòng ban'
+      totalRows={data?.pagination?.total ?? 0}
+    >
       <DataTableToolbar table={table} />
     </DataTable>
   );

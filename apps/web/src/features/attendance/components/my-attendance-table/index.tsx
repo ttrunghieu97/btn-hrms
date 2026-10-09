@@ -4,6 +4,8 @@ import * as React from 'react';
 
 import { DataTable } from '@/components/ui/table/data-table';
 import { useDataTable } from '@/hooks/use-data-table';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
+import { Icons } from '@/components/icons';
 import { attendanceUiCopy } from '@/lib/app-copy';
 import { type MyAttendanceDayRecord } from '../../utils/attendance-utils';
 import { getColumns } from './columns';
@@ -50,7 +52,17 @@ export function MyAttendanceTable({ data, isLoading, onPunch }: MyAttendanceTabl
 
   return (
     <div className='flex flex-1 flex-col gap-2'>
-      <DataTable table={table} hidePagination emptyState={<div className='text-muted-foreground flex h-32 items-center justify-center text-sm italic'>{attendanceUiCopy.noTodayData}</div>} />
+      <DataTable
+        table={table}
+        hidePagination
+        emptyState={
+          <AppEmptyState
+            icon={<Icons.calendar className='size-10' />}
+            title={attendanceUiCopy.noTodayData}
+            compact
+          />
+        }
+      />
     </div>
   );
 }

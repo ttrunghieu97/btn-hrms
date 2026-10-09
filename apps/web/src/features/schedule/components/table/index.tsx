@@ -19,7 +19,11 @@ import { columns } from './columns';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { createTableSearchParams } from '@/lib/pagination';
+import { AgendaViewSwitcher } from '@/components/ui/agenda';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ScheduleMobileAgenda } from '../schedule-mobile-agenda';
 import {
   Sheet,
   SheetContent,
@@ -72,6 +76,10 @@ export function ScheduleTable() {
     detail: parseAsString,
     tab: parseAsString,
   });
+
+  const isMobile = useIsMobile();
+  const [modeOverride, setModeOverride] = React.useState<'agenda' | 'matrix' | null>(null);
+  const currentMode = modeOverride ?? (isMobile ? 'agenda' : 'matrix');
 
   const activeTab = params.tab ?? 'all';
   const resolvedActiveTab: ScheduleTabValue =
@@ -181,94 +189,142 @@ export function ScheduleTable() {
 
   return (
     <div className='flex flex-1 flex-col gap-4'>
-      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
-        <Tabs
-          value={resolvedActiveTab}
-          onValueChange={(value) => {
-            setParams({ page: 1, tab: value === 'all' ? null : value }, { shallow: true }).catch(() => undefined);
-          }}
-          className='w-fit'
-        >
-          <TabsList className='w-fit'>
-            {SCHEDULE_STATUS_TABS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <TabsTrigger key={item.value} value={item.value} className='flex items-center gap-1.5'>
-                  <Icon className='h-4 w-4' />
-                  {item.label}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
+      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+        <div className='flex flex-wrap items-center justify-between gap-2.5 w-full sm:w-auto'>
+          <Tabs
+            value={resolvedActiveTab}
+            onValueChange={(value) => {
+              setParams({ page: 1, tab: value === 'all' ? null : value }, { shallow: true }).catch(() => undefined);
+            }}
+            className='w-fit'
+          >
+            <TabsList className='w-fit'>
+              {SCHEDULE_STATUS_TABS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <TabsTrigger key={item.value} value={item.value} className='flex items-center gap-1.5'>
+                    <Icon className='h-4 w-4' />
+                    {item.label}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
 
-        {/* Tuần điều hướng */}
-        <div className='flex items-center gap-2 text-sm'>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='h-9 w-9 rounded-md shrink-0'
-            onClick={() => setWeekStart((prev) => addDays(prev, -7))}
-          >
-            <Icons.chevronLeft className='h-4 w-4' />
-          </Button>
-          <span className='text-sm font-semibold min-w-[180px] text-center bg-muted/30 py-1.5 px-3 rounded-md border border-border/50'>
-            {format(weekStart, 'dd/MM/yyyy')} - {format(addDays(weekStart, 6), 'dd/MM/yyyy')}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='h-9 w-9 rounded-md shrink-0'
-            onClick={() => setWeekStart((prev) => addDays(prev, 7))}
-          >
-            <Icons.chevronRight className='h-4 w-4' />
-          </Button>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            className='h-9 px-3 text-xs shrink-0'
-            onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-          >
-            Tuần này
-          </Button>
+          <AgendaViewSwitcher
+            mode={currentMode}
+            onModeChange={setModeOverride}
+          />
         </div>
-      </div>
 
-      <div className='flex flex-1 flex-col gap-2'>
-        <DataTable
-          table={table}
-          emptyState={emptyState}
-        >
-          <DataTableToolbar table={table}>
+        {/* Desktop Tuần điều hướng (ẩn trên mobile khi xem Agenda) */}
+        {currentMode === 'matrix' && (
+          <div className='flex items-center gap-2 text-sm'>
             <Button
               type='button'
               variant='outline'
-              size='sm'
-              disabled={processedRows.length === 0}
-              onClick={() => router.push('/schedule/roster')}
+              size='icon'
+              aria-label='Tuần trước'
+              className='h-9 w-9 rounded-md shrink-0'
+              onClick={() => setWeekStart((prev) => addDays(prev, -7))}
             >
-              <Icons.add className='mr-1.5 size-4' />
-              Gán ca mới
+              <Icons.chevronLeft className='h-4 w-4' />
             </Button>
-          </DataTableToolbar>
-        </DataTable>
-
-        {detailOpen && selectedRow && (
-          <ScheduleDetailSheet
-            row={selectedRow}
-            open={detailOpen}
-            onOpenChange={(open) => {
-              if (!open) {
-                setParams({ detail: null }).catch(() => undefined);
-                setSelectedRow(null);
-              }
-            }}
-          />
+            <span className='text-sm font-semibold min-w-[180px] text-center bg-muted/30 py-1.5 px-3 rounded-md border border-border/50'>
+              {format(weekStart, 'dd/MM/yyyy')} - {format(addDays(weekStart, 6), 'dd/MM/yyyy')}
+            </span>
+            <Button
+              type='button'
+              variant='outline'
+              size='icon'
+              aria-label='Tuần sau'
+              className='h-9 w-9 rounded-md shrink-0'
+              onClick={() => setWeekStart((prev) => addDays(prev, 7))}
+            >
+              <Icons.chevronRight className='h-4 w-4' />
+            </Button>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className='h-9 px-3 text-xs shrink-0'
+              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+            >
+              Tuần này
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* Mobile search bar khi xem Agenda */}
+      {currentMode === 'agenda' && (
+        <div className='relative w-full sm:hidden'>
+          <Icons.search className='text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2 pointer-events-none' />
+          <Input
+            value={params.search ?? ''}
+            onChange={(e) => setParams({ search: e.target.value || null, page: 1 }, { shallow: true })}
+            placeholder='Tìm kiếm nhân viên, mã NV...'
+            className='h-11 min-h-[44px] pl-9 pr-8 text-sm bg-card rounded-lg'
+          />
+          {params.search && (
+            <button
+              type='button'
+              onClick={() => setParams({ search: null, page: 1 }, { shallow: true })}
+              className='text-muted-foreground hover:text-foreground absolute right-2.5 top-1/2 -translate-y-1/2 p-1 min-h-[44px] min-w-[44px] flex items-center justify-center'
+              aria-label='Xóa tìm kiếm'
+            >
+              <Icons.circleX className='size-4' />
+            </button>
+          )}
+        </div>
+      )}
+
+      {currentMode === 'agenda' ? (
+        <ScheduleMobileAgenda
+          rows={processedRows}
+          weekStart={weekStart}
+          onSelectRow={handleRowClick}
+          selectedRow={selectedRow}
+          onNavigateWeek={(delta) => setWeekStart((prev) => addDays(prev, delta))}
+          onCurrentWeek={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+          hasFilters={hasFilters}
+          onClearFilters={() => void setParams({ page: 1, search: null, sort: [] })}
+          onAssignNew={() => router.push('/schedule/roster')}
+        />
+      ) : (
+        <div className='flex flex-1 flex-col gap-2'>
+          <DataTable
+            table={table}
+            emptyState={emptyState}
+          >
+            <DataTableToolbar table={table}>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                disabled={processedRows.length === 0}
+                onClick={() => router.push('/schedule/roster')}
+              >
+                <Icons.add className='mr-1.5 size-4' />
+                Gán ca mới
+              </Button>
+            </DataTableToolbar>
+          </DataTable>
+        </div>
+      )}
+
+      {detailOpen && selectedRow && (
+        <ScheduleDetailSheet
+          row={selectedRow}
+          open={detailOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setParams({ detail: null }).catch(() => undefined);
+              setSelectedRow(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

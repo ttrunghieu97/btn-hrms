@@ -26,13 +26,18 @@ export function DomainTabs({ tabs, className }: DomainTabsProps) {
   }, undefined);
 
   return (
-    <div className={cn('scrollbar-none flex overflow-x-auto border-b border-border', className)}>
+    <nav
+      aria-label="Điều hướng phân hệ"
+      className={cn('scrollbar-none flex items-center overflow-x-auto border-b border-border', className)}
+    >
+      <h1 className='sr-only'>{activeTab?.label ?? tabs[0]?.label ?? 'Phân hệ'}</h1>
       {tabs.map((tab) => {
         const isActive = activeTab?.href === tab.href;
         return (
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               '-mb-[2px] whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium transition-colors hover:text-primary',
               isActive
@@ -44,6 +49,6 @@ export function DomainTabs({ tabs, className }: DomainTabsProps) {
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }

@@ -4,6 +4,8 @@ import { AttendanceCheckedEvent } from "../events/attendance-checked.event";
 import { RequestContextService } from "../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../shared/logging/context-logger";
 
+import { EventIdempotencyRepository } from "../../../infrastructure/repositories/event-idempotency.repository";
+
 @Injectable()
 export class AttendanceCheckedHandler implements OnModuleInit {
   private readonly logger: ContextLogger;
@@ -11,6 +13,7 @@ export class AttendanceCheckedHandler implements OnModuleInit {
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
     private readonly requestContext: RequestContextService,
+    private readonly idempotency?: EventIdempotencyRepository,
   ) {
     this.logger = new ContextLogger(
       this.requestContext,
@@ -22,9 +25,21 @@ export class AttendanceCheckedHandler implements OnModuleInit {
     this.eventBus.on(
       AttendanceCheckedEvent.name,
       async (event: AttendanceCheckedEvent) => {
-        this.logger.log(
-          `Attendance checked: employee=${event.employeeId} type=${event.type} date=${event.date}`,
-        );
+        const action = async () => {
+          this.logger.log(
+            `Attendance checked: employee=${event.employeeId} type=${event.type} date=${event.date}`,
+          );
+        };
+
+        if (this.idempotency && (event as any).eventId) {
+          await this.idempotency.runIdempotent(
+            "handler:attendance_checked",
+            (event as any).eventId,
+            action,
+          );
+        } else {
+          await action();
+        }
       },
     );
   }

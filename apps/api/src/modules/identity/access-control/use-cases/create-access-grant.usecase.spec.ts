@@ -37,4 +37,47 @@ describe('CreateAccessGrantUseCase', () => {
       expiresAt: new Date('2000-01-01T00:00:00.000Z'),
     })).rejects.toThrow('Grant expiry must be in the future');
   });
+
+  it('rejects self-grant attempts (privilege escalation prevention)', async () => {
+    const useCase = new CreateAccessGrantUseCase({} as never);
+    await expect(useCase.execute({
+      actorUserId: 'user-1',
+      targetUserId: 'user-1',
+      permissionCode: 'sys:all',
+      reason: 'self-promote',
+      expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+    })).rejects.toThrow('You cannot grant permissions to yourself.');
+  });
+
+  it('rejects sys:all grant if actor is not super admin', async () => {
+    const mockContext = {
+      get: jest.fn().mockReturnValue({ isSuperAdmin: false }),
+    };
+    const useCase = new CreateAccessGrantUseCase({} as never, mockContext as never);
+    await expect(useCase.execute({
+      actorUserId: 'admin-1',
+      targetUserId: 'user-2',
+      permissionCode: 'sys:all',
+      reason: 'elevate',
+      expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+    })).rejects.toThrow("Only super administrators can assign the 'sys:all' permission.");
+  });
+
+  it('allows sys:all grant if actor is super admin', async () => {
+    const repository = {
+      createAccessGrant: jest.fn().mockResolvedValue({ id: 'grant-super' }),
+      writeAccessAuditLog: jest.fn().mockResolvedValue(undefined),
+    };
+    const mockContext = {
+      get: jest.fn().mockReturnValue({ isSuperAdmin: true }),
+    };
+    const useCase = new CreateAccessGrantUseCase(repository as never, mockContext as never);
+    await expect(useCase.execute({
+      actorUserId: 'admin-super',
+      targetUserId: 'user-2',
+      permissionCode: 'sys:all',
+      reason: 'elevate',
+      expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+    })).resolves.toEqual({ id: 'grant-super' });
+  });
 });

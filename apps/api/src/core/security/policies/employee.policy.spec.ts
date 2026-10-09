@@ -40,4 +40,14 @@ describe('EmployeePolicies.view', () => {
     expect(EmployeePolicies.view.handle({ permissions: ['sys:all'] } as never, { id: 'employee-2' })).toBe(true);
     expect(EmployeePolicies.view.handle({ permissions: ['ALL'] } as never, { id: 'employee-2' })).toBe(false);
   });
+
+  it('allows collection access without resource for department managers and self', () => {
+    const deptUser = { permissions: ['employee:view:department'] };
+    const selfUser = { permissions: ['employee:view:self'] };
+    const unauthorizedUser = { permissions: ['benefits:view'] };
+
+    expect(EmployeePolicies.view.handle(deptUser as never, undefined)).toBe(true);
+    expect(EmployeePolicies.view.handle(selfUser as never, undefined)).toBe(true);
+    expect(EmployeePolicies.view.handle(unauthorizedUser as never, undefined)).toBe(false);
+  });
 });

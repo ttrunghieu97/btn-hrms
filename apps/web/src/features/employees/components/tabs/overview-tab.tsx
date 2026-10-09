@@ -373,6 +373,8 @@ function PersonalInfoSection({ employee }: { employee: EmployeeResponseDto }) {
 /* Overview Tab — Dashboard Layout                                     */
 /* ------------------------------------------------------------------ */
 
+import { EmployeeLifecycleHistoryCard } from '../workflow/employee-lifecycle-history-card';
+
 export function OverviewTab({ employee, isEditing }: OverviewTabProps) {
   if (!employee) return null;
 
@@ -384,20 +386,24 @@ export function OverviewTab({ employee, isEditing }: OverviewTabProps) {
         <EmploymentSummaryCard employee={employee} />
       </div>
 
-      {/* Row 2: Contract Summary */}
+      {/* Row 2: Lifecycle Status History & Audit Log */}
+      <EmployeeLifecycleHistoryCard employeeId={employee.id} />
+
+      {/* Row 3: Contract Summary */}
       <EmployeeContractCard employeeId={employee.id} />
 
-      {/* Row 3: Records Completeness + Assets Summary */}
+      {/* Row 4: Records Completeness + Assets Summary */}
       <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
         <RecordsCompletenessCard employee={employee} />
         <AssetsSummaryCard employee={employee} />
       </div>
 
-      {/* Row 4: Qualifications */}
+      {/* Row 5: Qualifications */}
       <EmployeeQualificationsCard employeeId={employee.id} />
 
-      {/* Row 5: Recent Activity */}
+      {/* Row 6: Recent Activity */}
       <RecentActivityCard employee={employee} />
     </div>
   );
 }
+

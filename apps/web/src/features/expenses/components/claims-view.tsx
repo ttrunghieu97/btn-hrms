@@ -46,6 +46,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { commonUiCopy, expensesUiCopy } from '@/locales/vi/app-copy';
 import { createExpenseClaimSchema, type CreateExpenseClaimFormValues } from '../schemas/expense.schema';
 import { pageParser, perPageParser, limitParser } from '@/lib/pagination';
+import { ExpenseClaimDetailDialog } from './expense-claim-detail-dialog';
 
 const copy = expensesUiCopy.claims;
 
@@ -54,6 +55,7 @@ export function ExpenseClaimsView() {
     page: pageParser,
     status: parseAsString,
   });
+  const [selectedClaim, setSelectedClaim] = useState<ExpenseClaimRow | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateExpenseClaimFormValues>({ title: '', currency: 'VND' });
 
@@ -103,7 +105,10 @@ export function ExpenseClaimsView() {
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size='sm'>{copy.create}</Button>
+              <Button size='sm'>
+                <Icons.add className='mr-2 size-4' />
+                {copy.create}
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -151,41 +156,87 @@ export function ExpenseClaimsView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className='font-medium'>{row.title ?? '—'}</TableCell>
-                  <TableCell>
-                    <StatusBadge mapping={CLAIM_STATUS_MAP} status={row.status ?? 'draft'} />
-                  </TableCell>
-                  <TableCell>{row.totalAmount ?? '—'}</TableCell>
-                  <TableCell>{row.currency ?? 'VND'}</TableCell>
-                  <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
-                  <TableCell>
-                    <div className='flex gap-1'>
-                      {row.status === 'draft' ? (
-                        <Button variant='outline' size='sm' onClick={() => submitClaim.mutate({ id: row.id })} disabled={submitClaim.isPending}>
-                          {expensesUiCopy.actions.submit}
+              {rows.map((row) => {
+                const amt = parseFloat(row.totalAmount || '0') || 0;
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      <button
+                        type='button'
+                        className='text-left font-medium text-foreground hover:text-primary hover:underline'
+                        onClick={() => setSelectedClaim(row)}
+                      >
+                        {row.title ?? '—'}
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge mapping={CLAIM_STATUS_MAP} status={row.status ?? 'draft'} />
+                    </TableCell>
+                    <TableCell className='font-mono font-medium'>
+                      {amt > 0 ? amt.toLocaleString('vi-VN') : '—'}
+                    </TableCell>
+                    <TableCell>{row.currency ?? 'VND'}</TableCell>
+                    <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
+                    <TableCell>
+                      <div className='flex items-center gap-1.5'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7 px-2 text-xs text-muted-foreground hover:text-foreground'
+                          onClick={() => setSelectedClaim(row)}
+                        >
+                          <Icons.eye className='mr-1 size-3.5' />
+                          Chi tiết luồng
                         </Button>
-                      ) : null}
-                      {row.status === 'submitted' ? (
-                        <>
-                          <Button variant='outline' size='sm' onClick={() => approveClaim.mutate({ id: row.id })} disabled={approveClaim.isPending}>
-                            {expensesUiCopy.actions.approve}
+                        {row.status === 'draft' ? (
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='h-7 text-xs'
+                            onClick={() => submitClaim.mutate({ id: row.id })}
+                            disabled={submitClaim.isPending}
+                          >
+                            {expensesUiCopy.actions.submit}
                           </Button>
-                          <Button variant='outline' size='sm' onClick={() => rejectClaim.mutate({ id: row.id })} disabled={rejectClaim.isPending}>
-                            {expensesUiCopy.actions.reject}
+                        ) : null}
+                        {row.status === 'submitted' ? (
+                          <>
+                            <Button
+                              variant='default'
+                              size='sm'
+                              className='h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2'
+                              onClick={() => approveClaim.mutate({ id: row.id })}
+                              disabled={approveClaim.isPending}
+                            >
+                              <Icons.check className='mr-1 size-3' />
+                              {expensesUiCopy.actions.approve}
+                            </Button>
+                            <Button
+                              variant='destructive'
+                              size='sm'
+                              className='h-7 text-xs px-2'
+                              onClick={() => setSelectedClaim(row)}
+                            >
+                              <Icons.close className='size-3' />
+                            </Button>
+                          </>
+                        ) : null}
+                        {row.status === 'approved' ? (
+                          <Button
+                            variant='default'
+                            size='sm'
+                            className='h-7 bg-blue-600 hover:bg-blue-700 text-white text-xs'
+                            onClick={() => reimburseClaim.mutate({ id: row.id })}
+                            disabled={reimburseClaim.isPending}
+                          >
+                            {expensesUiCopy.actions.reimburse}
                           </Button>
-                        </>
-                      ) : null}
-                      {row.status === 'approved' ? (
-                        <Button variant='outline' size='sm' onClick={() => reimburseClaim.mutate({ id: row.id })} disabled={reimburseClaim.isPending}>
-                          {expensesUiCopy.actions.reimburse}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -200,6 +251,14 @@ export function ExpenseClaimsView() {
           onPageChange={(page) => void setParams({ page })}
         />
       ) : null}
+
+      <ExpenseClaimDetailDialog
+        claim={selectedClaim}
+        open={Boolean(selectedClaim)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedClaim(null);
+        }}
+      />
     </div>
   );
 }

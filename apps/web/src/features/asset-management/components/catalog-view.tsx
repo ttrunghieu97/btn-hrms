@@ -79,11 +79,6 @@ export function AssetCatalogView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-between'>
-        <h2 className='text-lg font-semibold'>{copy.title}</h2>
-        {/* create dialog skipped: YAGNI for now, add when specific subview needs it */}
-      </div>
-
       {rows.length === 0 && !isLoading ? (
         <AppEmptyState
           icon={<Icons.page className='size-10' />}

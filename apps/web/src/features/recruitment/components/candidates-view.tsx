@@ -40,7 +40,6 @@ import {
 import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
-import { PageHeader } from '@/components/layout/page-header';
 import { commonUiCopy, recruitmentUiCopy } from '@/lib/app-copy';
 import { OffersPanel } from './offers-view';
 
@@ -92,10 +91,6 @@ export function CandidatesView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={recruitmentUiCopy.description}
-      />
       <div className='flex gap-4 overflow-x-auto pb-2'>
         {BOARD_STAGES.map((stage) => {
           const cards = applications.filter((a) => a.currentStage === stage.key);

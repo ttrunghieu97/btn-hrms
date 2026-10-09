@@ -1,11 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Icons } from '@/components/icons';
 import type { DashboardWidgetDto } from '../queries/dashboard-queries';
 import { registerWidget } from '../widget-registry/widget-registry';
 import { DashboardWidgetId } from '../widget-registry/widget-ids';
@@ -25,11 +29,12 @@ function AttendanceExceptionsList({ widget }: { widget: DashboardWidgetDto }) {
   const data = widget.data as ExceptionsPayload;
   const labels = dashboardCopy.attendanceExceptions.exceptionLabels as Record<string, string>;
 
-  if (!data.items || data.items.length === 0) {
+  if (!data?.items || data.items.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>{widget.title}</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold">{widget.title}</CardTitle>
+          <Icons.check className="size-4 text-emerald-600" />
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">
@@ -43,34 +48,49 @@ function AttendanceExceptionsList({ widget }: { widget: DashboardWidgetDto }) {
   const maxCount = Math.max(...data.items.map((i) => i.count), 1);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{widget.title}</CardTitle>
+    <Card className="border-rose-500/20 shadow-xs">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-base font-semibold">{widget.title}</CardTitle>
+        <Button variant="ghost" size="sm" asChild className="text-xs text-primary h-7 gap-1">
+          <Link href="/attendance">
+            Xử lý ngoại lệ
+            <Icons.chevronRight className="size-3" />
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
-        <div className="mb-3 flex items-baseline gap-2">
-          <span className="text-2xl font-bold">{data.total}</span>
-          <span className="text-muted-foreground text-sm">
-            {dashboardCopy.attendanceExceptions.totalPrefix}
-          </span>
+        <div className="mb-3 flex items-baseline justify-between">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">{data.total}</span>
+            <span className="text-muted-foreground text-xs">
+              {dashboardCopy.attendanceExceptions.totalPrefix}
+            </span>
+          </div>
+          <Badge variant="outline" className="border-rose-500/30 text-rose-600 bg-rose-500/10 text-xs">
+            Cần rà soát
+          </Badge>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {data.items.map((item) => {
             const label = labels[item.type] ?? item.type;
             const pct = Math.round((item.count / maxCount) * 100);
             return (
-              <div key={item.type} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span>{label}</span>
-                  <span className="font-semibold">{item.count}</span>
+              <Link
+                key={item.type}
+                href="/attendance"
+                className="block rounded-md p-2 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-medium text-foreground">{label}</span>
+                  <span className="font-bold text-rose-600 dark:text-rose-400">{item.count}</span>
                 </div>
-                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
                   <div
-                    className="bg-chart-1 h-full rounded-full transition-all"
+                    className="bg-rose-500 h-full rounded-full transition-all"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

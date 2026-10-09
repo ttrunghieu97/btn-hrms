@@ -8,9 +8,14 @@ import { Section } from '@/components/layout/section';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { usePayrollPeriodsQuery, useCreatePayrollPeriodMutation, useUpdatePayrollPeriodMutation } from '../queries/period-queries';
 import { PayrollPeriodsTable } from '../tables/payroll-periods-table';
-import { PayrollPeriodDialog } from './payroll-period-dialog';
+import dynamic from 'next/dynamic';
 import type { PayrollPeriod, CreatePayrollPeriodPayload } from '../types';
 import { perPageParser, pageParser } from '@/lib/pagination';
+
+const PayrollPeriodDialog = dynamic(
+  () => import('./payroll-period-dialog').then((mod) => mod.PayrollPeriodDialog),
+  { ssr: false }
+);
 
 export function PayrollPeriodsPageClient() {
   const [page] = useQueryState('page', pageParser);

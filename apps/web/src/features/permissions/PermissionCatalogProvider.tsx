@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { permissionsControllerFindAll } from '@/api/generated/permissions/permissions';
 import { extractList } from '@/lib/api-extract';
 import { roleUiCopy } from '@/lib/app-copy';
+import { useAuthStore } from '@/stores/auth-store';
 import type {
   PermissionCatalog,
   DomainMetadata,
@@ -177,10 +178,12 @@ const TEMPLATES_RAW = [
 ];
 
 export function PermissionCatalogProvider({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((state) => state.user);
   const { data: dbPermissionsRaw, isLoading, isError } = useQuery({
     queryKey: ['permissions', 'list-raw'],
     queryFn: () => permissionsControllerFindAll(),
     select: (data) => extractList<{ code: string; description?: string }>(data),
+    enabled: Boolean(user),
   });
 
   const catalog = useMemo<PermissionCatalog>(() => {

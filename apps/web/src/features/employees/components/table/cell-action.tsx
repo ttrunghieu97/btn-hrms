@@ -27,11 +27,17 @@ import {
 import { EmployeeDeleteDialog } from '../dialogs/employee-delete-dialog';
 import { ResetPasswordDialog } from '../dialogs/reset-password-dialog';
 import { TerminateEmployeeDialog } from '../dialogs/lifecycle/terminate-employee-dialog';
+import {
+  ChangeEmployeeStatusDialog,
+  type LifecycleStatus,
+} from '../dialogs/lifecycle/change-employee-status-dialog';
+import { RehireEmployeeDialog } from '../dialogs/lifecycle/rehire-employee-dialog';
 import { hasAnyPermission } from '@/lib/permissions';
 
 interface CellActionProps {
   data: EmployeeResponseDto;
 }
+
 
 function getEmployeeName(employee: EmployeeResponseDto) {
   return [employee.firstName, employee.lastName].filter(Boolean).join(' ') || employee.username;
@@ -44,6 +50,11 @@ export function CellAction({ data }: CellActionProps) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [resetPwOpen, setResetPwOpen] = React.useState(false);
   const [terminateOpen, setTerminateOpen] = React.useState(false);
+  const [changeStatusOpen, setChangeStatusOpen] = React.useState(false);
+  const [presetTargetStatus, setPresetTargetStatus] = React.useState<LifecycleStatus | undefined>(
+    undefined,
+  );
+  const [rehireOpen, setRehireOpen] = React.useState(false);
 
   const canEdit =
     currentUser?.isSuperAdmin ||
@@ -114,6 +125,21 @@ export function CellAction({ data }: CellActionProps) {
         open={terminateOpen}
         onOpenChange={setTerminateOpen}
       />
+      <ChangeEmployeeStatusDialog
+        employeeId={data.id}
+        employeeName={getEmployeeName(data)}
+        currentStatus={data.status ?? 'working'}
+        allowedTransitions={data.allowedTransitions ?? []}
+        presetTargetStatus={presetTargetStatus}
+        open={changeStatusOpen}
+        onOpenChange={setChangeStatusOpen}
+      />
+      <RehireEmployeeDialog
+        employeeId={data.id}
+        employeeName={getEmployeeName(data)}
+        open={rehireOpen}
+        onOpenChange={setRehireOpen}
+      />
 
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
@@ -132,6 +158,51 @@ export function CellAction({ data }: CellActionProps) {
           <DropdownMenuItem onClick={() => router.push(`/employees/${data.id}`)}>
             <Icons.eye className='mr-2 h-4 w-4' /> {commonUiCopy.viewDetails}
           </DropdownMenuItem>
+
+          {canEdit && !isDeleted && data.status === 'probation' && (
+            <DropdownMenuItem
+              onClick={() => {
+                setPresetTargetStatus('working');
+                setChangeStatusOpen(true);
+              }}
+              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+            >
+              <Icons.check className='mr-2 h-4 w-4' /> Chuyển chính thức (Activate)
+            </DropdownMenuItem>
+          )}
+
+          {canEdit && !isDeleted && (data.status === 'leave' || data.status === 'suspended') && (
+            <DropdownMenuItem
+              onClick={() => {
+                setPresetTargetStatus('working');
+                setChangeStatusOpen(true);
+              }}
+              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+            >
+              <Icons.check className='mr-2 h-4 w-4' /> Tiếp nhận đi làm lại
+            </DropdownMenuItem>
+          )}
+
+          {canEdit && !isDeleted && data.status === 'working' && (
+            <DropdownMenuItem
+              onClick={() => {
+                setPresetTargetStatus(undefined);
+                setChangeStatusOpen(true);
+              }}
+            >
+              <Icons.refresh className='mr-2 h-4 w-4' /> Chuyển trạng thái...
+            </DropdownMenuItem>
+          )}
+
+          {canEdit && data.status === 'terminated' && (
+            <DropdownMenuItem
+              onClick={() => setRehireOpen(true)}
+              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+            >
+              <Icons.add className='mr-2 h-4 w-4' /> Tái tuyển dụng (Rehire)
+
+            </DropdownMenuItem>
+          )}
 
           {canEdit && !isDeleted && (
             <DropdownMenuItem onClick={() => router.push(`/employees/${data.id}`)}>
@@ -170,3 +241,4 @@ export function CellAction({ data }: CellActionProps) {
     </>
   );
 }
+

@@ -3,8 +3,16 @@
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { parseAsString, useQueryStates } from 'nuqs';
-import { DepartmentFormSheet } from './department-form-sheet';
-import { PositionFormSheet } from './position-form-sheet';
+import dynamic from 'next/dynamic';
+
+const DepartmentFormSheet = dynamic(
+  () => import('./department-form-sheet').then((mod) => mod.DepartmentFormSheet),
+  { ssr: false }
+);
+const PositionFormSheet = dynamic(
+  () => import('./position-form-sheet').then((mod) => mod.PositionFormSheet),
+  { ssr: false }
+);
 
 export function DepartmentsSheetsController() {
   const pathname = usePathname();

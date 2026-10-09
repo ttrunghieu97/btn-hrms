@@ -6,7 +6,7 @@ import { LeaveTraceRepository } from "./leave-trace.repository";
 
 @ApiTags("Leave Trace")
 @ApiBearerAuth()
-@Controller("api/v1/leave")
+@Controller("leave")
 export class LeaveTraceController {
   constructor(private readonly traceService: LeaveTraceRepository) {}
 

@@ -26,4 +26,10 @@ describe(ApproveClaimUseCase.name, () => {
     repo.findById.mockResolvedValue({ id: "c1", status: "draft" });
     await expect(useCase.execute("c1", "user-1")).rejects.toThrow();
   });
+  it("rejects self-approval when approver is claim owner", async () => {
+    repo.findById.mockResolvedValue({ id: "c1", employeeId: "emp-1", status: "submitted" });
+    await expect(useCase.execute("c1", "user-1", "emp-1")).rejects.toThrow(
+      "Approver cannot approve their own expense claim",
+    );
+  });
 });

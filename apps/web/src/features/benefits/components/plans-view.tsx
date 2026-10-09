@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PageHeader } from '@/components/layout/page-header';
 import { formatDateVN } from "@/lib/date";
 import {
   Dialog,
@@ -41,7 +40,7 @@ import {
 } from '@/components/ui/table';
 import { DataTablePagination } from '@/components/ui/table/data-table-pagination';
 import { toast } from 'sonner';
-import { EmptyState } from '@/components/states/empty-state';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, benefitsUiCopy } from '@/locales/vi/app-copy';
@@ -100,70 +99,66 @@ export function BenefitPlansView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={benefitsUiCopy.description}
-        actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size='sm'>
-                <Icons.add className='mr-1.5 size-4' />
-                {copy.create}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{copy.create}</DialogTitle>
-                <DialogDescription>
-                  {benefitsUiCopy.description}
-                </DialogDescription>
-              </DialogHeader>
-              <div className='grid gap-4 py-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='benefit-plan-name'>{copy.columns.name}</Label>
-                  <Input
-                    id='benefit-plan-name'
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder='Tên gói phúc lợi'
-                    required
-                  />
-                </div>
-                <div className='grid gap-2'>
-                  <Label htmlFor='benefit-plan-coverage'>{copy.columns.coverageType}</Label>
-                  <Select
-                    value={form.coverageType}
-                    onValueChange={(val) =>
-                      setForm({ ...form, coverageType: val as CreateBenefitPlanFormValues['coverageType'] })
-                    }
-                  >
-                    <SelectTrigger id='benefit-plan-coverage'>
-                      <SelectValue placeholder='Chọn loại bảo hiểm' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='employee_only'>Chỉ nhân viên</SelectItem>
-                      <SelectItem value='employee_plus_one'>Nhân viên + 1</SelectItem>
-                      <SelectItem value='family'>Gia đình</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      <div className='flex items-center justify-end gap-4'>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size='sm'>
+              <Icons.add className='mr-1.5 size-4' />
+              {copy.create}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{copy.create}</DialogTitle>
+              <DialogDescription>
+                {benefitsUiCopy.description}
+              </DialogDescription>
+            </DialogHeader>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='benefit-plan-name'>{copy.columns.name}</Label>
+                <Input
+                  id='benefit-plan-name'
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder='Tên gói phúc lợi'
+                  required
+                />
               </div>
-              <DialogFooter>
-                <Button variant='outline' onClick={() => setOpen(false)}>
-                  {commonUiCopy.cancel}
-                </Button>
-                <Button onClick={() => void handleCreate()} disabled={createPlan.isPending}>
-                  {createPlan.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
-                  {commonUiCopy.create}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        }
-      />
+              <div className='grid gap-2'>
+                <Label htmlFor='benefit-plan-coverage'>{copy.columns.coverageType}</Label>
+                <Select
+                  value={form.coverageType}
+                  onValueChange={(val) =>
+                    setForm({ ...form, coverageType: val as CreateBenefitPlanFormValues['coverageType'] })
+                  }
+                >
+                  <SelectTrigger id='benefit-plan-coverage'>
+                    <SelectValue placeholder='Chọn loại bảo hiểm' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='employee_only'>Chỉ nhân viên</SelectItem>
+                    <SelectItem value='employee_plus_one'>Nhân viên + 1</SelectItem>
+                    <SelectItem value='family'>Gia đình</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant='outline' onClick={() => setOpen(false)}>
+                {commonUiCopy.cancel}
+              </Button>
+              <Button onClick={() => void handleCreate()} disabled={createPlan.isPending}>
+                {createPlan.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
+                {commonUiCopy.create}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {rows.length === 0 && !isLoading ? (
-        <EmptyState
+        <AppEmptyState
           icon={<Icons.page className='size-10' />}
           title={copy.empty}
           compact

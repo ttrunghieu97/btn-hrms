@@ -12,6 +12,7 @@ import { CreateOnboardingProcessUseCase } from "./use-cases/create-onboarding-pr
 import { CreateBoardingProcessUseCase } from "./use-cases/create-boarding-process.usecase";
 import { ListOnboardingProcessesUseCase } from "./use-cases/list-onboarding-processes.usecase";
 import { GetOnboardingProcessUseCase } from "./use-cases/get-onboarding-process.usecase";
+import { CompleteOnboardingTaskUseCase } from "./use-cases/complete-onboarding-task.usecase";
 import { BoardingModule } from "./boarding.module";
 import { ContractsModule } from "../../contracts/contracts.module";
 
@@ -30,6 +31,7 @@ import { ContractsModule } from "../../contracts/contracts.module";
     CreateBoardingProcessUseCase,
     ListOnboardingProcessesUseCase,
     GetOnboardingProcessUseCase,
+    CompleteOnboardingTaskUseCase,
   ],
 })
 export class OnboardingModule {}

@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/layout/page-header';
 import { formatDateVN } from "@/lib/date";
 import {
   Dialog,
@@ -33,12 +32,13 @@ import {
 } from '@/components/ui/table';
 import { DataTablePagination } from '@/components/ui/table/data-table-pagination';
 import { toast } from 'sonner';
-import { EmptyState } from '@/components/states/empty-state';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, performanceUiCopy } from '@/locales/vi/app-copy';
 import { createPerformanceCycleSchema, type CreatePerformanceCycleFormValues } from '../schemas/performance.schema';
 import { pageParser } from '@/lib/pagination';
+import { PerformanceCycleWorkflowHero } from './performance-cycle-workflow-hero';
 
 const copy = performanceUiCopy.cycles;
 
@@ -60,6 +60,7 @@ export function PerformanceCyclesView() {
     status: parseAsString,
   });
   const [open, setOpen] = useState(false);
+  const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
   const [form, setForm] = useState<CreatePerformanceCycleFormValues>({
     name: '',
     startsOn: '',
@@ -81,6 +82,8 @@ export function PerformanceCyclesView() {
   const createCycle = useCreatePerformanceCycle();
   const transitionCycle = useTransitionCycle();
 
+  const selectedCycle = rows.find((r) => r.id === selectedCycleId) || (rows.length > 0 ? rows[0] : null);
+
   async function handleCreate() {
     const parsed = createPerformanceCycleSchema.safeParse(form);
     if (!parsed.success) {
@@ -99,74 +102,93 @@ export function PerformanceCyclesView() {
   }
 
   return (
-    <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={performanceUiCopy.description}
-        actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size='sm'>
-                <Icons.add className='mr-1.5 size-4' />
-                {copy.create}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{copy.create}</DialogTitle>
-                <DialogDescription>{performanceUiCopy.description}</DialogDescription>
-              </DialogHeader>
-              <div className='grid gap-4 py-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='cycle-name'>{commonUiCopy.name}</Label>
-                  <Input
-                    id='cycle-name'
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className='grid gap-2'>
-                  <Label htmlFor='cycle-starts-on'>Ngày bắt đầu</Label>
-                  <Input
-                    id='cycle-starts-on'
-                    type='date'
-                    value={form.startsOn}
-                    onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className='grid gap-2'>
-                  <Label htmlFor='cycle-ends-on'>Ngày kết thúc</Label>
-                  <Input
-                    id='cycle-ends-on'
-                    type='date'
-                    value={form.endsOn}
-                    onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
-                    required
-                  />
-                </div>
+    <div className='flex min-h-0 flex-1 flex-col gap-5'>
+      {/* Workflow Hero Banner for Active / Selected Cycle */}
+      {selectedCycle && (
+        <PerformanceCycleWorkflowHero
+          cycle={selectedCycle}
+        />
+      )}
+
+      {/* Header & Create Action */}
+      <div className='flex items-center justify-between gap-4'>
+        <div>
+          <h3 className='text-sm font-semibold text-foreground'>
+            Danh sách tất cả chu kỳ đánh giá ({pagination?.total ?? rows.length})
+          </h3>
+          <p className='text-xs text-muted-foreground'>
+            Nhấn vào chu kỳ để kích hoạt quy trình phê duyệt và điều phối đánh giá
+          </p>
+        </div>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size='sm'>
+              <Icons.add className='mr-1.5 size-4' />
+              {copy.create}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{copy.create}</DialogTitle>
+              <DialogDescription>{performanceUiCopy.description}</DialogDescription>
+            </DialogHeader>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='cycle-name'>{commonUiCopy.name}</Label>
+                <Input
+                  id='cycle-name'
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
               </div>
-              <DialogFooter>
-                <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
-                <Button onClick={() => void handleCreate()} disabled={createCycle.isPending}>
-                  {createCycle.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
-                  {commonUiCopy.create}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        }
-      />
+              <div className='grid gap-2'>
+                <Label htmlFor='cycle-starts-on'>Ngày bắt đầu</Label>
+                <Input
+                  id='cycle-starts-on'
+                  type='date'
+                  value={form.startsOn}
+                  onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='cycle-ends-on'>Ngày kết thúc</Label>
+                <Input
+                  id='cycle-ends-on'
+                  type='date'
+                  value={form.endsOn}
+                  onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
+              <Button onClick={() => void handleCreate()} disabled={createCycle.isPending}>
+                {createCycle.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
+                {commonUiCopy.create}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {rows.length === 0 && !isLoading ? (
-        <EmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
+        <AppEmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
       ) : (
         <div className='rounded-md border overflow-hidden'>
           {/* Mobile cards view */}
           <div className='flex flex-col gap-3 p-3 md:hidden'>
             {rows.map((row) => (
-              <Card key={row.id} className='p-4 space-y-2.5'>
+              <Card
+                key={row.id}
+                className={`p-4 space-y-2.5 cursor-pointer transition-colors ${
+                  selectedCycle?.id === row.id ? 'border-primary ring-1 ring-primary' : ''
+                }`}
+                onClick={() => setSelectedCycleId(row.id)}
+              >
                 <div className='flex items-start justify-between gap-2'>
                   <span className='font-medium text-foreground text-sm'>{row.name ?? '—'}</span>
                   <StatusBadge mapping={CYCLE_STATUS_MAP} status={row.status ?? 'draft'} />
@@ -188,7 +210,10 @@ export function PerformanceCyclesView() {
                         key={act.action}
                         variant='outline'
                         size='sm'
-                        onClick={() => transitionCycle.mutate({ id: row.id, action: act.action })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          transitionCycle.mutate({ id: row.id, action: act.action });
+                        }}
                         disabled={transitionCycle.isPending}
                       >
                         {act.label}
@@ -210,25 +235,42 @@ export function PerformanceCyclesView() {
                   <TableHead>{copy.columns.startsOn}</TableHead>
                   <TableHead>{copy.columns.endsOn}</TableHead>
                   <TableHead>{commonUiCopy.date}</TableHead>
-                  <TableHead className='text-right' />
+                  <TableHead className='text-right'>Hành động quy trình</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className='font-medium'>{row.name ?? '—'}</TableCell>
+                  <TableRow
+                    key={row.id}
+                    className={`cursor-pointer transition-colors ${
+                      selectedCycle?.id === row.id ? 'bg-primary/5' : ''
+                    }`}
+                    onClick={() => setSelectedCycleId(row.id)}
+                  >
+                    <TableCell className='font-medium'>
+                      <div className='flex items-center gap-2'>
+                        {selectedCycle?.id === row.id && (
+                          <span className='size-1.5 rounded-full bg-primary' />
+                        )}
+                        <span>{row.name ?? '—'}</span>
+                      </div>
+                    </TableCell>
                     <TableCell><StatusBadge mapping={CYCLE_STATUS_MAP} status={row.status ?? 'draft'} /></TableCell>
                     <TableCell>{row.startsOn ? formatDateVN(row.startsOn) : '—'}</TableCell>
                     <TableCell>{row.endsOn ? formatDateVN(row.endsOn) : '—'}</TableCell>
                     <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
                     <TableCell className='text-right'>
-                      <div className='flex justify-end gap-1'>
+                      <div className='flex justify-end gap-1.5'>
                         {(CYCLE_ACTIONS[row.status ?? ''] ?? []).map((act) => (
                           <Button
                             key={act.action}
                             variant='outline'
                             size='sm'
-                            onClick={() => transitionCycle.mutate({ id: row.id, action: act.action })}
+                            className='h-7 text-xs'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              transitionCycle.mutate({ id: row.id, action: act.action });
+                            }}
                             disabled={transitionCycle.isPending}
                           >
                             {act.label}

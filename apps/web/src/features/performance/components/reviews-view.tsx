@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PageHeader } from '@/components/layout/page-header';
 import { formatDateVN } from "@/lib/date";
 import {
   Table,
@@ -24,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EmptyState } from '@/components/states/empty-state';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { performanceUiCopy } from '@/locales/vi/app-copy';
@@ -52,34 +51,30 @@ export function PerformanceReviewsView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <PageHeader
-        title={copy.title}
-        description={performanceUiCopy.description}
-        actions={
-          cycles.length > 0 ? (
-            <Select
-              value={selectedCycle ?? ''}
-              onValueChange={(val) => void setParams({ cycleId: val || null })}
-            >
-              <SelectTrigger className='w-64' aria-label='Chọn chu kỳ đánh giá'>
-                <SelectValue placeholder='Chọn chu kỳ đánh giá' />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null
-        }
-      />
+      <div className='flex items-center justify-end gap-4'>
+        {cycles.length > 0 ? (
+          <Select
+            value={selectedCycle ?? ''}
+            onValueChange={(val) => void setParams({ cycleId: val || null })}
+          >
+            <SelectTrigger className='w-64' aria-label='Chọn chu kỳ đánh giá'>
+              <SelectValue placeholder='Chọn chu kỳ đánh giá' />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </div>
 
       {!selectedCycle ? (
-        <EmptyState icon={<Icons.page className='size-10' />} title='Chưa có chu kỳ đánh giá' compact />
+        <AppEmptyState icon={<Icons.page className='size-10' />} title='Chưa có chu kỳ đánh giá' compact />
       ) : rows.length === 0 && !isLoading ? (
-        <EmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
+        <AppEmptyState icon={<Icons.page className='size-10' />} title={copy.empty} compact />
       ) : (
         <div className='rounded-md border overflow-hidden'>
           {/* Mobile cards view */}

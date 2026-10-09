@@ -174,6 +174,33 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const field =
       dbField && camelCaseMap[dbField] ? camelCaseMap[dbField] : dbField;
 
+    if (code.startsWith("08")) {
+      return {
+        status: HttpStatus.SERVICE_UNAVAILABLE,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Database connection unavailable",
+        details: undefined,
+      };
+    }
+
+    if (code.startsWith("53") || code.startsWith("57")) {
+      return {
+        status: HttpStatus.SERVICE_UNAVAILABLE,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Database service temporarily unavailable",
+        details: undefined,
+      };
+    }
+
+    if (code === "40P01" || code === "40001") {
+      return {
+        status: HttpStatus.CONFLICT,
+        code: "CONFLICT",
+        message: "Database transaction conflict, please retry",
+        details: undefined,
+      };
+    }
+
     switch (code) {
       case "23505":
         return {
@@ -222,11 +249,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
           details: constraint ? { constraint } : undefined,
         };
       default:
+        if (code.startsWith("22") || code.startsWith("23")) {
+          return {
+            status: HttpStatus.BAD_REQUEST,
+            code: "INVALID_REQUEST",
+            message: "Database validation failed",
+            details: { code, constraint: constraint || undefined },
+          };
+        }
         return {
-          status: HttpStatus.BAD_REQUEST,
-          code: "INVALID_REQUEST",
-          message: "Database validation failed",
-          details: { code, constraint: constraint || undefined },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          code: "INTERNAL_ERROR",
+          message: "Database operation failed",
+          details: undefined,
         };
     }
   }

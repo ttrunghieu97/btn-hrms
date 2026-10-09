@@ -2,6 +2,9 @@
 
 import { useDataTable } from '@/hooks/use-data-table';
 import { DataTable } from '@/components/ui/table/data-table';
+import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
+import { Icons } from '@/components/icons';
 import { payrollRunColumns, onEditRunRef, onGenerateRef, onViewRef } from './payroll-run-columns';
 import type { PayrollRun } from '../types';
 
@@ -35,11 +38,17 @@ export function PayrollRunsTable({ data, total, loading, onEdit, onGenerate, onV
     <DataTable
       table={table}
       isLoading={loading}
+      totalRowsLabel='Tổng số đợt tính lương'
+      totalRows={total}
       emptyState={
-        <div className='text-muted-foreground p-8 text-center'>
-          Chưa có bảng lương nào.
-        </div>
+        <AppEmptyState
+          icon={<Icons.page className='size-10' />}
+          title='Chưa có đợt tính lương nào'
+          compact
+        />
       }
-    />
+    >
+      <DataTableToolbar table={table} />
+    </DataTable>
   );
 }

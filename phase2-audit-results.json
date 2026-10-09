@@ -1,0 +1,218 @@
+{
+  "businessFlows": {
+    "auth": {
+      "status": "PASS",
+      "landedUrl": "http://localhost:8080/overview"
+    },
+    "dashboard": {
+      "status": "PASS",
+      "overviewHeading": "HR Operations",
+      "executiveHeading": "Executive"
+    },
+    "employee": {
+      "status": "PASS",
+      "tableRendered": true,
+      "searchVietnamese": "PASS"
+    },
+    "attendance": {
+      "status": "PASS",
+      "title": "Quản lý bảng công"
+    },
+    "schedule": {
+      "status": "PASS",
+      "title": "Tổng quan"
+    },
+    "leave": {
+      "status": "PASS",
+      "title": "Đơn nghỉ phép"
+    },
+    "approval": {
+      "status": "PASS",
+      "title": "Phê duyệt"
+    },
+    "payroll": {
+      "status": "PASS",
+      "runsTitle": "Bảng lương",
+      "periodsTitle": "Kỳ lương"
+    },
+    "offboarding": {
+      "status": "PASS",
+      "title": "Quy trình Offboarding"
+    },
+    "administration": {
+      "status": "PASS",
+      "usersTitle": "Người dùng",
+      "rolesTitle": "Quản lý nhóm quyền"
+    },
+    "permissions": {
+      "status": "PASS",
+      "title": "Permission Management"
+    }
+  },
+  "rolePermissionMatrix": {
+    "GET /users (Admin List)": {
+      "anonStatus": 401,
+      "anonPassed": true,
+      "empStatus": 403,
+      "empPassed": true,
+      "adminStatus": 200,
+      "adminPassed": true
+    },
+    "GET /roles (Roles Config)": {
+      "anonStatus": 401,
+      "anonPassed": true,
+      "empStatus": 403,
+      "empPassed": true,
+      "adminStatus": 200,
+      "adminPassed": true
+    },
+    "GET /permissions (Permissions List)": {
+      "anonStatus": 401,
+      "anonPassed": true,
+      "empStatus": 403,
+      "empPassed": true,
+      "adminStatus": 200,
+      "adminPassed": true
+    },
+    "POST /departments (Org Admin)": {
+      "anonStatus": 400,
+      "anonPassed": false,
+      "empStatus": 403,
+      "empPassed": true,
+      "adminStatus": 201,
+      "adminPassed": true
+    },
+    "GET /users/me (Self Profile)": {
+      "anonStatus": 401,
+      "anonPassed": true,
+      "empStatus": 200,
+      "empPassed": true,
+      "adminStatus": 200,
+      "adminPassed": true
+    },
+    "UI:/administration/users": {
+      "attempted": "/administration/users",
+      "landed": "http://localhost:8080/unauthorized?path=%2Fadministration%2Fusers",
+      "restricted": "PASS"
+    },
+    "UI:/administration/roles": {
+      "attempted": "/administration/roles",
+      "landed": "http://localhost:8080/unauthorized?path=%2Fadministration%2Froles",
+      "restricted": "PASS"
+    },
+    "UI:/admin/permissions": {
+      "attempted": "/admin/permissions",
+      "landed": "http://localhost:8080/unauthorized?path=%2Fadmin%2Fpermissions",
+      "restricted": "PASS"
+    }
+  },
+  "realDataAudit": {},
+  "errorRecovery": {
+    "404_NotFound": {
+      "status": "PASS",
+      "recoveryLink": "PASS"
+    },
+    "403_Unauthorized": {
+      "status": "PASS"
+    }
+  },
+  "mutations": {
+    "create": {
+      "status": "PASS",
+      "id": "ef42b6c7-4d24-4911-bfcf-b00fe0870319"
+    },
+    "createPersisted": "PASS",
+    "update": {
+      "status": "PASS"
+    },
+    "updatePersisted": "PASS",
+    "delete": {
+      "status": "PASS"
+    },
+    "absencePersisted": "PASS"
+  },
+  "performance": {
+    "buildTimeSeconds": 58.2,
+    "incrementalBuildSeconds": 4.8,
+    "staticPagesCount": 95,
+    "ttfb": 33,
+    "domContentLoaded": 72,
+    "loadTime": 91,
+    "fcp": 88,
+    "resourcesCount": 133
+  },
+  "responsive": {
+    "Desktop (1440px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Desktop (1280px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Tablet Landscape (1024px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Tablet Portrait (768px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Large Mobile (430px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Medium Mobile (390px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Small Mobile (375px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    },
+    "Extra Small Mobile (320px)": {
+      "maxOverflowPx": 0,
+      "status": "PASS"
+    }
+  },
+  "accessibility": {
+    "/overview": {
+      "h1Count": 1,
+      "h1Text": "HR Operations",
+      "buttonsWithoutLabel": 0,
+      "hasMainLandmark": true
+    },
+    "/employees": {
+      "h1Count": 1,
+      "h1Text": "Nhân viên",
+      "buttonsWithoutLabel": 0,
+      "hasMainLandmark": true
+    },
+    "/schedule": {
+      "h1Count": 1,
+      "h1Text": "Tổng quan",
+      "buttonsWithoutLabel": 0,
+      "hasMainLandmark": true
+    },
+    "/leave/requests": {
+      "h1Count": 1,
+      "h1Text": "Đơn nghỉ phép",
+      "buttonsWithoutLabel": 0,
+      "hasMainLandmark": true
+    },
+    "/payroll/runs": {
+      "h1Count": 1,
+      "h1Text": "Bảng lương",
+      "buttonsWithoutLabel": 0,
+      "hasMainLandmark": true
+    }
+  },
+  "consoleCleanliness": {
+    "errors": [
+      {
+        "url": "http://localhost:8080/some-completely-invalid-nonexistent-path-999",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      }
+    ]
+  }
+}
