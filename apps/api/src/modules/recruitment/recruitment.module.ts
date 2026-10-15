@@ -31,7 +31,6 @@ import { InterviewsModule } from "./interviews/interviews.module";
     PipelineModule,
     OffersModule,
     InterviewsModule,
-    InterviewsModule,
   ],
 })
 export class RecruitmentDomainModule {}

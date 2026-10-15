@@ -8,16 +8,61 @@ import { onboardingUiCopy } from '@/locales/vi/app-copy';
 export function useCreateOnboardingTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: { name: string; type?: string; isDefault?: boolean; items?: any[] }) => createOnboardingTemplate(dto),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: onboardingTemplateKeys.all() }); notifyMutationSuccess(onboardingUiCopy.feedback.created); },
+    mutationFn: (dto: {
+      name: string;
+      type?: string;
+      isDefault?: boolean;
+      items?: Array<{
+        title: string;
+        assigneeType: string;
+        dueDaysOffset?: number;
+        isMandatory?: boolean;
+      }>;
+    }) => createOnboardingTemplate(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingTemplateKeys.all() });
+      notifyMutationSuccess(onboardingUiCopy.feedback.created);
+    },
     onError: (e) => notifyMutationError(e, onboardingUiCopy.feedback.createFailed),
   });
 }
+
+export function useUpdateOnboardingTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      dto,
+    }: {
+      id: string;
+      dto: {
+        name?: string;
+        type?: string;
+        isDefault?: boolean;
+        items?: Array<{
+          title: string;
+          assigneeType: string;
+          dueDaysOffset?: number;
+          isMandatory?: boolean;
+        }>;
+      };
+    }) => updateOnboardingTemplate(id, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingTemplateKeys.all() });
+      notifyMutationSuccess('Đã cập nhật mẫu quy trình hội nhập');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể cập nhật mẫu quy trình hội nhập'),
+  });
+}
+
 export function useDeleteOnboardingTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id }: { id: string }) => deleteOnboardingTemplate(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: onboardingTemplateKeys.all() }); notifyMutationSuccess(onboardingUiCopy.feedback.deleted); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingTemplateKeys.all() });
+      notifyMutationSuccess(onboardingUiCopy.feedback.deleted);
+    },
     onError: (e) => notifyMutationError(e, onboardingUiCopy.feedback.deleteFailed),
   });
 }

@@ -1,4 +1,4 @@
-export type AuditAction = 
+export type AuditAction =
   | 'permission.grant'
   | 'permission.revoke'
   | 'role.assign'
@@ -13,7 +13,8 @@ export type AuditAction =
   | 'contract.create'
   | 'contract.update'
   | 'system.config'
-  | 'unknown';
+  | 'unknown'
+  | (string & {});
 
 export type AuditSeverity = 'info' | 'warning' | 'critical';
 

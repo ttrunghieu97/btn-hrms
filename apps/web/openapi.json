@@ -8201,6 +8201,141 @@
         ]
       }
     },
+    "/api/v1/recruitment/interviews": {
+      "get": {
+        "operationId": "InterviewsController_list",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List interviews for an application",
+        "tags": [
+          "Recruitment Interviews"
+        ]
+      },
+      "post": {
+        "operationId": "InterviewsController_schedule",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleInterviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Schedule an interview for a candidate application",
+        "tags": [
+          "Recruitment Interviews"
+        ]
+      }
+    },
+    "/api/v1/recruitment/interviews/{id}/complete": {
+      "post": {
+        "operationId": "InterviewsController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteInterviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark a scheduled interview as completed",
+        "tags": [
+          "Recruitment Interviews"
+        ]
+      }
+    },
+    "/api/v1/recruitment/interviews/{id}/scorecard": {
+      "post": {
+        "operationId": "InterviewsController_scorecard",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitScorecardDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit a scorecard for a completed interview",
+        "tags": [
+          "Recruitment Interviews"
+        ]
+      }
+    },
     "/api/v1/workforce/schedules/employees/{employeeId}/qualifications": {
       "get": {
         "operationId": "QualificationsController_getQualifications",
@@ -13417,6 +13552,55 @@
           }
         ],
         "summary": "List current user's notifications",
+        "tags": [
+          "Platform Notifications"
+        ]
+      }
+    },
+    "/api/v1/platform-notifications/my-notifications/read-all": {
+      "patch": {
+        "operationId": "PlatformNotificationsController_markAllNotificationsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark all current user's notifications as read",
+        "tags": [
+          "Platform Notifications"
+        ]
+      }
+    },
+    "/api/v1/platform-notifications/my-notifications/{id}/read": {
+      "patch": {
+        "operationId": "PlatformNotificationsController_markNotificationRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark a notification as read",
         "tags": [
           "Platform Notifications"
         ]
@@ -20981,8 +21165,13 @@
             "maximum": 5
           },
           "feedback": {
-            "type": "string",
-            "maxLength": 4000
+            "type": "string"
+          },
+          "rubric": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -21028,6 +21217,49 @@
         "required": [
           "decision"
         ]
+      },
+      "ScheduleInterviewDto": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "interviewType": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "location": {
+            "type": "string"
+          },
+          "meetingLink": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "applicationId",
+          "title",
+          "interviewType",
+          "scheduledAt"
+        ]
+      },
+      "CompleteInterviewDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string"
+          }
+        }
       },
       "ReplaceEmployeeQualificationsDto": {
         "type": "object",
@@ -21901,7 +22133,11 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "draft",
+              "open"
+            ]
           }
         },
         "required": [
@@ -21930,7 +22166,12 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "draft",
+              "open",
+              "closed"
+            ]
           }
         }
       },
@@ -21938,7 +22179,10 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "published"
+            ]
           },
           "note": {
             "type": "string"
@@ -22113,7 +22357,11 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "draft"
+            ],
+            "default": "draft"
           },
           "notes": {
             "type": "string"
@@ -22130,9 +22378,6 @@
             "type": "string"
           },
           "branchId": {
-            "type": "string"
-          },
-          "status": {
             "type": "string"
           },
           "notes": {

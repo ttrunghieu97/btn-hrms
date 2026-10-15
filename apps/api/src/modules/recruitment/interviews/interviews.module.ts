@@ -1,14 +1,15 @@
 import { Module } from "@nestjs/common";
+import { InterviewsController } from "./interviews.controller";
 import { InterviewRepository } from "./repositories/interview.repository";
 import {
   ScheduleInterviewUseCase, CompleteInterviewUseCase,
   SubmitScorecardUseCase, ListInterviewsUseCase,
 } from "./use-cases";
-import { ApplicationsRepository } from "../candidates/repositories/applications.repository";
 import { CandidatesModule } from "../candidates/candidates.module";
 
 @Module({
   imports: [CandidatesModule],
+  controllers: [InterviewsController],
   providers: [
     InterviewRepository,
     ScheduleInterviewUseCase, CompleteInterviewUseCase,

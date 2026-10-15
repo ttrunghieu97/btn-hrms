@@ -1,24 +1,54 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+export interface AuditFilterValues {
+  search?: string;
+  action?: string;
+  entity?: string;
+  severity?: string;
+  period?: string;
+}
+
 interface AuditFiltersProps {
-  onFilter: (filters: Record<string, string>) => void;
+  onFilter: (filters: AuditFilterValues) => void;
 }
 
 export function AuditFilters({ onFilter }: AuditFiltersProps) {
+  const [search, setSearch] = useState('');
+  const [action, setAction] = useState('all');
+  const [entity, setEntity] = useState('all');
+  const [severity, setSeverity] = useState('all');
+  const [period, setPeriod] = useState('7d');
+
+  const handleApply = () => {
+    onFilter({
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(action !== 'all' ? { action } : {}),
+      ...(entity !== 'all' ? { entity } : {}),
+      ...(severity !== 'all' ? { severity } : {}),
+      period,
+    });
+  };
+
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">User</label>
-        <Input placeholder="Actor name..." className="h-8 w-44 text-xs" />
+        <label className="text-xs text-muted-foreground">Search / Actor</label>
+        <Input
+          placeholder="Search actor, action..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+          className="h-8 w-44 text-xs"
+        />
       </div>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Action</label>
-        <Select>
+        <Select value={action} onValueChange={setAction}>
           <SelectTrigger className="h-8 w-40 text-xs">
             <SelectValue placeholder="All actions" />
           </SelectTrigger>
@@ -34,7 +64,7 @@ export function AuditFilters({ onFilter }: AuditFiltersProps) {
       </div>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Resource</label>
-        <Select>
+        <Select value={entity} onValueChange={setEntity}>
           <SelectTrigger className="h-8 w-36 text-xs">
             <SelectValue placeholder="All resources" />
           </SelectTrigger>
@@ -49,7 +79,7 @@ export function AuditFilters({ onFilter }: AuditFiltersProps) {
       </div>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Severity</label>
-        <Select>
+        <Select value={severity} onValueChange={setSeverity}>
           <SelectTrigger className="h-8 w-28 text-xs">
             <SelectValue placeholder="All" />
           </SelectTrigger>
@@ -63,7 +93,7 @@ export function AuditFilters({ onFilter }: AuditFiltersProps) {
       </div>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Period</label>
-        <Select>
+        <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="h-8 w-28 text-xs">
             <SelectValue placeholder="7 days" />
           </SelectTrigger>
@@ -75,7 +105,9 @@ export function AuditFilters({ onFilter }: AuditFiltersProps) {
           </SelectContent>
         </Select>
       </div>
-      <Button size="sm" className="h-8 text-xs">Search</Button>
+      <Button size="sm" className="h-8 text-xs" onClick={handleApply}>
+        Search
+      </Button>
     </div>
   );
 }

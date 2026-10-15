@@ -12,6 +12,6 @@ export interface SubmitScorecardDto {
      * @maximum 5
      */
   rating: number;
-  /** @maxLength 4000 */
   feedback?: string;
+  rubric?: string[];
 }

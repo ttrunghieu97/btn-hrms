@@ -3,12 +3,14 @@ import { requisitionsControllerList, requisitionsControllerGet } from '@/api/gen
 import { postingsControllerList, postingsControllerGet } from '@/api/generated/recruitment-postings/recruitment-postings';
 import { candidatesControllerList, candidatesControllerGet } from '@/api/generated/recruitment-candidates/recruitment-candidates';
 import { offersControllerList, offersControllerGet } from '@/api/generated/recruitment-offers/recruitment-offers';
+import { interviewsControllerList } from '@/api/generated/recruitment-interviews/recruitment-interviews';
 import { queryPolicyPresets } from '@/lib/query-client';
 import {
   requisitionKeys,
   postingKeys,
   applicationKeys,
   offerKeys,
+  interviewKeys,
   type RequisitionListFilters,
   type PostingListFilters,
   type CandidateListFilters,
@@ -73,4 +75,12 @@ export const offerDetailQueryOptions = (id: string) =>
     queryKey: offerKeys.detail(id),
     queryFn: () => offersControllerGet(id),
     enabled: !!id,
+  });
+
+export const applicationInterviewsQueryOptions = (applicationId: string) =>
+  queryOptions({
+    ...queryPolicyPresets['employees'],
+    queryKey: interviewKeys.byApplication(applicationId),
+    queryFn: () => interviewsControllerList({ applicationId }),
+    enabled: !!applicationId,
   });

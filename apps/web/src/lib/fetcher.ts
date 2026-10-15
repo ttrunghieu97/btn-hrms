@@ -260,6 +260,15 @@ async function execute<T>(
     throw await parseError(res, requestId);
   }
 
+  const contentType = res.headers.get('content-type') ?? '';
+  if (
+    contentType.includes('application/vnd.openxmlformats') ||
+    contentType.includes('application/octet-stream')
+  ) {
+    const blob = await res.blob();
+    return { data: blob, status: res.status, headers: res.headers } as T;
+  }
+
   const body =
     [204, 205, 304].includes(res.status) ? null : await res.text();
   const data = (body ? JSON.parse(body) : null) as T;

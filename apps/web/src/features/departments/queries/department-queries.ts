@@ -13,8 +13,16 @@ import {
   positionsControllerRemove,
   positionsControllerUpdate
 } from '@/api/generated/positions/positions';
+import {
+  locationsControllerCreate,
+  locationsControllerFindList,
+  locationsControllerRemove,
+  locationsControllerUpdate
+} from '@/api/generated/location-management/location-management';
 import type {
   CreateDepartmentDto,
+  CreateLocationDto,
+  CreateLocationDtoType,
   CreatePositionDto,
   DepartmentEmployeesControllerListByDepartmentParams,
   DepartmentResponseDto,
@@ -22,6 +30,7 @@ import type {
   DepartmentsControllerFindOneParams,
   PositionListItemDto,
   UpdateDepartmentDto,
+  UpdateLocationDto,
   UpdatePositionDto
 } from '@/api/generated/model';
 import { extractList, extractPagination, unwrapData } from '@/lib/api-extract';
@@ -29,6 +38,20 @@ import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
 
 export type DepartmentRow = DepartmentResponseDto;
+
+export interface LocationListItemDto {
+  id: string;
+  parentId?: string | null;
+  name: string;
+  type: CreateLocationDtoType;
+  address?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  radiusMeters?: number | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface DepartmentListQueryParams {
   page: number;
@@ -48,8 +71,13 @@ export interface PositionMutationPayload {
   description?: string;
 }
 
+export type LocationMutationPayload = CreateLocationDto & {
+  isActive?: boolean;
+};
+
 export const departmentKeys = createKeyFactory<DepartmentListQueryParams>('departments');
 export const positionKeys = createKeyFactory('positions');
+export const locationKeys = createKeyFactory('locations');
 
 export const departmentInvalidations = {
   list: async (queryClient: import('@tanstack/react-query').QueryClient) => {
@@ -58,10 +86,14 @@ export const departmentInvalidations = {
   positions: async (queryClient: import('@tanstack/react-query').QueryClient) => {
     await queryClient.invalidateQueries({ queryKey: positionKeys.all() });
   },
+  locations: async (queryClient: import('@tanstack/react-query').QueryClient) => {
+    await queryClient.invalidateQueries({ queryKey: locationKeys.all() });
+  },
   all: async (queryClient: import('@tanstack/react-query').QueryClient) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: departmentKeys.all() }),
-      queryClient.invalidateQueries({ queryKey: positionKeys.all() })
+      queryClient.invalidateQueries({ queryKey: positionKeys.all() }),
+      queryClient.invalidateQueries({ queryKey: locationKeys.all() })
     ]);
   }
 };
@@ -139,6 +171,19 @@ export function positionListQueryOptions(requestInit?: RequestInit) {
   });
 }
 
+export function locationListQueryOptions(requestInit?: RequestInit) {
+  return queryOptions({
+    queryKey: locationKeys.list(),
+    queryFn: async () => {
+      const response = await locationsControllerFindList(undefined, requestInit);
+      return extractList<LocationListItemDto>(response).toSorted((a, b) =>
+        (a.name || '').localeCompare(b.name || '', 'vi')
+      );
+    },
+    ...queryPolicyPresets.static
+  });
+}
+
 export function useDepartmentsTableQuery(params: DepartmentListQueryParams) {
   return useQuery(departmentListQueryOptions(params));
 }
@@ -152,6 +197,10 @@ export function useDepartmentDetailQuery(id?: string, enabled = true) {
 
 export function usePositionsTableQuery() {
   return useQuery(positionListQueryOptions());
+}
+
+export function useLocationsTableQuery() {
+  return useQuery(locationListQueryOptions());
 }
 
 export async function createDepartment(payload: DepartmentMutationPayload) {
@@ -184,6 +233,22 @@ export async function updatePosition(id: string, payload: PositionMutationPayloa
 
 export async function deletePosition(id: string) {
   await positionsControllerRemove(id);
+}
+
+export async function createLocation(payload: LocationMutationPayload) {
+  return unwrapData<LocationListItemDto>(
+    await locationsControllerCreate(payload satisfies CreateLocationDto)
+  );
+}
+
+export async function updateLocation(id: string, payload: Partial<LocationMutationPayload>) {
+  return unwrapData<LocationListItemDto>(
+    await locationsControllerUpdate(id, payload satisfies UpdateLocationDto)
+  );
+}
+
+export async function deleteLocation(id: string) {
+  await locationsControllerRemove(id);
 }
 
 export function useDepartmentEmployeesQuery(

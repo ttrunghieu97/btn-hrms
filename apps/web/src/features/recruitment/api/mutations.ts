@@ -22,6 +22,11 @@ import {
   offersControllerSubmit,
   offersControllerDecide
 } from '@/api/generated/recruitment-offers/recruitment-offers';
+import {
+  interviewsControllerSchedule,
+  interviewsControllerComplete,
+  interviewsControllerScorecard
+} from '@/api/generated/recruitment-interviews/recruitment-interviews';
 import type {
   CreateRequisitionDto,
   UpdateRequisitionDto,
@@ -35,12 +40,15 @@ import type {
   SubmitScorecardDto,
   CreateOfferDto,
   DecideOfferDto,
+  ScheduleInterviewDto,
+  CompleteInterviewDto,
 } from '@/api/generated/model';
 import {
   requisitionKeys,
   postingKeys,
   applicationKeys,
   offerKeys,
+  interviewKeys,
 } from '../queries/recruitment-queries';
 
 // --- Requisitions ---
@@ -187,5 +195,36 @@ export function useDecideOffer() {
     mutationFn: ({ id, dto }: { id: string; dto: DecideOfferDto }) =>
       offersControllerDecide(id, dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: offerKeys.all() }),
+  });
+}
+
+// --- Interviews ---
+
+export function useScheduleInterview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: ScheduleInterviewDto) => interviewsControllerSchedule(dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: interviewKeys.all() }),
+  });
+}
+
+export function useCompleteInterview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: CompleteInterviewDto }) =>
+      interviewsControllerComplete(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: interviewKeys.all() }),
+  });
+}
+
+export function useSubmitInterviewScorecard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: SubmitScorecardDto }) =>
+      interviewsControllerScorecard(id, dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: interviewKeys.all() });
+      void qc.invalidateQueries({ queryKey: applicationKeys.all() });
+    },
   });
 }

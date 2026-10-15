@@ -5,6 +5,7 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { UpdatePayrollPeriodDtoStatus } from './updatePayrollPeriodDtoStatus';
 
 export interface UpdatePayrollPeriodDto {
   code?: string;
@@ -12,5 +13,5 @@ export interface UpdatePayrollPeriodDto {
   startsOn?: string;
   endsOn?: string;
   payDate?: string;
-  status?: string;
+  status?: UpdatePayrollPeriodDtoStatus;
 }

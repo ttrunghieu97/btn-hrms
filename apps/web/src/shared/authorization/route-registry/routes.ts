@@ -229,6 +229,10 @@ export const routeRegistry: readonly RouteDef[] = [
     permission: { anyOf: ['organization:view'] },
   },
   {
+    path: '/organization/locations',
+    permission: { anyOf: ['organization:view'] },
+  },
+  {
     path: '/attendance/history',
     permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
   },
@@ -246,6 +250,10 @@ export const routeRegistry: readonly RouteDef[] = [
   },
   {
     path: '/attendance/management/periods/:period',
+    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+  },
+  {
+    path: '/attendance/gps-logs',
     permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
   },
   {

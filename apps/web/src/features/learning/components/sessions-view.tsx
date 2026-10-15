@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
 import { sessionsQueryOptions, coursesQueryOptions } from '../api/queries';
-import { useCreateSession, usePublishSession, useCancelSession } from '../api/mutations';
+import {
+  useCreateSession,
+  usePublishSession,
+  useCancelSession,
+  useRegisterSession,
+  useCheckInSession,
+  useCompleteSession,
+} from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
 import { SESSION_STATUS_MAP, type SessionRow, type CourseRow } from './status-maps';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -60,9 +67,15 @@ export function SessionsView() {
   const createSession = useCreateSession();
   const publishSession = usePublishSession();
   const cancelSession = useCancelSession();
+  const registerSession = useRegisterSession();
+  const checkInSession = useCheckInSession();
+  const completeSession = useCompleteSession();
 
   async function handleCreate() {
-    const parsed = createSessionSchema.safeParse(form);
+    const parsed = createSessionSchema.safeParse({
+      ...form,
+      courseId: selectedCourse ?? form.courseId,
+    });
     if (!parsed.success) return;
     await createSession.mutateAsync(parsed.data);
     setOpen(false);
@@ -157,17 +170,43 @@ export function SessionsView() {
                   {row.scheduledAt ? formatDateVN(row.scheduledAt) : '—'}
                 </div>
                 {(row.status === 'scheduled' || row.status === 'in_progress') && (
-                  <div className='pt-1 flex gap-2 justify-end'>
+                  <div className='pt-1 flex flex-wrap gap-2 justify-end'>
                     {row.status === 'scheduled' && (
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => publishSession.mutate({ id: row.id })}
-                        disabled={publishSession.isPending}
-                      >
-                        Công bố
-                      </Button>
+                      <>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => registerSession.mutate({ id: row.id })}
+                          disabled={registerSession.isPending}
+                        >
+                          Đăng ký
+                        </Button>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => publishSession.mutate({ id: row.id })}
+                          disabled={publishSession.isPending}
+                        >
+                          Công bố
+                        </Button>
+                      </>
                     )}
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => checkInSession.mutate({ id: row.id })}
+                      disabled={checkInSession.isPending}
+                    >
+                      Điểm danh
+                    </Button>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => completeSession.mutate({ id: row.id })}
+                      disabled={completeSession.isPending}
+                    >
+                      Hoàn thành
+                    </Button>
                     <Button
                       variant='outline'
                       size='sm'
@@ -202,26 +241,54 @@ export function SessionsView() {
                     </TableCell>
                     <TableCell>{row.scheduledAt ? formatDateVN(row.scheduledAt) : '—'}</TableCell>
                     <TableCell className='text-right'>
-                      <div className='flex justify-end gap-1.5'>
+                      <div className='flex flex-wrap justify-end gap-1.5'>
                         {row.status === 'scheduled' ? (
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => publishSession.mutate({ id: row.id })}
-                            disabled={publishSession.isPending}
-                          >
-                            Công bố
-                          </Button>
+                          <>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => registerSession.mutate({ id: row.id })}
+                              disabled={registerSession.isPending}
+                            >
+                              Đăng ký
+                            </Button>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => publishSession.mutate({ id: row.id })}
+                              disabled={publishSession.isPending}
+                            >
+                              Công bố
+                            </Button>
+                          </>
                         ) : null}
                         {row.status === 'scheduled' || row.status === 'in_progress' ? (
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => cancelSession.mutate({ id: row.id })}
-                            disabled={cancelSession.isPending}
-                          >
-                            Hủy
-                          </Button>
+                          <>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => checkInSession.mutate({ id: row.id })}
+                              disabled={checkInSession.isPending}
+                            >
+                              Điểm danh
+                            </Button>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => completeSession.mutate({ id: row.id })}
+                              disabled={completeSession.isPending}
+                            >
+                              Hoàn thành
+                            </Button>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => cancelSession.mutate({ id: row.id })}
+                              disabled={cancelSession.isPending}
+                            >
+                              Hủy
+                            </Button>
+                          </>
                         ) : null}
                       </div>
                     </TableCell>

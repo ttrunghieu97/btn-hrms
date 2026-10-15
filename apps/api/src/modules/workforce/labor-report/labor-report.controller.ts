@@ -1,20 +1,19 @@
-import { Controller, Get, Header, Param, Query, Res } from "@nestjs/common";
+import { Controller, Get, Header, Query, Res } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { EmployeePolicies } from "../../../core/security/policies/employee.policy";
-import { LaborReportService } from "./labor-report.service";
-import { LaborReportDocxService } from "./labor-report-docx.service";
 import { LaborReportQueryDto } from "./dto/labor-report-query.dto";
+import { ExportLaborReportExcelUseCase } from "./use-cases/export-labor-report-excel.usecase";
+import { ExportLaborReportDocxUseCase } from "./use-cases/export-labor-report-docx.usecase";
 import type { Response } from "express";
-import * as fs from "fs";
 
 @ApiTags("Labor Reports")
 @ApiBearerAuth()
 @Controller("reports/labor-usage")
 export class LaborReportController {
   constructor(
-    private readonly reportService: LaborReportService,
-    private readonly reportDocxService: LaborReportDocxService,
+    private readonly exportExcelUseCase: ExportLaborReportExcelUseCase,
+    private readonly exportDocxUseCase: ExportLaborReportDocxUseCase,
   ) {}
 
   @Get()
@@ -23,11 +22,7 @@ export class LaborReportController {
   @ApiOperation({ summary: "Export Mẫu 01/PLI - Excel (.xlsx)" })
   async export(@Query() query: LaborReportQueryDto, @Res() res: Response) {
     const year = query.year ?? new Date().getFullYear();
-    const buffer = await this.reportService.generateReport(year);
-
-    const filename = `BÁO CÁO TÌNH HÌNH SD LAO ĐỘNG ${year}.xlsx`;
-    const filepath = `storage/reports/${filename}`;
-    await fs.promises.writeFile(filepath, buffer);
+    const { buffer, filename } = await this.exportExcelUseCase.execute(year);
 
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
     res.send(buffer);
@@ -39,11 +34,7 @@ export class LaborReportController {
   @ApiOperation({ summary: "Export Mẫu 01/PLI - Word (.docx)" })
   async exportDocx(@Query() query: LaborReportQueryDto, @Res() res: Response) {
     const year = query.year ?? new Date().getFullYear();
-    const buffer = await this.reportDocxService.generateReport(year);
-
-    const filename = `BÁO CÁO TÌNH HÌNH SD LAO ĐỘNG ${year}.docx`;
-    const filepath = `storage/reports/${filename}`;
-    await fs.promises.writeFile(filepath, buffer);
+    const { buffer, filename } = await this.exportDocxUseCase.execute(year);
 
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
     res.send(buffer);

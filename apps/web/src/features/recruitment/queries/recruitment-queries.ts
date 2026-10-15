@@ -33,3 +33,9 @@ export const offerKeys = {
     ['recruitment-offers', 'application', applicationId] as const,
   detail: (id: string) => ['recruitment-offers', 'detail', id] as const,
 };
+
+export const interviewKeys = {
+  all: () => ['recruitment-interviews'] as const,
+  byApplication: (applicationId: string) =>
+    ['recruitment-interviews', 'application', applicationId] as const,
+};

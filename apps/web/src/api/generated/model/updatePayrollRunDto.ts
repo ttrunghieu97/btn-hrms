@@ -9,6 +9,5 @@
 export interface UpdatePayrollRunDto {
   payrollPeriodId?: string;
   branchId?: string;
-  status?: string;
   notes?: string;
 }

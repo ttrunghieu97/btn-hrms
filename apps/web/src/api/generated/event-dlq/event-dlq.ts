@@ -29,6 +29,11 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
+import type {
+  EventDlqControllerDeleteParams,
+  EventDlqControllerListParams
+} from '../model';
+
 import { customFetch } from '../../../lib/fetcher';
 
 
@@ -63,20 +68,27 @@ export type eventDlqControllerListResponseSuccess = (eventDlqControllerListRespo
 
 export type eventDlqControllerListResponse = (eventDlqControllerListResponseSuccess)
 
-export const getEventDlqControllerListUrl = () => {
+export const getEventDlqControllerListUrl = (params?: EventDlqControllerListParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/admin/events/dead-letters`
+  return stringifiedParams.length > 0 ? `/api/v1/admin/events/dead-letters?${stringifiedParams}` : `/api/v1/admin/events/dead-letters`
 }
 
 /**
- * @summary List dead-lettered outbox events
+ * @summary List dead-lettered outbox events with pagination
  */
-export const eventDlqControllerList = async ( options?: Parameters<typeof customFetch>[1]): Promise<eventDlqControllerListResponse> => {
+export const eventDlqControllerList = async (params?: EventDlqControllerListParams, options?: Parameters<typeof customFetch>[1]): Promise<eventDlqControllerListResponse> => {
 
-  return customFetch<eventDlqControllerListResponse>(getEventDlqControllerListUrl(),
+  return customFetch<eventDlqControllerListResponse>(getEventDlqControllerListUrl(params),
   {
     ...options,
     method: 'GET'
@@ -89,29 +101,29 @@ export const eventDlqControllerList = async ( options?: Parameters<typeof custom
 
 
 
-export const getEventDlqControllerListInfiniteQueryKey = () => {
+export const getEventDlqControllerListInfiniteQueryKey = (params?: EventDlqControllerListParams,) => {
     return [
-    'infinite', `/api/v1/admin/events/dead-letters`
+    'infinite', `/api/v1/admin/events/dead-letters`, ...(params ? [params] : [])
     ] as const;
     }
 
-export const getEventDlqControllerListQueryKey = () => {
+export const getEventDlqControllerListQueryKey = (params?: EventDlqControllerListParams,) => {
     return [
-    `/api/v1/admin/events/dead-letters`
+    `/api/v1/admin/events/dead-letters`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getEventDlqControllerListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getEventDlqControllerListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>(params?: EventDlqControllerListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerListInfiniteQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerListInfiniteQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerList>>> = ({ signal }) => eventDlqControllerList({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerList>>> = ({ signal }) => eventDlqControllerList(params, { signal, ...requestOptions });
 
 
 
@@ -125,7 +137,7 @@ export type EventDlqControllerListInfiniteQueryError = unknown
 
 
 export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>(
-  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
+ params: undefined |  EventDlqControllerListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof eventDlqControllerList>>,
           TError,
@@ -135,7 +147,7 @@ export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<R
  , queryClient?: QueryClient
   ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof eventDlqControllerList>>,
           TError,
@@ -145,19 +157,19 @@ export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<R
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List dead-lettered outbox events
+ * @summary List dead-lettered outbox events with pagination
  */
 
 export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerList>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getEventDlqControllerListInfiniteQueryOptions(options)
+  const queryOptions = getEventDlqControllerListInfiniteQueryOptions(params,options)
 
   const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -169,16 +181,16 @@ export function useEventDlqControllerListInfinite<TData = InfiniteData<Awaited<R
 
 
 
-export const getEventDlqControllerListQueryOptions = <TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getEventDlqControllerListQueryOptions = <TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>(params?: EventDlqControllerListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerListQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerListQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerList>>> = ({ signal }) => eventDlqControllerList({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerList>>> = ({ signal }) => eventDlqControllerList(params, { signal, ...requestOptions });
 
 
 
@@ -192,7 +204,7 @@ export type EventDlqControllerListQueryError = unknown
 
 
 export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
+ params: undefined |  EventDlqControllerListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof eventDlqControllerList>>,
           TError,
@@ -202,7 +214,7 @@ export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof even
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof eventDlqControllerList>>,
           TError,
@@ -212,19 +224,19 @@ export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof even
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List dead-lettered outbox events
+ * @summary List dead-lettered outbox events with pagination
  */
 
 export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof eventDlqControllerList>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ params?: EventDlqControllerListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerList>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getEventDlqControllerListQueryOptions(options)
+  const queryOptions = getEventDlqControllerListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -236,7 +248,286 @@ export function useEventDlqControllerList<TData = Awaited<ReturnType<typeof even
 
 
 
-export type eventDlqControllerReplayResponse201 = {
+export type eventDlqControllerInspectResponse200 = {
+  data: void
+  status: 200
+}
+
+export type eventDlqControllerInspectResponseSuccess = (eventDlqControllerInspectResponse200) & {
+  headers: Headers;
+};
+;
+
+export type eventDlqControllerInspectResponse = (eventDlqControllerInspectResponseSuccess)
+
+export const getEventDlqControllerInspectUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/events/dead-letters/${id}`
+}
+
+/**
+ * @summary Inspect a dead-lettered event by ID
+ */
+export const eventDlqControllerInspect = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<eventDlqControllerInspectResponse> => {
+
+  return customFetch<eventDlqControllerInspectResponse>(getEventDlqControllerInspectUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getEventDlqControllerInspectInfiniteQueryKey = (id: string,) => {
+    return [
+    'infinite', `/api/v1/admin/events/dead-letters/${id}`
+    ] as const;
+    }
+
+export const getEventDlqControllerInspectQueryKey = (id: string,) => {
+    return [
+    `/api/v1/admin/events/dead-letters/${id}`
+    ] as const;
+    }
+
+
+export const getEventDlqControllerInspectInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerInspect>>>, TError = unknown>(id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerInspectInfiniteQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerInspect>>> = ({ signal }) => eventDlqControllerInspect(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EventDlqControllerInspectInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof eventDlqControllerInspect>>>
+export type EventDlqControllerInspectInfiniteQueryError = unknown
+
+
+export function useEventDlqControllerInspectInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerInspect>>>, TError = unknown>(
+ id: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>,
+          TError,
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEventDlqControllerInspectInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerInspect>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>,
+          TError,
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEventDlqControllerInspectInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerInspect>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Inspect a dead-lettered event by ID
+ */
+
+export function useEventDlqControllerInspectInfinite<TData = InfiniteData<Awaited<ReturnType<typeof eventDlqControllerInspect>>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEventDlqControllerInspectInfiniteQueryOptions(id,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getEventDlqControllerInspectQueryOptions = <TData = Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getEventDlqControllerInspectQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof eventDlqControllerInspect>>> = ({ signal }) => eventDlqControllerInspect(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type EventDlqControllerInspectQueryResult = NonNullable<Awaited<ReturnType<typeof eventDlqControllerInspect>>>
+export type EventDlqControllerInspectQueryError = unknown
+
+
+export function useEventDlqControllerInspect<TData = Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>,
+          TError,
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEventDlqControllerInspect<TData = Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>,
+          TError,
+          Awaited<ReturnType<typeof eventDlqControllerInspect>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useEventDlqControllerInspect<TData = Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Inspect a dead-lettered event by ID
+ */
+
+export function useEventDlqControllerInspect<TData = Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof eventDlqControllerInspect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getEventDlqControllerInspectQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type eventDlqControllerDeleteResponse200 = {
+  data: void
+  status: 200
+}
+
+export type eventDlqControllerDeleteResponseSuccess = (eventDlqControllerDeleteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type eventDlqControllerDeleteResponse = (eventDlqControllerDeleteResponseSuccess)
+
+export const getEventDlqControllerDeleteUrl = (id: string,
+    params: EventDlqControllerDeleteParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/admin/events/dead-letters/${id}?${stringifiedParams}` : `/api/v1/admin/events/dead-letters/${id}`
+}
+
+/**
+ * @summary Discard/delete a dead-lettered event
+ */
+export const eventDlqControllerDelete = async (id: string,
+    params: EventDlqControllerDeleteParams, options?: Parameters<typeof customFetch>[1]): Promise<eventDlqControllerDeleteResponse> => {
+
+  return customFetch<eventDlqControllerDeleteResponse>(getEventDlqControllerDeleteUrl(id,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getEventDlqControllerDeleteMutationKey = () => ['eventDlqControllerDelete'] as const;
+
+export const getEventDlqControllerDeleteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDelete>>, TError,EventDlqControllerDeleteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDelete>>, TError,EventDlqControllerDeleteMutationVariables, TContext> => {
+
+const mutationKey = getEventDlqControllerDeleteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof eventDlqControllerDelete>>, EventDlqControllerDeleteMutationVariables> = (props) => {
+          const {id,params} = props ?? {};
+
+          return  eventDlqControllerDelete(id,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EventDlqControllerDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof eventDlqControllerDelete>>>
+
+    export type EventDlqControllerDeleteMutationError = unknown
+    export type EventDlqControllerDeleteMutationVariables = {id: string;params: EventDlqControllerDeleteParams}
+
+    /**
+ * @summary Discard/delete a dead-lettered event
+ */
+export const useEventDlqControllerDelete = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDelete>>, TError,EventDlqControllerDeleteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof eventDlqControllerDelete>>,
+        TError,
+        EventDlqControllerDeleteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEventDlqControllerDeleteMutationOptions(options), queryClient);
+    }
+    export type eventDlqControllerReplayResponse201 = {
   data: void
   status: 201
 }
@@ -405,4 +696,89 @@ export const useEventDlqControllerReplayAll = <TError = unknown,
         TContext
       > => {
       return useMutation(getEventDlqControllerReplayAllMutationOptions(options), queryClient);
+    }
+    export type eventDlqControllerDiscardResponse201 = {
+  data: void
+  status: 201
+}
+
+export type eventDlqControllerDiscardResponseSuccess = (eventDlqControllerDiscardResponse201) & {
+  headers: Headers;
+};
+;
+
+export type eventDlqControllerDiscardResponse = (eventDlqControllerDiscardResponseSuccess)
+
+export const getEventDlqControllerDiscardUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/events/dead-letters/${id}/discard`
+}
+
+/**
+ * @summary Discard a dead-lettered event
+ */
+export const eventDlqControllerDiscard = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<eventDlqControllerDiscardResponse> => {
+
+  return customFetch<eventDlqControllerDiscardResponse>(getEventDlqControllerDiscardUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEventDlqControllerDiscardMutationKey = () => ['eventDlqControllerDiscard'] as const;
+
+export const getEventDlqControllerDiscardMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDiscard>>, TError,EventDlqControllerDiscardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDiscard>>, TError,EventDlqControllerDiscardMutationVariables, TContext> => {
+
+const mutationKey = getEventDlqControllerDiscardMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof eventDlqControllerDiscard>>, EventDlqControllerDiscardMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  eventDlqControllerDiscard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EventDlqControllerDiscardMutationResult = NonNullable<Awaited<ReturnType<typeof eventDlqControllerDiscard>>>
+
+    export type EventDlqControllerDiscardMutationError = unknown
+    export type EventDlqControllerDiscardMutationVariables = {id: string}
+
+    /**
+ * @summary Discard a dead-lettered event
+ */
+export const useEventDlqControllerDiscard = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eventDlqControllerDiscard>>, TError,EventDlqControllerDiscardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof eventDlqControllerDiscard>>,
+        TError,
+        EventDlqControllerDiscardMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEventDlqControllerDiscardMutationOptions(options), queryClient);
     }

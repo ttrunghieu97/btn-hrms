@@ -13,10 +13,15 @@ const PositionFormSheet = dynamic(
   () => import('./position-form-sheet').then((mod) => mod.PositionFormSheet),
   { ssr: false }
 );
+const LocationFormSheet = dynamic(
+  () => import('./location-form-sheet').then((mod) => mod.LocationFormSheet),
+  { ssr: false }
+);
 
 export function DepartmentsSheetsController() {
   const pathname = usePathname();
   const isPositions = pathname === '/organization/positions';
+  const isLocations = pathname === '/organization/locations';
 
   const [params, setParams] = useQueryStates({
     create: parseAsString,
@@ -31,7 +36,14 @@ export function DepartmentsSheetsController() {
 
   return (
     <>
-      {isPositions ? (
+      {isLocations ? (
+        <LocationFormSheet
+          key={params.detail ?? 'new-loc'}
+          locationId={params.detail ?? undefined}
+          open={!!params.create || !!params.detail}
+          onOpenChange={handleClose}
+        />
+      ) : isPositions ? (
         <PositionFormSheet
           key={params.detail ?? 'new-pos'}
           positionId={params.detail ?? undefined}

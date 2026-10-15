@@ -40,6 +40,7 @@ export default function AttendanceLayout({ children }: { children: React.ReactNo
 
   const tabs = [
     { href: '/attendance/management', label: 'Quản lý bảng công' },
+    { href: '/attendance/gps-logs', label: 'Nhật ký định vị GPS' },
   ];
 
   return (

@@ -1,31 +1,73 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AuditTimelineView,
   AuditFilters,
   AuditSummaryCards,
+  useAuditLogsQuery,
+  type AuditFilterValues,
 } from '@/features/audit';
-import type { AuditEvent } from '@/features/audit';
+import type { AuditLogsControllerFindAllParams } from '@/api/generated/model';
 
-const mockAuditEvents: AuditEvent[] = [
-  { id: 'ae-1', action: 'permission.grant', actor: { id: 'u-1', name: 'Admin User' }, resource: { type: 'permission', id: 'p-1', label: 'payroll:view' }, target: 'role:hr_manager', severity: 'warning', timestamp: new Date(Date.now() - 900000).toISOString(), requestId: 'req-a1b2c3' },
-  { id: 'ae-2', action: 'login.failure', actor: { id: 'u-3', name: 'unknown' }, severity: 'critical', timestamp: new Date(Date.now() - 1800000).toISOString(), requestId: 'req-d4e5f6' },
-  { id: 'ae-3', action: 'employee.update', actor: { id: 'u-2', name: 'HR Manager' }, resource: { type: 'employee', id: 'emp-0123', label: 'Nguyen Van A' }, severity: 'info', timestamp: new Date(Date.now() - 3600000).toISOString(), before: { salary_grade: 'G5' }, after: { salary_grade: 'G6' } },
-  { id: 'ae-4', action: 'role.assign', actor: { id: 'u-1', name: 'Admin User' }, resource: { type: 'role', id: 'r-2', label: 'Manager' }, target: 'user:u-4', severity: 'info', timestamp: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'ae-5', action: 'approval.approve', actor: { id: 'u-5', name: 'Director' }, resource: { type: 'leave', id: 'lv-42', label: 'Annual Leave' }, severity: 'info', timestamp: new Date(Date.now() - 14400000).toISOString() },
-  { id: 'ae-6', action: 'permission.revoke', actor: { id: 'u-1', name: 'Admin User' }, resource: { type: 'permission', id: 'p-3', label: 'attendance:manage' }, target: 'role:intern', severity: 'warning', timestamp: new Date(Date.now() - 28800000).toISOString() },
-  { id: 'ae-7', action: 'login.success', actor: { id: 'u-6', name: 'Employee' }, severity: 'info', timestamp: new Date(Date.now() - 43200000).toISOString() },
-  { id: 'ae-8', action: 'contract.create', actor: { id: 'u-2', name: 'HR Manager' }, resource: { type: 'contract', id: 'ct-101', label: 'Probation Contract' }, severity: 'info', timestamp: new Date(Date.now() - 86400000).toISOString() },
-];
+function periodToFromIso(period?: string): string | undefined {
+  const now = Date.now();
+  switch (period) {
+    case '24h':
+      return new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    case '7d':
+      return new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    case '30d':
+      return new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+    case '90d':
+      return new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
+    default:
+      return undefined;
+  }
+}
 
 export default function AdminAuditPage() {
-  const summaryData = useMemo(() => ({
-    failedLogins: 24,
-    permissionChanges: 8,
-    roleAssignments: 15,
-    policyUpdates: 3,
-  }), []);
+  const [filters, setFilters] = useState<AuditFilterValues>({ period: '7d' });
+
+  const queryParams = useMemo<AuditLogsControllerFindAllParams>(() => {
+    const from = periodToFromIso(filters.period);
+    return {
+      limit: 100,
+      ...(filters.search ? { search: filters.search } : {}),
+      ...(filters.action ? { action: filters.action } : {}),
+      ...(filters.entity ? { entity: filters.entity } : {}),
+      ...(from ? { from } : {}),
+    };
+  }, [filters]);
+
+  const { data: allEvents = [], isLoading } = useAuditLogsQuery(queryParams);
+
+  const filteredEvents = useMemo(() => {
+    if (!filters.severity) return allEvents;
+    return allEvents.filter((e) => e.severity === filters.severity);
+  }, [allEvents, filters.severity]);
+
+  const summaryData = useMemo(() => {
+    const failedLogins = allEvents.filter(
+      (e) => e.action.includes('login') && e.severity === 'critical',
+    ).length;
+    const permissionChanges = allEvents.filter((e) =>
+      e.action.includes('permission'),
+    ).length;
+    const roleAssignments = allEvents.filter((e) =>
+      e.action.includes('role'),
+    ).length;
+    const policyUpdates = allEvents.filter(
+      (e) => e.action.includes('policy') || e.action.includes('approval'),
+    ).length;
+
+    return {
+      failedLogins,
+      permissionChanges,
+      roleAssignments,
+      policyUpdates,
+    };
+  }, [allEvents]);
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-6 px-4">
@@ -38,13 +80,13 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Summary cards */}
-      <AuditSummaryCards data={summaryData} />
+      <AuditSummaryCards data={summaryData} isLoading={isLoading} />
 
       {/* Filters */}
-      <AuditFilters onFilter={() => {}} />
+      <AuditFilters onFilter={setFilters} />
 
       {/* Timeline */}
-      <AuditTimelineView events={mockAuditEvents} />
+      <AuditTimelineView events={filteredEvents} isLoading={isLoading} />
     </div>
   );
 }

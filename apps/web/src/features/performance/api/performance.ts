@@ -76,3 +76,16 @@ export async function assignReviewer(dto: AssignReviewerPayload) {
     body: JSON.stringify(dto),
   });
 }
+
+export interface SubmitReviewPayload {
+  overallComment?: string;
+  ratings?: Array<{ competencyId: string; score: number; comment?: string }>;
+}
+
+export async function submitPerformanceReview(assignmentId: string, dto: SubmitReviewPayload) {
+  return customFetch(`${BASE}/review-assignments/${assignmentId}/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  });
+}

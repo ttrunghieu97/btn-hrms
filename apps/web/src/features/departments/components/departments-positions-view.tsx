@@ -7,13 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { DepartmentsTable } from './departments-table';
 import { PositionsTable } from './positions-table';
+import { LocationsTable } from './locations-table';
 import { departmentUiCopy } from '@/lib/app-copy';
-import type { DepartmentRow } from '../queries/department-queries';
+import type { DepartmentRow, LocationListItemDto } from '../queries/department-queries';
 import type { PositionListItemDto } from '@/api/generated/model';
 
 export function DepartmentsPositionsView() {
   const pathname = usePathname();
   const isPositions = pathname === '/organization/positions';
+  const isLocations = pathname === '/organization/locations';
 
   const [, setParams] = useQueryStates({
     create: parseAsString,
@@ -28,13 +30,19 @@ export function DepartmentsPositionsView() {
     setParams({ detail: row.id, create: null }, { shallow: true }).catch(() => undefined);
   }
 
+  function handleLocRowClick(row: LocationListItemDto) {
+    setParams({ detail: row.id, create: null }, { shallow: true }).catch(() => undefined);
+  }
+
   function handleCreateClick() {
     setParams({ create: 'true', detail: null }, { shallow: true }).catch(() => undefined);
   }
 
-  const createLabel = !isPositions
-    ? departmentUiCopy.tabs.addDepartment
-    : departmentUiCopy.tabs.addPosition;
+  const createLabel = isLocations
+    ? 'Thêm địa điểm'
+    : isPositions
+      ? departmentUiCopy.tabs.addPosition
+      : departmentUiCopy.tabs.addDepartment;
 
   return (
     <div className='flex flex-1 flex-col gap-4 min-h-0'>
@@ -46,10 +54,12 @@ export function DepartmentsPositionsView() {
       </div>
 
       <div className='flex flex-1 flex-col min-h-0 overflow-hidden'>
-        {!isPositions ? (
-          <DepartmentsTable onRowClick={handleDeptRowClick} />
-        ) : (
+        {isLocations ? (
+          <LocationsTable onRowClick={handleLocRowClick} />
+        ) : isPositions ? (
           <PositionsTable onRowClick={handlePosRowClick} />
+        ) : (
+          <DepartmentsTable onRowClick={handleDeptRowClick} />
         )}
       </div>
     </div>

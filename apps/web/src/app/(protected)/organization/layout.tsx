@@ -9,6 +9,7 @@ import { DepartmentsSheetsController } from '@/features/departments';
 const tabs = [
   { href: '/organization/departments', label: routeLabels.departments },
   { href: '/organization/positions', label: routeLabels.positions },
+  { href: '/organization/locations', label: 'Địa điểm làm việc' },
 ];
 
 export default function OrganizationLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +17,8 @@ export default function OrganizationLayout({ children }: { children: React.React
   const isMainTabRoute =
     pathname === '/organization' ||
     pathname === '/organization/departments' ||
-    pathname === '/organization/positions';
+    pathname === '/organization/positions' ||
+    pathname === '/organization/locations';
 
   if (!isMainTabRoute) {
     return (

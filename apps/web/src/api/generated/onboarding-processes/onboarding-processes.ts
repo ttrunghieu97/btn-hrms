@@ -7,6 +7,7 @@
  */
 import {
   useInfiniteQuery,
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
@@ -15,12 +16,15 @@ import type {
   DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
   InfiniteData,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
   UseInfiniteQueryOptions,
   UseInfiniteQueryResult,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -428,3 +432,351 @@ export function useBoardingProcessControllerFindOne<TData = Awaited<ReturnType<t
 
 
 
+export type boardingProcessControllerCompleteItemResponse201 = {
+  data: void
+  status: 201
+}
+
+export type boardingProcessControllerCompleteItemResponseSuccess = (boardingProcessControllerCompleteItemResponse201) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerCompleteItemResponse = (boardingProcessControllerCompleteItemResponseSuccess)
+
+export const getBoardingProcessControllerCompleteItemUrl = (id: string,
+    itemId: string,) => {
+
+
+
+
+  return `/api/v1/onboarding/processes/${id}/items/${itemId}/complete`
+}
+
+/**
+ * @summary Mark an onboarding checklist item as completed
+ */
+export const boardingProcessControllerCompleteItem = async (id: string,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<boardingProcessControllerCompleteItemResponse> => {
+
+  return customFetch<boardingProcessControllerCompleteItemResponse>(getBoardingProcessControllerCompleteItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerCompleteItemMutationKey = () => ['boardingProcessControllerCompleteItem'] as const;
+
+export const getBoardingProcessControllerCompleteItemMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>, TError,BoardingProcessControllerCompleteItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>, TError,BoardingProcessControllerCompleteItemMutationVariables, TContext> => {
+
+const mutationKey = getBoardingProcessControllerCompleteItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>, BoardingProcessControllerCompleteItemMutationVariables> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  boardingProcessControllerCompleteItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BoardingProcessControllerCompleteItemMutationResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>>
+
+    export type BoardingProcessControllerCompleteItemMutationError = unknown
+    export type BoardingProcessControllerCompleteItemMutationVariables = {id: string;itemId: string}
+
+    /**
+ * @summary Mark an onboarding checklist item as completed
+ */
+export const useBoardingProcessControllerCompleteItem = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>, TError,BoardingProcessControllerCompleteItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof boardingProcessControllerCompleteItem>>,
+        TError,
+        BoardingProcessControllerCompleteItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBoardingProcessControllerCompleteItemMutationOptions(options), queryClient);
+    }
+    export type boardingProcessControllerReopenItemResponse201 = {
+  data: void
+  status: 201
+}
+
+export type boardingProcessControllerReopenItemResponseSuccess = (boardingProcessControllerReopenItemResponse201) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerReopenItemResponse = (boardingProcessControllerReopenItemResponseSuccess)
+
+export const getBoardingProcessControllerReopenItemUrl = (id: string,
+    itemId: string,) => {
+
+
+
+
+  return `/api/v1/onboarding/processes/${id}/items/${itemId}/reopen`
+}
+
+/**
+ * @summary Reopen a completed onboarding checklist item
+ */
+export const boardingProcessControllerReopenItem = async (id: string,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<boardingProcessControllerReopenItemResponse> => {
+
+  return customFetch<boardingProcessControllerReopenItemResponse>(getBoardingProcessControllerReopenItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerReopenItemMutationKey = () => ['boardingProcessControllerReopenItem'] as const;
+
+export const getBoardingProcessControllerReopenItemMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>, TError,BoardingProcessControllerReopenItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>, TError,BoardingProcessControllerReopenItemMutationVariables, TContext> => {
+
+const mutationKey = getBoardingProcessControllerReopenItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>, BoardingProcessControllerReopenItemMutationVariables> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  boardingProcessControllerReopenItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BoardingProcessControllerReopenItemMutationResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>>
+
+    export type BoardingProcessControllerReopenItemMutationError = unknown
+    export type BoardingProcessControllerReopenItemMutationVariables = {id: string;itemId: string}
+
+    /**
+ * @summary Reopen a completed onboarding checklist item
+ */
+export const useBoardingProcessControllerReopenItem = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>, TError,BoardingProcessControllerReopenItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof boardingProcessControllerReopenItem>>,
+        TError,
+        BoardingProcessControllerReopenItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBoardingProcessControllerReopenItemMutationOptions(options), queryClient);
+    }
+    export type boardingProcessControllerSkipItemResponse201 = {
+  data: void
+  status: 201
+}
+
+export type boardingProcessControllerSkipItemResponseSuccess = (boardingProcessControllerSkipItemResponse201) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerSkipItemResponse = (boardingProcessControllerSkipItemResponseSuccess)
+
+export const getBoardingProcessControllerSkipItemUrl = (id: string,
+    itemId: string,) => {
+
+
+
+
+  return `/api/v1/onboarding/processes/${id}/items/${itemId}/skip`
+}
+
+/**
+ * @summary Skip a non-mandatory onboarding checklist item
+ */
+export const boardingProcessControllerSkipItem = async (id: string,
+    itemId: string, options?: Parameters<typeof customFetch>[1]): Promise<boardingProcessControllerSkipItemResponse> => {
+
+  return customFetch<boardingProcessControllerSkipItemResponse>(getBoardingProcessControllerSkipItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerSkipItemMutationKey = () => ['boardingProcessControllerSkipItem'] as const;
+
+export const getBoardingProcessControllerSkipItemMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>, TError,BoardingProcessControllerSkipItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>, TError,BoardingProcessControllerSkipItemMutationVariables, TContext> => {
+
+const mutationKey = getBoardingProcessControllerSkipItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>, BoardingProcessControllerSkipItemMutationVariables> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  boardingProcessControllerSkipItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BoardingProcessControllerSkipItemMutationResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>>
+
+    export type BoardingProcessControllerSkipItemMutationError = unknown
+    export type BoardingProcessControllerSkipItemMutationVariables = {id: string;itemId: string}
+
+    /**
+ * @summary Skip a non-mandatory onboarding checklist item
+ */
+export const useBoardingProcessControllerSkipItem = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>, TError,BoardingProcessControllerSkipItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof boardingProcessControllerSkipItem>>,
+        TError,
+        BoardingProcessControllerSkipItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBoardingProcessControllerSkipItemMutationOptions(options), queryClient);
+    }
+    export type boardingProcessControllerUpdateTaskResponse200 = {
+  data: void
+  status: 200
+}
+
+export type boardingProcessControllerUpdateTaskResponseSuccess = (boardingProcessControllerUpdateTaskResponse200) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerUpdateTaskResponse = (boardingProcessControllerUpdateTaskResponseSuccess)
+
+export const getBoardingProcessControllerUpdateTaskUrl = (id: string,
+    taskId: string,) => {
+
+
+
+
+  return `/api/v1/onboarding/processes/${id}/tasks/${taskId}`
+}
+
+/**
+ * @summary Complete, reopen, or skip an onboarding task (alias)
+ */
+export const boardingProcessControllerUpdateTask = async (id: string,
+    taskId: string, options?: Parameters<typeof customFetch>[1]): Promise<boardingProcessControllerUpdateTaskResponse> => {
+
+  return customFetch<boardingProcessControllerUpdateTaskResponse>(getBoardingProcessControllerUpdateTaskUrl(id,taskId),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerUpdateTaskMutationKey = () => ['boardingProcessControllerUpdateTask'] as const;
+
+export const getBoardingProcessControllerUpdateTaskMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>, TError,BoardingProcessControllerUpdateTaskMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>, TError,BoardingProcessControllerUpdateTaskMutationVariables, TContext> => {
+
+const mutationKey = getBoardingProcessControllerUpdateTaskMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>, BoardingProcessControllerUpdateTaskMutationVariables> = (props) => {
+          const {id,taskId} = props ?? {};
+
+          return  boardingProcessControllerUpdateTask(id,taskId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BoardingProcessControllerUpdateTaskMutationResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>>
+
+    export type BoardingProcessControllerUpdateTaskMutationError = unknown
+    export type BoardingProcessControllerUpdateTaskMutationVariables = {id: string;taskId: string}
+
+    /**
+ * @summary Complete, reopen, or skip an onboarding task (alias)
+ */
+export const useBoardingProcessControllerUpdateTask = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>, TError,BoardingProcessControllerUpdateTaskMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof boardingProcessControllerUpdateTask>>,
+        TError,
+        BoardingProcessControllerUpdateTaskMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBoardingProcessControllerUpdateTaskMutationOptions(options), queryClient);
+    }

@@ -19,7 +19,6 @@ import {
 } from '@/lib/mutation-feedback';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,6 +41,7 @@ import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, recruitmentUiCopy } from '@/lib/app-copy';
 import { OffersPanel } from './offers-view';
+import { InterviewsPanel } from './interviews-view';
 
 const copy = recruitmentUiCopy.candidates;
 
@@ -254,6 +254,11 @@ function ApplicationDetailDialog({
                 </Button>
               </div>
             ) : null}
+
+            <section className='flex flex-col gap-2'>
+              <h3 className='text-sm font-semibold'>{copy.sections.interviews}</h3>
+              <InterviewsPanel applicationId={applicationId} />
+            </section>
 
             <ScorecardsSection app={app} />
 

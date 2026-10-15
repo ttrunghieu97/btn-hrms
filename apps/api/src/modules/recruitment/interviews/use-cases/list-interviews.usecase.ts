@@ -7,6 +7,17 @@ export class ListInterviewsUseCase {
   constructor(private readonly repo: InterviewRepository) {}
   async execute(applicationId: string): Promise<InterviewResponseDto[]> {
     const rows = await this.repo.findByApplication(applicationId);
-    return rows.map((r) => ({ id: r.id, applicationId: r.applicationId, title: r.title, interviewType: r.interviewType, status: r.status, scheduledAt: r.scheduledAt, durationMinutes: r.durationMinutes }));
+    return rows.map((r) => ({
+      id: r.id,
+      applicationId: r.applicationId,
+      title: r.title,
+      interviewType: r.interviewType,
+      status: r.status,
+      scheduledAt: r.scheduledAt,
+      durationMinutes: r.durationMinutes,
+      location: r.location,
+      meetingLink: r.meetingLink,
+      notes: r.notes,
+    }));
   }
 }

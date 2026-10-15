@@ -16,6 +16,8 @@ import { ListNotificationTemplatesUseCase } from "./use-cases/list-notification-
 import { GetNotificationPreferencesUseCase } from "./use-cases/get-notification-preferences.usecase";
 import { UpdateNotificationPreferencesUseCase } from "./use-cases/update-notification-preferences.usecase";
 import { GetUserNotificationsUseCase } from "./use-cases/get-user-notifications.usecase";
+import { MarkNotificationReadUseCase } from "./use-cases/mark-notification-read.usecase";
+import { MarkAllNotificationsReadUseCase } from "./use-cases/mark-all-notifications-read.usecase";
 import { SendNotificationUseCase } from "./use-cases/send-notification.usecase";
 
 @Module({
@@ -36,6 +38,8 @@ import { SendNotificationUseCase } from "./use-cases/send-notification.usecase";
     GetNotificationPreferencesUseCase,
     UpdateNotificationPreferencesUseCase,
     GetUserNotificationsUseCase,
+    MarkNotificationReadUseCase,
+    MarkAllNotificationsReadUseCase,
     SendNotificationUseCase,
   ],
   exports: [

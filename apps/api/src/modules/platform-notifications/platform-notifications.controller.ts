@@ -25,6 +25,8 @@ import { ListNotificationTemplatesUseCase } from "./use-cases/list-notification-
 import { GetNotificationPreferencesUseCase } from "./use-cases/get-notification-preferences.usecase";
 import { UpdateNotificationPreferencesUseCase } from "./use-cases/update-notification-preferences.usecase";
 import { GetUserNotificationsUseCase } from "./use-cases/get-user-notifications.usecase";
+import { MarkNotificationReadUseCase } from "./use-cases/mark-notification-read.usecase";
+import { MarkAllNotificationsReadUseCase } from "./use-cases/mark-all-notifications-read.usecase";
 import { SendNotificationUseCase } from "./use-cases/send-notification.usecase";
 
 @ApiTags("Platform Notifications")
@@ -40,6 +42,8 @@ export class PlatformNotificationsController {
     private readonly getPreferencesUseCase: GetNotificationPreferencesUseCase,
     private readonly updatePreferencesUseCase: UpdateNotificationPreferencesUseCase,
     private readonly getUserNotificationsUseCase: GetUserNotificationsUseCase,
+    private readonly markNotificationReadUseCase: MarkNotificationReadUseCase,
+    private readonly markAllNotificationsReadUseCase: MarkAllNotificationsReadUseCase,
     private readonly sendNotificationUseCase: SendNotificationUseCase,
   ) {}
 
@@ -105,6 +109,25 @@ export class PlatformNotificationsController {
   getMyNotifications(@Req() req: { user: AuthUser }) {
     const userId = req.user.id;
     return this.getUserNotificationsUseCase.execute(userId);
+  }
+
+  @Patch("my-notifications/read-all")
+  @RequirePermission("notifications:view:self")
+  @ApiOperation({ summary: "Mark all current user's notifications as read" })
+  markAllNotificationsRead(@Req() req: { user: AuthUser }) {
+    const userId = req.user.id;
+    return this.markAllNotificationsReadUseCase.execute(userId);
+  }
+
+  @Patch("my-notifications/:id/read")
+  @RequirePermission("notifications:view:self")
+  @ApiOperation({ summary: "Mark a notification as read" })
+  markNotificationRead(
+    @Req() req: { user: AuthUser },
+    @Param("id") id: string,
+  ) {
+    const userId = req.user.id;
+    return this.markNotificationReadUseCase.execute(userId, id);
   }
 
   // --- Internal / System endpoints ---

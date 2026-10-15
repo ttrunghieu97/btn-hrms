@@ -41,6 +41,13 @@ export const OFFER_STATUS_MAP: StatusMap = {
   withdrawn: { label: recruitmentUiCopy.offerStatus.withdrawn, variant: 'outline' },
 };
 
+export const INTERVIEW_STATUS_MAP: StatusMap = {
+  scheduled: { label: recruitmentUiCopy.interviews.status.scheduled, variant: 'secondary' },
+  rescheduled: { label: recruitmentUiCopy.interviews.status.rescheduled, variant: 'secondary' },
+  completed: { label: recruitmentUiCopy.interviews.status.completed, variant: 'default' },
+  cancelled: { label: recruitmentUiCopy.interviews.status.cancelled, variant: 'outline' },
+};
+
 /** Row shapes returned by the recruitment API (mirrors backend mappers). */
 export interface RequisitionRow {
   id: string;
@@ -112,4 +119,17 @@ export interface OfferRow {
   status?: string;
   decidedAt?: string | null;
   createdAt?: string;
+}
+
+export interface InterviewRow {
+  id: string;
+  applicationId?: string;
+  title?: string;
+  interviewType?: 'phone' | 'video' | 'in_person' | 'technical' | 'panel' | string;
+  status?: string;
+  scheduledAt?: string;
+  durationMinutes?: number | null;
+  location?: string | null;
+  meetingLink?: string | null;
+  notes?: string | null;
 }

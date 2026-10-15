@@ -25,6 +25,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { employeesControllerFindOne } from '@/api/generated/employees-hr-management/employees-hr-management';
 import { permissions } from '@/lib/permissions';
 import { createTableSearchParams } from '@/lib/pagination';
+import { LaborReportExportDialog } from '../dialogs/labor-report-export-dialog';
 
 const EMPLOYEE_STATUS_TABS = [
   {
@@ -285,6 +286,7 @@ export function EmployeesTable() {
           onRowMouseEnter={(row) => prefetchEmployeeDetail(row.original.id)}
         >
           <DataTableToolbar table={table}>
+            <LaborReportExportDialog />
             <Button
               type='button'
               variant='outline'

@@ -1,5 +1,5 @@
 import {  Inject , Injectable } from "@nestjs/common";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../infrastructure/database/database.provider";
 import { AppDatabase } from "../../../infrastructure/database/database-client.type";
 import {
@@ -182,6 +182,54 @@ export class PlatformNotificationsRepository {
       where: eq(notifications.userId, userId),
       orderBy: (n, { desc }) => [desc(n.createdAt)],
     });
+  }
+
+  async markNotificationRead(userId: string, id: string) {
+    const existing = await this.db.query.notifications.findFirst({
+      where: and(eq(notifications.id, id), eq(notifications.userId, userId)),
+    });
+    if (!existing) return null;
+
+    const existingMeta =
+      existing.metadata && typeof existing.metadata === "object"
+        ? (existing.metadata as Record<string, unknown>)
+        : {};
+
+    const [row] = await this.db
+      .update(notifications)
+      .set({
+        metadata: {
+          ...existingMeta,
+          isRead: true,
+          readAt: new Date().toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(notifications.id, id))
+      .returning();
+    return row ?? null;
+  }
+
+  async markAllNotificationsRead(userId: string) {
+    const rows = await this.listUserNotifications(userId);
+    const readAt = new Date().toISOString();
+    await Promise.all(
+      rows.map((row) => {
+        const meta =
+          row.metadata && typeof row.metadata === "object"
+            ? (row.metadata as Record<string, unknown>)
+            : {};
+        if (meta.isRead === true) return Promise.resolve();
+        return this.db
+          .update(notifications)
+          .set({
+            metadata: { ...meta, isRead: true, readAt },
+            updatedAt: new Date(),
+          })
+          .where(eq(notifications.id, row.id));
+      }),
+    );
+    return { ok: true };
   }
 }
 

@@ -1096,7 +1096,177 @@ export function usePlatformNotificationsControllerGetMyNotifications<TData = Awa
 
 
 
-export type platformNotificationsControllerSendNotificationResponse201 = {
+export type platformNotificationsControllerMarkAllNotificationsReadResponse200 = {
+  data: void
+  status: 200
+}
+
+export type platformNotificationsControllerMarkAllNotificationsReadResponseSuccess = (platformNotificationsControllerMarkAllNotificationsReadResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformNotificationsControllerMarkAllNotificationsReadResponse = (platformNotificationsControllerMarkAllNotificationsReadResponseSuccess)
+
+export const getPlatformNotificationsControllerMarkAllNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/v1/platform-notifications/my-notifications/read-all`
+}
+
+/**
+ * @summary Mark all current user's notifications as read
+ */
+export const platformNotificationsControllerMarkAllNotificationsRead = async ( options?: Parameters<typeof customFetch>[1]): Promise<platformNotificationsControllerMarkAllNotificationsReadResponse> => {
+
+  return customFetch<platformNotificationsControllerMarkAllNotificationsReadResponse>(getPlatformNotificationsControllerMarkAllNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getPlatformNotificationsControllerMarkAllNotificationsReadMutationKey = () => ['platformNotificationsControllerMarkAllNotificationsRead'] as const;
+
+export const getPlatformNotificationsControllerMarkAllNotificationsReadMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>, TError,void, TContext> => {
+
+const mutationKey = getPlatformNotificationsControllerMarkAllNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>, void> = () => {
+
+
+          return  platformNotificationsControllerMarkAllNotificationsRead(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformNotificationsControllerMarkAllNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>>
+
+    export type PlatformNotificationsControllerMarkAllNotificationsReadMutationError = unknown
+
+
+    /**
+ * @summary Mark all current user's notifications as read
+ */
+export const usePlatformNotificationsControllerMarkAllNotificationsRead = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformNotificationsControllerMarkAllNotificationsRead>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPlatformNotificationsControllerMarkAllNotificationsReadMutationOptions(options), queryClient);
+    }
+    export type platformNotificationsControllerMarkNotificationReadResponse200 = {
+  data: void
+  status: 200
+}
+
+export type platformNotificationsControllerMarkNotificationReadResponseSuccess = (platformNotificationsControllerMarkNotificationReadResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformNotificationsControllerMarkNotificationReadResponse = (platformNotificationsControllerMarkNotificationReadResponseSuccess)
+
+export const getPlatformNotificationsControllerMarkNotificationReadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/platform-notifications/my-notifications/${id}/read`
+}
+
+/**
+ * @summary Mark a notification as read
+ */
+export const platformNotificationsControllerMarkNotificationRead = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<platformNotificationsControllerMarkNotificationReadResponse> => {
+
+  return customFetch<platformNotificationsControllerMarkNotificationReadResponse>(getPlatformNotificationsControllerMarkNotificationReadUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getPlatformNotificationsControllerMarkNotificationReadMutationKey = () => ['platformNotificationsControllerMarkNotificationRead'] as const;
+
+export const getPlatformNotificationsControllerMarkNotificationReadMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>, TError,PlatformNotificationsControllerMarkNotificationReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>, TError,PlatformNotificationsControllerMarkNotificationReadMutationVariables, TContext> => {
+
+const mutationKey = getPlatformNotificationsControllerMarkNotificationReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>, PlatformNotificationsControllerMarkNotificationReadMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  platformNotificationsControllerMarkNotificationRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformNotificationsControllerMarkNotificationReadMutationResult = NonNullable<Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>>
+
+    export type PlatformNotificationsControllerMarkNotificationReadMutationError = unknown
+    export type PlatformNotificationsControllerMarkNotificationReadMutationVariables = {id: string}
+
+    /**
+ * @summary Mark a notification as read
+ */
+export const usePlatformNotificationsControllerMarkNotificationRead = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>, TError,PlatformNotificationsControllerMarkNotificationReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformNotificationsControllerMarkNotificationRead>>,
+        TError,
+        PlatformNotificationsControllerMarkNotificationReadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPlatformNotificationsControllerMarkNotificationReadMutationOptions(options), queryClient);
+    }
+    export type platformNotificationsControllerSendNotificationResponse201 = {
   data: void
   status: 201
 }

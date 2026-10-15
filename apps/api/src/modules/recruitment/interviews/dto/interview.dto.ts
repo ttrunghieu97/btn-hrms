@@ -22,6 +22,14 @@ export class SubmitScorecardDto {
 }
 
 export class InterviewResponseDto {
-  id!: string; applicationId!: string; title!: string; interviewType!: string;
-  status!: string; scheduledAt!: Date; durationMinutes!: number | null;
+  @ApiProperty() id!: string;
+  @ApiProperty() applicationId!: string;
+  @ApiProperty() title!: string;
+  @ApiProperty() interviewType!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty() scheduledAt!: Date;
+  @ApiPropertyOptional({ nullable: true }) durationMinutes!: number | null;
+  @ApiPropertyOptional({ nullable: true }) location?: string | null;
+  @ApiPropertyOptional({ nullable: true }) meetingLink?: string | null;
+  @ApiPropertyOptional({ nullable: true }) notes?: string | null;
 }

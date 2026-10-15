@@ -3,9 +3,11 @@ import {
   createPerformanceCycle, transitionCycle,
   createPerformanceGoal, transitionGoal,
   assignReviewer,
+  submitPerformanceReview,
   type CreateCyclePayload,
   type CreateGoalPayload,
   type AssignReviewerPayload,
+  type SubmitReviewPayload,
 } from './performance';
 import { performanceCycleKeys, performanceGoalKeys, performanceReviewKeys } from '../queries/performance-queries';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
@@ -74,5 +76,18 @@ export function useAssignReviewer() {
       notifyMutationSuccess(performanceUiCopy.feedback.reviewerAssigned);
     },
     onError: (error) => notifyMutationError(error, performanceUiCopy.feedback.reviewerAssignFailed),
+  });
+}
+
+export function useSubmitPerformanceReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assignmentId, dto }: { assignmentId: string; dto: SubmitReviewPayload }) =>
+      submitPerformanceReview(assignmentId, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: performanceReviewKeys.all() });
+      notifyMutationSuccess('Đã nộp bài đánh giá năng lực thành công');
+    },
+    onError: (error) => notifyMutationError(error, 'Không thể nộp bài đánh giá năng lực'),
   });
 }

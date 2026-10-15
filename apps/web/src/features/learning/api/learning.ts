@@ -18,6 +18,10 @@ export async function createSession(dto: { courseId: string; title: string; sche
 }
 export async function publishSession(id: string) { return customFetch(`${BASE}/sessions/${id}/publish`, { method: 'POST' }); }
 export async function cancelSession(id: string) { return customFetch(`${BASE}/sessions/${id}/cancel`, { method: 'POST' }); }
+export async function registerSession(id: string) { return customFetch(`${BASE}/sessions/${id}/register`, { method: 'POST' }); }
+export async function withdrawSession(id: string) { return customFetch(`${BASE}/sessions/${id}/withdraw`, { method: 'POST' }); }
+export async function checkInSession(id: string) { return customFetch(`${BASE}/sessions/${id}/checkin`, { method: 'POST' }); }
+export async function completeSession(id: string) { return customFetch(`${BASE}/sessions/${id}/complete`, { method: 'POST' }); }
 
 // ─── Certifications ───
 export async function listCertDefinitions() { return customFetch(`${BASE}/certifications/definitions`); }

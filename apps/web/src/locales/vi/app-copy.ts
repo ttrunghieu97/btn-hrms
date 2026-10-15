@@ -2126,6 +2126,7 @@ export const recruitmentUiCopy = {
     sections: {
       profile: 'Thông tin ứng viên',
       pipeline: 'Lịch sử quy trình',
+      interviews: 'Lịch phỏng vấn',
       scorecards: 'Đánh giá phỏng vấn',
       offers: 'Thư mời làm việc'
     },
@@ -2138,6 +2139,37 @@ export const recruitmentUiCopy = {
       feedback: 'Nhận xét',
       emptyScorecards: 'Chưa có đánh giá nào.',
       emptyEvents: 'Chưa có lịch sử chuyển giai đoạn.'
+    }
+  },
+  interviews: {
+    title: 'Phỏng vấn',
+    empty: 'Chưa có lịch phỏng vấn nào.',
+    fields: {
+      title: 'Tiêu đề phỏng vấn',
+      interviewType: 'Hình thức phỏng vấn',
+      scheduledAt: 'Thời gian',
+      durationMinutes: 'Thời lượng (phút)',
+      location: 'Địa điểm',
+      meetingLink: 'Link cuộc họp',
+      notes: 'Ghi chú'
+    },
+    types: {
+      phone: 'Điện thoại',
+      video: 'Video online',
+      in_person: 'Trực tiếp',
+      technical: 'Kỹ thuật',
+      panel: 'Hội đồng'
+    },
+    status: {
+      scheduled: 'Đã lên lịch',
+      rescheduled: 'Đã dời lịch',
+      completed: 'Đã hoàn thành',
+      cancelled: 'Đã hủy'
+    },
+    actions: {
+      schedule: 'Lên lịch phỏng vấn',
+      complete: 'Hoàn thành',
+      scorecard: 'Chấm điểm'
     }
   },
   offers: {

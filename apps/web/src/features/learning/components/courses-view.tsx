@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { coursesQueryOptions } from '../api/queries';
-import { useCreateCourse, usePublishCourse } from '../api/mutations';
+import { useCreateCourse, usePublishCourse, useEnrollCourse } from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
 import { COURSE_STATUS_MAP, type CourseRow } from './status-maps';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -33,6 +33,7 @@ export function CoursesView() {
   const rows = extractList<CourseRow>(data);
   const createCourse = useCreateCourse();
   const publishCourse = usePublishCourse();
+  const enrollCourse = useEnrollCourse();
 
   async function handleCreate() {
     const parsed = createCourseSchema.safeParse(form);
@@ -79,7 +80,7 @@ export function CoursesView() {
                 <TableHead>{copy.columns.status}</TableHead>
                 <TableHead>{copy.columns.estimatedHours}</TableHead>
                 <TableHead>{commonUiCopy.date}</TableHead>
-                <TableHead />
+                <TableHead className='text-right' />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -89,8 +90,18 @@ export function CoursesView() {
                   <TableCell><StatusBadge mapping={COURSE_STATUS_MAP} status={row.status ?? 'draft'} /></TableCell>
                   <TableCell>{row.estimatedHours ?? '—'}</TableCell>
                   <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
-                  <TableCell>
-                    {row.status === 'draft' ? <Button variant='outline' size='sm' onClick={() => publishCourse.mutate({ id: row.id })} disabled={publishCourse.isPending}>Công bố</Button> : null}
+                  <TableCell className='text-right'>
+                    <div className='flex items-center justify-end gap-2'>
+                      {row.status === 'draft' ? (
+                        <Button variant='outline' size='sm' onClick={() => publishCourse.mutate({ id: row.id })} disabled={publishCourse.isPending}>
+                          Công bố
+                        </Button>
+                      ) : (
+                        <Button variant='outline' size='sm' onClick={() => enrollCourse.mutate(row.id)} disabled={enrollCourse.isPending}>
+                          Ghi danh
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

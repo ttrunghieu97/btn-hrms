@@ -5,10 +5,11 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { CreatePayrollRunDtoStatus } from './createPayrollRunDtoStatus';
 
 export interface CreatePayrollRunDto {
   payrollPeriodId: string;
   branchId?: string;
-  status?: string;
+  status?: CreatePayrollRunDtoStatus;
   notes?: string;
 }

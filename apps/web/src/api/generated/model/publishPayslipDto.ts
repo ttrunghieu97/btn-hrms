@@ -5,8 +5,9 @@
  * The Human Resource Management System API description
  * OpenAPI spec version: 1.0
  */
+import type { PublishPayslipDtoStatus } from './publishPayslipDtoStatus';
 
 export interface PublishPayslipDto {
-  status?: string;
+  status?: PublishPayslipDtoStatus;
   note?: string;
 }
