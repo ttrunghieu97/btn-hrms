@@ -1,10 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { SQL, and, count, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import { SQL, and, count, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import * as schema from "../../../../infrastructure/database/schema";
 import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
 import { PayrollQueryDto } from "../dto/payroll-query.dto";
+import { throwConflict } from "../../../../shared/utils/http-error";
+import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 
 type LegacyPayrollRow = {
   id: string;
@@ -75,14 +77,29 @@ export class PayrollRepository extends BaseRepository<
     return rows;
   }
 
-  async findByEmployeeId(employeeId: string, tx: PostgresJsDatabase<typeof schema> = this.db) {
+  async findByEmployeeId(
+    employeeId: string,
+    tx: PostgresJsDatabase<typeof schema> = this.db,
+    options?: { publishedOnly?: boolean },
+  ) {
+    const where = options?.publishedOnly
+      ? and(
+          eq(schema.payslips.employeeId, employeeId),
+          eq(schema.payslips.status, "published"),
+        )
+      : eq(schema.payslips.employeeId, employeeId);
     const rows = await tx.query.payslips.findMany({
-      where: eq(schema.payslips.employeeId, employeeId),
+      where,
       with: this.withRelations(),
       orderBy: [desc(schema.payslips.updatedAt)],
       limit: 1,
     });
-    return rows[0] ? this.toLegacyPayroll(rows[0]) : null;
+    const row = rows[0];
+    if (!row) return null;
+    if (options?.publishedOnly && row.status && row.status !== "published") {
+      return null;
+    }
+    return this.toLegacyPayroll(row);
   }
 
   async create(): Promise<LegacyPayrollRow | null> {
@@ -158,10 +175,18 @@ export class PayrollRepository extends BaseRepository<
       currency?: string;
       effectiveFrom?: string | null;
       effectiveTo?: string | null;
+      metadata?: Record<string, unknown>;
     },
-    tx: PostgresJsDatabase<typeof schema> = this.db,
-  ) {
-    const employee = await tx.query.employees.findFirst({
+    tx?: PostgresJsDatabase<typeof schema>,
+  ): Promise<LegacyPayrollRow> {
+    if (!tx && typeof this.db.transaction === "function") {
+      return this.db.transaction((activeTx) =>
+        this.upsertByEmployeeId(employeeId, values, activeTx),
+      );
+    }
+    const activeTx = tx ?? this.db;
+
+    const employee = await activeTx.query.employees.findFirst({
       where: eq(schema.employees.id, employeeId),
     });
     if (!employee) {
@@ -172,14 +197,51 @@ export class PayrollRepository extends BaseRepository<
       values.effectiveFrom,
       values.effectiveTo,
     );
-    const payrollPeriod = await this.ensurePayrollPeriod(periodBounds, tx);
+    const payrollPeriod = await this.ensurePayrollPeriod(periodBounds, activeTx);
     const payrollRun = await this.ensurePayrollRun(
       payrollPeriod.id,
       employee.branchId ?? null,
-      tx,
+      activeTx,
     );
 
-    const existing = await tx.query.payslips.findFirst({
+    if (typeof (activeTx as { execute?: unknown }).execute === "function") {
+      const lockedRows = (await activeTx.execute(
+        sql`SELECT id, status FROM ${schema.payrollRuns} WHERE ${schema.payrollRuns.id} = ${payrollRun.id} FOR UPDATE`,
+      )) as unknown as { id: string; status: string }[];
+      const lockedRun = Array.isArray(lockedRows) ? lockedRows[0] : undefined;
+      if (!lockedRun) {
+        throwConflict(
+          "Parent payroll run no longer exists",
+          ERROR_CODES.CONFLICT,
+          { employeeId, payrollRunId: payrollRun.id },
+        );
+      }
+      if (lockedRun.status && lockedRun.status !== "draft") {
+        throwConflict(
+          `Cannot modify payroll record belonging to a '${lockedRun.status}' payroll run; finalized or in-flight payroll runs are immutable`,
+          ERROR_CODES.INVALID_STATUS_TRANSITION,
+          {
+            employeeId,
+            payrollRunId: payrollRun.id,
+            payrollRunStatus: lockedRun.status,
+          },
+        );
+      }
+    }
+
+    if (payrollRun.status && payrollRun.status !== "draft") {
+      throwConflict(
+        `Cannot modify payroll record belonging to a '${payrollRun.status}' payroll run; finalized or in-flight payroll runs are immutable`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          employeeId,
+          payrollRunId: payrollRun.id,
+          payrollRunStatus: payrollRun.status,
+        },
+      );
+    }
+
+    const existing = await activeTx.query.payslips.findFirst({
       where: and(
         eq(schema.payslips.employeeId, employeeId),
         eq(schema.payslips.payrollRunId, payrollRun.id),
@@ -187,41 +249,152 @@ export class PayrollRepository extends BaseRepository<
       with: { payrollItems: true },
     });
 
-    const salary = values.salary ?? "0";
-    const bonus = values.bonus ?? "0";
-    const deduction = values.deduction ?? "0";
-    const allowance = values.allowance ?? "0";
-    const overtimeAmount = values.overtimeAmount ?? "0";
-    const taxAmount = values.taxAmount ?? "0";
-    const insuranceAmount = values.insuranceAmount ?? "0";
+    if (existing?.status && existing.status !== "draft") {
+      throwConflict(
+        `Payslip in '${existing.status}' status is immutable and cannot be overwritten; use an authorized payroll adjustment or reversal workflow`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          employeeId,
+          payslipId: existing.id,
+          status: existing.status,
+        },
+      );
+    }
+
+    const existingItemAmount = (code: string) =>
+      existing?.payrollItems?.find((item) => item.code === code)?.amount;
+    const salary = values.salary ?? existingItemAmount("base_salary") ?? "0";
+    const bonus = values.bonus ?? existingItemAmount("bonus") ?? "0";
+    const deduction = values.deduction ?? existingItemAmount("deduction") ?? "0";
+    const allowance = values.allowance ?? existingItemAmount("allowance") ?? "0";
+    const overtimeAmount = values.overtimeAmount ?? existingItemAmount("overtime") ?? "0";
+    const taxAmount = values.taxAmount ?? existingItemAmount("tax") ?? "0";
+    const insuranceAmount = values.insuranceAmount ?? existingItemAmount("insurance") ?? "0";
     const grossPay = this.sum([salary, bonus, allowance, overtimeAmount]);
     const totalDeductions = this.sum([deduction, taxAmount, insuranceAmount]);
     const netPay = values.netSalary ?? this.subtract(grossPay, totalDeductions);
-    const currency = values.currency ?? "VND";
+    const currency = values.currency ?? existing?.currency ?? "VND";
+    const existingMeta =
+      existing?.metadata && typeof existing.metadata === "object"
+        ? (existing.metadata as Record<string, unknown>)
+        : {};
+    const incomingMeta =
+      values.metadata && typeof values.metadata === "object"
+        ? values.metadata
+        : {};
+    const defaultUnconfirmedComponents = [
+      "tax_amount",
+      "statutory_insurance_amount",
+      "allowance_components",
+      "overtime_day_type_multipliers",
+      "standard_working_divisor",
+      "mid_period_salary_proration",
+    ];
+    const isFinalSettlement =
+      existingMeta.source === "offboarding-final-settlement" ||
+      incomingMeta.source === "offboarding-final-settlement" ||
+      existingMeta.settlementComplete === false ||
+      incomingMeta.settlementComplete === false;
+    const preservedBlockerCode =
+      (typeof incomingMeta.policyBlockerCode === "string" &&
+      incomingMeta.policyBlockerCode.trim().length > 0
+        ? incomingMeta.policyBlockerCode
+        : undefined) ??
+      (typeof existingMeta.policyBlockerCode === "string" &&
+      existingMeta.policyBlockerCode.trim().length > 0
+        ? existingMeta.policyBlockerCode
+        : undefined) ??
+      (isFinalSettlement
+        ? "BIZ_005_FINAL_SETTLEMENT_POLICY_UNCONFIRMED"
+        : "BIZ_004_PAYROLL_POLICY_UNCONFIRMED");
+    const preservedUnconfirmed =
+      Array.isArray(incomingMeta.unconfirmedPolicyComponents) &&
+      incomingMeta.unconfirmedPolicyComponents.length > 0
+        ? incomingMeta.unconfirmedPolicyComponents
+        : Array.isArray(existingMeta.unconfirmedPolicyComponents) &&
+            existingMeta.unconfirmedPolicyComponents.length > 0
+          ? existingMeta.unconfirmedPolicyComponents
+          : defaultUnconfirmedComponents;
+    const preservedOmitted =
+      Array.isArray(incomingMeta.omittedComponents) &&
+      incomingMeta.omittedComponents.length > 0
+        ? incomingMeta.omittedComponents
+        : Array.isArray(existingMeta.omittedComponents) &&
+            existingMeta.omittedComponents.length > 0
+          ? existingMeta.omittedComponents
+          : undefined;
+
+    const payslipMetadata: Record<string, unknown> = {
+      ...existingMeta,
+      ...incomingMeta,
+      source:
+        typeof incomingMeta.source === "string" && incomingMeta.source.trim().length > 0
+          ? incomingMeta.source
+          : typeof existingMeta.source === "string" && existingMeta.source.trim().length > 0
+            ? existingMeta.source
+            : "legacy-payroll-upsert",
+      effectiveFrom:
+        values.effectiveFrom !== undefined
+          ? values.effectiveFrom
+          : ((existingMeta.effectiveFrom as string | null | undefined) ?? null),
+      effectiveTo:
+        values.effectiveTo !== undefined
+          ? values.effectiveTo
+          : ((existingMeta.effectiveTo as string | null | undefined) ?? null),
+      calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+      isProvisional: true,
+      requiresManualReviewBeforePublish: true,
+      policyBlockerCode: preservedBlockerCode,
+      unconfirmedPolicyComponents: preservedUnconfirmed,
+      ...(isFinalSettlement ? { settlementComplete: false } : {}),
+      ...(preservedOmitted ? { omittedComponents: preservedOmitted } : {}),
+      ...(existingMeta.calcVersion !== undefined && existingMeta.calcVersion !== null
+        ? { calcVersion: existingMeta.calcVersion }
+        : {}),
+      ...(existingMeta.calculationVersionId !== undefined && existingMeta.calculationVersionId !== null
+        ? { calculationVersionId: existingMeta.calculationVersionId }
+        : {}),
+      ...(existingMeta.calculationHash !== undefined && existingMeta.calculationHash !== null
+        ? { calculationHash: existingMeta.calculationHash }
+        : {}),
+    };
 
     let payslipId = existing?.id;
     if (existing) {
-      await tx
+      const updateQuery = activeTx
         .update(schema.payslips)
         .set({
           grossPay,
           totalDeductions,
           netPay,
           currency,
-          metadata: {
-            source: "legacy-payroll-upsert",
-            effectiveFrom: values.effectiveFrom ?? null,
-            effectiveTo: values.effectiveTo ?? null,
-          },
+          metadata: payslipMetadata,
           updatedAt: new Date(),
         })
-        .where(eq(schema.payslips.id, existing.id));
+        .where(
+          and(
+            eq(schema.payslips.id, existing.id),
+            eq(schema.payslips.status, "draft"),
+          ),
+        );
+      if (typeof (updateQuery as { returning?: () => Promise<unknown[]> }).returning === "function") {
+        const updatedRows = await (updateQuery as { returning: () => Promise<unknown[]> }).returning();
+        if (Array.isArray(updatedRows) && updatedRows.length === 0) {
+          throwConflict(
+            "Payslip status changed concurrently and can no longer be modified",
+            ERROR_CODES.CONFLICT,
+            { payslipId: existing.id, employeeId },
+          );
+        }
+      } else {
+        await updateQuery;
+      }
 
-      await tx
+      await activeTx
         .delete(schema.payrollItems)
         .where(eq(schema.payrollItems.payslipId, existing.id));
     } else {
-      const [inserted] = await tx
+      const [inserted] = await activeTx
         .insert(schema.payslips)
         .values({
           payrollRunId: payrollRun.id,
@@ -231,11 +404,7 @@ export class PayrollRepository extends BaseRepository<
           netPay,
           currency,
           status: "draft",
-          metadata: {
-            source: "legacy-payroll-upsert",
-            effectiveFrom: values.effectiveFrom ?? null,
-            effectiveTo: values.effectiveTo ?? null,
-          },
+          metadata: payslipMetadata,
         })
         .returning();
       payslipId = inserted?.id;
@@ -245,7 +414,7 @@ export class PayrollRepository extends BaseRepository<
       throw new Error(`Failed to upsert payslip for employee ${employeeId}`);
     }
 
-    await tx.insert(schema.payrollItems).values(
+    await activeTx.insert(schema.payrollItems).values(
       [
         this.makePayrollItem(payrollRun.id, payslipId, employeeId, {
           type: "earning",
@@ -292,7 +461,7 @@ export class PayrollRepository extends BaseRepository<
       ]      .filter((item) => item.amount !== "0"),
     );
 
-    const reloaded = await tx.query.payslips.findFirst({
+    const reloaded = await activeTx.query.payslips.findFirst({
       where: eq(schema.payslips.id, payslipId),
       with: this.withRelations(),
     });

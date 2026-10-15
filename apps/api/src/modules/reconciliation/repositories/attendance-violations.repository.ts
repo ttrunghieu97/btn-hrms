@@ -36,16 +36,37 @@ export class AttendanceViolationsRepository {
 
     await db
       .delete(schema.attendanceViolations)
-      .where(eq(schema.attendanceViolations.sessionId, sessionId));
+      .where(
+        and(
+          eq(schema.attendanceViolations.sessionId, sessionId),
+          eq(schema.attendanceViolations.status, "OPEN"),
+        ),
+      );
 
     if (violations.length === 0) {
       return [];
     }
 
-    return db
+    const preserved =
+      typeof db.query?.attendanceViolations?.findMany === "function"
+        ? await db.query.attendanceViolations.findMany({
+            where: eq(schema.attendanceViolations.sessionId, sessionId),
+          })
+        : [];
+    const preservedCodes = new Set(preserved.map((v) => v.code));
+
+    const toInsert = violations.filter((v) => !preservedCodes.has(v.code));
+    if (toInsert.length === 0) {
+      return preserved;
+    }
+
+    const inserted = await db
       .insert(schema.attendanceViolations)
-      .values(violations)
+      .values(toInsert)
+      .onConflictDoNothing()
       .returning();
+
+    return [...preserved, ...inserted];
   }
 
   async transaction<T>(cb: (tx: AppDatabase) => Promise<T>): Promise<T> {

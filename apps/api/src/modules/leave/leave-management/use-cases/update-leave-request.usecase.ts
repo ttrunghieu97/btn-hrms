@@ -3,6 +3,7 @@ import { UpdateLeaveRequestDto } from "../dto/update-leave-request.dto";
 import { LeaveRequestsRepository } from "../repositories/leave-requests.repository";
 import {
   throwBadRequest,
+  throwConflict,
   throwNotFound,
 } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
@@ -50,10 +51,86 @@ export class UpdateLeaveRequestUseCase {
       });
     }
 
-    await this.leaveRequestsRepo.transaction(async () => {
+    const totalUnits = dto.totalUnits ?? existing.totalUnits;
+
+    await this.leaveRequestsRepo.transaction(async (tx) => {
+      if (
+        (dto.startDate !== undefined || dto.endDate !== undefined) &&
+        this.leaveRequestsRepo.findOverlappingApprovedRequest
+      ) {
+        const overlap =
+          await this.leaveRequestsRepo.findOverlappingApprovedRequest(
+            existing.employeeId,
+            startDate,
+            endDate,
+            id,
+            tx,
+          );
+        if (overlap) {
+          throwConflict(
+            "Leave request overlaps with an existing pending or approved request",
+            ERROR_CODES.SCHEDULE_CONFLICT,
+            { overlappingRequestId: overlap.id },
+          );
+        }
+      }
+
+      const isPaid = existing.leaveType?.isPaid ?? true;
+      if (
+        isPaid &&
+        (dto.totalUnits !== undefined || dto.startDate !== undefined) &&
+        (this.leaveRequestsRepo.lockBalanceForYear ||
+          this.leaveRequestsRepo.findBalanceForYear)
+      ) {
+        const balanceYear = new Date(startDate).getFullYear();
+        const balance = this.leaveRequestsRepo.lockBalanceForYear
+          ? await this.leaveRequestsRepo.lockBalanceForYear(
+              existing.employeeId,
+              existing.leaveTypeId,
+              balanceYear,
+              tx,
+            )
+          : await this.leaveRequestsRepo.findBalanceForYear(
+              existing.employeeId,
+              existing.leaveTypeId,
+              balanceYear,
+              tx,
+            );
+        if (balance) {
+          const pendingUnits = this.leaveRequestsRepo.sumPendingUnitsForYear
+            ? await this.leaveRequestsRepo.sumPendingUnitsForYear(
+                existing.employeeId,
+                existing.leaveTypeId,
+                balanceYear,
+                tx,
+                id,
+              )
+            : 0;
+          const totalAvailable =
+            Number(balance.openingBalance) +
+            Number(balance.accruedAmount) +
+            Number(balance.carriedOverAmount) +
+            Number(balance.adjustedAmount) -
+            Number(balance.usedAmount) -
+            Number(pendingUnits);
+          if (totalAvailable < Number(totalUnits)) {
+            throwBadRequest(
+              "Số ngày phép còn lại không đủ",
+              ERROR_CODES.LEAVE_BALANCE_INSUFFICIENT,
+              {
+                available: totalAvailable,
+                pendingReserved: Number(pendingUnits),
+                requested: totalUnits,
+              },
+            );
+          }
+        }
+      }
+
       await this.leaveRequestsRepo.update(
         id,
-        LeaveRequestMapper.toEntity(dto) ,
+        LeaveRequestMapper.toEntity(dto),
+        tx,
       );
 
       await this.leaveRequestsRepo.createAuditLog(
@@ -61,6 +138,7 @@ export class UpdateLeaveRequestUseCase {
         "leave_request_update",
         id,
         { dto },
+        tx,
       );
     });
 

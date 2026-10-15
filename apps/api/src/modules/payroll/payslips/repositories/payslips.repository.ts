@@ -50,15 +50,26 @@ export class PayslipsRepository {
     if (status) conditions.push(eq(schema.payslips.status, status as NonNullable<typeof schema.payslips.$inferInsert['status']>));
 
     if (scope) {
-      if (scope.tier === 'self' && scope.employeeId) {
-        conditions.push(eq(schema.payslips.employeeId, scope.employeeId));
-      } else if (scope.tier === 'department' && scope.departmentId) {
-        conditions.push(sql`EXISTS (
+      if (scope.tier === 'self') {
+        conditions.push(
+          scope.employeeId
+            ? eq(schema.payslips.employeeId, scope.employeeId)
+            : sql`1 = 0`,
+        );
+        conditions.push(eq(schema.payslips.status, "published"));
+      } else if (scope.tier === 'department') {
+        conditions.push(
+          scope.departmentId
+            ? sql`EXISTS (
           SELECT 1 FROM ${schema.orgAssignments}
           WHERE ${schema.orgAssignments.employeeId} = ${schema.payslips.employeeId}
           AND ${schema.orgAssignments.departmentId} = ${scope.departmentId}
           AND ${schema.orgAssignments.isCurrent} = true
-        )`);
+        )`
+            : sql`1 = 0`,
+        );
+      } else if (scope.tier !== 'all') {
+        conditions.push(sql`1 = 0`);
       }
     }
 
@@ -101,10 +112,17 @@ export class PayslipsRepository {
     values: Partial<typeof schema.payslips.$inferInsert>,
     tx: AppDatabase = this.db,
   ) {
+    const condition =
+      values.status === "published"
+        ? and(
+            eq(schema.payslips.id, id),
+            eq(schema.payslips.status, "draft"),
+          )
+        : eq(schema.payslips.id, id);
     const [row] = await tx
       .update(schema.payslips)
       .set({ ...values, updatedAt: new Date() })
-      .where(eq(schema.payslips.id, id))
+      .where(condition)
       .returning();
     return row ?? null;
   }

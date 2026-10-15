@@ -12,9 +12,10 @@ export class UpdateEmployeeAllowanceUseCase {
   async execute(
     allowanceId: string,
     data: { type?: string; amount?: number; effectiveFrom?: string; effectiveTo?: string; note?: string },
+    employeeId?: string,
   ) {
     const existing = await this.allowancesRepo.findById(allowanceId);
-    if (!existing) {
+    if (!existing || (employeeId && existing.employeeId !== employeeId)) {
       throwNotFound("Allowance not found", ERROR_CODES.ALLOWANCE_NOT_FOUND, { allowanceId });
     }
 

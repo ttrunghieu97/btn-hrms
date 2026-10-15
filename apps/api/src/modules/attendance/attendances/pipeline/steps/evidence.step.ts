@@ -33,6 +33,15 @@ export class EvidenceStep implements VerificationStep {
     ctx.selfieUrl = result.url;
     ctx.verificationStatus = result.verificationStatus;
 
+    if (result.verificationStatus === "rejected") {
+      this.metrics.incrementAttendanceFaceFail("no_face_rejected");
+      throwBadRequest(
+        "Selfie rejected: no face detected",
+        ERROR_CODES.SELFIE_REJECTED,
+        { reason: "FACE_NOT_DETECTED" },
+      );
+    }
+
     if (!result.facePresent) {
       this.metrics.incrementAttendanceFaceFail("low_confidence");
       return { flags: { selfieLowConfidence: true }, verificationStatus: result.verificationStatus };

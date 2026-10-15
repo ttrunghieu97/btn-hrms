@@ -48,8 +48,8 @@ export class LeaveManagementController {
   @Get()
   @CheckPolicy(LeavePolicies.view)
   @ApiOperation({ summary: "List leave requests" })
-  list(@Query() query: LeaveRequestQueryDto) {
-    return this.listLeaveRequests.execute(query);
+  list(@Query() query: LeaveRequestQueryDto, @Req() req?: AuthRequest) {
+    return this.listLeaveRequests.execute(query, req?.user);
   }
 
   @Get("balances/:employeeId")
@@ -63,8 +63,8 @@ export class LeaveManagementController {
   @Get(":id")
   @CheckPolicy(LeavePolicies.view)
   @ApiOperation({ summary: "Get leave request details" })
-  get(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.getLeaveRequest.execute(id);
+  get(@Param("id", new ParseUUIDPipe()) id: string, @Req() req?: AuthRequest) {
+    return this.getLeaveRequest.execute(id, req?.user);
   }
 
   @Post()

@@ -3,20 +3,37 @@ import { type PolicyHandler } from "./base.policy";
 import { Permissions } from "../permissions/permissions.registry";
 
 class ViewLeavePolicyHandler implements PolicyHandler {
-  requiredAnyOfPermissions = [Permissions.LEAVE_VIEW];
+  requiredAnyOfPermissions = [
+    Permissions.LEAVE_VIEW,
+    Permissions.LEAVE_VIEW_ALL,
+    Permissions.LEAVE_VIEW_DEPARTMENT,
+    Permissions.LEAVE_VIEW_SELF,
+  ];
 
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return user.permissions?.includes(Permissions.LEAVE_VIEW) ?? false;
+    const perms = user.permissions ?? [];
+    return (
+      perms.includes(Permissions.LEAVE_VIEW) ||
+      perms.includes(Permissions.LEAVE_VIEW_ALL) ||
+      perms.includes(Permissions.LEAVE_VIEW_DEPARTMENT) ||
+      perms.includes(Permissions.LEAVE_VIEW_SELF) ||
+      perms.includes("leave:manage")
+    );
   }
 }
 
 class CreateLeavePolicyHandler implements PolicyHandler {
-  requiredAnyOfPermissions = [Permissions.LEAVE_CREATE];
+  requiredAnyOfPermissions = [Permissions.LEAVE_CREATE, "leave:request"];
 
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return user.permissions?.includes(Permissions.LEAVE_CREATE) ?? false;
+    const perms = user.permissions ?? [];
+    return (
+      perms.includes(Permissions.LEAVE_CREATE) ||
+      perms.includes("leave:request") ||
+      perms.includes("leave:manage")
+    );
   }
 }
 

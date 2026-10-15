@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
+import { Resource } from "../../../core/security/decorators/resource.decorator";
+import { Employee } from "../../../core/security/types/resource-entities";
 import { EmployeePolicies } from "../../../core/security/policies/employee.policy";
 import { CreateEmployeeDocumentDto } from "./dto/create-employee-document.dto";
 import { ListEmployeeDocumentsUseCase } from "./use-cases/list-employee-documents.usecase";
@@ -9,6 +11,7 @@ import { DeleteEmployeeDocumentUseCase } from "./use-cases/delete-employee-docum
 
 @ApiTags("Employee Documents")
 @ApiBearerAuth()
+@Resource(Employee, "employeeId")
 @Controller("employees/:employeeId/documents")
 export class EmployeeDocumentsController {
   constructor(
@@ -18,6 +21,7 @@ export class EmployeeDocumentsController {
   ) {}
 
   @Get()
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "List employee documents" })
   list(@Param("employeeId") employeeId: string) {
@@ -25,6 +29,7 @@ export class EmployeeDocumentsController {
   }
 
   @Post()
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.edit)
   @ApiOperation({ summary: "Add employee document" })
   create(
@@ -35,6 +40,7 @@ export class EmployeeDocumentsController {
   }
 
   @Delete(":documentId")
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.edit)
   @ApiOperation({ summary: "Delete employee document" })
   remove(

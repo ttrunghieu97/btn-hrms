@@ -5,6 +5,7 @@ import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { PayslipMapper } from "../mappers/payslip.mapper";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
+import { DataScope } from "../../../../core/security/types/data-scope.interface";
 
 @Injectable()
 export class GetPayslipUseCase {
@@ -16,9 +17,9 @@ export class GetPayslipUseCase {
     this.logger = new ContextLogger(this.requestContext, GetPayslipUseCase.name);
   }
 
-  async execute(id: string) {
+  async execute(id: string, scope?: DataScope) {
     const row = await this.payslipsRepo.findById(id);
-    if (!row) {
+    if (!row || (scope?.tier === "self" && row.status !== "published")) {
       throwNotFound("Payslip not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
         payslipId: id,
       });

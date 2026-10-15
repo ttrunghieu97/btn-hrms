@@ -25,19 +25,25 @@ export class InboundAdapterController {
     @Body() body: unknown,
   ) {
     const secret = String(process.env.WEBHOOK_SECRET || "").trim();
-    if (secret) {
-      const expectedSignature = signWebhookPayload(secret, JSON.stringify(body ?? {}));
-      if (
-        !signature ||
-        Buffer.byteLength(signature) !== Buffer.byteLength(expectedSignature) ||
-        !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-      ) {
-        throwUnauthorized(
-          "Invalid webhook signature",
-          ERROR_CODES.AUTH_TOKEN_INVALID,
-          { reason: "INVALID_WEBHOOK_SIGNATURE" },
-        );
-      }
+    if (!secret) {
+      throwUnauthorized(
+        "Inbound webhook secret is not configured",
+        ERROR_CODES.AUTH_TOKEN_INVALID,
+        { reason: "WEBHOOK_SECRET_NOT_CONFIGURED" },
+      );
+    }
+
+    const expectedSignature = signWebhookPayload(secret, JSON.stringify(body ?? {}));
+    if (
+      !signature ||
+      Buffer.byteLength(signature) !== Buffer.byteLength(expectedSignature) ||
+      !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+    ) {
+      throwUnauthorized(
+        "Invalid webhook signature",
+        ERROR_CODES.AUTH_TOKEN_INVALID,
+        { reason: "INVALID_WEBHOOK_SIGNATURE" },
+      );
     }
 
     return {

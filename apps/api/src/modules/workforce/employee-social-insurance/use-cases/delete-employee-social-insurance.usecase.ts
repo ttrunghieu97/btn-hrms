@@ -9,9 +9,9 @@ export class DeleteEmployeeSocialInsuranceUseCase {
     private readonly repo: EmployeeSocialInsuranceRepository,
   ) {}
 
-  async execute(enrollmentId: string) {
+  async execute(enrollmentId: string, employeeId?: string) {
     const existing = await this.repo.findById(enrollmentId);
-    if (!existing) {
+    if (!existing || (employeeId && existing.employeeId !== employeeId)) {
       throwNotFound("Social insurance enrollment not found", ERROR_CODES.SOCIAL_INSURANCE_NOT_FOUND, { enrollmentId });
     }
 

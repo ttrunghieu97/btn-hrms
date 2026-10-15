@@ -38,7 +38,12 @@ import { SendNotificationUseCase } from "./use-cases/send-notification.usecase";
     GetUserNotificationsUseCase,
     SendNotificationUseCase,
   ],
-  exports: [SendNotificationUseCase],
+  exports: [
+    SendNotificationUseCase,
+    EmailDeliveryService,
+    SmsDeliveryService,
+    PushDeliveryService,
+  ],
 })
 export class PlatformNotificationsDomainModule {}
 

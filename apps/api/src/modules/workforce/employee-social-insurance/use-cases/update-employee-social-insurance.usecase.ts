@@ -12,9 +12,10 @@ export class UpdateEmployeeSocialInsuranceUseCase {
   async execute(
     enrollmentId: string,
     data: { insuranceNumber?: string; startDate?: string; endDate?: string; status?: string; reason?: string },
+    employeeId?: string,
   ) {
     const existing = await this.repo.findById(enrollmentId);
-    if (!existing) {
+    if (!existing || (employeeId && existing.employeeId !== employeeId)) {
       throwNotFound("Social insurance enrollment not found", ERROR_CODES.SOCIAL_INSURANCE_NOT_FOUND, { enrollmentId });
     }
 

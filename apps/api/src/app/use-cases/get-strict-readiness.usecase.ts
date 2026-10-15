@@ -8,10 +8,13 @@ export class GetStrictReadinessUseCase {
 
   async execute() {
     const result = await this.getReadiness.execute();
-    if (result.status === "ready") {
+    if (result.status === "ready" && result.productionReady) {
       return result;
     }
 
+    const faceReady =
+      result.adapters?.facePresence?.configured &&
+      !result.adapters?.facePresence?.simulated;
     const dependency = !result.database.ok
       ? "database"
       : !result.redis.ok
@@ -20,10 +23,12 @@ export class GetStrictReadinessUseCase {
           ? "storage"
           : !result.eventBus.ok
             ? "event_bus"
-            : "unknown";
+            : !faceReady
+              ? "face_presence"
+              : "notification_delivery";
 
     throw new ServiceUnavailableException({
-      message: "Service dependencies are not ready",
+      message: "Service dependencies or mandatory external adapters are not ready",
       error: ERROR_CODES.SERVICE_UNAVAILABLE,
       details: {
         dependency,

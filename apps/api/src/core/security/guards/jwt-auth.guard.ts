@@ -9,10 +9,12 @@ import { IAuthSessionReader } from "../../../contracts/ports/auth-session-reader
 import { CONTRACTS_TOKENS } from "../../../contracts/contracts.tokens";
 import { RolesRepository } from "../roles/roles.repository";
 import { PermissionHierarchyResolver } from "../permissions/permission-hierarchy.resolver";
-import { throwUnauthorized } from "../../../shared/utils/http-error";
+import { throwForbidden, throwUnauthorized } from "../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { ERROR_REASONS } from "../../../shared/constants/error-reasons";
 import { getScopeId } from "../../../shared/constants/system";
+
+const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -46,6 +48,10 @@ export class JwtAuthGuard implements CanActivate {
       throwUnauthorized("No token provided", ERROR_CODES.AUTH_TOKEN_MISSING, {
         reason: ERROR_REASONS.MISSING_TOKEN,
       });
+    }
+
+    if (!headerToken && cookieToken) {
+      this.assertCookieCsrfSafe(request);
     }
 
     let payload: { sub: string; email: string; azv?: number };
@@ -120,6 +126,64 @@ export class JwtAuthGuard implements CanActivate {
 
     request.user = authUser;
     return true;
+  }
+
+  private assertCookieCsrfSafe(request: {
+    method?: string;
+    headers?: Record<string, string | string[] | undefined>;
+  }): void {
+    const method = String(request.method || "GET").toUpperCase();
+    if (!STATE_CHANGING_METHODS.has(method)) {
+      return;
+    }
+
+    const headers = request.headers ?? {};
+    const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
+    if (secFetchSite === "cross-site") {
+      throwForbidden(
+        "Cross-site cookie-authenticated mutation blocked (CSRF protection)",
+        ERROR_CODES.FORBIDDEN,
+        { reason: "CSRF_CROSS_SITE_BLOCKED" },
+      );
+    }
+
+    const rawOrigin = headers.origin;
+    const origin = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
+    if (origin) {
+      const normalizedOrigin = origin.trim().replace(/\/+$/, "").toLowerCase();
+      const allowedOrigins = new Set<string>();
+
+      const rawHost = headers.host;
+      const host = (Array.isArray(rawHost) ? rawHost[0] : rawHost)?.trim().toLowerCase();
+      if (host) {
+        allowedOrigins.add(`http://${host}`);
+        allowedOrigins.add(`https://${host}`);
+      }
+
+      const configuredOrigins = [
+        this.configService?.get<string>("CORS_ORIGIN"),
+        this.configService?.get<string>("FRONTEND_URL"),
+        process.env.CORS_ORIGIN,
+        process.env.FRONTEND_URL,
+      ];
+      for (const entry of configuredOrigins) {
+        if (!entry) continue;
+        for (const item of String(entry).split(",")) {
+          const cleaned = item.trim().replace(/\/+$/, "").toLowerCase();
+          if (cleaned && cleaned !== "*") {
+            allowedOrigins.add(cleaned);
+          }
+        }
+      }
+
+      if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin)) {
+        throwForbidden(
+          "Cross-origin cookie-authenticated mutation blocked (CSRF protection)",
+          ERROR_CODES.FORBIDDEN,
+          { reason: "CSRF_ORIGIN_MISMATCH", origin },
+        );
+      }
+    }
   }
 
   private getCookieValue(cookieHeader: string | undefined, name: string) {

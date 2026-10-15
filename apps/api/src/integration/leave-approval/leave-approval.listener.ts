@@ -85,14 +85,15 @@ export class LeaveApprovalListener implements OnModuleInit {
         return;
       }
 
+      let decisionResult: { applied: boolean; finalStatus: string } | undefined;
       if (outcome === "approved") {
-        await this.decisionHandler.handleApproval({
+        decisionResult = await this.decisionHandler.handleApproval({
           leaveRequestId,
           decidedByUserId: decidedByUserId ?? "system",
           decidedAt: new Date(completedAt),
         });
       } else {
-        await this.decisionHandler.handleRejection({
+        decisionResult = await this.decisionHandler.handleRejection({
           leaveRequestId,
           decidedByUserId: decidedByUserId ?? "system",
           decidedAt: new Date(completedAt),
@@ -100,11 +101,18 @@ export class LeaveApprovalListener implements OnModuleInit {
         });
       }
 
-      await this.linkRepo.updateStatus(leaveRequestId, outcome);
+      const effectiveStatus =
+        decisionResult?.finalStatus === "approved" ||
+        decisionResult?.finalStatus === "rejected" ||
+        decisionResult?.finalStatus === "cancelled"
+          ? decisionResult.finalStatus
+          : outcome;
+
+      await this.linkRepo.updateStatus(leaveRequestId, effectiveStatus);
       await this.markProcessed(idempotentId);
 
       this.logger.log(
-        `Engine ${outcome} applied to leave ${leaveRequestId}`,
+        `Engine ${outcome} (effective: ${effectiveStatus}) applied to leave ${leaveRequestId}`,
       );
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

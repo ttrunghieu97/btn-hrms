@@ -116,22 +116,27 @@ export class SendNotificationUseCase {
         effectiveType = NotificationType.IN_APP;
       }
 
+      const isInApp = effectiveType === NotificationType.IN_APP;
       const baseMetadata: Record<string, any> = {
         requestedType,
         effectiveType,
         templateName: dto.templateName ?? null,
         fallbackReasons: fallbackReasons.length ? fallbackReasons : undefined,
+        provider: isInApp ? "in_app" : "pending",
+        simulated: false,
+        deliveryState: isInApp ? "delivered" : "queued",
+        externalDelivery: false,
       };
 
       notificationInputs.push({
         userId: dto.userId,
         templateId,
         type: effectiveType,
-        status: effectiveType === NotificationType.IN_APP ? "sent" : "pending",
+        status: isInApp ? "sent" : "pending",
         subject: renderedSubject,
         body: renderedBody,
         metadata: baseMetadata,
-        sentAt: effectiveType === NotificationType.IN_APP ? new Date() : null,
+        sentAt: isInApp ? new Date() : null,
       });
 
       executionContexts.push({

@@ -18,7 +18,21 @@ export class ListPayslipsUseCase {
 
   async execute(query: PayslipQueryDto, scope?: DataScope) {
     const result = await this.payslipsRepo.list(query, scope);
-    return { ...result, rows: PayslipMapper.toResponseDtos(result.rows as any  ) };
+    const filteredRows =
+      scope?.tier === "self"
+        ? (result.rows ?? []).filter(
+            (row: { status?: string }) =>
+              !row.status || row.status === "published",
+          )
+        : result.rows;
+    return {
+      ...result,
+      rows: PayslipMapper.toResponseDtos(filteredRows as any),
+      total:
+        scope?.tier === "self" && filteredRows.length !== (result.rows ?? []).length
+          ? filteredRows.length
+          : result.total,
+    };
   }
 }
 

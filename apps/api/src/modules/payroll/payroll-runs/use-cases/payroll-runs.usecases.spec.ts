@@ -48,7 +48,8 @@ describe(GeneratePayrollRunUseCase.name, () => {
       createPayslips: jest.fn().mockResolvedValue([{ id: "payslip-1", employeeId: "emp-1" }]),
       createPayrollItems: jest.fn(),
       markRunApproved: jest.fn(),
-      markRunPendingApproval: jest.fn(),
+      markRunPendingApproval: jest.fn().mockResolvedValue([{ id: "run-1" }]),
+      recordApprovalAction: jest.fn().mockResolvedValue(undefined),
     };
     const eventOutbox = {
       stage: jest.fn().mockResolvedValue({ id: "out-1" }),
@@ -71,12 +72,69 @@ describe(GeneratePayrollRunUseCase.name, () => {
       { canTransition: jest.fn().mockReturnValue(true) } as any,
     );
 
-    await useCase.execute("run-1");
+    await useCase.execute("run-1", "user-maker");
 
+    expect(repo.createPayslips).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          employeeId: "emp-1",
+          status: "draft",
+          metadata: expect.objectContaining({
+            calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+            policyBlockerCode: "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+            unconfirmedPolicyComponents: expect.arrayContaining([
+              "tax_amount",
+              "statutory_insurance_amount",
+              "allowance_components",
+              "overtime_day_type_multipliers",
+              "standard_working_divisor",
+              "mid_period_salary_proration",
+            ]),
+          }),
+        }),
+      ],
+      expect.anything(),
+    );
+    expect(repo.recordApprovalAction).toHaveBeenCalledWith(
+      "run-1",
+      "REQUESTED",
+      "user-maker",
+      null,
+      expect.anything(),
+    );
     expect(eventOutbox.stage).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "PayrollGeneratedEvent" }),
       expect.anything(),
     );
+  });
+
+  it("rejects generation when requester identity is missing or 'system'", async () => {
+    const repo = {
+      findById: jest.fn().mockResolvedValue({
+        id: "run-1",
+        payrollPeriodId: "period-1",
+        branchId: null,
+        status: "draft",
+      }),
+      transaction: jest.fn(),
+      recordApprovalAction: jest.fn(),
+    };
+    const useCase = new GeneratePayrollRunUseCase(
+      repo as any,
+      { getEffectiveDailySummaries: jest.fn().mockResolvedValue([]) },
+      { evaluate: jest.fn() },
+      { getAdjustmentDeltas: jest.fn().mockResolvedValue([]) },
+      { stage: jest.fn() } as any,
+      { canTransition: jest.fn().mockReturnValue(true) } as any,
+    );
+
+    await expect(useCase.execute("run-1")).rejects.toThrow(
+      "Approval requester identity is required to enforce Segregation of Duties",
+    );
+    await expect(useCase.execute("run-1", "system")).rejects.toThrow(
+      "Approval requester identity is required to enforce Segregation of Duties",
+    );
+    expect(repo.transaction).not.toHaveBeenCalled();
   });
 
   it("rejects concurrent generation when run is already being processed", async () => {
@@ -89,6 +147,7 @@ describe(GeneratePayrollRunUseCase.name, () => {
       findActiveCalculationVersion: jest.fn().mockResolvedValue(null),
       transaction: jest.fn().mockImplementation(async (fn) => fn({})),
       markRunProcessing: jest.fn().mockResolvedValue([]), // concurrent clash!
+      recordApprovalAction: jest.fn(),
     };
 
     const useCase = new GeneratePayrollRunUseCase(
@@ -100,7 +159,7 @@ describe(GeneratePayrollRunUseCase.name, () => {
       { canTransition: jest.fn().mockReturnValue(true) } as any,
     );
 
-    await expect(useCase.execute("run-1")).rejects.toThrow(
+    await expect(useCase.execute("run-1", "user-maker")).rejects.toThrow(
       "Payroll run is currently being processed or its status was changed concurrently",
     );
   });
@@ -177,11 +236,14 @@ describe("ApprovePayrollRunUseCase (Segregation of Duties)", () => {
     expect(repo.transaction).not.toHaveBeenCalled();
   });
 
-  it("permits approval when approver is different from the requester", async () => {
+  it("permits approval when approver is different from the requester and payslips are non-provisional", async () => {
     const repo = {
       findById: jest.fn().mockResolvedValue({ id: "run-1", status: "pending_approval" }),
       getApprovalHistory: jest.fn().mockResolvedValue([
         { action: "REQUESTED", performedByUserId: "user-alice" },
+      ]),
+      findPayslipsByRunId: jest.fn().mockResolvedValue([
+        { id: "ps-1", employeeId: "emp-1", status: "draft", metadata: { calculationStatus: "CONFIRMED" } },
       ]),
       transaction: jest.fn().mockImplementation(async (fn) => fn({})),
       updateStatusWithGuard: jest.fn().mockResolvedValue(true),
@@ -192,7 +254,56 @@ describe("ApprovePayrollRunUseCase (Segregation of Duties)", () => {
     const { ApprovePayrollRunUseCase } = require("./payroll-runs.usecases");
     const useCase = new ApprovePayrollRunUseCase(repo as any, stateMachine, eventOutbox as any);
 
-    const result = await useCase.execute("run-1", "user-bob");
+    await useCase.execute("run-1", "user-bob");
     expect(repo.recordApprovalAction).toHaveBeenCalledWith("run-1", "APPROVED", "user-bob", null, expect.anything());
+  });
+
+  it("blocks approving or posting a payroll run whose payslips are provisional (BIZ-004 / BIZ-005)", async () => {
+    const provisionalPayslips = [
+      {
+        id: "ps-prov-1",
+        employeeId: "emp-1",
+        status: "draft",
+        metadata: {
+          calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+          policyBlockerCode: "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+          unconfirmedPolicyComponents: ["tax_amount", "statutory_insurance_amount"],
+        },
+      },
+    ];
+    const repo = {
+      findById: jest.fn().mockResolvedValue({
+        id: "run-prov-1",
+        status: "pending_approval",
+        calculationVersionId: "v1",
+        calculationHash: "abc12345",
+      }),
+      getApprovalHistory: jest.fn().mockResolvedValue([
+        { action: "REQUESTED", performedByUserId: "user-alice" },
+      ]),
+      findPayslipsByRunId: jest.fn().mockResolvedValue(provisionalPayslips),
+      transaction: jest.fn(),
+    };
+    const stateMachine = new PayrollRunStateMachine();
+    const eventOutbox = { stage: jest.fn() };
+    const { ApprovePayrollRunUseCase, PostPayrollRunUseCase } = require("./payroll-runs.usecases");
+
+    const approveUseCase = new ApprovePayrollRunUseCase(repo as any, stateMachine, eventOutbox as any);
+    await expect(approveUseCase.execute("run-prov-1", "user-bob")).rejects.toThrow(
+      "Provisional payroll run cannot be approved while HR/Finance payroll policies remain unconfirmed",
+    );
+    expect(repo.transaction).not.toHaveBeenCalled();
+
+    repo.findById.mockResolvedValue({
+      id: "run-prov-1",
+      status: "approved",
+      calculationVersionId: "v1",
+      calculationHash: "abc12345",
+    });
+    const postUseCase = new PostPayrollRunUseCase(repo as any, stateMachine, eventOutbox as any);
+    await expect(postUseCase.execute("run-prov-1", "user-bob")).rejects.toThrow(
+      "Provisional payroll run cannot be posted while HR/Finance payroll policies remain unconfirmed",
+    );
+    expect(repo.transaction).not.toHaveBeenCalled();
   });
 });

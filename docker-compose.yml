@@ -93,6 +93,8 @@ services:
       FEATURE_DB_VERIFY: "true"
       FEATURE_VAULT: "false"
       FEATURE_REDIS_EVENT_BUS: "false"
+      ATTENDANCE_STRICT_FACE_DETECTION: "${ATTENDANCE_STRICT_FACE_DETECTION:-false}"
+      ATTENDANCE_FACE_VERIFICATION_MODE: "${ATTENDANCE_FACE_VERIFICATION_MODE:-flagged}"
 
       # Webhooks
       WEBHOOK_SECRET: ""
@@ -100,7 +102,9 @@ services:
       WEBHOOK_ALLOW_INSECURE_HTTP: "false"
       WEBHOOK_TARGET_ALLOWLIST: ""
 
-      # Security
+      # Security & Origin Protection
+      CORS_ORIGIN: ${CORS_ORIGIN:-${APP_URL}}
+      FRONTEND_URL: ${FRONTEND_URL:-${APP_URL}}
       ALLOW_DB_RESET: "false"
       ALLOW_REMOTE_DB_RESET: "false"
       SEED_PASSWORD: ${SEED_PASSWORD:-}

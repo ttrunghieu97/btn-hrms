@@ -42,4 +42,10 @@ export interface EmployeeShiftReaderPort {
     employeeIds: string[],
     date: string,
   ): Promise<ShiftAssignmentRecord[]>;
+
+  /** Returns all active shift assignments across all employees within a date range. */
+  getAllAssignmentsForRange?(
+    from: string,
+    to: string,
+  ): Promise<ShiftAssignmentRecord[]>;
 }

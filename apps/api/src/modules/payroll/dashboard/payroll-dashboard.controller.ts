@@ -13,7 +13,7 @@ export class PayrollDashboardController {
   ) {}
 
   @Get("dashboard")
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "Get payroll dashboard overview" })
   async getDashboard() {
     return this.getPayrollDashboard.execute();

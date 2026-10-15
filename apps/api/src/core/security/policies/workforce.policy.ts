@@ -158,6 +158,7 @@ class DeleteSchedulePolicyHandler implements PolicyHandler {
 class ViewPayrollPolicyHandler implements PolicyHandler {
   readonly policyName = "ViewPayroll";
   readonly requiredAnyOfPermissions = [
+    Permissions.PAYROLL_VIEW,
     Permissions.PAYROLL_VIEW_SELF,
     Permissions.PAYROLL_VIEW_ALL,
     Permissions.PAYROLL_MANAGE,
@@ -166,6 +167,7 @@ class ViewPayrollPolicyHandler implements PolicyHandler {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     const perms = user.permissions ?? [];
     if (
+      perms.includes(Permissions.PAYROLL_VIEW) ||
       perms.includes(Permissions.PAYROLL_VIEW_ALL) ||
       perms.includes(Permissions.PAYROLL_MANAGE)
     )

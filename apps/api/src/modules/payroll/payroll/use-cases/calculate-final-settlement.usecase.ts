@@ -17,24 +17,38 @@ export interface CalculateFinalSettlementInput {
   employeeId: string;
 }
 
+export const FINAL_SETTLEMENT_OMITTED_COMPONENTS = [
+  "unused_leave_payout",
+  "final_tax_adjustment",
+  "statutory_insurance_adjustment",
+  "working_day_attendance_proration",
+] as const;
+
+export const FINAL_SETTLEMENT_POLICY_BLOCKER_CODE =
+  "BIZ_005_FINAL_SETTLEMENT_POLICY_UNCONFIRMED";
+
 export interface FinalSettlementResult {
   status: "settled" | "failed";
   payrollRef?: string;
   proratedSalary?: number;
   daysWorked?: number;
   daysInMonth?: number;
+  isProvisional?: boolean;
+  settlementComplete?: boolean;
+  requiresManualReviewBeforePublish?: boolean;
+  policyBlockerCode?: string;
+  omittedComponents?: readonly string[];
 }
 
 /**
- * Computes a departing employee's final settlement when offboarding completes.
+ * Computes a departing employee's final settlement draft when offboarding completes.
  *
- * Scope (per product decision): prorate the base salary for the final partial
- * month up to the employee's end date and persist it as a draft payslip, then
- * report the result back to offboarding's settlement link.
- *
- * Deliberately OUT of scope for now (logged as TODO, not silently dropped):
- *   - unused-leave payout — no leave-balance data source exists yet
- *   - final tax / statutory adjustment on the settlement amount
+ * Because HR/Finance policy for unused-leave conversion, final PIT/statutory
+ * adjustments, and working-day vs calendar-day proration is not yet confirmed
+ * (`NEEDS_BUSINESS_CONFIRMATION`), this use-case persists a PROVISIONAL draft
+ * payslip flagged with `settlementComplete: false` and
+ * `requiresManualReviewBeforePublish: true` so it cannot be published to the
+ * employee as a completed settlement without manual HR/Finance completion.
  */
 @Injectable()
 export class CalculateFinalSettlementUseCase {
@@ -61,52 +75,110 @@ export class CalculateFinalSettlementUseCase {
 
     await this.settlementWriter.markProcessing(processId);
 
-    const salaryStructure =
-      await this.payrollRepo.getCurrentSalaryStructureByEmployeeId(employeeId);
+    let payroll: { id: string };
+    let proratedSalary = 0;
+    let daysWorked = 0;
+    let daysInMonth = 0;
 
-    if (!salaryStructure) {
-      this.logger.warn({
-        event: "final_settlement_no_salary_structure",
+    try {
+      const salaryStructure =
+        await this.payrollRepo.getCurrentSalaryStructureByEmployeeId(employeeId);
+
+      if (!salaryStructure) {
+        this.logger.warn({
+          event: "final_settlement_no_salary_structure",
+          employeeId,
+          processId,
+        });
+        await this.settlementWriter.markFailed(processId);
+        return { status: "failed" };
+      }
+
+      const employee = await this.employeeReader.findEmployeeById(employeeId);
+      const endDate = this.resolveEndDate(employee?.endDate ?? null);
+
+      const baseSalary = Number(salaryStructure.baseSalary ?? 0);
+      const proration = this.prorate(baseSalary, endDate);
+      proratedSalary = proration.proratedSalary;
+      daysWorked = proration.daysWorked;
+      daysInMonth = proration.daysInMonth;
+
+      const monthStart = this.firstOfMonth(endDate);
+      const effectiveTo = this.toDateString(endDate);
+
+      const upsertPayload = {
+        salary: String(proratedSalary),
+        netSalary: String(proratedSalary),
+        currency: salaryStructure.currency ?? "VND",
+        effectiveFrom: monthStart,
+        effectiveTo,
+        metadata: {
+          source: "offboarding-final-settlement",
+          isProvisional: true,
+          settlementComplete: false,
+          requiresManualReviewBeforePublish: true,
+          policyBlockerCode: FINAL_SETTLEMENT_POLICY_BLOCKER_CODE,
+          omittedComponents: [...FINAL_SETTLEMENT_OMITTED_COMPONENTS],
+          prorationBasis: "calendar_days_provisional",
+        },
+      };
+
+      const committedPayroll =
+        typeof this.payrollRepo.transaction === "function"
+          ? await this.payrollRepo.transaction((tx) =>
+              this.payrollRepo.upsertByEmployeeId(employeeId, upsertPayload, tx),
+            )
+          : await this.payrollRepo.upsertByEmployeeId(employeeId, upsertPayload);
+
+      if (!committedPayroll || !committedPayroll.id) {
+        throw new Error(
+          `Final settlement transaction did not produce a valid payslip reference for process ${processId}`,
+        );
+      }
+
+      payroll = committedPayroll;
+    } catch (txError) {
+      this.logger.error({
+        event: "final_settlement_transaction_failed",
         employeeId,
         processId,
+        error: txError instanceof Error ? txError.message : String(txError),
       });
-      await this.settlementWriter.markFailed(processId);
-      return { status: "failed" };
+
+      try {
+        await this.settlementWriter.markFailed(processId);
+      } catch (markFailedError) {
+        this.logger.error({
+          event: "final_settlement_mark_failed_persistence_error",
+          employeeId,
+          processId,
+          originalError:
+            txError instanceof Error ? txError.message : String(txError),
+          markFailedError:
+            markFailedError instanceof Error
+              ? markFailedError.message
+              : String(markFailedError),
+          recoveryHint:
+            "Settlement link remained in processing; eligible for stale-processing timeout recovery or retry",
+        });
+      }
+
+      throw txError;
     }
 
-    const employee = await this.employeeReader.findEmployeeById(employeeId);
-    const endDate = this.resolveEndDate(employee?.endDate ?? null);
-
-    const baseSalary = Number(salaryStructure.baseSalary ?? 0);
-    const { proratedSalary, daysWorked, daysInMonth } = this.prorate(
-      baseSalary,
-      endDate,
-    );
-
-    const monthStart = this.firstOfMonth(endDate);
-    const effectiveTo = this.toDateString(endDate);
-
-    const payroll = await this.payrollRepo.upsertByEmployeeId(employeeId, {
-      salary: String(proratedSalary),
-      netSalary: String(proratedSalary),
-      currency: salaryStructure.currency ?? "VND",
-      effectiveFrom: monthStart,
-      effectiveTo,
-    });
-
-    // TODO(final-settlement): add unused-leave payout once a leave-balance
-    // reader port exists, and apply final tax / statutory adjustment. Tracked
-    // separately — intentionally not part of the salary-prorate seam.
-    this.logger.log({
-      event: "final_settlement_computed",
+    this.logger.warn({
+      event: "final_settlement_provisional_draft_created",
       employeeId,
       processId,
       payrollRef: payroll.id,
       proratedSalary,
       daysWorked,
       daysInMonth,
-      unusedLeavePayout: "TODO: no leave-balance source",
-      taxAdjustment: "TODO: not yet applied",
+      isProvisional: true,
+      settlementComplete: false,
+      requiresManualReviewBeforePublish: true,
+      policyBlockerCode: FINAL_SETTLEMENT_POLICY_BLOCKER_CODE,
+      omittedComponents: [...FINAL_SETTLEMENT_OMITTED_COMPONENTS],
     });
 
     await this.settlementWriter.markSettled(processId, payroll.id);
@@ -117,6 +189,11 @@ export class CalculateFinalSettlementUseCase {
       proratedSalary,
       daysWorked,
       daysInMonth,
+      isProvisional: true,
+      settlementComplete: false,
+      requiresManualReviewBeforePublish: true,
+      policyBlockerCode: FINAL_SETTLEMENT_POLICY_BLOCKER_CODE,
+      omittedComponents: FINAL_SETTLEMENT_OMITTED_COMPONENTS,
     };
   }
 

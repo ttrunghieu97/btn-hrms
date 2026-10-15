@@ -81,6 +81,15 @@ export class GetPayrollRunUseCase {
 export class CreatePayrollRunUseCase {
   constructor(private readonly repo: PayrollRunsRepository) {}
   async execute(dto: CreatePayrollRunDto) {
+    const requestedStatus = (dto as { status?: string }).status;
+    if (requestedStatus !== undefined && requestedStatus !== "draft") {
+      throwBadRequest(
+        `Cannot create payroll run in '${requestedStatus}' status; new payroll runs must start in 'draft'`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { status: requestedStatus },
+      );
+    }
+
     const existing = await this.repo.findByPeriodAndBranch(
       dto.payrollPeriodId,
       dto.branchId ?? null,
@@ -96,7 +105,7 @@ export class CreatePayrollRunUseCase {
     const row = await this.repo.create(
       PayrollRunMapper.toEntity({
         ...dto,
-        status: dto.status ?? "draft",
+        status: "draft",
       }) as PayrollRunCreateInput,
     );
     const created = await this.repo.findById(row!.id);
@@ -123,16 +132,31 @@ export class UpdatePayrollRunUseCase {
       });
     }
 
-    if (dto.status && dto.status !== existing.status) {
+    const requestedStatus = (dto as { status?: string }).status;
+    if (requestedStatus !== undefined && requestedStatus !== existing.status) {
       this.stateMachine.assertTransition(
         existing.status as PayrollRunStatus,
-        dto.status as PayrollRunStatus,
+        requestedStatus as PayrollRunStatus,
+      );
+      throwBadRequest(
+        `Lifecycle status transition (${existing.status} → ${requestedStatus}) is not permitted via generic update; use the dedicated payroll run lifecycle endpoints`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { from: existing.status, to: requestedStatus },
       );
     }
 
+    if (!this.stateMachine.isEditable(existing.status as PayrollRunStatus)) {
+      throwBadRequest(
+        `Payroll run in '${existing.status}' status cannot be modified directly`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { status: existing.status },
+      );
+    }
+
+    const { status: _ignoredStatus, ...safeDto } = dto as Record<string, unknown>;
     await this.repo.update(
       id,
-      PayrollRunMapper.toEntity(dto),
+      PayrollRunMapper.toEntity(safeDto),
     );
     const updated = await this.repo.findById(id);
     return PayrollRunMapper.toDto(updated!);
@@ -153,7 +177,7 @@ export class GeneratePayrollRunUseCase {
     private readonly stateMachine: PayrollRunStateMachine,
   ) {}
 
-  async execute(id: string) {
+  async execute(id: string, requestedByUserId?: string | null) {
     const payrollRun = await this.repo.findById(id);
     if (!payrollRun) {
       throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
@@ -161,11 +185,43 @@ export class GeneratePayrollRunUseCase {
       });
     }
 
-    if (["approved", "paid", "closed", "pending_approval"].includes(payrollRun.status)) {
+    const currentStatus = (payrollRun.status ?? "draft") as string;
+    if (["approved", "posted", "paid", "closed", "pending_approval"].includes(currentStatus)) {
       throwBadRequest(
         "Payroll run cannot be regenerated after approval",
         ERROR_CODES.INVALID_REQUEST,
-        { payrollRunId: id, status: payrollRun.status },
+        { payrollRunId: id, status: currentStatus },
+      );
+    }
+
+    if (typeof this.stateMachine.assertTransition === "function") {
+      this.stateMachine.assertTransition(currentStatus as any, "processing");
+    } else if (
+      currentStatus !== "draft" ||
+      (typeof this.stateMachine.canTransition === "function" &&
+        !this.stateMachine.canTransition(currentStatus as any, "processing"))
+    ) {
+      throwBadRequest(
+        `Invalid payroll run transition: ${currentStatus} → processing`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { from: currentStatus, to: "processing", payrollRunId: id },
+      );
+    }
+
+    const normalizedRequesterId =
+      typeof requestedByUserId === "string" ? requestedByUserId.trim() : "";
+    if (!normalizedRequesterId || normalizedRequesterId === "system") {
+      throwForbidden(
+        "Approval requester identity is required to enforce Segregation of Duties",
+        ERROR_CODES.FORBIDDEN,
+        { payrollRunId: id },
+      );
+    }
+    if (typeof this.repo.recordApprovalAction !== "function") {
+      throwForbidden(
+        "Approval history persistence is required to enforce Segregation of Duties",
+        ERROR_CODES.FORBIDDEN,
+        { payrollRunId: id },
       );
     }
 
@@ -222,7 +278,7 @@ export class GeneratePayrollRunUseCase {
     const calcVersionCode = calcVersion?.code ?? "unknown";
 
     await this.repo.transaction(async (tx: PayrollRunTransaction) => {
-      const processing = await this.repo.markRunProcessing(payrollRun.id, tx, payrollRun.status);
+      const processing = await this.repo.markRunProcessing(payrollRun.id, tx, "draft");
       if (!processing || processing.length === 0) {
         throwConflict(
           "Payroll run is currently being processed or its status was changed concurrently",
@@ -230,8 +286,32 @@ export class GeneratePayrollRunUseCase {
           { payrollRunId: payrollRun.id },
         );
       }
+
+      const existingSnapshots =
+        typeof this.repo.getRunInputSnapshotsWithItems === "function"
+          ? await this.repo.getRunInputSnapshotsWithItems(payrollRun.id, tx)
+          : [];
+      for (const existing of existingSnapshots) {
+        if (
+          existing.snapshot.status === "locked" ||
+          existing.snapshot.lockedAt !== null
+        ) {
+          throwConflict(
+            "Cannot regenerate payroll run: input snapshots are locked",
+            ERROR_CODES.CONFLICT,
+            { payrollRunId: payrollRun.id, snapshotId: existing.snapshot.id },
+          );
+        }
+      }
+      const existingSnapshotByEmployee = new Map(
+        existingSnapshots.map((entry) => [entry.snapshot.employeeId, entry]),
+      );
+
       await this.repo.deleteRunItems(payrollRun.id, tx);
       await this.repo.deleteRunPayslips(payrollRun.id, tx);
+      if (typeof this.repo.deleteRunInputSnapshots === "function") {
+        await this.repo.deleteRunInputSnapshots(payrollRun.id, tx);
+      }
 
       // Capture input snapshots before calculation — freezes what goes into
       // the payroll engine. Ensures reproducibility: a payroll result can
@@ -322,6 +402,16 @@ export class GeneratePayrollRunUseCase {
             snapshotOvertimeMinutes: totalOvertimeMinutes - adjustmentOvertimeDelta,
             adjustmentRegularDelta,
             adjustmentOvertimeDelta,
+            calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+            policyBlockerCode: "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+            unconfirmedPolicyComponents: [
+              "tax_amount",
+              "statutory_insurance_amount",
+              "allowance_components",
+              "overtime_day_type_multipliers",
+              "standard_working_divisor",
+              "mid_period_salary_proration",
+            ],
           },
         });
 
@@ -388,21 +478,63 @@ export class GeneratePayrollRunUseCase {
         events.push(new PayrollGeneratedEvent(calc.employeeId, String(payslipId)));
       }
 
-      // Persist input snapshots (freeze what entered calculation in atomic batch)
+      // Persist input snapshots (freeze what entered calculation in atomic batch,
+      // preserving full historical attempt lineage in sourceVersions.attemptHistory)
+      const generatedAtNow = new Date();
+      const generatedAtIso = generatedAtNow.toISOString();
       const snapshotEntries = inputSnapshotItems.map((item) => {
         const delta = deltaByEmployee.get(item.employeeId);
+        const priorEntry = existingSnapshotByEmployee.get(item.employeeId);
+        let attemptNumber = 1;
+        let attemptHistory: unknown[] = [];
+
+        if (priorEntry) {
+          const priorSourceVersions = (priorEntry.snapshot.sourceVersions ??
+            {}) as Record<string, unknown>;
+          const priorHistory = Array.isArray(priorSourceVersions.attemptHistory)
+            ? priorSourceVersions.attemptHistory
+            : [];
+          const {
+            attemptHistory: _omittedHistory,
+            ...priorMetaWithoutHistory
+          } = priorSourceVersions;
+          const priorAttemptNumber =
+            typeof priorSourceVersions.attemptNumber === "number"
+              ? priorSourceVersions.attemptNumber
+              : priorHistory.length + 1;
+          const priorAttemptRecord = {
+            attemptNumber: priorAttemptNumber,
+            snapshotId: priorEntry.snapshot.id,
+            generatedByUserId: priorEntry.snapshot.generatedByUserId ?? null,
+            generatedAt:
+              priorEntry.snapshot.generatedAt instanceof Date
+                ? priorEntry.snapshot.generatedAt.toISOString()
+                : String(priorEntry.snapshot.generatedAt),
+            sourceVersions: priorMetaWithoutHistory,
+            items: priorEntry.items.map((it) => ({
+              inputType: it.inputType,
+              value: it.value,
+              sourceReference: it.sourceReference ?? null,
+            })),
+          };
+          attemptHistory = [...priorHistory, priorAttemptRecord];
+          attemptNumber = priorAttemptNumber + 1;
+        }
+
         return {
           snapshot: {
             payrollRunId: payrollRun.id,
             employeeId: item.employeeId,
             status: "ready" as const,
             sourceVersions: {
+              attemptNumber,
               attendanceSnapshot: periodKey,
               adjustmentVersion: delta ? 1 : 0,
-              generatedAt: new Date().toISOString(),
+              generatedAt: generatedAtIso,
+              ...(attemptHistory.length > 0 ? { attemptHistory } : {}),
             },
-            generatedByUserId: null,
-            generatedAt: new Date(),
+            generatedByUserId: normalizedRequesterId,
+            generatedAt: generatedAtNow,
           },
           itemInputs: [
             { inputType: "ATTENDANCE_REGULAR_MINUTES" as const, value: item.workedMinutes, sourceReference: "attendance_policy" },
@@ -432,26 +564,45 @@ export class GeneratePayrollRunUseCase {
 
       // Update payroll run with calculation provenance
       if (calcVersionId) {
-        await this.repo.update(payrollRun.id, {
-          calculationVersionId: calcVersionId,
-          calculationHash: simpleHash(JSON.stringify({
-            employeeCount: inputSnapshotItems.length,
-            totalWorkedMinutes: inputSnapshotItems.reduce((s, i) => s + i.workedMinutes, 0),
-            totalOvertimeMinutes: inputSnapshotItems.reduce((s, i) => s + i.overtimeMinutes, 0),
-            adjustmentCount: inputSnapshotItems.filter((i) => i.adjustmentRegular !== 0 || i.adjustmentOvertime !== 0).length,
-            calcVersion: calcVersionCode,
-            calcTimestamp: new Date().toISOString().slice(0, 16),
-          })),
-        });
+        await this.repo.update(
+          payrollRun.id,
+          {
+            calculationVersionId: calcVersionId,
+            calculationHash: simpleHash(JSON.stringify({
+              employeeCount: inputSnapshotItems.length,
+              totalWorkedMinutes: inputSnapshotItems.reduce((s, i) => s + i.workedMinutes, 0),
+              totalOvertimeMinutes: inputSnapshotItems.reduce((s, i) => s + i.overtimeMinutes, 0),
+              adjustmentCount: inputSnapshotItems.filter((i) => i.adjustmentRegular !== 0 || i.adjustmentOvertime !== 0).length,
+              calcVersion: calcVersionCode,
+              calcTimestamp: new Date().toISOString().slice(0, 16),
+            })),
+          },
+          tx,
+        );
       }
 
-      await this.repo.markRunPendingApproval(payrollRun.id, tx);
+      const pendingRows = await this.repo.markRunPendingApproval(payrollRun.id, tx);
+      if (Array.isArray(pendingRows) && pendingRows.length === 0) {
+        throwConflict(
+          "Payroll run status changed concurrently before pending_approval transition",
+          ERROR_CODES.CONFLICT,
+          { payrollRunId: payrollRun.id },
+        );
+      }
+
+      await this.repo.recordApprovalAction(
+        payrollRun.id,
+        "REQUESTED",
+        normalizedRequesterId,
+        null,
+        tx,
+      );
 
       await this.eventOutbox.stage(
         new PayrollProcessedEvent({
           scopeId: getScopeId(),
           payrollRunId: payrollRun.id,
-          processedByUserId: null,
+          processedByUserId: normalizedRequesterId,
         }),
         tx,
       );
@@ -459,6 +610,372 @@ export class GeneratePayrollRunUseCase {
 
     const generated = await this.repo.findById(id);
     return PayrollRunMapper.toDto(generated!);
+  }
+}
+
+const VALID_APPROVAL_HISTORY_ACTIONS = new Set([
+  "REQUESTED",
+  "RESUBMITTED",
+  "APPROVED",
+  "REJECTED",
+  "POSTED",
+]);
+
+function isValidActorIdentity(userId: unknown): userId is string {
+  return (
+    typeof userId === "string" &&
+    userId.trim().length > 0 &&
+    userId.trim() !== "system"
+  );
+}
+
+export interface CurrentCycleApprovalResolution {
+  isMalformed: boolean;
+  hasPriorRejectionWithoutNewRequest: boolean;
+  currentCycleEntries: Array<{
+    action: string;
+    performedByUserId: string | null;
+    comment?: string | null;
+  }>;
+  requesterUserId: string | null;
+  requesterUserIds: string[];
+  approverUserIds: string[];
+  latestAction: string | null;
+}
+
+/**
+ * Resolves the active approval cycle from chronological `payroll_run_approval_history`
+ * rows. Any entry at or before the last `REJECTED` row belongs to a prior rejected
+ * cycle and is strictly excluded so a new cycle can never inherit a stale requester.
+ */
+export function resolveCurrentCycleApprovalHistory(
+  history:
+    | Array<{
+        action?: string | null;
+        performedByUserId?: string | null;
+        comment?: string | null;
+      }>
+    | null
+    | undefined,
+): CurrentCycleApprovalResolution {
+  if (!Array.isArray(history) || history.length === 0) {
+    return {
+      isMalformed: false,
+      hasPriorRejectionWithoutNewRequest: false,
+      currentCycleEntries: [],
+      requesterUserId: null,
+      requesterUserIds: [],
+      approverUserIds: [],
+      latestAction: null,
+    };
+  }
+
+  for (const row of history) {
+    if (
+      !row ||
+      typeof row.action !== "string" ||
+      !VALID_APPROVAL_HISTORY_ACTIONS.has(row.action)
+    ) {
+      return {
+        isMalformed: true,
+        hasPriorRejectionWithoutNewRequest: false,
+        currentCycleEntries: [],
+        requesterUserId: null,
+        requesterUserIds: [],
+        approverUserIds: [],
+        latestAction: null,
+      };
+    }
+  }
+
+  let lastRejectedIndex = -1;
+  for (let i = 0; i < history.length; i++) {
+    if (history[i]!.action === "REJECTED") {
+      lastRejectedIndex = i;
+    }
+  }
+
+  const currentCycleEntries = (
+    lastRejectedIndex >= 0 ? history.slice(lastRejectedIndex + 1) : history
+  ).map((h) => ({
+    action: h.action as string,
+    performedByUserId:
+      typeof h.performedByUserId === "string" ? h.performedByUserId.trim() : null,
+    comment: h.comment ?? null,
+  }));
+
+  if (currentCycleEntries.length === 0) {
+    return {
+      isMalformed: false,
+      hasPriorRejectionWithoutNewRequest: true,
+      currentCycleEntries: [],
+      requesterUserId: null,
+      requesterUserIds: [],
+      approverUserIds: [],
+      latestAction: "REJECTED",
+    };
+  }
+
+  const firstEntry = currentCycleEntries[0]!;
+  if (firstEntry.action !== "REQUESTED" && firstEntry.action !== "RESUBMITTED") {
+    return {
+      isMalformed: true,
+      hasPriorRejectionWithoutNewRequest: false,
+      currentCycleEntries,
+      requesterUserId: null,
+      requesterUserIds: [],
+      approverUserIds: [],
+      latestAction: currentCycleEntries[currentCycleEntries.length - 1]!.action,
+    };
+  }
+
+  const requesterUserIds: string[] = [];
+  const approverUserIds: string[] = [];
+
+  for (const entry of currentCycleEntries) {
+    if (entry.action === "REQUESTED" || entry.action === "RESUBMITTED") {
+      if (!isValidActorIdentity(entry.performedByUserId)) {
+        return {
+          isMalformed: true,
+          hasPriorRejectionWithoutNewRequest: false,
+          currentCycleEntries,
+          requesterUserId: null,
+          requesterUserIds: [],
+          approverUserIds: [],
+          latestAction: currentCycleEntries[currentCycleEntries.length - 1]!.action,
+        };
+      }
+      if (!requesterUserIds.includes(entry.performedByUserId)) {
+        requesterUserIds.push(entry.performedByUserId);
+      }
+    } else if (entry.action === "APPROVED" && entry.comment !== "Payroll posted") {
+      if (!isValidActorIdentity(entry.performedByUserId)) {
+        return {
+          isMalformed: true,
+          hasPriorRejectionWithoutNewRequest: false,
+          currentCycleEntries,
+          requesterUserId: null,
+          requesterUserIds: [],
+          approverUserIds: [],
+          latestAction: currentCycleEntries[currentCycleEntries.length - 1]!.action,
+        };
+      }
+      if (!approverUserIds.includes(entry.performedByUserId)) {
+        approverUserIds.push(entry.performedByUserId);
+      }
+    }
+  }
+
+  const latestEntry = currentCycleEntries[currentCycleEntries.length - 1]!;
+  const latestRequest = [...currentCycleEntries]
+    .reverse()
+    .find((h) => h.action === "REQUESTED" || h.action === "RESUBMITTED");
+
+  return {
+    isMalformed: false,
+    hasPriorRejectionWithoutNewRequest: false,
+    currentCycleEntries,
+    requesterUserId: latestRequest?.performedByUserId ?? null,
+    requesterUserIds,
+    approverUserIds,
+    latestAction: latestEntry.action,
+  };
+}
+
+function assertValidApprovalCycleForApprove(
+  payrollRunId: string,
+  history:
+    | Array<{
+        action?: string | null;
+        performedByUserId?: string | null;
+        comment?: string | null;
+      }>
+    | null
+    | undefined,
+  approvedByUserId: string,
+): CurrentCycleApprovalResolution {
+  const cycle = resolveCurrentCycleApprovalHistory(history);
+  if (
+    cycle.isMalformed ||
+    !cycle.requesterUserId ||
+    (cycle.latestAction !== "REQUESTED" && cycle.latestAction !== "RESUBMITTED")
+  ) {
+    throwForbidden(
+      "Approval requester identity is required to enforce Segregation of Duties",
+      ERROR_CODES.FORBIDDEN,
+      { payrollRunId },
+    );
+  }
+  if (cycle.requesterUserIds.includes(approvedByUserId)) {
+    throwForbidden(
+      "Người yêu cầu phê duyệt không được tự phê duyệt bảng lương (Vi phạm Segregation of Duties)",
+      ERROR_CODES.FORBIDDEN,
+      {
+        payrollRunId,
+        requesterUserId: cycle.requesterUserId,
+        approverUserId: approvedByUserId,
+      },
+    );
+  }
+  return cycle;
+}
+
+function assertValidApprovalCycleForPost(
+  payrollRunId: string,
+  run: { approvedByUserId?: string | null },
+  history:
+    | Array<{
+        action?: string | null;
+        performedByUserId?: string | null;
+        comment?: string | null;
+      }>
+    | null
+    | undefined,
+  postedByUserId: string,
+): CurrentCycleApprovalResolution {
+  const cycle = resolveCurrentCycleApprovalHistory(history);
+  if (
+    cycle.isMalformed ||
+    !cycle.requesterUserId ||
+    cycle.latestAction === "REJECTED"
+  ) {
+    throwForbidden(
+      "Approval requester identity is required to enforce Segregation of Duties",
+      ERROR_CODES.FORBIDDEN,
+      { payrollRunId },
+    );
+  }
+  if (cycle.requesterUserIds.includes(postedByUserId)) {
+    throwForbidden(
+      "Người yêu cầu phê duyệt không được tự chốt bảng lương (Vi phạm Segregation of Duties)",
+      ERROR_CODES.FORBIDDEN,
+      {
+        payrollRunId,
+        requesterUserId: cycle.requesterUserId,
+        postedByUserId,
+      },
+    );
+  }
+  if (run.approvedByUserId === "system") {
+    throwForbidden(
+      "Approver identity is required to enforce Segregation of Duties",
+      ERROR_CODES.FORBIDDEN,
+      { payrollRunId },
+    );
+  }
+  if (
+    (run.approvedByUserId && cycle.requesterUserIds.includes(run.approvedByUserId)) ||
+    cycle.approverUserIds.some((approverId) => cycle.requesterUserIds.includes(approverId))
+  ) {
+    throwForbidden(
+      "Người yêu cầu phê duyệt không được tự phê duyệt bảng lương (Vi phạm Segregation of Duties)",
+      ERROR_CODES.FORBIDDEN,
+      {
+        payrollRunId,
+        requesterUserId: cycle.requesterUserId,
+        approverUserId: run.approvedByUserId ?? cycle.approverUserIds[0],
+      },
+    );
+  }
+  return cycle;
+}
+
+export function isProvisionalPayslipMetadata(metadata: unknown): {
+  isProvisional: boolean;
+  calculationStatus?: string;
+  policyBlockerCode?: string;
+  unconfirmedComponents?: unknown[];
+} {
+  if (!metadata || typeof metadata !== "object") {
+    return { isProvisional: false };
+  }
+  const meta = metadata as Record<string, unknown>;
+  if (meta.calculationStatus === "PROVISIONAL_POLICY_UNCONFIRMED") {
+    return {
+      isProvisional: true,
+      calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+      policyBlockerCode:
+        typeof meta.policyBlockerCode === "string"
+          ? meta.policyBlockerCode
+          : "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+      unconfirmedComponents: Array.isArray(meta.unconfirmedPolicyComponents)
+        ? meta.unconfirmedPolicyComponents
+        : [],
+    };
+  }
+  if (
+    meta.isProvisional === true ||
+    meta.settlementComplete === false ||
+    meta.requiresManualReviewBeforePublish === true
+  ) {
+    return {
+      isProvisional: true,
+      calculationStatus:
+        typeof meta.calculationStatus === "string"
+          ? meta.calculationStatus
+          : "PROVISIONAL_POLICY_UNCONFIRMED",
+      policyBlockerCode:
+        typeof meta.policyBlockerCode === "string"
+          ? meta.policyBlockerCode
+          : "BIZ_005_FINAL_SETTLEMENT_POLICY_UNCONFIRMED",
+      unconfirmedComponents: Array.isArray(meta.omittedComponents)
+        ? meta.omittedComponents
+        : Array.isArray(meta.unconfirmedPolicyComponents)
+          ? meta.unconfirmedPolicyComponents
+          : [],
+    };
+  }
+  return { isProvisional: false };
+}
+
+async function assertPayrollRunNotProvisional(
+  id: string,
+  run: unknown,
+  repo: PayrollRunsRepository,
+  operation: "approve" | "post",
+  tx?: PayrollRunTransaction,
+): Promise<void> {
+  const runRecord = (run ?? {}) as Record<string, unknown>;
+  const runMetaCheck = isProvisionalPayslipMetadata(runRecord.metadata ?? runRecord);
+  if (runMetaCheck.isProvisional) {
+    throwConflict(
+      `Provisional payroll run cannot be ${operation === "approve" ? "approved" : "posted"} while HR/Finance payroll policies remain unconfirmed`,
+      ERROR_CODES.INVALID_STATUS_TRANSITION,
+      {
+        payrollRunId: id,
+        calculationStatus: runMetaCheck.calculationStatus,
+        policyBlockerCode: runMetaCheck.policyBlockerCode,
+        unconfirmedPolicyComponents: runMetaCheck.unconfirmedComponents ?? [],
+      },
+    );
+  }
+
+  if (typeof repo.findPayslipsByRunId === "function") {
+    const runPayslips = await repo.findPayslipsByRunId(id, tx);
+    if (runPayslips.length === 0) {
+      throwConflict(
+        `Payroll run has no generated payslips and cannot be ${operation === "approve" ? "approved" : "posted"}`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payrollRunId: id },
+      );
+    }
+
+    for (const payslip of runPayslips) {
+      const check = isProvisionalPayslipMetadata(payslip.metadata);
+      if (check.isProvisional) {
+        throwConflict(
+          `Provisional payroll run cannot be ${operation === "approve" ? "approved" : "posted"} while HR/Finance payroll policies remain unconfirmed`,
+          ERROR_CODES.INVALID_STATUS_TRANSITION,
+          {
+            payrollRunId: id,
+            payslipId: payslip.id,
+            calculationStatus: check.calculationStatus,
+            policyBlockerCode: check.policyBlockerCode,
+            unconfirmedPolicyComponents: check.unconfirmedComponents ?? [],
+          },
+        );
+      }
+    }
   }
 }
 
@@ -477,22 +994,62 @@ export class ApprovePayrollRunUseCase {
     const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
     this.stateMachine.assertTransition(currentStatus, "approved");
 
-    // Segregation of Duties (SoD): Requester cannot approve their own payroll run
-    const history = await this.repo.getApprovalHistory(id);
-    const lastRequest = [...history].reverse().find((h) => h.action === "REQUESTED");
-    if (lastRequest?.performedByUserId && lastRequest.performedByUserId === approvedByUserId) {
+    const normalizedApproverId =
+      typeof approvedByUserId === "string" ? approvedByUserId.trim() : "";
+    if (!isValidActorIdentity(normalizedApproverId)) {
       throwForbidden(
-        "Người yêu cầu phê duyệt không được tự phê duyệt bảng lương (Vi phạm Segregation of Duties)",
+        "Approver identity is required to enforce Segregation of Duties",
         ERROR_CODES.FORBIDDEN,
-        { payrollRunId: id, requesterUserId: lastRequest.performedByUserId, approverUserId: approvedByUserId },
+        { payrollRunId: id },
       );
     }
 
+    // Fast-fail pre-flight checks before opening transaction
+    const history = await this.repo.getApprovalHistory(id);
+    assertValidApprovalCycleForApprove(id, history, normalizedApproverId);
+    await assertPayrollRunNotProvisional(id, run, this.repo, "approve");
+
     await this.repo.transaction(async (tx) => {
+      let lockedRun: {
+        id: string;
+        status: string;
+        approvedByUserId?: string | null;
+      } | null = null;
+      if (typeof this.repo.lockRunById === "function") {
+        lockedRun = await this.repo.lockRunById(id, tx);
+        if (!lockedRun) {
+          throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+            payrollRunId: id,
+          });
+        }
+        if (lockedRun.status !== currentStatus) {
+          throwConflict(
+            "Payroll run was updated concurrently",
+            ERROR_CODES.CONFLICT,
+            { payrollRunId: id },
+          );
+        }
+      }
+
+      const txHistory = await this.repo.getApprovalHistory(id, tx);
+      assertValidApprovalCycleForApprove(id, txHistory, normalizedApproverId);
+      await assertPayrollRunNotProvisional(
+        id,
+        lockedRun ?? run,
+        this.repo,
+        "approve",
+        tx,
+      );
+
       const updated = await this.repo.updateStatusWithGuard(
         id,
         currentStatus,
-        { status: "approved", processedAt: new Date() } as any,
+        {
+          status: "approved",
+          approvedByUserId: normalizedApproverId,
+          approvedAt: new Date(),
+          processedAt: new Date(),
+        } as any,
         tx,
       );
       if (!updated) {
@@ -502,12 +1059,18 @@ export class ApprovePayrollRunUseCase {
           { payrollRunId: id },
         );
       }
-      await this.repo.recordApprovalAction(id, "APPROVED", approvedByUserId, comment ?? null, tx);
+      await this.repo.recordApprovalAction(
+        id,
+        "APPROVED",
+        normalizedApproverId,
+        comment ?? null,
+        tx,
+      );
 
       await this.eventOutbox.stage(
         new PayrollApprovedEvent({
           payrollRunId: id,
-          approvedByUserId,
+          approvedByUserId: normalizedApproverId,
           scopeId: getScopeId(),
         }),
         tx,
@@ -535,11 +1098,41 @@ export class RejectPayrollRunUseCase {
     // rejection transitions to draft (editable state for resubmission)
     this.stateMachine.assertTransition(currentStatus, "draft");
 
+    const normalizedRejectorId =
+      typeof rejectedByUserId === "string" ? rejectedByUserId.trim() : "";
+    if (!isValidActorIdentity(normalizedRejectorId)) {
+      throwForbidden(
+        "Rejector identity is required to enforce Segregation of Duties",
+        ERROR_CODES.FORBIDDEN,
+        { payrollRunId: id },
+      );
+    }
+
     await this.repo.transaction(async (tx) => {
+      if (typeof this.repo.lockRunById === "function") {
+        const lockedRun = await this.repo.lockRunById(id, tx);
+        if (!lockedRun) {
+          throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+            payrollRunId: id,
+          });
+        }
+        if (lockedRun.status !== currentStatus) {
+          throwConflict(
+            "Payroll run was updated concurrently",
+            ERROR_CODES.CONFLICT,
+            { payrollRunId: id },
+          );
+        }
+      }
+
       const updated = await this.repo.updateStatusWithGuard(
         id,
         currentStatus,
-        { status: "draft" } as any,
+        {
+          status: "draft",
+          approvedByUserId: null,
+          approvedAt: null,
+        } as any,
         tx,
       );
       if (!updated) {
@@ -549,12 +1142,18 @@ export class RejectPayrollRunUseCase {
           { payrollRunId: id },
         );
       }
-      await this.repo.recordApprovalAction(id, "REJECTED", rejectedByUserId, reason, tx);
+      await this.repo.recordApprovalAction(
+        id,
+        "REJECTED",
+        normalizedRejectorId,
+        reason,
+        tx,
+      );
 
       await this.eventOutbox.stage(
         new PayrollRejectedEvent({
           payrollRunId: id,
-          rejectedByUserId,
+          rejectedByUserId: normalizedRejectorId,
           reason,
           scopeId: getScopeId(),
         }),
@@ -578,10 +1177,36 @@ export class RequestPayrollApprovalUseCase {
     const run = await this.repo.findById(id);
     if (!run) throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, { payrollRunId: id });
 
+    const normalizedRequesterId =
+      typeof requestedByUserId === "string" ? requestedByUserId.trim() : "";
+    if (!isValidActorIdentity(normalizedRequesterId)) {
+      throwForbidden(
+        "Approval requester identity is required to enforce Segregation of Duties",
+        ERROR_CODES.FORBIDDEN,
+        { payrollRunId: id },
+      );
+    }
+
     const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
     this.stateMachine.assertTransition(currentStatus, "pending_approval");
 
     await this.repo.transaction(async (tx) => {
+      if (typeof this.repo.lockRunById === "function") {
+        const lockedRun = await this.repo.lockRunById(id, tx);
+        if (!lockedRun) {
+          throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+            payrollRunId: id,
+          });
+        }
+        if (lockedRun.status !== currentStatus) {
+          throwConflict(
+            "Payroll run was updated concurrently",
+            ERROR_CODES.CONFLICT,
+            { payrollRunId: id },
+          );
+        }
+      }
+
       const updated = await this.repo.updateStatusWithGuard(
         id,
         currentStatus,
@@ -595,7 +1220,13 @@ export class RequestPayrollApprovalUseCase {
           { payrollRunId: id },
         );
       }
-      await this.repo.recordApprovalAction(id, "REQUESTED", requestedByUserId, null, tx);
+      await this.repo.recordApprovalAction(
+        id,
+        "REQUESTED",
+        normalizedRequesterId,
+        null,
+        tx,
+      );
     });
 
     const updated = await this.repo.findById(id);
@@ -618,16 +1249,19 @@ export class PostPayrollRunUseCase {
     const currentStatus = run.status as "draft" | "processing" | "pending_approval" | "approved" | "posted";
     this.stateMachine.assertTransition(currentStatus, "posted");
 
-    // Segregation of Duties (SoD): Requester cannot post their own payroll run
-    const history = await this.repo.getApprovalHistory(id);
-    const lastRequest = [...history].reverse().find((h) => h.action === "REQUESTED");
-    if (lastRequest?.performedByUserId && lastRequest.performedByUserId === postedByUserId) {
+    const normalizedPosterId =
+      typeof postedByUserId === "string" ? postedByUserId.trim() : "";
+    if (!isValidActorIdentity(normalizedPosterId)) {
       throwForbidden(
-        "Người yêu cầu phê duyệt không được tự chốt bảng lương (Vi phạm Segregation of Duties)",
+        "Poster identity is required to enforce Segregation of Duties",
         ERROR_CODES.FORBIDDEN,
-        { payrollRunId: id, requesterUserId: lastRequest.performedByUserId, postedByUserId },
+        { payrollRunId: id },
       );
     }
+
+    // Fast-fail pre-flight checks before opening transaction
+    const history = await this.repo.getApprovalHistory(id);
+    assertValidApprovalCycleForPost(id, run, history, normalizedPosterId);
 
     // Posting guards — validate preconditions for financial publication
     if (!run.calculationVersionId) {
@@ -643,13 +1277,66 @@ export class PostPayrollRunUseCase {
       );
     }
 
+    await assertPayrollRunNotProvisional(id, run, this.repo, "post");
+
     await this.repo.transaction(async (tx) => {
+      let lockedRun: {
+        id: string;
+        status: string;
+        approvedByUserId: string | null;
+        postedByUserId: string | null;
+        calculationVersionId: string | null;
+        calculationHash: string | null;
+      } | null = null;
+      if (typeof this.repo.lockRunById === "function") {
+        lockedRun = await this.repo.lockRunById(id, tx);
+        if (!lockedRun) {
+          throwNotFound("Payroll run not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+            payrollRunId: id,
+          });
+        }
+        if (lockedRun.status !== currentStatus) {
+          throwConflict(
+            "Payroll run was updated concurrently",
+            ERROR_CODES.CONFLICT,
+            { payrollRunId: id },
+          );
+        }
+        if (!lockedRun.calculationVersionId) {
+          throwBadRequest(
+            "Payroll run has no calculation version. Generate payroll before posting.",
+            ERROR_CODES.INVALID_REQUEST,
+          );
+        }
+        if (!lockedRun.calculationHash) {
+          throwBadRequest(
+            "Payroll run has no calculation hash. Generate payroll before posting.",
+            ERROR_CODES.INVALID_REQUEST,
+          );
+        }
+      }
+
+      const txHistory = await this.repo.getApprovalHistory(id, tx);
+      assertValidApprovalCycleForPost(
+        id,
+        lockedRun ?? run,
+        txHistory,
+        normalizedPosterId,
+      );
+      await assertPayrollRunNotProvisional(
+        id,
+        lockedRun ?? run,
+        this.repo,
+        "post",
+        tx,
+      );
+
       const updated = await this.repo.updateStatusWithGuard(
         id,
         currentStatus,
         {
           status: "posted",
-          postedByUserId,
+          postedByUserId: normalizedPosterId,
           postedAt: new Date(),
           publicationStatus: "pending",
         } as any,
@@ -663,12 +1350,22 @@ export class PostPayrollRunUseCase {
         );
       }
 
-      await this.repo.recordApprovalAction(id, "APPROVED", postedByUserId, "Payroll posted", tx);
+      if (typeof this.repo.lockRunInputSnapshots === "function") {
+        await this.repo.lockRunInputSnapshots(id, tx);
+      }
+
+      await this.repo.recordApprovalAction(
+        id,
+        "APPROVED",
+        normalizedPosterId,
+        "Payroll posted",
+        tx,
+      );
 
       await this.eventOutbox.stage(
         new PayrollPostedEvent({
           payrollRunId: id,
-          postedByUserId,
+          postedByUserId: normalizedPosterId,
           scopeId: getScopeId(),
         }),
         tx,

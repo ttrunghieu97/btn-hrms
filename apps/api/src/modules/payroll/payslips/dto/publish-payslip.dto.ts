@@ -1,10 +1,11 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class PublishPayslipDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ["published"] })
   @IsOptional()
   @IsString()
+  @IsIn(["published"])
   status?: string;
 
   @ApiPropertyOptional()

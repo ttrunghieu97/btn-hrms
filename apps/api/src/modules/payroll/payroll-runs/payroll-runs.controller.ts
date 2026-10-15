@@ -55,7 +55,7 @@ export class PayrollRunsController {
   ) {}
 
   @Get()
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "List payroll runs" })
   @ApiOkResponse({ type: PayrollRunListEnvelopeDto })
   list(@Query() query: PayrollRunQueryDto) {
@@ -63,7 +63,7 @@ export class PayrollRunsController {
   }
 
   @Get(":id")
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "Get payroll run" })
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
   get(@Param("id", new ParseUUIDPipe()) id: string) {
@@ -100,8 +100,11 @@ export class PayrollRunsController {
     summary: "Generate payslips and payroll records for payroll run",
   })
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
-  generate(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.generateRun.execute(id);
+  generate(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req?: any,
+  ) {
+    return this.generateRun.execute(id, req?.user?.id ?? req?.user?.userId ?? null);
   }
 
   @Post(":id/request-approval")
@@ -111,9 +114,12 @@ export class PayrollRunsController {
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
   requestApproval(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Request() req: any,
+    @Request() req?: any,
   ) {
-    return this.requestApprovalRun.execute(id, req.user?.id ?? "system");
+    return this.requestApprovalRun.execute(
+      id,
+      req?.user?.id ?? req?.user?.userId ?? "system",
+    );
   }
 
   @Post(":id/approve")
@@ -123,9 +129,12 @@ export class PayrollRunsController {
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
   approve(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Request() req: any,
+    @Request() req?: any,
   ) {
-    return this.approveRun.execute(id, req.user?.id ?? "system");
+    return this.approveRun.execute(
+      id,
+      req?.user?.id ?? req?.user?.userId ?? "system",
+    );
   }
 
   @Post(":id/reject")
@@ -138,7 +147,11 @@ export class PayrollRunsController {
     @Request() req: any,
     @Body() body: { reason: string },
   ) {
-    return this.rejectRun.execute(id, req.user?.id ?? "system", body.reason);
+    return this.rejectRun.execute(
+      id,
+      req?.user?.id ?? req?.user?.userId ?? "system",
+      body.reason,
+    );
   }
 
   @Post(":id/post")
@@ -148,9 +161,12 @@ export class PayrollRunsController {
   @ApiOkResponse({ type: PayrollRunEnvelopeDto })
   post(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Request() req: any,
+    @Request() req?: any,
   ) {
-    return this.postRun.execute(id, req.user?.id ?? "system");
+    return this.postRun.execute(
+      id,
+      req?.user?.id ?? req?.user?.userId ?? "system",
+    );
   }
 }
 

@@ -55,8 +55,10 @@ export class LeaveApprovalLinkRepository {
   async updateStatus(
     leaveRequestId: string,
     status: LinkStatus,
+    tx?: AppDatabase,
   ): Promise<void> {
-    await this.db
+    const db = tx && typeof (tx as { update?: unknown }).update === "function" ? tx : this.db;
+    await db
       .update(schema.leaveApprovalLinks)
       .set({ status, updatedAt: new Date() })
       .where(eq(schema.leaveApprovalLinks.leaveRequestId, leaveRequestId));

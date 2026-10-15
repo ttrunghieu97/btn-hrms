@@ -13,7 +13,10 @@ import {
   ApiOperation,
 } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
+import { Resource } from "../../../core/security/decorators/resource.decorator";
+import { Employee } from "../../../core/security/types/resource-entities";
 import { EmployeePolicies } from "../../../core/security/policies/employee.policy";
+import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
 import { ListEmployeeAllowancesUseCase } from "./use-cases/list-employee-allowances.usecase";
 import { CreateEmployeeAllowanceUseCase } from "./use-cases/create-employee-allowance.usecase";
 import { UpdateEmployeeAllowanceUseCase } from "./use-cases/update-employee-allowance.usecase";
@@ -22,6 +25,7 @@ import { CreateAllowanceDto, UpdateAllowanceDto } from "./dto/allowance.dto";
 
 @ApiTags("Employee Allowances")
 @ApiBearerAuth()
+@Resource(Employee, "employeeId")
 @Controller("employees/:employeeId/allowances")
 export class EmployeeAllowancesController {
   constructor(
@@ -32,6 +36,7 @@ export class EmployeeAllowancesController {
   ) {}
 
   @Get()
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "List allowances of an employee" })
   findAll(@Param("employeeId") employeeId: string) {
@@ -39,7 +44,9 @@ export class EmployeeAllowancesController {
   }
 
   @Post()
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.edit)
+  @AuditLog({ action: "employee_allowance_create", entity: "employee_allowance" })
   @ApiOperation({ summary: "Add an allowance to employee" })
   create(
     @Param("employeeId") employeeId: string,
@@ -49,23 +56,27 @@ export class EmployeeAllowancesController {
   }
 
   @Patch(":allowanceId")
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.edit)
+  @AuditLog({ action: "employee_allowance_update", entity: "employee_allowance" })
   @ApiOperation({ summary: "Update an allowance" })
   update(
-    @Param("employeeId") _employeeId: string,
+    @Param("employeeId") employeeId: string,
     @Param("allowanceId") allowanceId: string,
     @Body() dto: UpdateAllowanceDto,
   ) {
-    return this.updateAllowance.execute(allowanceId, dto);
+    return this.updateAllowance.execute(allowanceId, dto, employeeId);
   }
 
   @Delete(":allowanceId")
+  @Resource(Employee, "employeeId")
   @CheckPolicy(EmployeePolicies.edit)
+  @AuditLog({ action: "employee_allowance_delete", entity: "employee_allowance" })
   @ApiOperation({ summary: "Delete an allowance" })
   remove(
-    @Param("employeeId") _employeeId: string,
+    @Param("employeeId") employeeId: string,
     @Param("allowanceId") allowanceId: string,
   ) {
-    return this.deleteAllowance.execute(allowanceId);
+    return this.deleteAllowance.execute(allowanceId, employeeId);
   }
 }

@@ -30,14 +30,14 @@ export class SalaryStructuresController {
   ) {}
 
   @Get()
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "List salary structures" })
   list(@Query() query: SalaryStructureQueryDto) {
     return this.listSalaryStructures.execute(query);
   }
 
   @Get(":id")
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "Get salary structure" })
   get(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.getSalaryStructure.execute(id);

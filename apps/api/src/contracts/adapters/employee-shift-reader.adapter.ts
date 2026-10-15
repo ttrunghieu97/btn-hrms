@@ -29,6 +29,27 @@ export class EmployeeShiftReaderAdapter implements EmployeeShiftReaderPort {
     ) as Promise<ShiftAssignmentRecord[]>;
   }
 
+  async getAllAssignmentsForRange(
+    from: string,
+    to: string,
+  ): Promise<ShiftAssignmentRecord[]> {
+    const rows = await this.db.query.employeeShiftAssignments.findMany({
+      where: and(
+        lte(schema.employeeShiftAssignments.effectiveFrom, to),
+        or(
+          gte(schema.employeeShiftAssignments.effectiveTo, from),
+          isNull(schema.employeeShiftAssignments.effectiveTo),
+        ),
+        ne(schema.employeeShiftAssignments.status, "cancelled"),
+      ),
+      with: {
+        shiftTemplate: true,
+      },
+      orderBy: [desc(schema.employeeShiftAssignments.effectiveFrom)],
+    });
+    return rows as ShiftAssignmentRecord[];
+  }
+
   async findShiftAssignmentForEmployeeDay(
     employeeId: string,
     workDate: string,

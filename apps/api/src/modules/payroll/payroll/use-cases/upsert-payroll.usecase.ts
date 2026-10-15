@@ -24,12 +24,18 @@ export class UpsertPayrollUseCase {
 
     return this.payrollRepo.transaction(async (tx) => {
       const row = await this.payrollRepo.upsertByEmployeeId(employeeId, {
-        salary: dto.salary  ,
-        bonus: (dto.bonus ?? "0")  ,
-        deduction: (dto.deduction ?? "0")  ,
+        salary: dto.salary,
+        bonus: dto.bonus,
+        deduction: dto.deduction,
+        allowance: dto.allowance,
+        overtimeAmount: dto.overtimeAmount,
+        taxAmount: dto.taxAmount,
+        insuranceAmount: dto.insuranceAmount,
+        netSalary: dto.netSalary,
         currency: dto.currency ?? "VND",
-        effectiveFrom: dto.effectiveFrom ?? null,
-      }  , tx);
+        effectiveFrom: dto.effectiveFrom ?? undefined,
+        effectiveTo: dto.effectiveTo ?? undefined,
+      }, tx);
 
       if (!row) throwInternalServer("Failed to upsert payroll record", ERROR_CODES.INTERNAL_ERROR);
 

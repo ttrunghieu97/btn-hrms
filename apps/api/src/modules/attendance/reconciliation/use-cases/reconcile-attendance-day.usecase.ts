@@ -26,22 +26,27 @@ export class ReconcileAttendanceDayUseCase {
       : await this.eventRepo.findByEmployeeIdsAndRange([], dayStart, dayEnd);
 
     const assignments: AssignmentWindow[] = [];
-    if (employeeId) {
-      const shiftRows = await this.shiftReader.getEmployeeAssignmentsForRange(
-        employeeId,
-        date,
-        date,
-      );
-      for (const s of shiftRows) {
-        if (!s.shiftTemplate) continue;
-        assignments.push({
-          id: s.id,
+    const shiftRows = employeeId
+      ? await this.shiftReader.getEmployeeAssignmentsForRange(
           employeeId,
-          shiftTemplateId: s.shiftTemplateId,
-          scheduledStart: new Date(`${date}T${s.shiftTemplate.startTime}`),
-          scheduledEnd: new Date(`${date}T${s.shiftTemplate.endTime}`),
-        });
-      }
+          date,
+          date,
+        )
+      : this.shiftReader.getAllAssignmentsForRange
+        ? await this.shiftReader.getAllAssignmentsForRange(date, date)
+        : [];
+
+    for (const s of shiftRows) {
+      if (!s.shiftTemplate) continue;
+      const targetEmployeeId = s.employeeId || employeeId;
+      if (!targetEmployeeId) continue;
+      assignments.push({
+        id: s.id,
+        employeeId: targetEmployeeId,
+        shiftTemplateId: s.shiftTemplateId,
+        scheduledStart: new Date(`${date}T${s.shiftTemplate.startTime}`),
+        scheduledEnd: new Date(`${date}T${s.shiftTemplate.endTime}`),
+      });
     }
 
     const mappedEvents = events.map((e) => ({

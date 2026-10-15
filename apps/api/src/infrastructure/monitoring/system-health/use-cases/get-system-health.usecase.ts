@@ -1,9 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { SystemHealthRepository } from "../repositories/system-health.repository";
 import { RedisService } from "../../../../infrastructure/redis/redis.service";
 import { StorageService } from "../../../../infrastructure/storage/storage.service";
+import { FacePresenceService } from "../../../../modules/attendance/attendances/services/face-presence.service";
+import { EmailDeliveryService } from "../../../../modules/platform-notifications/channels/email-delivery.service";
+import { SmsDeliveryService } from "../../../../modules/platform-notifications/channels/sms-delivery.service";
+import { PushDeliveryService } from "../../../../modules/platform-notifications/channels/push-delivery.service";
 import type { SystemHealthResponseDto, ComponentHealthDto } from "../dto/system-health-response.dto";
 
 @Injectable()
@@ -15,6 +19,10 @@ export class GetSystemHealthUseCase {
     private readonly requestContext: RequestContextService,
     private readonly redis: RedisService,
     private readonly storage: StorageService,
+    @Optional() private readonly facePresence?: FacePresenceService,
+    @Optional() private readonly emailDelivery?: EmailDeliveryService,
+    @Optional() private readonly smsDelivery?: SmsDeliveryService,
+    @Optional() private readonly pushDelivery?: PushDeliveryService,
   ) {
     this.logger = new ContextLogger(this.requestContext, GetSystemHealthUseCase.name);
   }
@@ -34,6 +42,36 @@ export class GetSystemHealthUseCase {
     const s3Result = await this.checkComponent("s3", () => this.checkS3());
     components.push(s3Result);
     totalLatencyMs += s3Result.latencyMs;
+
+    const faceDiag = (this.facePresence ?? new FacePresenceService()).getDiagnostics();
+    const faceHealthy = faceDiag.configured && !faceDiag.simulated;
+    components.push({
+      name: "face_presence",
+      status: faceHealthy ? "healthy" : "degraded",
+      latencyMs: 0,
+      error: faceHealthy
+        ? null
+        : `Noop provider active (mode=${faceDiag.mode}; external face detection not configured)`,
+    });
+
+    const emailDiag = (this.emailDelivery ?? new EmailDeliveryService()).getDiagnostics();
+    const smsDiag = (this.smsDelivery ?? new SmsDeliveryService()).getDiagnostics();
+    const pushDiag = (this.pushDelivery ?? new PushDeliveryService()).getDiagnostics();
+    const simulatedChannels = [
+      (!emailDiag.configured || emailDiag.simulated) ? "email" : null,
+      (!smsDiag.configured || smsDiag.simulated) ? "sms" : null,
+      (!pushDiag.configured || pushDiag.simulated) ? "push" : null,
+    ].filter((ch): ch is string => ch !== null);
+
+    components.push({
+      name: "notification_delivery",
+      status: simulatedChannels.length === 0 ? "healthy" : "degraded",
+      latencyMs: 0,
+      error:
+        simulatedChannels.length === 0
+          ? null
+          : `Simulated providers active (${simulatedChannels.join("/")} external delivery providers not configured)`,
+    });
 
     await this.recordHealthCheck(dbResult);
 

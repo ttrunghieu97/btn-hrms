@@ -28,6 +28,38 @@ export class UpdatePayrollPeriodUseCase {
       });
     }
 
+    if (existing.status === "paid" || existing.status === "closed") {
+      throwBadRequest(
+        `Payroll period in '${existing.status}' status is immutable`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payrollPeriodId: id, status: existing.status },
+      );
+    }
+
+    if (existing.status === "processing") {
+      throwBadRequest(
+        "Payroll period in 'processing' status cannot be modified while payroll calculation is in progress",
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payrollPeriodId: id, status: existing.status },
+      );
+    }
+
+    if (dto.status && ["paid", "processing"].includes(dto.status) && dto.status !== existing.status) {
+      throwBadRequest(
+        `Cannot transition payroll period directly to '${dto.status}' via generic update`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payrollPeriodId: id, from: existing.status, to: dto.status },
+      );
+    }
+
+    if (dto.status !== undefined && !["draft", "open", "closed"].includes(dto.status)) {
+      throwBadRequest(
+        `Invalid payroll period status '${dto.status}'; allowed statuses on update are 'draft', 'open', or 'closed'`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payrollPeriodId: id, from: existing.status, to: dto.status },
+      );
+    }
+
     const startsOn = dto.startsOn ?? existing.startsOn;
     const endsOn = dto.endsOn ?? existing.endsOn;
     if (startsOn > endsOn) {

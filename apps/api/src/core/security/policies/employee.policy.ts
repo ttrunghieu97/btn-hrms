@@ -7,14 +7,23 @@ import { Permissions } from "../permissions/permissions.registry";
 class ViewEmployeePolicyHandler implements PolicyHandler {
   readonly policyName = "ViewEmployee";
   readonly requiredAnyOfPermissions = [
+    Permissions.EMPLOYEES_VIEW,
     Permissions.EMPLOYEES_VIEW_SELF,
     Permissions.EMPLOYEES_VIEW_DEPARTMENT,
     Permissions.EMPLOYEES_VIEW_ALL,
+    Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_MANAGE,
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
-    if (user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL)) return true;
+    if (
+      user.permissions?.includes(Permissions.EMPLOYEES_VIEW) ||
+      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL) ||
+      user.permissions?.includes(Permissions.EMPLOYEES_EDIT) ||
+      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+    )
+      return true;
     if (!resource) {
       return (
         user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) ||
@@ -99,12 +108,28 @@ class EditEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_EDIT,
     Permissions.EMPLOYEES_MANAGE,
   ];
-  handle(user: AuthUser): boolean {
+  handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return (
+    const hasEditPermission = Boolean(
       user.permissions?.includes(Permissions.EMPLOYEES_EDIT) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE),
     );
+    if (!hasEditPermission) return false;
+
+    if (
+      resource &&
+      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) &&
+      !user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL) &&
+      !user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+    ) {
+      return Boolean(
+        user.departmentId &&
+        resource.departmentId &&
+        String(user.departmentId) === String(resource.departmentId),
+      );
+    }
+
+    return true;
   }
 }
 

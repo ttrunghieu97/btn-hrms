@@ -24,6 +24,14 @@ describe("InboundAdapterController", () => {
       process.env.WEBHOOK_SECRET = originalSecret;
     });
 
+    it("fails closed when WEBHOOK_SECRET is not configured (SEC-007)", async () => {
+      delete process.env.WEBHOOK_SECRET;
+      const controller = new InboundAdapterController();
+      await expect(
+        controller.ingest("generic", undefined, { event: "test" }),
+      ).rejects.toThrow("Inbound webhook secret is not configured");
+    });
+
     it("rejects invalid signature", async () => {
       const controller = new InboundAdapterController();
       await expect(

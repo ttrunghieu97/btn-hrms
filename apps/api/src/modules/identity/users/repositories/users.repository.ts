@@ -11,6 +11,8 @@ import {
   safeLimit,
   safePage,
 } from "../../../../shared/dto/pagination.dto";
+import { throwConflict } from "../../../../shared/utils/http-error";
+import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 
 const USER_RELATIONS = new Set(["userPermissions", "userRoles"]);
 const USER_COLUMNS = {
@@ -177,6 +179,23 @@ export class UsersRepository {
   }
 
   async delete(id: string) {
+    if (typeof this.db.query?.employees?.findFirst === "function") {
+      const linkedEmployee = await this.db.query.employees.findFirst({
+        where: eq(schema.employees.userId, id),
+        columns: { id: true, employeeCode: true },
+      });
+      if (linkedEmployee) {
+        throwConflict(
+          "Cannot delete user account linked to an employee profile; deactivate the user instead",
+          ERROR_CODES.CONFLICT,
+          {
+            reason: "USER_LINKED_TO_EMPLOYEE",
+            userId: id,
+            employeeId: linkedEmployee.id,
+          },
+        );
+      }
+    }
     await this.db.delete(users).where(eq(users.id, id));
   }
 

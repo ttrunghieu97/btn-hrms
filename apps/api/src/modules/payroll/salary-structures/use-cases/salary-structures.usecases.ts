@@ -26,7 +26,11 @@ export class UpsertSalaryStructureUseCase {
       throwBadRequest(
         "Invalid salary structure date range",
         ERROR_CODES.INVALID_REQUEST,
-        dto,
+        {
+          employeeId: dto.employeeId,
+          effectiveFrom: dto.effectiveFrom,
+          effectiveTo: dto.effectiveTo,
+        },
       );
     }
     const result = await this.repo.list({

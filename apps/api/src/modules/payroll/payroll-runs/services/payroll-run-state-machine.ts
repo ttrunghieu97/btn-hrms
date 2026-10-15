@@ -5,10 +5,10 @@ import { throwBadRequest } from "../../../../shared/utils/http-error";
 export type PayrollRunStatus = "draft" | "processing" | "pending_approval" | "approved" | "posted";
 
 const VALID_TRANSITIONS: Record<PayrollRunStatus, PayrollRunStatus[]> = {
-  draft: ["processing"],
+  draft: ["processing", "pending_approval"],
   processing: ["draft", "pending_approval"],
   pending_approval: ["approved", "draft"],
-  approved: ["posted", "pending_approval"],
+  approved: ["posted"],
   posted: [],
 };
 

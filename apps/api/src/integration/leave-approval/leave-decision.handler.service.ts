@@ -28,7 +28,7 @@ export class LeaveDecisionHandler {
     leaveRequestId: string;
     decidedByUserId: string | null;
     decidedAt: Date;
-  }) {
+  }): Promise<{ applied: boolean; finalStatus: string } | undefined> {
     const { leaveRequestId, decidedByUserId, decidedAt } = params;
 
     // Guard 1: correlation must exist (reject orphan events)
@@ -37,14 +37,14 @@ export class LeaveDecisionHandler {
       this.logger.warn(
         `No approval link for leave ${leaveRequestId} — ignoring approval`,
       );
-      return;
+      return undefined;
     }
 
-    await this.leaveRepo.transaction(async (tx) => {
-      const existing = await this.leaveRepo.findById(leaveRequestId);
+    const txResult = await this.leaveRepo.transaction(async (tx) => {
+      const existing = await this.leaveRepo.findById(leaveRequestId, tx);
       if (!existing) {
         this.logger.warn(`Leave ${leaveRequestId} not found for approval`);
-        return;
+        return undefined;
       }
 
       // Guard 2: terminal state → reject late engine decision
@@ -52,7 +52,7 @@ export class LeaveDecisionHandler {
         this.logger.warn(
           `Leave ${leaveRequestId} is in terminal state ${existing.status} — ignoring late approval`,
         );
-        return;
+        return { applied: false, finalStatus: existing.status };
       }
 
       this.lifecycle.assertTransition(existing.status, "approved", leaveRequestId);
@@ -71,29 +71,87 @@ export class LeaveDecisionHandler {
         this.logger.warn(
           `Leave ${leaveRequestId} was modified concurrently — skipping approval`,
         );
-        return;
+        return { applied: false, finalStatus: "approved" };
       }
 
-      // Consume balance
-      const balanceYear = new Date(existing.startDate).getFullYear();
-      const balance = await this.leaveRepo.findBalanceForYear(
-        existing.employeeId,
-        existing.leaveTypeId,
-        balanceYear,
-        tx,
-      );
-      if (balance) {
-        const updated = await this.leaveRepo.incrementUsedBalance(
-          balance.id,
-          existing.totalUnits.toString(),
-          tx,
-        );
-        if (!updated) {
-          this.logger.error(
-            `Failed to approve leave request ${leaveRequestId}: insufficient balance remaining`,
+      // Consume balance (for paid leave types)
+      const isPaid = existing.leaveType?.isPaid ?? true;
+      if (isPaid) {
+        const balanceYear = new Date(existing.startDate).getFullYear();
+        const balance = this.leaveRepo.lockBalanceForYear
+          ? await this.leaveRepo.lockBalanceForYear(
+              existing.employeeId,
+              existing.leaveTypeId,
+              balanceYear,
+              tx,
+            )
+          : await this.leaveRepo.findBalanceForYear(
+              existing.employeeId,
+              existing.leaveTypeId,
+              balanceYear,
+              tx,
+            );
+        if (balance) {
+          const updated = await this.leaveRepo.incrementUsedBalance(
+            balance.id,
+            existing.totalUnits.toString(),
+            tx,
           );
-          throw new Error("Insufficient leave balance to complete approval");
+          if (!updated) {
+            const insufficientReason =
+              "Insufficient leave balance to complete approval";
+            this.logger.warn(
+              `Leave request ${leaveRequestId} auto-rejected during approval: ${insufficientReason}`,
+            );
+
+            await this.leaveRepo.updateStatusWithGuard(
+              leaveRequestId,
+              "approved",
+              {
+                status: "rejected",
+                approverUserId: decidedByUserId,
+                approvedAt: null,
+                rejectedAt: decidedAt,
+                rejectionReason: insufficientReason,
+              },
+              tx,
+            );
+
+            if (this.linkRepo.updateStatus) {
+              await this.linkRepo.updateStatus(leaveRequestId, "rejected", tx);
+            }
+
+            await this.leaveRepo.createAuditLog(
+              decidedByUserId,
+              "leave_request_reject_insufficient_balance",
+              leaveRequestId,
+              {
+                previousStatus: existing.status,
+                newStatus: "rejected",
+                reason: insufficientReason,
+              },
+              tx,
+            );
+
+            await this.eventOutbox.stage(
+              new LeaveRejectedEvent({
+                idempotencyKey: `${leaveRequestId}:leave.rejected`,
+                leaveRequestId,
+                employeeId: existing.employeeId,
+                rejectedByUserId: decidedByUserId,
+                rejectedAt: decidedAt.toISOString(),
+                reason: insufficientReason,
+              }),
+              tx,
+            );
+
+            return { applied: true, finalStatus: "rejected" as const };
+          }
         }
+      }
+
+      if (this.linkRepo.updateStatus) {
+        await this.linkRepo.updateStatus(leaveRequestId, "approved", tx);
       }
 
       await this.leaveRepo.createAuditLog(
@@ -116,18 +174,24 @@ export class LeaveDecisionHandler {
         }),
         tx,
       );
+
+      return { applied: true, finalStatus: "approved" as const };
     });
 
-    // Reconcile attendance OUTSIDE transaction
-    const updated = await this.leaveRepo.findById(leaveRequestId);
-    if (updated) {
-      try {
-        await this.reconciliation.reconcileApprovedLeave(updated);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Leave ${leaveRequestId} reconcile failed: ${msg}`);
+    // Reconcile attendance OUTSIDE transaction only when approval succeeded
+    if (txResult?.applied && txResult.finalStatus === "approved") {
+      const updated = await this.leaveRepo.findById(leaveRequestId);
+      if (updated) {
+        try {
+          await this.reconciliation.reconcileApprovedLeave(updated);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Leave ${leaveRequestId} reconcile failed: ${msg}`);
+        }
       }
     }
+
+    return txResult;
   }
 
   async handleRejection(params: {
@@ -135,7 +199,7 @@ export class LeaveDecisionHandler {
     decidedByUserId: string | null;
     decidedAt: Date;
     rejectionReason?: string | null;
-  }) {
+  }): Promise<{ applied: boolean; finalStatus: string } | undefined> {
     const { leaveRequestId, decidedByUserId, decidedAt, rejectionReason } = params;
 
     // Guard 1: correlation must exist
@@ -144,14 +208,14 @@ export class LeaveDecisionHandler {
       this.logger.warn(
         `No approval link for leave ${leaveRequestId} — ignoring rejection`,
       );
-      return;
+      return undefined;
     }
 
-    await this.leaveRepo.transaction(async (tx) => {
-      const existing = await this.leaveRepo.findById(leaveRequestId);
+    return this.leaveRepo.transaction(async (tx) => {
+      const existing = await this.leaveRepo.findById(leaveRequestId, tx);
       if (!existing) {
         this.logger.warn(`Leave ${leaveRequestId} not found for rejection`);
-        return;
+        return undefined;
       }
 
       // Guard 2: terminal state → reject late engine decision
@@ -159,7 +223,7 @@ export class LeaveDecisionHandler {
         this.logger.warn(
           `Leave ${leaveRequestId} is in terminal state ${existing.status} — ignoring late rejection`,
         );
-        return;
+        return { applied: false, finalStatus: existing.status };
       }
 
       this.lifecycle.assertTransition(existing.status, "rejected", leaveRequestId);
@@ -179,7 +243,11 @@ export class LeaveDecisionHandler {
         this.logger.warn(
           `Leave ${leaveRequestId} was modified concurrently — skipping rejection`,
         );
-        return;
+        return { applied: false, finalStatus: "rejected" };
+      }
+
+      if (this.linkRepo.updateStatus) {
+        await this.linkRepo.updateStatus(leaveRequestId, "rejected", tx);
       }
 
       await this.leaveRepo.createAuditLog(
@@ -202,6 +270,8 @@ export class LeaveDecisionHandler {
         }),
         tx,
       );
+
+      return { applied: true, finalStatus: "rejected" as const };
     });
   }
 }

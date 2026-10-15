@@ -162,6 +162,12 @@ export class PlatformNotificationsRepository {
       .returning();
   }
 
+  findNotificationById(id: string) {
+    return this.db.query.notifications.findFirst({
+      where: eq(notifications.id, id),
+    });
+  }
+
   async updateNotification(id: string, patch: Record<string, unknown>  ) {
     const [row] = await this.db
       .update(notifications)

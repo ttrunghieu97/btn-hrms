@@ -5,6 +5,7 @@ import { throwNotFound } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
+import { DataScope } from "../../../../core/security/types/data-scope.interface";
 
 @Injectable()
 export class GetPayrollByEmployeeUseCase {
@@ -16,14 +17,19 @@ export class GetPayrollByEmployeeUseCase {
     this.logger = new ContextLogger(this.requestContext, GetPayrollByEmployeeUseCase.name);
   }
 
-  async execute(employeeId: string) {
-    const row = await this.payrollRepo.findByEmployeeId(employeeId);
+  async execute(employeeId: string, scope?: DataScope) {
+    const publishedOnly = scope?.tier === "self";
+    const row = await this.payrollRepo.findByEmployeeId(
+      employeeId,
+      undefined,
+      { publishedOnly },
+    );
     if (!row) {
       throwNotFound("Payroll not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
         employeeId,
       });
     }
-    return PayrollMapper.toResponseDto(row  );
+    return PayrollMapper.toResponseDto(row);
   }
 }
 

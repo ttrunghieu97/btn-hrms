@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsUUID } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreatePayrollRunDto {
   @ApiProperty()
@@ -11,9 +11,10 @@ export class CreatePayrollRunDto {
   @IsUUID()
   branchId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ["draft"], default: "draft" })
   @IsOptional()
   @IsString()
+  @IsIn(["draft"])
   status?: string;
 
   @ApiPropertyOptional()

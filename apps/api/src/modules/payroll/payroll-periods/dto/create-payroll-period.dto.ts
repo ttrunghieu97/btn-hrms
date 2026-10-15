@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -33,9 +34,10 @@ export class CreatePayrollPeriodDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   payDate?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ["draft", "open"] })
   @IsOptional()
   @IsString()
+  @IsIn(["draft", "open"])
   status?: string;
 }
 

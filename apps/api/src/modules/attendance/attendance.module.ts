@@ -21,6 +21,7 @@ import { ReconciliationModule } from "./reconciliation/reconciliation.module";
       { path: "workforce/schedules/reconciliation", module: ReconciliationModule },
     ]),
   ],
+  exports: [AttendancesModule],
 })
 export class AttendanceDomainModule {}
 

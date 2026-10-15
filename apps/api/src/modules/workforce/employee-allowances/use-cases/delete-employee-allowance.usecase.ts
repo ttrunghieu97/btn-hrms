@@ -9,9 +9,9 @@ export class DeleteEmployeeAllowanceUseCase {
     private readonly allowancesRepo: EmployeeAllowancesRepository,
   ) {}
 
-  async execute(allowanceId: string) {
+  async execute(allowanceId: string, employeeId?: string) {
     const existing = await this.allowancesRepo.findById(allowanceId);
-    if (!existing) {
+    if (!existing || (employeeId && existing.employeeId !== employeeId)) {
       throwNotFound("Allowance not found", ERROR_CODES.ALLOWANCE_NOT_FOUND, { allowanceId });
     }
 

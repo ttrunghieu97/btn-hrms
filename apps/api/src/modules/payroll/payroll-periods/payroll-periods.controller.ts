@@ -32,14 +32,14 @@ export class PayrollPeriodsController {
   ) {}
 
   @Get()
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "List payroll periods" })
   list(@Query() query: PayrollPeriodQueryDto) {
     return this.listPayrollPeriods.execute(query);
   }
 
   @Get(":id")
-  @CheckPolicy(PayrollPolicies.view)
+  @CheckPolicy(PayrollPolicies.viewAll)
   @ApiOperation({ summary: "Get payroll period by id" })
   get(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.getPayrollPeriod.execute(id);

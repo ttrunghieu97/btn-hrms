@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PayslipsRepository } from "../repositories/payslips.repository";
 import { PublishPayslipDto } from "../dto/publish-payslip.dto";
 import {
+  throwBadRequest,
   throwConflict,
   throwNotFound,
 } from "../../../../shared/utils/http-error";
@@ -23,14 +24,21 @@ export class PublishPayslipUseCase {
     this.logger = new ContextLogger(this.requestContext, PublishPayslipUseCase.name);
   }
 
-  async execute(id: string, dto: PublishPayslipDto) {
-    const existing = await this.payslipsRepo.findById(id);
-    if (!existing) {
-      throwNotFound("Payslip not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
-        payslipId: id,
-      });
+  private assertPublishable(id: string, record: {
+    status?: string | null;
+    payrollRunId?: string | null;
+    payrollRun?: { status?: string | null } | null;
+    metadata?: unknown;
+  }, targetStatus: string) {
+    if (targetStatus !== "published") {
+      throwBadRequest(
+        `Invalid target payslip status '${targetStatus}'; publish endpoint only transitions payslips to 'published'`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payslipId: id, targetStatus },
+      );
     }
-    if (existing.status === "voided") {
+
+    if (record.status === "voided") {
       throwConflict(
         "Voided payslip cannot be published",
         ERROR_CODES.INVALID_STATUS_TRANSITION,
@@ -38,23 +46,119 @@ export class PublishPayslipUseCase {
       );
     }
 
+    if (record.status && record.status !== "draft") {
+      throwConflict(
+        `Payslip in '${record.status}' status cannot be published; only 'draft' payslips can transition to 'published'`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { payslipId: id, status: record.status },
+      );
+    }
+
+    const existingMeta = (record.metadata ?? {}) as Record<string, unknown>;
+    if (
+      existingMeta.settlementComplete === false ||
+      existingMeta.requiresManualReviewBeforePublish === true
+    ) {
+      throwConflict(
+        "Provisional final-settlement payslip cannot be published before manual HR/Finance completion of omitted settlement components",
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          payslipId: id,
+          policyBlockerCode: existingMeta.policyBlockerCode ?? "BIZ_005_FINAL_SETTLEMENT_POLICY_UNCONFIRMED",
+          omittedComponents: existingMeta.omittedComponents ?? [],
+        },
+      );
+    }
+
+    if (
+      existingMeta.calculationStatus === "PROVISIONAL_POLICY_UNCONFIRMED" ||
+      existingMeta.isProvisional === true ||
+      (existingMeta.source === "legacy-payroll-upsert" &&
+        existingMeta.calculationStatus !== "CONFIRMED")
+    ) {
+      throwConflict(
+        "Provisional payroll payslip cannot be published while HR/Finance payroll policies remain unconfirmed",
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          payslipId: id,
+          calculationStatus:
+            existingMeta.calculationStatus ?? "PROVISIONAL_POLICY_UNCONFIRMED",
+          policyBlockerCode:
+            existingMeta.policyBlockerCode ??
+            "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+          unconfirmedPolicyComponents:
+            existingMeta.unconfirmedPolicyComponents ??
+            existingMeta.omittedComponents ??
+            [],
+        },
+      );
+    }
+
+    if (!record.payrollRunId || record.payrollRun === null) {
+      throwConflict(
+        "Cannot publish payslip without an approved or posted parent payroll run",
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          payslipId: id,
+          payrollRunId: record.payrollRunId ?? null,
+        },
+      );
+    }
+
+    if (
+      record.payrollRun !== undefined &&
+      (!record.payrollRun?.status || !["approved", "posted"].includes(record.payrollRun.status))
+    ) {
+      throwConflict(
+        `Cannot publish payslip while parent payroll run is in '${record.payrollRun?.status ?? "unapproved"}' status`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          payslipId: id,
+          payrollRunId: record.payrollRunId ?? null,
+          payrollRunStatus: record.payrollRun?.status ?? null,
+        },
+      );
+    }
+  }
+
+  async execute(id: string, dto: PublishPayslipDto) {
+    const existing = await this.payslipsRepo.findById(id);
+    if (!existing) {
+      throwNotFound("Payslip not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+        payslipId: id,
+      });
+    }
+    const targetStatus = dto.status ?? "published";
+    this.assertPublishable(id, existing as any, targetStatus);
+
     await this.payslipsRepo.transaction(async (tx) => {
-      await this.payslipsRepo.update(id, {
-        status: (dto.status ?? "published") as "published",
+      const current = (await this.payslipsRepo.findById(id, tx as any)) ?? existing;
+      this.assertPublishable(id, current as any, targetStatus);
+
+      const updated = await this.payslipsRepo.update(id, {
+        status: "published",
         publishedAt: new Date(),
         metadata: dto.note
           ? {
-              ...(existing.metadata ?? {}),
+              ...(current.metadata ?? {}),
               note: dto.note,
             }
-          : existing.metadata,
+          : current.metadata,
       }, tx);
+
+      if (!updated) {
+        throwConflict(
+          "Payslip status changed concurrently and could not be published",
+          ERROR_CODES.CONFLICT,
+          { payslipId: id },
+        );
+      }
 
       await this.eventOutbox.stage(
         new PayslipPublishedEvent({
           payslipId: id,
-          employeeId: existing.employeeId,
-          payrollRunId: existing.payrollRunId ?? null,
+          employeeId: current.employeeId,
+          payrollRunId: current.payrollRunId ?? null,
         }),
         tx,
       );

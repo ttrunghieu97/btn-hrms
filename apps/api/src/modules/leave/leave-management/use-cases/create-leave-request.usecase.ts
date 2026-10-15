@@ -86,25 +86,40 @@ export class CreateLeaveRequestUseCase {
       );
     }
 
+    const balanceYear = new Date(dto.startDate).getFullYear();
+
     if (leaveType.isPaid) {
-      const balanceYear = new Date(dto.startDate).getFullYear();
-      const balance = await this.leaveRequestsRepo.findBalanceForYear(
-        employeeId,
-        dto.leaveTypeId,
-        balanceYear,
-      );
+      const [balance, pendingUnits] = await Promise.all([
+        this.leaveRequestsRepo.findBalanceForYear(
+          employeeId,
+          dto.leaveTypeId,
+          balanceYear,
+        ),
+        this.leaveRequestsRepo.sumPendingUnitsForYear
+          ? this.leaveRequestsRepo.sumPendingUnitsForYear(
+              employeeId,
+              dto.leaveTypeId,
+              balanceYear,
+            )
+          : Promise.resolve(0),
+      ]);
       if (balance) {
         const totalAvailable =
           Number(balance.openingBalance) +
           Number(balance.accruedAmount) +
           Number(balance.carriedOverAmount) +
           Number(balance.adjustedAmount) -
-          Number(balance.usedAmount);
+          Number(balance.usedAmount) -
+          Number(pendingUnits);
         if (totalAvailable < Number(dto.totalUnits)) {
           throwBadRequest(
             "Số ngày phép còn lại không đủ",
             ERROR_CODES.LEAVE_BALANCE_INSUFFICIENT,
-            { available: totalAvailable, requested: dto.totalUnits },
+            {
+              available: totalAvailable,
+              pendingReserved: Number(pendingUnits),
+              requested: dto.totalUnits,
+            },
           );
         }
       }
@@ -127,6 +142,51 @@ export class CreateLeaveRequestUseCase {
           ERROR_CODES.SCHEDULE_CONFLICT,
           { overlappingRequestId: overlapInTx.id },
         );
+      }
+
+      let balanceInTx = null;
+      if (leaveType.isPaid) {
+        balanceInTx = this.leaveRequestsRepo.lockBalanceForYear
+          ? await this.leaveRequestsRepo.lockBalanceForYear(
+              employeeId,
+              dto.leaveTypeId,
+              balanceYear,
+              tx,
+            )
+          : await this.leaveRequestsRepo.findBalanceForYear(
+              employeeId,
+              dto.leaveTypeId,
+              balanceYear,
+              tx,
+            );
+        if (balanceInTx) {
+          const pendingUnitsInTx = this.leaveRequestsRepo.sumPendingUnitsForYear
+            ? await this.leaveRequestsRepo.sumPendingUnitsForYear(
+                employeeId,
+                dto.leaveTypeId,
+                balanceYear,
+                tx,
+              )
+            : 0;
+          const totalAvailableInTx =
+            Number(balanceInTx.openingBalance) +
+            Number(balanceInTx.accruedAmount) +
+            Number(balanceInTx.carriedOverAmount) +
+            Number(balanceInTx.adjustedAmount) -
+            Number(balanceInTx.usedAmount) -
+            Number(pendingUnitsInTx);
+          if (totalAvailableInTx < Number(dto.totalUnits)) {
+            throwBadRequest(
+              "Số ngày phép còn lại không đủ",
+              ERROR_CODES.LEAVE_BALANCE_INSUFFICIENT,
+              {
+                available: totalAvailableInTx,
+                pendingReserved: Number(pendingUnitsInTx),
+                requested: dto.totalUnits,
+              },
+            );
+          }
+        }
       }
 
       const record = await this.leaveRequestsRepo.create(
@@ -160,13 +220,14 @@ export class CreateLeaveRequestUseCase {
         );
       } else {
         // Auto-approve: no engine involved → CreateLeave IS the decision source
-        const balanceYear = new Date(dto.startDate).getFullYear();
-        const balance = await this.leaveRequestsRepo.findBalanceForYear(
-          employeeId,
-          dto.leaveTypeId,
-          balanceYear,
-          tx,
-        );
+        const balance =
+          balanceInTx ??
+          (await this.leaveRequestsRepo.findBalanceForYear(
+            employeeId,
+            dto.leaveTypeId,
+            balanceYear,
+            tx,
+          ));
         if (balance) {
           const updated = await this.leaveRequestsRepo.incrementUsedBalance(
             balance.id,

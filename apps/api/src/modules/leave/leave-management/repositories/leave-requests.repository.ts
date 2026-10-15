@@ -16,7 +16,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
+import { BaseRepository, type FindOptions } from "../../../../infrastructure/repositories/base.repository";
 import { LeaveRequestQueryDto } from "../dto/leave-request-query.dto";
 
 @Injectable()
@@ -31,8 +31,15 @@ export class LeaveRequestsRepository extends BaseRepository<
     this.db = this.db;
   }
 
-  async findById(id: string) {
-    const row = await this.db.query.leaveRequests.findFirst({
+  async findById(
+    id: string,
+    tx?: AppDatabase | FindOptions<typeof schema.leaveRequests.$inferSelect>,
+  ) {
+    const db =
+      tx && "query" in tx && tx.query?.leaveRequests
+        ? (tx as AppDatabase)
+        : this.db;
+    const row = await db.query.leaveRequests.findFirst({
       where: eq(schema.leaveRequests.id, id),
       with: {
         employee: { with: { department: true } },
@@ -58,12 +65,22 @@ export class LeaveRequestsRepository extends BaseRepository<
     return rows;
   }
 
-  async list(query: LeaveRequestQueryDto) {
+  async list(
+    query: LeaveRequestQueryDto,
+    scope?: { tier: "all" | "department" | "self"; departmentId?: string; employeeId?: string },
+  ) {
     const { page = 1, limit = 20, employeeId, status, search } = query;
     const offset = (page - 1) * limit;
     const conditions = [];
 
-    if (employeeId) {
+    if (scope?.tier === "self" && scope.employeeId) {
+      conditions.push(eq(schema.leaveRequests.employeeId, scope.employeeId));
+    } else if (scope?.tier === "department" && scope.departmentId) {
+      conditions.push(eq(schema.employees.departmentId, scope.departmentId));
+      if (employeeId) {
+        conditions.push(eq(schema.leaveRequests.employeeId, employeeId));
+      }
+    } else if (employeeId) {
       conditions.push(eq(schema.leaveRequests.employeeId, employeeId));
     }
     if (status) {
@@ -224,7 +241,7 @@ export class LeaveRequestsRepository extends BaseRepository<
     balanceYear: number,
     tx?: AppDatabase,
   ) {
-    const db = tx ?? this.db;
+    const db = tx?.query?.leaveBalances ? tx : this.db;
     return db.query.leaveBalances.findFirst({
       where: and(
         eq(schema.leaveBalances.employeeId, employeeId),
@@ -233,6 +250,51 @@ export class LeaveRequestsRepository extends BaseRepository<
       ),
       with: { leaveType: true },
     });
+  }
+
+  async lockBalanceForYear(
+    employeeId: string,
+    leaveTypeId: string,
+    balanceYear: number,
+    tx?: AppDatabase,
+  ) {
+    if (tx && typeof (tx as { execute?: unknown }).execute === "function") {
+      await tx.execute(
+        sql`SELECT ${schema.leaveBalances.id} FROM ${schema.leaveBalances} WHERE ${schema.leaveBalances.employeeId} = ${employeeId} AND ${schema.leaveBalances.leaveTypeId} = ${leaveTypeId} AND ${schema.leaveBalances.balanceYear} = ${balanceYear} FOR UPDATE`,
+      );
+    }
+    return this.findBalanceForYear(employeeId, leaveTypeId, balanceYear, tx);
+  }
+
+  async sumPendingUnitsForYear(
+    employeeId: string,
+    leaveTypeId: string,
+    balanceYear: number,
+    tx?: AppDatabase,
+    excludeRequestId?: string,
+  ): Promise<number> {
+    const db = tx?.query?.leaveRequests ? tx : this.db;
+    const yearStart = `${balanceYear}-01-01`;
+    const yearEnd = `${balanceYear}-12-31`;
+    const conditions = [
+      eq(schema.leaveRequests.employeeId, employeeId),
+      eq(schema.leaveRequests.leaveTypeId, leaveTypeId),
+      eq(schema.leaveRequests.status, "pending"),
+      gte(schema.leaveRequests.startDate, yearStart),
+      lte(schema.leaveRequests.startDate, yearEnd),
+    ];
+
+    if (excludeRequestId) {
+      conditions.push(ne(schema.leaveRequests.id, excludeRequestId));
+    }
+
+    const rows = await db.query.leaveRequests.findMany({
+      where: and(...conditions),
+    });
+    return (rows ?? []).reduce(
+      (sum, row) => sum + Number(row.totalUnits ?? 0),
+      0,
+    );
   }
 
   async incrementUsedBalance(balanceId: string, units: string, tx?: AppDatabase) {
@@ -287,7 +349,7 @@ export class LeaveRequestsRepository extends BaseRepository<
     excludeRequestId?: string,
     tx?: AppDatabase,
   ) {
-    const db = tx ?? this.db;
+    const db = tx?.query?.leaveRequests ? tx : this.db;
     const conditions = [
       eq(schema.leaveRequests.employeeId, employeeId),
       inArray(schema.leaveRequests.status, ["approved", "pending"]),

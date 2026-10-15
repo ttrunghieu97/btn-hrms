@@ -45,8 +45,14 @@ export class PayslipsController {
   @Resource(Payroll)
   @CheckPolicy(PayrollPolicies.view)
   @ApiOperation({ summary: "Get payslip by id" })
-  get(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.getPayslip.execute(id);
+  get(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req?: { user?: AuthUser },
+  ) {
+    const scope = req?.user
+      ? this.queryScopeService.resolveScope(req.user, "payroll")
+      : undefined;
+    return this.getPayslip.execute(id, scope);
   }
 
   @Patch(":id/publish")

@@ -5,8 +5,10 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { violationSeverityEnum, violationStatusEnum } from "./enums";
 import { employees } from "../workforce/tables";
 import { attendanceSessions } from "../attendance/tables";
@@ -50,5 +52,19 @@ export const attendanceViolations = pgTable(
     idxEmployee: index("idx_attendance_violations_employee").on(table.employeeId),
     idxStatus: index("idx_attendance_violations_status").on(table.status),
     idxCode: index("idx_attendance_violations_code").on(table.code),
+    uqSessionEmployeeCode: uniqueIndex(
+      "uq_attendance_violations_session_emp_code",
+    )
+      .on(table.employeeId, table.sessionId, table.code)
+      .where(sql`${table.sessionId} is not null`),
+    uqNullSessionDedup: uniqueIndex(
+      "uq_attendance_violations_null_session_dedup",
+    )
+      .on(
+        table.employeeId,
+        table.code,
+        sql`coalesce(${table.metadata}->>'dedupKey', ${table.metadata}->>'date', '')`,
+      )
+      .where(sql`${table.sessionId} is null`),
   }),
 );

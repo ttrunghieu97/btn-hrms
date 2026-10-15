@@ -26,12 +26,21 @@ export class CreatePayrollPeriodUseCase {
       );
     }
 
+    const requestedStatus = dto.status ?? "draft";
+    if (!["draft", "open"].includes(requestedStatus)) {
+      throwBadRequest(
+        `Cannot create payroll period in '${requestedStatus}' status; new periods must start in 'draft' or 'open'`,
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        { status: requestedStatus },
+      );
+    }
+
     const created = await this.payrollPeriodsRepo.create({
       code: dto.code,
       name: dto.name,
       startsOn: dto.startsOn,
       endsOn: dto.endsOn,
-      status: (dto.status ?? "draft") as "draft" | "open" | "closed" | "processing" | "paid",
+      status: requestedStatus as "draft" | "open",
     });
 
     const row = await this.payrollPeriodsRepo.findById(created!.id);

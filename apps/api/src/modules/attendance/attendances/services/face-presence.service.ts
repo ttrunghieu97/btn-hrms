@@ -25,7 +25,29 @@ export type FacePresenceResult = {
 @Injectable()
 export class FacePresenceService {
   async detect(_buffer: Buffer, _mime: string): Promise<FacePresenceResult> {
+    const strictFacePolicy =
+      process.env.ATTENDANCE_STRICT_FACE_DETECTION === "true" ||
+      String(process.env.ATTENDANCE_FACE_VERIFICATION_MODE || "").toLowerCase() ===
+        "strict";
+    if (strictFacePolicy) {
+      return { facePresent: false, confidence: null, provider: "noop" };
+    }
     return { facePresent: true, confidence: null, provider: "noop" };
+  }
+
+  getDiagnostics() {
+    const strictFacePolicy =
+      process.env.ATTENDANCE_STRICT_FACE_DETECTION === "true" ||
+      String(process.env.ATTENDANCE_FACE_VERIFICATION_MODE || "").toLowerCase() ===
+        "strict";
+    return {
+      provider: "noop" as const,
+      configured: false,
+      simulated: true,
+      mode: strictFacePolicy
+        ? ("strict_fail_closed" as const)
+        : ("permissive_noop" as const),
+    };
   }
 }
 

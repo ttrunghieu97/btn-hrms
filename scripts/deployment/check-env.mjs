@@ -17,6 +17,7 @@ const groups = [
       "AUTH_JWT_SECRET",
       "AUTH_JWT_REFRESH_SECRET",
       "AUTH_DEFAULT_PASSWORD",
+      "ATTENDANCE_STRICT_FACE_DETECTION",
     ],
   },
   {
@@ -37,6 +38,7 @@ const groups = [
       "STORAGE_S3_URL",
       "BOOT_ENABLE_SWAGGER",
       "BOOT_VERIFY_DB",
+      "ATTENDANCE_STRICT_FACE_DETECTION",
     ],
   },
   {

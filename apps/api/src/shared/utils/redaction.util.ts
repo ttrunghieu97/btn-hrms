@@ -1,4 +1,4 @@
-const DEFAULT_REDACT_KEYS = [
+export const DEFAULT_REDACT_KEYS = [
   "password",
   "passwordHash",
   "token",
@@ -9,6 +9,9 @@ const DEFAULT_REDACT_KEYS = [
   "authorization",
   "cookie",
   "set-cookie",
+  "secret",
+  "clientSecret",
+  "webhookSecret",
   "identityNumber",
   "bankAccountNumber",
   "taxCode",
@@ -18,7 +21,36 @@ const DEFAULT_REDACT_KEYS = [
   "personalEmail",
   "emergencyContactName",
   "emergencyContactPhone",
+  "salary",
+  "baseSalary",
+  "bonus",
+  "deduction",
+  "deductions",
+  "totalDeductions",
+  "allowance",
+  "allowances",
+  "overtimeAmount",
+  "taxAmount",
+  "insuranceAmount",
+  "netSalary",
+  "grossPay",
+  "netPay",
+  "proratedSalary",
+  "hourlyRate",
+  "salaryComponents",
+  "compensation",
+  "insuranceNumber",
+  "socialInsuranceNumber",
+  "totalGross",
+  "totalNet",
+  "grossAmount",
+  "netAmount",
+  "salaryCap",
 ];
+
+export function normalizeRedactKey(key: string): string {
+  return key.toLowerCase().replace(/[_-\s]/g, "");
+}
 
 export function redactSensitive(
   input: unknown,
@@ -26,7 +58,7 @@ export function redactSensitive(
   maxDepth = 6,
 ): unknown {
   const seen = new WeakSet();
-  const keySet = new Set(keys.map((k) => k.toLowerCase()));
+  const keySet = new Set(keys.map(normalizeRedactKey));
 
   const walk = (value: any, depth: number): any => {
     if (depth > maxDepth) return "[Truncated]";
@@ -39,9 +71,21 @@ export function redactSensitive(
       return value.map((item) => walk(item, depth + 1));
     }
 
+    const isValidationErrorLike =
+      typeof value.property === "string" &&
+      ("constraints" in value || "children" in value || "target" in value);
+
     const out: Record<string, any> = {};
     for (const [k, v] of Object.entries(value)) {
-      if (keySet.has(k.toLowerCase())) {
+      if (isValidationErrorLike && k === "target") {
+        out[k] = "[REDACTED]";
+      } else if (
+        isValidationErrorLike &&
+        k === "value" &&
+        keySet.has(normalizeRedactKey(value.property))
+      ) {
+        out[k] = "[REDACTED]";
+      } else if (keySet.has(normalizeRedactKey(k))) {
         out[k] = "[REDACTED]";
       } else {
         out[k] = walk(v, depth + 1);

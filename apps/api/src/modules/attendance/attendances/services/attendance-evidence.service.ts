@@ -62,6 +62,19 @@ export class AttendanceEvidenceService {
     });
     this.metrics.observeAttendanceVerificationStep("face_detect", faceResult.facePresent ? "ok" : "no_face", performance.now() - tFace);
 
+    const strictFacePolicy =
+      process.env.ATTENDANCE_STRICT_FACE_DETECTION === "true" ||
+      String(process.env.ATTENDANCE_FACE_VERIFICATION_MODE || "").toLowerCase() === "strict";
+
+    if (!faceResult.facePresent && strictFacePolicy) {
+      this.metrics.incrementAttendanceFaceFail("no_face_rejected");
+      throwBadRequest(
+        "Selfie rejected: no face detected",
+        ERROR_CODES.SELFIE_REJECTED,
+        { reason: "FACE_NOT_DETECTED" },
+      );
+    }
+
     const verificationStatus: "verified" | "flagged" | "rejected" =
       faceResult.facePresent ? "verified" : "flagged";
 

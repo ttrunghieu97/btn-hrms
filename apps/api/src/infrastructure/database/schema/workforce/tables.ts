@@ -46,7 +46,7 @@ export const employees = pgTable(
 
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "restrict" }),
 
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),

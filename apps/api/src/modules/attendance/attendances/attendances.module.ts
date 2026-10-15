@@ -88,6 +88,6 @@ import { VIRUS_SCANNER_PORT } from "./ports/virus-scanner.port";
     EvidenceStep,
     EvidenceCleanupService,
   ],
-  exports: [AttendanceCapturePolicyService],
+  exports: [AttendanceCapturePolicyService, FacePresenceService],
 })
 export class AttendancesModule {}
