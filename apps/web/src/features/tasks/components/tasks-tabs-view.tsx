@@ -7,6 +7,7 @@ import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { TasksTable } from './tasks-table';
 import { DraggableTaskBoard } from './board/draggable-task-board';
 import { TaskAnalyticsView } from './task-analytics-view';
+import { TaskTemplatesView } from './task-templates-view';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/layout/section';
 import { taskUiCopy } from '@/lib/app-copy';
@@ -14,7 +15,7 @@ import { useTaskLiveUpdates } from '../hooks/use-task-live-updates';
 import type { Task } from '../utils/task-types';
 import { perPageParser, pageParser } from '@/lib/pagination';
 
-type ViewTab = 'all' | 'mine' | 'kanban' | 'analytics';
+type ViewTab = 'all' | 'mine' | 'kanban' | 'analytics' | 'templates';
 
 export function TasksTabsView() {
   const [params, setParams] = useQueryStates({
@@ -73,6 +74,10 @@ export function TasksTabsView() {
               <Icons.trendingUp className='h-4 w-4' />
               {taskUiCopy.tabs.analytics}
             </TabsTrigger>
+            <TabsTrigger value='templates' className='flex items-center gap-1.5'>
+              <Icons.page className='h-4 w-4' />
+              Mẫu công việc
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -86,6 +91,8 @@ export function TasksTabsView() {
         <DraggableTaskBoard onCardClick={handleRowClick} />
       ) : activeTab === 'analytics' ? (
         <TaskAnalyticsView />
+      ) : activeTab === 'templates' ? (
+        <TaskTemplatesView />
       ) : (
         <TasksTable
           scope={activeTab === 'mine' ? 'mine' : 'all'}

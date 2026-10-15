@@ -14,6 +14,8 @@ import {
   useNotificationsQuery,
   type NotificationItem
 } from '../queries/notification-queries';
+import { NotificationPreferencesPanel } from './notification-preferences-panel';
+import { NotificationTemplatesPanel } from './notification-templates-panel';
 
 export default function NotificationsPage() {
   const queryClient = getQueryClient();
@@ -83,6 +85,8 @@ export default function NotificationsPage() {
             {notificationUiCopy.tabs.unread(unreadNotifications.length)}
           </TabsTrigger>
           <TabsTrigger value='read'>{notificationUiCopy.tabs.read(readNotifications.length)}</TabsTrigger>
+          <TabsTrigger value='preferences'>Tùy chọn nhận thông báo</TabsTrigger>
+          <TabsTrigger value='templates'>Mẫu thông báo</TabsTrigger>
         </TabsList>
         <TabsContent value='all' className='mt-4 flex-1 min-h-0'>
           {renderList(notifications)}
@@ -92,6 +96,12 @@ export default function NotificationsPage() {
         </TabsContent>
         <TabsContent value='read' className='mt-4 flex-1 min-h-0'>
           {renderList(readNotifications)}
+        </TabsContent>
+        <TabsContent value='preferences' className='mt-4 flex-1 min-h-0'>
+          <NotificationPreferencesPanel />
+        </TabsContent>
+        <TabsContent value='templates' className='mt-4 flex-1 min-h-0'>
+          <NotificationTemplatesPanel />
         </TabsContent>
       </Tabs>
     </div>

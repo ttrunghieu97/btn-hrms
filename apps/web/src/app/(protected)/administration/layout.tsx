@@ -8,6 +8,7 @@ const tabs = [
   { href: '/administration/users', label: routeLabels.users },
   { href: '/administration/roles', label: routeLabels.roleManagement },
   { href: '/administration/approval', label: routeLabels.approval },
+  { href: '/administration/workflows', label: 'Quy trình động' },
 ];
 
 export default function AdministrationLayout({ children }: { children: React.ReactNode }) {

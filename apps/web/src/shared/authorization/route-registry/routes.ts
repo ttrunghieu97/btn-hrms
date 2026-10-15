@@ -337,6 +337,10 @@ export const routeRegistry: readonly RouteDef[] = [
     permission: { anyOf: ['users:view', 'users:edit', 'approval-policies:view', 'approval-requests:view'] },
   },
   {
+    path: '/administration/workflows',
+    permission: { anyOf: ['users:view', 'users:edit', 'approval-policies:view', 'approval-requests:view'] },
+  },
+  {
     path: '/monitoring/system-health',
     permission: { anyOf: ['monitoring:view'] },
   },
