@@ -149,4 +149,50 @@ describe("RefreshTokensUseCase", () => {
       useCase.execute("expired-jwt"),
     ).rejects.toThrow(UnauthorizedException);
   });
+
+  it("AUDIT-002: revokes token family and records reuse when superseded token is replayed past grace period", async () => {
+    authRepo.findActiveRefreshToken.mockResolvedValue({
+      ...mockTokenRecord,
+      supersededAt: new Date(Date.now() - 60_000), // 60s ago > 30s grace period
+    });
+
+    await expect(
+      useCase.execute("replayed-superseded-token"),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(authRepo.revokeRefreshTokenFamily).toHaveBeenCalledWith("user-1");
+    expect(authRepo.recordRefreshTokenReuse).toHaveBeenCalledWith(
+      expect.objectContaining({ tokenId: "token-1", actorUserId: "user-1" }),
+    );
+  });
+
+  it("AUDIT-002: revokes token family and records reuse when revoked token is replayed", async () => {
+    authRepo.findActiveRefreshToken.mockResolvedValue({
+      ...mockTokenRecord,
+      revokedAt: new Date(Date.now() - 5_000),
+    });
+
+    await expect(
+      useCase.execute("replayed-revoked-token"),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(authRepo.revokeRefreshTokenFamily).toHaveBeenCalledWith("user-1");
+    expect(authRepo.recordRefreshTokenReuse).toHaveBeenCalledWith(
+      expect.objectContaining({ tokenId: "token-1", actorUserId: "user-1" }),
+    );
+  });
+
+  it("AUDIT-002: compares SHA-256 hex digest (64 chars) with BCrypt so >72-byte JWTs are never truncated", async () => {
+    jwtService.signAsync
+      .mockResolvedValueOnce("new-access-token")
+      .mockResolvedValueOnce("new-refresh-token");
+
+    const longRefreshToken = "a".repeat(250);
+    await useCase.execute(longRefreshToken);
+
+    expect(bcrypt.compare).toHaveBeenCalledWith(
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      mockTokenRecord.tokenHash,
+    );
+  });
 });

@@ -44,7 +44,7 @@ export function ConversationSelect({
           id='messenger-conversation'
           value={selectedId}
           onChange={(e) => onSelect(e.target.value)}
-          className='border-border/40 bg-background/70 text-foreground focus:border-primary/40 focus:ring-primary/30 w-full rounded-xl border px-2.5 py-1.5 text-xs focus:ring-2 focus:outline-none sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm'
+          className='border-border/40 bg-background/70 text-foreground focus:border-primary/40 focus:ring-primary/30 w-full rounded-xl border px-2.5 py-1.5 text-xs focus:ring-2 focus:outline-none sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm [&>option]:bg-popover [&>option]:text-popover-foreground'
         >
           {conversations.map((conversation) => (
             <option key={conversation.id} value={conversation.id}>

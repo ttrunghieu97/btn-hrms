@@ -73,7 +73,7 @@ export function ScheduleTable() {
   const [params, setParams] = useQueryStates({
     ...createTableSearchParams(tempColumnIds),
     search: parseAsString,
-    detail: parseAsString,
+    scheduleDetail: parseAsString,
     tab: parseAsString,
   });
 
@@ -100,7 +100,7 @@ export function ScheduleTable() {
 
   /* ─── client-side filter + sort ─── */
   const processedRows = React.useMemo(() => {
-    let rows = data?.rows ?? [];
+    let rows = [...(data?.rows ?? [])];
 
     if (resolvedActiveTab === 'published') {
       rows = rows.filter((r) => r.assignmentStatus === 'published');
@@ -119,9 +119,9 @@ export function ScheduleTable() {
 
     if (params.sort?.length) {
       const s = params.sort[0];
-      rows.sort((a, b) => {
-        const aVal = String((a as any)[s.id] ?? '');
-        const bVal = String((b as any)[s.id] ?? '');
+      rows = [...rows].sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[s.id] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[s.id] ?? '');
         return s.desc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
       });
     }
@@ -138,17 +138,17 @@ export function ScheduleTable() {
   const hasFilters = Boolean(params.search ?? (resolvedActiveTab !== 'all' ? true : false));
 
   /* ─── detail sheet ─── */
-  const detailOpen = !!params.detail;
+  const detailOpen = !!params.scheduleDetail;
   React.useEffect(() => {
-    if (params.detail && processedRows.length > 0) {
-      const found = processedRows.find((r) => `${r.assignmentId}-${r.workDate}` === params.detail);
+    if (params.scheduleDetail && processedRows.length > 0) {
+      const found = processedRows.find((r) => `${r.assignmentId}-${r.workDate}` === params.scheduleDetail);
       if (found && found !== selectedRow) setSelectedRow(found);
     }
-  }, [params.detail, processedRows, selectedRow]);
+  }, [params.scheduleDetail, processedRows, selectedRow]);
 
   const handleRowClick = React.useCallback((row: ScheduleRow) => {
     setSelectedRow(row);
-    setParams({ detail: `${row.assignmentId}-${row.workDate}` }).catch(() => undefined);
+    setParams({ scheduleDetail: `${row.assignmentId}-${row.workDate}` }).catch(() => undefined);
   }, [setParams]);
 
   const cols = React.useMemo(() => columns(handleRowClick), [handleRowClick]);
@@ -302,7 +302,6 @@ export function ScheduleTable() {
                 type='button'
                 variant='outline'
                 size='sm'
-                disabled={processedRows.length === 0}
                 onClick={() => router.push('/schedule/roster')}
               >
                 <Icons.add className='mr-1.5 size-4' />
@@ -319,7 +318,7 @@ export function ScheduleTable() {
           open={detailOpen}
           onOpenChange={(open) => {
             if (!open) {
-              setParams({ detail: null }).catch(() => undefined);
+              setParams({ scheduleDetail: null }).catch(() => undefined);
               setSelectedRow(null);
             }
           }}

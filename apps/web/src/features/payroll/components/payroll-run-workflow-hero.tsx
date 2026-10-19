@@ -45,7 +45,8 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
 
   const status: PayrollRunStatus = run.status || 'draft';
   const isProvisionalRun =
-    run.isProvisional !== false &&
+    (run.isProvisional === true ||
+      run.calculationStatus === 'PROVISIONAL_POLICY_UNCONFIRMED') &&
     run.calculationStatus !== 'CONFIRMED' &&
     status !== 'posted';
 
@@ -161,7 +162,8 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
                     size='sm'
                     variant='outline'
                     className='h-8 text-xs font-medium gap-1.5'
-                    disabled={isPending}
+                    disabled={isPending || !run.processedAt}
+                    title={!run.processedAt ? 'Vui lòng tính toán phiếu lương trước khi trình duyệt' : undefined}
                     onClick={() => requestApprovalMutation.mutate(run.id)}
                   >
                     Trình duyệt bảng lương

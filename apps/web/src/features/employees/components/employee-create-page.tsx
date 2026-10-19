@@ -376,6 +376,11 @@ export function EmployeeCreatePage() {
                     email: form.formValues.email,
                     phoneNumber: form.formValues.phoneNumber,
                     address: form.formValues.address,
+                    bankName: form.formValues.bankName,
+                    bankAccountNumber: form.formValues.bankAccountNumber,
+                    taxCode: form.formValues.taxCode,
+                    emergencyContactName: form.formValues.emergencyContactName,
+                    emergencyContactPhone: form.formValues.emergencyContactPhone,
                   }}
                   errors={form.errors}
                   genderOptions={[...GENDER_OPTIONS]}
@@ -456,12 +461,12 @@ export function EmployeeCreatePage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{commonUiCopy.confirm}</AlertDialogCancel>
+            <AlertDialogCancel>{employeeUiCopy.detailModal.continueEditing}</AlertDialogCancel>
             <AlertDialogAction
-              className='bg-destructive hover:bg-destructive/90'
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
               onClick={handleCloseConfirm}
             >
-              {commonUiCopy.cancel}
+              {employeeUiCopy.detailModal.discardChangesAction}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

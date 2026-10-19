@@ -108,14 +108,18 @@ export function EmployeeContractCard({ employeeId }: EmployeeContractCardProps) 
                 <div className='mt-2.5 pt-2 border-t border-border/40 flex items-center gap-3 text-xs'>
                   <div>
                     <span className='text-muted-foreground text-[11px]'>LCB: </span>
-                    <span className='font-mono font-bold text-foreground'>{baseSalaryNum.toFixed(2)} VND</span>
+                    <span className='font-mono font-bold text-foreground'>
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(baseSalaryNum)}
+                    </span>
                   </div>
                   {totalAllowancesNum > 0 && (
                     <>
                       <span className='text-muted-foreground'>·</span>
                       <div>
                         <span className='text-muted-foreground text-[11px]'>Phụ cấp: </span>
-                        <span className='font-mono font-bold text-emerald-600 dark:text-emerald-400'>+{totalAllowancesNum.toFixed(2)} VND</span>
+                        <span className='font-mono font-bold text-emerald-600 dark:text-emerald-400'>
+                          +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAllowancesNum)}
+                        </span>
                       </div>
                     </>
                   )}

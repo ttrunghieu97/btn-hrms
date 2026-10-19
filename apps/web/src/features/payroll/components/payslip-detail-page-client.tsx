@@ -1,12 +1,15 @@
 'use client';
 
+import * as React from 'react';
 import { formatDateTimeVN } from "@/lib/date";
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { MoneyCell } from '@/components/common/money-cell';
-import { usePayslipQuery } from '../queries/payslip-queries';
+import { usePayslipQuery, usePublishPayslipMutation } from '../queries/payslip-queries';
+import { isProvisionalPayslip } from '../tables/payslip-columns';
 import { PayslipStatusBadge } from './payslip-status-badge';
+import { PublishPayslipDialog } from './publish-payslip-dialog';
 
 const fmtDate = (d: string | null | undefined) =>
   d ? formatDateTimeVN(d) : '\u2014';
@@ -35,6 +38,8 @@ function DetailRow({ label, value, className }: { label: string; value: React.Re
 
 export function PayslipDetailPageClient({ payslipId }: Props) {
   const { data: payslip, isLoading, isError, error, refetch } = usePayslipQuery(payslipId);
+  const publishMutation = usePublishPayslipMutation();
+  const [publishOpen, setPublishOpen] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -62,26 +67,45 @@ export function PayslipDetailPageClient({ payslipId }: Props) {
     );
   }
 
+  const provisional = isProvisionalPayslip(payslip);
+
   return (
     <div className='space-y-6'>
-      <div>
-        <Button variant='ghost' asChild className='mb-2 -ml-2'>
-          <Link href='/payroll/payslips'>
-            <Icons.chevronLeft className='mr-1 h-4 w-4' />
-            Quay lại
-          </Link>
-        </Button>
-        <div className='flex items-center gap-3'>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            Phiếu lương — {payslip.employee?.fullName ?? ''}
-          </h1>
-          <PayslipStatusBadge status={payslip.status} />
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <Button variant='ghost' asChild className='mb-2 -ml-2'>
+            <Link href='/payroll/payslips'>
+              <Icons.chevronLeft className='mr-1 h-4 w-4' />
+              Quay lại
+            </Link>
+          </Button>
+          <div className='flex items-center gap-3'>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Phiếu lương — {payslip.employee?.fullName ?? ''}
+            </h1>
+            <PayslipStatusBadge status={payslip.status} />
+          </div>
+          {payslip.employee?.employeeCode && (
+            <p className='text-muted-foreground mt-1 text-sm'>
+              Mã NV: {payslip.employee.employeeCode}
+              {payslip.employee.departmentName && ` — ${payslip.employee.departmentName}`}
+            </p>
+          )}
         </div>
-        {payslip.employee?.employeeCode && (
-          <p className='text-muted-foreground mt-1 text-sm'>
-            Mã NV: {payslip.employee.employeeCode}
-            {payslip.employee.departmentName && ` — ${payslip.employee.departmentName}`}
-          </p>
+        {payslip.status === 'draft' && (
+          <Button
+            size='sm'
+            disabled={provisional || publishMutation.isPending}
+            title={
+              provisional
+                ? 'Phiếu lương tạm tính (PD-04) — Chưa thể công bố'
+                : 'Công bố phiếu lương'
+            }
+            onClick={() => setPublishOpen(true)}
+          >
+            <Icons.circleCheck className='mr-1.5 h-4 w-4' />
+            Công bố phiếu lương
+          </Button>
         )}
       </div>
 
@@ -117,22 +141,24 @@ export function PayslipDetailPageClient({ payslipId }: Props) {
           </dl>
         </SectionCard>
 
-        <SectionCard title='Khấu trừ (Tạm tính — PD-04)'>
+        <SectionCard title={provisional ? 'Khấu trừ (Tạm tính — PD-04)' : 'Khấu trừ'}>
           <dl className='space-y-1'>
             <DetailRow
-              label='Khấu trừ tạm tính (10%)'
+              label={provisional ? 'Khấu trừ tạm tính (10%)' : 'Tổng khấu trừ'}
               value={<MoneyCell amount={payslip.totalDeductions} currency={payslip.currency} />}
             />
           </dl>
-          <p className='mt-3 text-xs text-amber-700 dark:text-amber-400'>
-            * Khoản khấu trừ đang tính tạm theo tỷ lệ 10% tổng thu nhập (Provisional — PD-04), chưa
-            áp dụng biểu tính BHXH/BHYT/BHTN và Thuế TNCN chính thức.
-          </p>
+          {provisional && (
+            <p className='mt-3 text-xs text-amber-700 dark:text-amber-400'>
+              * Khoản khấu trừ đang tính tạm theo tỷ lệ 10% tổng thu nhập (Provisional — PD-04), chưa
+              áp dụng biểu tính BHXH/BHYT/BHTN và Thuế TNCN chính thức.
+            </p>
+          )}
         </SectionCard>
       </div>
 
       <div className='rounded-lg border bg-muted/10 p-6'>
-        <h2 className='mb-4 text-lg font-semibold'>Tổng kết (Tạm tính)</h2>
+        <h2 className='mb-4 text-lg font-semibold'>{provisional ? 'Tổng kết (Tạm tính)' : 'Tổng kết'}</h2>
         <dl className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
           <div>
             <dt className='text-muted-foreground text-sm'>Tổng thu nhập</dt>
@@ -141,13 +167,13 @@ export function PayslipDetailPageClient({ payslipId }: Props) {
             </dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Khấu trừ tạm tính (10%)</dt>
+            <dt className='text-muted-foreground text-sm'>{provisional ? 'Khấu trừ tạm tính (10%)' : 'Tổng khấu trừ'}</dt>
             <dd className='text-lg font-medium'>
               <MoneyCell amount={payslip.totalDeductions} currency={payslip.currency} />
             </dd>
           </div>
           <div>
-            <dt className='text-muted-foreground text-sm'>Thực nhận (Tạm tính)</dt>
+            <dt className='text-muted-foreground text-sm'>{provisional ? 'Thực nhận (Tạm tính)' : 'Thực nhận'}</dt>
             <dd className='text-lg font-bold'>
               <MoneyCell amount={payslip.netPay} currency={payslip.currency} />
             </dd>
@@ -173,6 +199,18 @@ export function PayslipDetailPageClient({ payslipId }: Props) {
           </p>
         </div>
       )}
+
+      <PublishPayslipDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        publishing={publishMutation.isPending}
+        onConfirm={() => {
+          publishMutation.mutate(
+            { id: payslip.id },
+            { onSuccess: () => setPublishOpen(false) }
+          );
+        }}
+      />
     </div>
   );
 }

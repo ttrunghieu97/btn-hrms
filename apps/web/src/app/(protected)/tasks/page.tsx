@@ -2,7 +2,6 @@ import type { SearchParams } from 'nuqs/server';
 import { TaskListingPage } from '@/features/tasks';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import { searchParamsCache } from '@/lib/searchparams';
 
 export const metadata = {

@@ -10,6 +10,7 @@ import { LeaveAttendanceReconciliationService } from "../services/leave-attendan
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
+import { LeaveCancellationRequestedEvent } from "../../../../core/events/events/leave-cancellation-requested.event";
 
 import { LeaveAuthorizationService } from "../services/leave-authorization.service";
 
@@ -46,12 +47,13 @@ export class CancelLeaveRequestUseCase {
     const wasApproved = existing.status === "approved";
 
     const updated = await this.leaveRequestsRepo.transaction(async (tx) => {
+      const cancelledNow = new Date();
       const record = await this.leaveRequestsRepo.updateStatusWithGuard(
         id,
         existing.status,
         {
           status: "cancelled",
-          cancelledAt: new Date(),
+          cancelledAt: cancelledNow,
         },
         tx,
       );
@@ -70,15 +72,12 @@ export class CancelLeaveRequestUseCase {
       // 1. Emit cancellation event if pending (engine sync needed)
       if (existing.status === "pending") {
         await this.eventOutbox.stage(
-          {
-            eventType: "leave.cancellation.requested",
-            eventVersion: 1,
-            payload: {
-              idempotencyKey: `${id}:leave.cancellation.requested`,
-              leaveRequestId: id,
-              cancelledByUserId: actor.id,
-            },
-          },
+          new LeaveCancellationRequestedEvent({
+            idempotencyKey: `${id}:leave.cancellation.requested`,
+            leaveRequestId: id,
+            cancelledByUserId: actor.id,
+            cancelledAt: cancelledNow.toISOString(),
+          }),
           tx,
         );
       }

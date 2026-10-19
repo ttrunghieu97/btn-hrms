@@ -82,8 +82,10 @@ export function LeaveBalanceView({ employeeId }: { employeeId?: string }) {
               {balances.map((b: LeaveBalanceRow) => {
                 const opening = parseFloat(b.openingBalance ?? '0');
                 const accrued = parseFloat(b.accruedAmount ?? '0');
+                const carriedOver = parseFloat(b.carriedOverAmount ?? '0');
+                const adjusted = parseFloat(b.adjustedAmount ?? '0');
                 const used = parseFloat(b.usedAmount ?? '0');
-                const remaining = opening + accrued - used;
+                const remaining = opening + accrued + carriedOver + adjusted - used;
                 return (
                   <TableRow key={b.id}>
                     <TableCell className='font-medium'>{b.leaveType?.name ?? '—'}</TableCell>

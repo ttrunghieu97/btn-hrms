@@ -68,7 +68,7 @@ export const routeRegistry: readonly RouteDef[] = [
   // ── Organization ──────────────────────────────────────────────────────
   {
     path: '/organization',
-    permission: { anyOf: ['organization:view'] },
+    permission: { anyOf: ['departments:view', 'locations:view'] },
     nav: { title: 'Cơ cấu tổ chức', icon: 'department', group: 'Nhân sự' },
   },
 
@@ -186,7 +186,7 @@ export const routeRegistry: readonly RouteDef[] = [
   // ── Administration ────────────────────────────────────────────────────
   {
     path: '/administration',
-    permission: { anyOf: ['users:view', 'users:edit', 'approval-policies:view', 'approval-requests:view'] },
+    permission: { anyOf: ['users:view', 'users:edit', 'roles:view', 'approval-policies:view', 'approval-requests:view'] },
     nav: { title: 'Quản trị', icon: 'settings', group: 'Quản trị' },
   },
 
@@ -206,13 +206,9 @@ export const routeRegistry: readonly RouteDef[] = [
     permission: {},
   },
   {
-    path: '/change-password',
-    permission: { anyOf: ['auth:change-password'] },
-    nav: { title: 'Đổi mật khẩu', icon: 'lock', group: 'Tài khoản' },
-  },
-  {
     path: '/account/change-password',
     permission: { anyOf: ['auth:change-password'] },
+    nav: { title: 'Đổi mật khẩu', icon: 'lock', group: 'Tài khoản' },
   },
 
   // ── Sub-routes (no nav) ──────────────────────────────────────────────
@@ -230,15 +226,15 @@ export const routeRegistry: readonly RouteDef[] = [
   },
   {
     path: '/organization/departments',
-    permission: { anyOf: ['organization:view'] },
+    permission: { anyOf: ['departments:view'] },
   },
   {
     path: '/organization/positions',
-    permission: { anyOf: ['organization:view'] },
+    permission: { anyOf: ['departments:view'] },
   },
   {
     path: '/organization/locations',
-    permission: { anyOf: ['organization:view'] },
+    permission: { anyOf: ['locations:view'] },
   },
   {
     path: '/attendance/history',
@@ -417,6 +413,10 @@ export const routeRegistry: readonly RouteDef[] = [
     permission: { anyOf: ['users:view', 'users:edit', 'approval-policies:view', 'approval-requests:view'] },
   },
   {
+    path: '/administration/audit-logs',
+    permission: { anyOf: ['users:view'] },
+  },
+  {
     path: '/monitoring/system-health',
     permission: { anyOf: ['monitoring:view'] },
   },
@@ -428,10 +428,6 @@ export const routeRegistry: readonly RouteDef[] = [
     path: '/monitoring/data-integrity',
     permission: { anyOf: ['monitoring:view'] },
   },
-  {
-    path: '/notifications',
-    permission: { anyOf: ['notifications:view:self'] },
-  },
 
   // ── Admin ──────────────────────────────────────────────────────────────
   {
@@ -440,7 +436,7 @@ export const routeRegistry: readonly RouteDef[] = [
   },
   {
     path: '/admin/permissions',
-    permission: { anyOf: ['users:edit'] },
+    permission: { anyOf: ['users:edit', 'roles:view'] },
   },
   {
     path: '/admin/audit',
@@ -452,7 +448,7 @@ export const routeRegistry: readonly RouteDef[] = [
   },
   {
     path: '/admin/settings',
-    permission: { anyOf: ['settings:view'] },
+    permission: { anyOf: ['users:edit'] },
   },
 
   // ── Benefits ──────────────────────────────────────────────────────────
@@ -470,17 +466,17 @@ export const routeRegistry: readonly RouteDef[] = [
   // ── Leave sub-routes ──────────────────────────────────────────────────
   {
     path: '/leave/policies',
-    permission: { anyOf: ['leave:view'] },
+    permission: { anyOf: ['leave:view', 'leave:view:self', 'leave:view:department', 'leave:view:all'] },
   },
 
   // ── Payroll sub-routes ────────────────────────────────────────────────
   {
     path: '/payroll/payslips',
-    permission: { anyOf: ['payroll:view'] },
+    permission: { anyOf: ['payroll:view', 'payroll:view:self', 'payroll:view:all'] },
   },
   {
     path: '/payroll/payslips/:payslipId',
-    permission: { anyOf: ['payroll:view'] },
+    permission: { anyOf: ['payroll:view', 'payroll:view:self', 'payroll:view:all'] },
   },
   {
     path: '/payroll/periods',
@@ -509,16 +505,6 @@ export const routeRegistry: readonly RouteDef[] = [
   {
     path: '/recruitment',
     permission: { anyOf: ['recruitment:view'] },
-  },
-
-  // ── Schedule sub-routes ──────────────────────────────────────────────
-  {
-    path: '/schedule/rosters',
-    permission: { anyOf: ['schedule:view:self', 'schedule:view:department', 'schedule:view:all'] },
-  },
-  {
-    path: '/schedule/templates',
-    permission: { anyOf: ['schedule:view:self', 'schedule:view:department', 'schedule:view:all'] },
   },
 
   // ── Workspace ────────────────────────────────────────────────────────

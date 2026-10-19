@@ -10,6 +10,8 @@ import { GetEmployeeUseCase } from "./use-cases/get-employee.usecase";
 import { CheckUsernameUseCase } from "./use-cases/check-username.usecase";
 import { CreateEmployeeUseCase } from "./use-cases/create-employee.usecase";
 import { UpdateEmployeeUseCase } from "./use-cases/update-employee.usecase";
+import { UpdateMyProfileUseCase } from "./use-cases/update-my-profile.usecase";
+import { SubmitResignationRequestUseCase } from "./use-cases/submit-resignation-request.usecase";
 import { DeleteEmployeeUseCase } from "./use-cases/delete-employee.usecase";
 import { PurgeEmployeeUseCase } from "./use-cases/purge-employee.usecase";
 import { CheckEmployeeCodeUseCase } from "./use-cases/check-employee-code.usecase";
@@ -43,6 +45,8 @@ describe("EmployeesController Scoping", () => {
         { provide: CheckEmployeeCodeUseCase, useValue: { execute: jest.fn() } },
         { provide: CreateEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateEmployeeUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateMyProfileUseCase, useValue: { execute: jest.fn() } },
+        { provide: SubmitResignationRequestUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: PurgeEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: ResetEmployeePasswordUseCase, useValue: {} },

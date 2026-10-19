@@ -13,6 +13,8 @@ import { GetApprovalInboxUseCase } from "../use-cases/get-approval-inbox.usecase
 import { RequestApprovalDto } from "../dto/request-approval.dto";
 import { DecideApprovalStepDto } from "../dto/decide-approval-step.dto";
 import { ApprovalRequestQueryDto } from "../dto/approval-request-query.dto";
+import { throwForbidden } from "../../../shared/utils/http-error";
+import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import type { AuthUser } from "../../../core/security/types/auth-user.interface";
 
 interface AuthRequest extends ExpressRequest {
@@ -36,8 +38,15 @@ export class ApprovalRequestController {
   @CheckPolicy(ApprovalPolicies.request)
   @AuditLog({ action: "approval_request_create", entity: "approval_request" })
   @ApiOperation({ summary: "Submit a new approval request" })
-  async create(@Body() dto: RequestApprovalDto) {
-    return this.requestApproval.execute(dto);
+  async create(@Body() dto: RequestApprovalDto, @Req() req?: AuthRequest) {
+    const requestedByUserId = req?.user?.id?.trim();
+    if (!requestedByUserId) {
+      throwForbidden(
+        "Authenticated user identity is required to request approval",
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+    return this.requestApproval.execute(dto, requestedByUserId);
   }
 
   @Get("inbox")
@@ -77,14 +86,27 @@ export class ApprovalRequestController {
     @Body() dto: DecideApprovalStepDto,
     @Req() req: AuthRequest,
   ) {
-    return this.decideStep.execute({ ...dto, requestId: id }, req.user.id);
+    return this.decideStep.execute(
+      { ...dto, requestId: id },
+      req.user.id,
+      req.user.roles,
+    );
   }
 
   @Post(":id/cancel")
   @CheckPolicy(ApprovalPolicies.cancel)
   @AuditLog({ action: "approval_request_cancel", entity: "approval_request" })
   @ApiOperation({ summary: "Cancel an approval request" })
-  async cancel(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.cancelApproval.execute(id);
+  async cancel(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Req() req?: AuthRequest,
+  ) {
+    if (!req?.user?.id?.trim()) {
+      throwForbidden(
+        "Authenticated user identity is required to cancel an approval request",
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+    return this.cancelApproval.execute(id, req.user);
   }
 }

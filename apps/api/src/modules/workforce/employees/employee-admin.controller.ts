@@ -43,6 +43,8 @@ import { CancelTransferUseCase } from "./use-cases/cancel-transfer.usecase";
 import { ApplyTransferUseCase } from "./use-cases/apply-transfer.usecase";
 import { ChangeEmployeeStatusUseCase } from "./use-cases/change-employee-status.usecase";
 import { ChangeEmployeeStatusDto } from "./dto/change-employee-status.dto";
+import { EvaluateProbationUseCase } from "./use-cases/evaluate-probation.usecase";
+import { EvaluateProbationDto } from "./dto/evaluate-probation.dto";
 import { TerminateEmployeeUseCase } from "../application/use-cases/terminate-employee.usecase";
 import { TerminateEmployeeDto } from "./dto/terminate-employee.dto";
 import { RehireEmployeeDto } from "./dto/rehire-employee.dto";
@@ -74,6 +76,7 @@ export class EmployeeAdminController {
     private readonly bulkChangeStatus: BulkChangeStatusUseCase,
     private readonly bulkArchiveUseCase: BulkArchiveUseCase,
     private readonly changeEmployeeStatus: ChangeEmployeeStatusUseCase,
+    private readonly evaluateProbationUseCase: EvaluateProbationUseCase,
     private readonly terminateEmployee: TerminateEmployeeUseCase,
     private readonly listEmployeeStatusHistory: ListEmployeeStatusHistoryUseCase,
   ) {}
@@ -123,6 +126,19 @@ export class EmployeeAdminController {
     @Body() dto: ChangeEmployeeStatusDto,
   ) {
     return this.changeEmployeeStatus.execute(id, dto);
+  }
+
+  @Post(":id/probation/evaluate")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Resource(Employee, "id")
+  @CheckPolicy(EmployeePolicies.edit)
+  @AuditLog({ action: "employee_probation_evaluate", entity: "employee" })
+  @ApiOperation({ summary: "Evaluate probation outcome (confirm, extend, or fail)" })
+  evaluateProbation(
+    @Param("id") id: string,
+    @Body() dto: EvaluateProbationDto,
+  ) {
+    return this.evaluateProbationUseCase.execute(id, dto);
   }
 
   @Put(":id/terminate")

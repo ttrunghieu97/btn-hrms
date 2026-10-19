@@ -6,7 +6,7 @@ import {
   uploadPolicyByPurpose,
   uploadPolicy,
 } from "../../../shared/upload/upload-policy";
-import { throwBadRequest } from "../../../shared/utils/http-error";
+import { throwBadRequest, throwForbidden } from "../../../shared/utils/http-error";
 import { ContextLogger } from "../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../shared/context/request-context.service";
 
@@ -35,6 +35,7 @@ export interface MultipartInitResult {
 }
 
 const MULTIPART_MIN_SIZE = 50 * 1024 * 1024; // 50MB
+const MULTIPART_DEFAULT_MAX_SIZE = 500 * 1024 * 1024; // 500MB
 const PART_SIZE = 5 * 1024 * 1024; // 5MB
 const PRESIGNED_TTL_SEC = 3600; // 1 hour (longer for large uploads)
 const OWNER_TYPE_PREFIX: Record<string, string> = {
@@ -58,10 +59,57 @@ export class MultipartInitUseCase {
   async execute(input: MultipartInitInput): Promise<MultipartInitResult> {
     const { purpose, ownerType, ownerId, mimeType, size, uploadedBy } = input;
 
+    const actor =
+      typeof this.requestContext?.get === "function"
+        ? this.requestContext.get()
+        : undefined;
+    if (actor && actor.userId) {
+      if (ownerType === "employee") {
+        const isSelf = actor.employeeId && String(actor.employeeId) === String(ownerId);
+        const canManage =
+          actor.isSuperAdmin ||
+          actor.permissions?.some((p) =>
+            [
+              "employee:manage:sensitive",
+              "employee:edit",
+              "employee:manage",
+              "employees:manage:sensitive",
+              "employees:edit",
+              "employees:manage",
+              "sys:all",
+            ].includes(p),
+          );
+        if (!isSelf && !canManage) {
+          throwForbidden(
+            "Cannot upload files for another employee without management permissions",
+            "FORBIDDEN",
+          );
+        }
+      } else if (ownerType === "user") {
+        const isSelf = String(actor.userId) === String(ownerId);
+        const canManage =
+          actor.isSuperAdmin ||
+          actor.permissions?.some((p) => ["users:edit", "sys:all"].includes(p));
+        if (!isSelf && !canManage) {
+          throwForbidden(
+            "Cannot upload files for another user without management permissions",
+            "FORBIDDEN",
+          );
+        }
+      }
+    }
+
     // Validate purpose
     const purposeConfig = uploadPolicyByPurpose[purpose as keyof typeof uploadPolicyByPurpose];
     if (!purposeConfig) {
       throwBadRequest(`Unknown upload purpose: ${purpose}`, "INVALID_PURPOSE");
+    }
+
+    if (purpose === "avatar") {
+      throwBadRequest(
+        "Multipart uploads are not supported for avatars",
+        "INVALID_PURPOSE",
+      );
     }
 
     // Validate mime type
@@ -77,20 +125,24 @@ export class MultipartInitUseCase {
       );
     }
 
-    // Validate size against purpose limit
-    const maxBytes = purposeConfig.maxFileSizeBytes ?? 10 * 1024 * 1024;
-    if (size > maxBytes) {
-      throwBadRequest(
-        `File size ${size} exceeds maximum of ${maxBytes} for purpose "${purpose}"`,
-        "FILE_SIZE_EXCEEDED",
-      );
-    }
-
     // Gate: only use multipart for files >= 50MB
     if (size < MULTIPART_MIN_SIZE) {
       throwBadRequest(
         `File size ${size} is below multipart threshold of ${MULTIPART_MIN_SIZE}. Use regular presigned upload instead.`,
         "USE_PRESIGNED_UPLOAD",
+      );
+    }
+
+    // Validate size against multipart maximum limit
+    const configuredMultipartMax = Number(this.config.get("UPLOAD_MULTIPART_MAX_BYTES"));
+    const maxMultipartBytes =
+      Number.isFinite(configuredMultipartMax) && configuredMultipartMax > 0
+        ? configuredMultipartMax
+        : Math.max(purposeConfig.maxFileSizeBytes ?? 0, MULTIPART_DEFAULT_MAX_SIZE);
+    if (size > maxMultipartBytes) {
+      throwBadRequest(
+        `File size ${size} exceeds maximum multipart size of ${maxMultipartBytes} for purpose "${purpose}"`,
+        "FILE_SIZE_EXCEEDED",
       );
     }
 

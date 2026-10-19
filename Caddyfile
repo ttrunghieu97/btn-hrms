@@ -8,6 +8,10 @@
 # Global options
 {
     auto_https off
+    servers {
+        trusted_proxies static private_ranges
+        client_ip_headers CF-Connecting-IP X-Forwarded-For
+    }
 }
 
 # ── Production: HTTP internal routing ──────────────────────
@@ -38,26 +42,30 @@ http://btn.hieutt.id.vn {
         rewrite * /api/v1{path}
         reverse_proxy btn-hrms-api:3001 {
             header_up X-Forwarded-Proto "https"
-            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-For {client_ip}
+            header_up X-Real-IP {client_ip}
         }
     }
 
     # Proxy WebSocket (Socket.IO) to NestJS
     reverse_proxy /socket.io/* btn-hrms-api:3001 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 
     # Proxy API requests to NestJS
     reverse_proxy /api/v1/* btn-hrms-api:3001 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 
     # Proxy all other requests to Next.js
     reverse_proxy * btn-hrms-web:8080 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 }
 
@@ -89,25 +97,29 @@ localhost, 10.8.1.84, 10.10.3.231, 10.139.143.90 {
         rewrite * /api/v1{path}
         reverse_proxy btn-hrms-api:3001 {
             header_up X-Forwarded-Proto "https"
-            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-For {client_ip}
+            header_up X-Real-IP {client_ip}
         }
     }
 
     # Proxy WebSocket (Socket.IO) to NestJS
     reverse_proxy /socket.io/* btn-hrms-api:3001 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 
     # Proxy API requests to NestJS
     reverse_proxy /api/v1/* btn-hrms-api:3001 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 
     # Proxy all other requests to Next.js
     reverse_proxy * btn-hrms-web:8080 {
         header_up X-Forwarded-Proto "https"
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-For {client_ip}
+        header_up X-Real-IP {client_ip}
     }
 }

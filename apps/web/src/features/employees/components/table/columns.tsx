@@ -11,12 +11,8 @@ import { ChevronDownIcon, ChevronUpIcon, CaretSortIcon } from '@radix-ui/react-i
 import { extractProtectedAssetUrl } from '@/lib/asset-url';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { getSmartStatus } from '../../utils/employee-status';
+import { getEmployeeName } from '../../utils/employee-display';
 import { CellAction } from './cell-action';
-
-function getEmployeeName(employee: EmployeeResponseDto) {
-  const fullName = [employee.firstName, employee.lastName].filter(Boolean).join(' ').trim();
-  return fullName || employee.username;
-}
 
 function getInitials(name: string) {
   const parts = name.split(' ');
@@ -56,22 +52,22 @@ function SortHeader({
     <Button
       type='button'
       variant='ghost'
-      className='-ml-2 h-8 px-2 font-medium'
+      className='-ml-2 h-8 max-w-full overflow-hidden px-2 font-medium'
       onClick={() => column.toggleSorting(sorted === 'asc')}
     >
-      <span>{title}</span>
+      <span className='truncate'>{title}</span>
       {sorted === 'desc' ? (
-        <ChevronDownIcon className='text-muted-foreground ml-1 size-4' />
+        <ChevronDownIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       ) : sorted === 'asc' ? (
-        <ChevronUpIcon className='text-muted-foreground ml-1 size-4' />
+        <ChevronUpIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       ) : (
-        <CaretSortIcon className='text-muted-foreground ml-1 size-4' />
+        <CaretSortIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       )}
     </Button>
   );
 }
 
-export const columns = (onRowClick?: (employee: EmployeeResponseDto) => void): ColumnDef<EmployeeResponseDto>[] => [
+export const columns = (): ColumnDef<EmployeeResponseDto>[] => [
   {
     id: 'select',
     header: ({ table }) => (

@@ -273,8 +273,15 @@ export function PermissionMatrix({
     };
   };
 
+  const visibleResourceIds = useMemo(
+    () => new Set(catalog.resources.filter(r => !r.hidden).map(r => r.id)),
+    [catalog.resources]
+  );
+
   const getGlobalStatus = () => {
-    const codes = catalog.permissions.map(p => p.id);
+    const codes = catalog.permissions
+      .filter(p => p.id !== 'sys:all' && p.resourceId !== 'sys' && visibleResourceIds.has(p.resourceId))
+      .map(p => p.id);
     const selectedCount = codes.filter(code => assignments[code]?.selected).length;
     const totalCount = codes.length;
     return { allChecked: totalCount > 0 && selectedCount === totalCount, someChecked: selectedCount > 0 && selectedCount < totalCount, codes };
@@ -282,6 +289,9 @@ export function PermissionMatrix({
 
   const getCategoryGlobalStatus = (category: string) => {
     const categoryPermissions = catalog.permissions.filter(p => {
+      if (p.id === 'sys:all' || p.resourceId === 'sys' || !visibleResourceIds.has(p.resourceId)) {
+        return false;
+      }
       return getActionCategory(p.actionId) === category;
     });
     const codes = categoryPermissions.map(p => p.id);
@@ -303,23 +313,22 @@ export function PermissionMatrix({
   const handleToggleCellGroup = (resourceId: string, categoryActionIds: string[], checked: boolean) => {
     if (cannotEdit) return;
     const newAssignments = { ...assignments };
-    categoryActionIds.forEach(actionId => {
-      const permissionId = `${resourceId}:${actionId}`;
-      const exists = catalog.permissions.some(p => p.id === permissionId);
-      if (exists) {
-        newAssignments[permissionId] = { selected: checked, scopeId: assignments[permissionId]?.scopeId || 'all' };
-        if (checked) {
-          const meta = catalog.permissions.find(p => p.id === permissionId);
-          meta?.dependsOn?.forEach(depId => {
-            newAssignments[depId] = { selected: true, scopeId: assignments[depId]?.scopeId || 'all' };
-          });
-        } else {
-          catalog.permissions.forEach(p => {
-            if (p.dependsOn?.includes(permissionId) && newAssignments[p.id]?.selected) {
-              newAssignments[p.id] = { selected: false, scopeId: assignments[p.id]?.scopeId || 'all' };
-            }
-          });
-        }
+    const matchingPerms = catalog.permissions.filter(
+      p => p.resourceId === resourceId && categoryActionIds.includes(p.actionId)
+    );
+    matchingPerms.forEach(meta => {
+      const permissionId = meta.id;
+      newAssignments[permissionId] = { selected: checked, scopeId: assignments[permissionId]?.scopeId || 'all' };
+      if (checked) {
+        meta.dependsOn?.forEach(depId => {
+          newAssignments[depId] = { selected: true, scopeId: assignments[depId]?.scopeId || 'all' };
+        });
+      } else {
+        catalog.permissions.forEach(p => {
+          if (p.dependsOn?.includes(permissionId) && newAssignments[p.id]?.selected) {
+            newAssignments[p.id] = { selected: false, scopeId: assignments[p.id]?.scopeId || 'all' };
+          }
+        });
       }
     });
     onChange(newAssignments);
@@ -327,9 +336,13 @@ export function PermissionMatrix({
 
   const handleGrantCategory = (resourceId: string, category: string, grant: boolean) => {
     if (cannotEdit) return;
-    const actionIds = CATEGORY_MAP[category as keyof typeof CATEGORY_MAP];
-    if (!actionIds) return;
-    handleToggleCellGroup(resourceId, [...actionIds], grant);
+    const matchingActionIds = catalog.permissions
+      .filter(p => p.resourceId === resourceId && getActionCategory(p.actionId) === category)
+      .map(p => p.actionId);
+    const fallbackActionIds = CATEGORY_MAP[category as keyof typeof CATEGORY_MAP] ?? [];
+    const actionIds = matchingActionIds.length > 0 ? matchingActionIds : [...fallbackActionIds];
+    if (actionIds.length === 0) return;
+    handleToggleCellGroup(resourceId, actionIds, grant);
   };
 
   const handleClearResource = (resourceId: string) => {

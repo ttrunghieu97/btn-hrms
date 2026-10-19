@@ -70,28 +70,39 @@ export function PermissionWorkspace({ id, variant = 'full' }: PermissionWorkspac
     assignments: {} as RoleAssignmentMap,
   });
 
+  const hydratedRoleKeyRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     if (!role) return;
-    setName(role.name ?? '');
-    setDescription(role.description ?? '');
-    setBreadcrumbRoleName(role.name ?? '');
+    const catalogLoaded = catalog.permissions.length > 0;
+    const roleKey = `${role.id}:${catalogLoaded ? 'ready' : 'pending'}`;
+    if (hydratedRoleKeyRef.current === roleKey) return;
+
+    const isRoleSwitch = !hydratedRoleKeyRef.current?.startsWith(`${role.id}:`);
+    hydratedRoleKeyRef.current = roleKey;
+
+    if (isRoleSwitch) {
+      setName(role.name ?? '');
+      setDescription(role.description ?? '');
+      setBreadcrumbRoleName(role.name ?? '');
+
+      // Reset filters on role switch
+      setPermissionSearch('');
+      setSelectedDomainId(null);
+      setSelectedCategoryId(null);
+      setShowOnlySelected(false);
+      setActiveResourceId(null);
+    }
 
     const mappedAssignments = permissionCodesToAssignments(role.permissions || []);
     setAssignments(mappedAssignments);
 
-    setInitialState({
-      name: role.name ?? '',
-      description: role.description ?? '',
+    setInitialState((prev) => ({
+      name: isRoleSwitch ? (role.name ?? '') : prev.name,
+      description: isRoleSwitch ? (role.description ?? '') : prev.description,
       assignments: mappedAssignments,
-    });
-
-    // Reset filters
-    setPermissionSearch('');
-    setSelectedDomainId(null);
-    setSelectedCategoryId(null);
-    setShowOnlySelected(false);
-    setActiveResourceId(null);
-  }, [role]);
+    }));
+  }, [role, catalog.permissions.length, permissionCodesToAssignments, setBreadcrumbRoleName]);
 
   const selectedCount = useMemo(() => {
     return Object.values(assignments).filter(a => a.selected).length;
@@ -236,7 +247,7 @@ export function PermissionWorkspace({ id, variant = 'full' }: PermissionWorkspac
               )}
               <span className={cn(
                 "text-xs font-medium",
-                isDirty ? "text-amber-600" : "text-muted-foreground"
+                isDirty ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
               )}>
                 {isDirty ? roleUiCopy.unsavedChanges : roleUiCopy.noUnsavedChanges}
               </span>

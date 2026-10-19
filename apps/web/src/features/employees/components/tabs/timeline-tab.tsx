@@ -167,7 +167,7 @@ export function TimelineTab({ employee }: TimelineTabProps) {
       {/* Header */}
       <div className='border-b px-4 py-3'>
         <div className='flex items-center gap-3'>
-          <div className='bg-purple-500/10 p-1.5 rounded-lg text-purple-600'>
+          <div className='bg-purple-500/10 p-1.5 rounded-lg text-purple-600 dark:text-purple-400'>
             <Icons.activity className='size-4' />
           </div>
           <div>

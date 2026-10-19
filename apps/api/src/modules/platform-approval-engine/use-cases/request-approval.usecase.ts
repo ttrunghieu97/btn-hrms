@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PlatformApprovalEngineRepository } from "../repositories/platform-approval-engine.repository";
 import { EventOutboxService } from "../../../core/events/event-outbox.service";
 import { ApprovalRequestCreatedEvent } from "../../../core/events/events/approval-request-created.event";
-import { throwNotFound, throwBadRequest } from "../../../shared/utils/http-error";
+import { throwNotFound, throwBadRequest, throwForbidden } from "../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { RequestApprovalDto } from "../dto/request-approval.dto";
 
@@ -13,7 +13,15 @@ export class RequestApprovalUseCase {
     private readonly eventOutbox: EventOutboxService,
   ) {}
 
-  async execute(dto: RequestApprovalDto) {
+  async execute(dto: RequestApprovalDto, requestedByUserId: string) {
+    const actorUserId = typeof requestedByUserId === "string" ? requestedByUserId.trim() : "";
+    if (!actorUserId) {
+      throwForbidden(
+        "Authenticated user identity is required to request approval",
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+
     const policy = await this.repo.findPolicyById(dto.policyId);
     if (!policy) throwNotFound("Approval policy not found", ERROR_CODES.APPROVAL_POLICY_NOT_FOUND, { policyId: dto.policyId });
 
@@ -25,7 +33,7 @@ export class RequestApprovalUseCase {
         policyId: dto.policyId,
         subjectType: dto.subjectType,
         subjectId: dto.subjectId,
-        requestedByUserId: dto.requestedByUserId ?? null,
+        requestedByUserId: actorUserId,
         metadata: dto.metadata ?? null,
       }, tx);
 
@@ -57,7 +65,7 @@ export class RequestApprovalUseCase {
           policyKey: policy.key,
           subjectType: dto.subjectType,
           subjectId: dto.subjectId,
-          requestedByUserId: dto.requestedByUserId ?? null,
+          requestedByUserId: actorUserId,
           requestedAt: new Date().toISOString(),
         }),
         tx,

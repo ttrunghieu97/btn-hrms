@@ -53,11 +53,23 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
-import { appCopy, commonUiCopy, shiftUiCopy, scheduleUiCopy } from '@/lib/app-copy';
+import { commonUiCopy, shiftUiCopy, scheduleUiCopy } from '@/lib/app-copy';
 import { feedbackCopy } from '@/lib/feedback-copy';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
 import { cn } from '@/lib/utils';
-import { useDepartmentsQuery, employeesQueryOptions } from '@/features/employees';
+import {
+  useDepartmentsQuery,
+  usePositionsQuery,
+  employeesQueryOptions
+} from '@/features/employees';
+import {
+  evaluatePermissionRule,
+  employee,
+  departments,
+  schedule,
+  system
+} from '@/shared/authorization';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   approveShiftRosterMutation,
   publishShiftRosterMutation,
@@ -72,16 +84,13 @@ import {
   shiftsAssignmentsQueryOptions,
   shiftsInvalidations,
   type ShiftRosterStatus,
-  type ShiftRosterRow,
-  type ShiftAssignmentRow
+  type ShiftRosterRow
 } from '../api/queries';
 import { RosterCell } from './roster-cell';
 import { getShiftCategory, sortByStartTime } from './roster-types';
 import { formatDateVN as formatDate } from '@/lib/date';
-import { positionsControllerFindAll } from '@/api/generated/positions/positions';
 import { locationsControllerFindList } from '@/api/generated/location-management/location-management';
 import { extractList } from '@/lib/api-extract';
-import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets, getQueryClient } from '@/lib/query-client';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -158,10 +167,6 @@ function getWorkflowMessage(status: ShiftRosterStatus) {
   }
 }
 
-function formatMeta(value?: string | null) {
-  return value ? formatDate(value) : '—';
-}
-
 function normalize(str: string) {
   return str
     .toLowerCase()
@@ -171,17 +176,8 @@ function normalize(str: string) {
     .replace(/\u0110/g, 'D');
 }
 
-const positionKeys = createKeyFactory('positions');
-function positionsQueryOptions() {
-  return {
-    queryKey: positionKeys.all(),
-    queryFn: () => positionsControllerFindAll().then((r) => extractList<{ id: string; name: string; isActive: boolean }>(r)),
-    ...queryPolicyPresets['default']
-  };
-}
-
 function getInitials(name: string) {
-  const parts = name.split(' ');
+  const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
@@ -189,6 +185,72 @@ function getInitials(name: string) {
 }
 
 export function RosterView() {
+  const user = useAuthStore((state) => state.user);
+  const userPermissions = user?.permissions;
+  const isUnrestrictedUser = !user || Boolean(user.isSuperAdmin);
+
+  const canViewEmployees = React.useMemo(
+    () =>
+      isUnrestrictedUser ||
+      evaluatePermissionRule(
+        {
+          anyOf: [
+            employee.view,
+            employee.viewSelf,
+            employee.viewDepartment,
+            employee.viewAll,
+            employee.edit,
+            employee.manage,
+            system.all
+          ]
+        },
+        userPermissions
+      ),
+    [isUnrestrictedUser, userPermissions]
+  );
+
+  const canViewDepartments = React.useMemo(
+    () =>
+      isUnrestrictedUser ||
+      evaluatePermissionRule(
+        {
+          anyOf: [departments.view, departments.edit, system.all]
+        },
+        userPermissions
+      ),
+    [isUnrestrictedUser, userPermissions]
+  );
+
+  const canViewLocations = React.useMemo(
+    () =>
+      isUnrestrictedUser ||
+      evaluatePermissionRule(
+        {
+          anyOf: ['locations:view', 'locations:edit', system.all]
+        },
+        userPermissions
+      ),
+    [isUnrestrictedUser, userPermissions]
+  );
+
+  const canManageSchedule = React.useMemo(
+    () =>
+      isUnrestrictedUser ||
+      evaluatePermissionRule(
+        {
+          anyOf: [
+            schedule.create,
+            schedule.editDepartment,
+            schedule.editAll,
+            schedule.delete,
+            system.all
+          ]
+        },
+        userPermissions
+      ),
+    [isUnrestrictedUser, userPermissions]
+  );
+
   const [weekStart, setWeekStart] = React.useState(() => {
     const now = new Date();
     return startOfWeek(now, { weekStartsOn: 1 });
@@ -215,39 +277,24 @@ export function RosterView() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = React.useState<string[]>([]);
   const [bulkAssignPopoverOpen, setBulkAssignPopoverOpen] = React.useState(false);
 
-  const departmentsQuery = useDepartmentsQuery();
-  const employeesQuery = useQuery(employeesQueryOptions({ limit: 500 }));
+  const departmentsQuery = useDepartmentsQuery(canViewDepartments);
+  const employeesQuery = useQuery({
+    ...employeesQueryOptions({ limit: 500 }),
+    enabled: canViewEmployees
+  });
   const templatesQuery = useQuery(shiftsTemplatesQueryOptions({ page: 1, limit: 100 }));
-  const positionsQuery = useQuery(positionsQueryOptions());
+  const positionsQuery = usePositionsQuery(canViewEmployees && assignSheetOpen);
   const locationsQuery = useQuery({
     queryKey: ['locations-list'],
     queryFn: async () => {
       const res = await locationsControllerFindList({});
       return extractList<{ id: string; code: string; name: string }>(res);
-    }
+    },
+    enabled: canViewLocations && assignSheetOpen,
+    ...queryPolicyPresets['static']
   });
 
   const weekRange = getWeekRange(weekStart);
-
-  const employeeOptions = React.useMemo(
-    () =>
-      (employeesQuery.data?.employees ?? []).map((emp) => ({
-        value: emp.id,
-        label: `${emp.firstName} ${emp.lastName}${emp.employeeCode ? ` (${emp.employeeCode})` : ''}`.trim(),
-        departmentId: emp.department?.id
-      })),
-    [employeesQuery.data?.employees]
-  );
-
-  const filteredEmployeesOptions = React.useMemo(() => {
-    let opts = employeeOptions;
-    if (filters.departmentId) {
-      opts = opts.filter((opt) => opt.departmentId === filters.departmentId);
-    }
-    if (!employeeSearch) return opts;
-    const term = normalize(employeeSearch);
-    return opts.filter((opt) => normalize(opt.label).includes(term));
-  }, [employeeOptions, employeeSearch, filters.departmentId]);
 
   const rosterQuery = useQuery(
     shiftsRosterQueryOptions({
@@ -267,7 +314,6 @@ export function RosterView() {
     })
   );
 
-  const employees = employeesQuery.data?.employees ?? [];
   const templates = templatesQuery.data?.templates ?? [];
   const positions = positionsQuery.data ?? [];
   const locations = locationsQuery.data ?? [];
@@ -280,18 +326,8 @@ export function RosterView() {
   const isLoading =
     rosterQuery.isLoading ||
     assignmentsQuery.isLoading ||
-    employeesQuery.isLoading ||
     templatesQuery.isLoading ||
-    locationsQuery.isLoading ||
-    positionsQuery.isLoading;
-
-  const displayedEmployees = React.useMemo(() => {
-    return employees.filter((emp) => {
-      if (filters.employeeId && emp.id !== filters.employeeId) return false;
-      if (filters.departmentId && emp.department?.id !== filters.departmentId) return false;
-      return true;
-    });
-  }, [employees, filters.employeeId, filters.departmentId]);
+    (canViewEmployees && employeesQuery.isLoading);
 
   // Convert assignment rows to ShiftRosterRow-compatible format
   // so grid can display data from assignments API (primary) merged with roster API
@@ -358,6 +394,64 @@ export function RosterView() {
     return result;
   }, [rosterRows, assignmentRows, templates, weekRange.from, weekRange.to]);
 
+  const employees = React.useMemo(() => {
+    const catalogEmployees = employeesQuery.data?.employees ?? [];
+    const seenIds = new Set(catalogEmployees.map((emp) => emp.id));
+    const fallbackEmployees: Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      employeeCode: string;
+      department?: { id: string; name: string } | null;
+    }> = [];
+
+    for (const row of mergedRows) {
+      if (!row.employeeId || seenIds.has(row.employeeId)) continue;
+      seenIds.add(row.employeeId);
+      const displayName = (row.employeeName || row.employeeId).trim();
+      fallbackEmployees.push({
+        id: row.employeeId,
+        firstName: displayName,
+        lastName: '',
+        employeeCode: '',
+        department: row.departmentId ? { id: row.departmentId, name: row.departmentId } : null
+      });
+    }
+
+    return [...catalogEmployees, ...fallbackEmployees];
+  }, [employeesQuery.data?.employees, mergedRows]);
+
+  const employeeOptions = React.useMemo(
+    () =>
+      employees.map((emp) => {
+        const fullName = `${emp.firstName} ${emp.lastName}`.trim();
+        return {
+          value: emp.id,
+          label: `${fullName}${emp.employeeCode ? ` (${emp.employeeCode})` : ''}`.trim(),
+          departmentId: emp.department?.id
+        };
+      }),
+    [employees]
+  );
+
+  const filteredEmployeesOptions = React.useMemo(() => {
+    let opts = employeeOptions;
+    if (filters.departmentId) {
+      opts = opts.filter((opt) => opt.departmentId === filters.departmentId);
+    }
+    if (!employeeSearch) return opts;
+    const term = normalize(employeeSearch);
+    return opts.filter((opt) => normalize(opt.label).includes(term));
+  }, [employeeOptions, employeeSearch, filters.departmentId]);
+
+  const displayedEmployees = React.useMemo(() => {
+    return employees.filter((emp) => {
+      if (filters.employeeId && emp.id !== filters.employeeId) return false;
+      if (filters.departmentId && emp.department?.id !== filters.departmentId) return false;
+      return true;
+    });
+  }, [employees, filters.employeeId, filters.departmentId]);
+
   const assignmentsByDay = React.useMemo(() => {
     const map = new Map<string, Map<string, ShiftRosterRow[]>>();
     for (const row of mergedRows) {
@@ -369,23 +463,11 @@ export function RosterView() {
     return map;
   }, [mergedRows]);
 
-  const coverage = React.useMemo(() => {
-    const map = new Map<string, { assigned: number; location: string; position: string }>();
-    for (const row of mergedRows) {
-      const loc = row.locationName || 'Không có địa điểm';
-      const pos = row.positionName || 'Không có vị trí';
-      const key = `${loc}|${pos}`;
-      const current = map.get(key) ?? { assigned: 0, location: loc, position: pos };
-      current.assigned += 1;
-      map.set(key, current);
-    }
-    return Array.from(map.entries()).map(([key, data]) => ({ key, ...data }));
-  }, [mergedRows]);
-
   const weeklyHours = React.useMemo(() => {
     const map = new Map<string, number>();
     for (const row of mergedRows) {
-      map.set(row.employeeName, (map.get(row.employeeName) ?? 0) + (row.scheduledMinutes ?? 0));
+      if (!row.employeeId) continue;
+      map.set(row.employeeId, (map.get(row.employeeId) ?? 0) + (row.scheduledMinutes ?? 0));
     }
     return map;
   }, [mergedRows]);
@@ -676,7 +758,7 @@ export function RosterView() {
           </div>
 
           <div className='flex items-center gap-2'>
-            {!isLocked && (
+            {!isLocked && canManageSchedule && (
               <>
                 <Popover open={bulkAssignPopoverOpen} onOpenChange={setBulkAssignPopoverOpen}>
                   <PopoverTrigger asChild>
@@ -769,48 +851,52 @@ export function RosterView() {
               {shiftUiCopy.roster.refreshAction}
             </Button>
 
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10'
-              onClick={() => {
-                void rejectMutation.mutate({
-                  ...workflowPayload,
-                  reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
-                });
-              }}
-              disabled={isMutating}
-            >
-              <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
-              Mở khóa Roster (Rút về Nháp)
-            </Button>
-
-            {(status === 'draft' || status === 'rejected') ? (
-              <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handleSubmit} disabled={isMutating}>
-                <Icons.check className='mr-1.5 h-3.5 w-3.5' />
-                {shiftUiCopy.roster.submitAction}
-              </Button>
-            ) : null}
-
-            {status === 'pending_approval' ? (
+            {canManageSchedule ? (
               <>
-                <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handleApprove} disabled={isMutating}>
-                  <Icons.check className='mr-1.5 h-3.5 w-3.5' />
-                  {shiftUiCopy.roster.approveAction}
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10'
+                  onClick={() => {
+                    void rejectMutation.mutate({
+                      ...workflowPayload,
+                      reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
+                    });
+                  }}
+                  disabled={isMutating}
+                >
+                  <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
+                  Mở khóa Roster (Rút về Nháp)
                 </Button>
-                <Button type='button' size='sm' variant='destructive' className='rounded-md h-8 text-xs font-semibold' onClick={() => setRejectDialogOpen(true)} disabled={isMutating}>
-                  <Icons.circleX className='mr-1.5 h-3.5 w-3.5' />
-                  {shiftUiCopy.roster.rejectAction}
-                </Button>
-              </>
-            ) : null}
 
-            {status === 'approved' ? (
-              <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handlePublish} disabled={isMutating}>
-                <Icons.check className='mr-1.5 h-3.5 w-3.5' />
-                {shiftUiCopy.roster.publishAction}
-              </Button>
+                {(status === 'draft' || status === 'rejected') ? (
+                  <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handleSubmit} disabled={isMutating}>
+                    <Icons.check className='mr-1.5 h-3.5 w-3.5' />
+                    {shiftUiCopy.roster.submitAction}
+                  </Button>
+                ) : null}
+
+                {status === 'pending_approval' ? (
+                  <>
+                    <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handleApprove} disabled={isMutating}>
+                      <Icons.check className='mr-1.5 h-3.5 w-3.5' />
+                      {shiftUiCopy.roster.approveAction}
+                    </Button>
+                    <Button type='button' size='sm' variant='destructive' className='rounded-md h-8 text-xs font-semibold' onClick={() => setRejectDialogOpen(true)} disabled={isMutating}>
+                      <Icons.circleX className='mr-1.5 h-3.5 w-3.5' />
+                      {shiftUiCopy.roster.rejectAction}
+                    </Button>
+                  </>
+                ) : null}
+
+                {status === 'approved' ? (
+                  <Button type='button' size='sm' className='rounded-md h-8 text-xs font-semibold' onClick={handlePublish} disabled={isMutating}>
+                    <Icons.check className='mr-1.5 h-3.5 w-3.5' />
+                    {shiftUiCopy.roster.publishAction}
+                  </Button>
+                ) : null}
+              </>
             ) : null}
           </div>
         </div>
@@ -822,10 +908,10 @@ export function RosterView() {
         {(() => {
           const allWarnings: { employeeName: string; date: string; message: string }[] = [];
           displayedEmployees.forEach((emp) => {
-            const empHoursMins = weeklyHours.get(`${emp.firstName} ${emp.lastName}`.trim()) ?? 0;
+            const empHoursMins = weeklyHours.get(emp.id) ?? 0;
             if (empHoursMins > 40 * 60) {
               allWarnings.push({
-                employeeName: `${emp.firstName} ${emp.lastName}`,
+                employeeName: `${emp.firstName} ${emp.lastName}`.trim(),
                 date: 'Cả tuần',
                 message: `Vượt quá 40h/tuần (${Math.round(empHoursMins / 60)}h)`
               });
@@ -876,22 +962,24 @@ export function RosterView() {
               </AlertTitle>
               <AlertDescription className='text-xs mt-1 text-muted-foreground'>{getWorkflowMessage(status)}</AlertDescription>
             </div>
-            <Button
-              type='button'
-              size='sm'
-              variant='outline'
-              className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10 shrink-0'
-              onClick={() => {
-                void rejectMutation.mutate({
-                  ...workflowPayload,
-                  reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
-                });
-              }}
-              disabled={isMutating}
-            >
-              <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
-              Mở khóa ngay
-            </Button>
+            {canManageSchedule ? (
+              <Button
+                type='button'
+                size='sm'
+                variant='outline'
+                className='rounded-md h-8 text-xs font-semibold text-amber-600 border-amber-500/40 hover:bg-amber-500/10 shrink-0'
+                onClick={() => {
+                  void rejectMutation.mutate({
+                    ...workflowPayload,
+                    reason: 'Mở khóa Roster để chỉnh sửa lịch làm việc'
+                  });
+                }}
+                disabled={isMutating}
+              >
+                <Icons.restore className='mr-1.5 h-3.5 w-3.5' />
+                Mở khóa ngay
+              </Button>
+            ) : null}
           </Alert>
         ) : null}
 
@@ -907,21 +995,23 @@ export function RosterView() {
                 <TableRow className='hover:bg-transparent bg-muted/20'>
                   <TableHead className='sticky left-0 bg-card min-w-[200px] max-w-[240px] z-20 border-r border-border font-semibold text-xs text-foreground uppercase tracking-wider py-3 px-4'>
                     <div className='flex items-center gap-2'>
-                      <input
-                        type='checkbox'
-                        className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20'
-                        checked={
-                          displayedEmployees.length > 0 &&
-                          selectedEmployeeIds.length === displayedEmployees.length
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedEmployeeIds(displayedEmployees.map((emp) => emp.id));
-                          } else {
-                            setSelectedEmployeeIds([]);
+                      {canManageSchedule ? (
+                        <input
+                          type='checkbox'
+                          className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20'
+                          checked={
+                            displayedEmployees.length > 0 &&
+                            selectedEmployeeIds.length === displayedEmployees.length
                           }
-                        }}
-                      />
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedEmployeeIds(displayedEmployees.map((emp) => emp.id));
+                            } else {
+                              setSelectedEmployeeIds([]);
+                            }
+                          }}
+                        />
+                      ) : null}
                       <span>{scheduleUiCopy.roster.employeeColumn}</span>
                     </div>
                   </TableHead>
@@ -938,31 +1028,34 @@ export function RosterView() {
               </TableHeader>
               <TableBody>
                 {displayedEmployees.map((emp) => {
-                  const empHoursMins = weeklyHours.get(`${emp.firstName} ${emp.lastName}`.trim()) ?? 0;
+                  const empHoursMins = weeklyHours.get(emp.id) ?? 0;
+                  const empFullName = `${emp.firstName} ${emp.lastName}`.trim();
                   return (
                     <TableRow key={emp.id} className='hover:bg-muted/5'>
                       <TableCell className='sticky left-0 bg-card font-medium z-10 border-r border-b border-border py-3 px-4 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'>
                         <div className='flex items-center gap-2.5'>
-                          <input
-                            type='checkbox'
-                            className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20 shrink-0'
-                            checked={selectedEmployeeIds.includes(emp.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedEmployeeIds((prev) => [...prev, emp.id]);
-                              } else {
-                                setSelectedEmployeeIds((prev) => prev.filter((id) => id !== emp.id));
-                              }
-                            }}
-                          />
+                          {canManageSchedule ? (
+                            <input
+                              type='checkbox'
+                              className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/20 shrink-0'
+                              checked={selectedEmployeeIds.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedEmployeeIds((prev) => [...prev, emp.id]);
+                                } else {
+                                  setSelectedEmployeeIds((prev) => prev.filter((id) => id !== emp.id));
+                                }
+                              }}
+                            />
+                          ) : null}
                           <Avatar className='h-7 w-7 border shrink-0'>
                             <AvatarFallback className='text-[10px] bg-primary/5 text-primary font-semibold'>
-                              {getInitials(`${emp.firstName} ${emp.lastName}`)}
+                              {getInitials(empFullName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className='flex flex-col min-w-0'>
                             <span className='truncate text-xs font-semibold leading-normal text-foreground'>
-                              {emp.firstName} {emp.lastName}
+                              {empFullName}
                             </span>
                             <span className='text-[9px] text-muted-foreground font-mono mt-0.5'>
                               {emp.employeeCode || emp.id.slice(0, 8)}
@@ -991,7 +1084,7 @@ export function RosterView() {
                           assignments: dayRows,
                           category: getShiftCategory(dayRows[0]),
                           warnings,
-                          isLocked
+                          isLocked: isLocked || !canManageSchedule
                         };
 
                         return (

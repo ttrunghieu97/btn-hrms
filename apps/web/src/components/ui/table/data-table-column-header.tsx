@@ -26,17 +26,17 @@ export function DataTableColumnHeader<TData, TValue>({
     <Button
       type='button'
       variant='ghost'
-      className={cn('-ml-2 h-8 px-2 font-medium', className)}
+      className={cn('-ml-2 h-8 max-w-full overflow-hidden px-2 font-medium', className)}
       onClick={() => column.toggleSorting(sorted === 'asc')}
       {...props}
     >
-      <span>{title}</span>
+      <span className='truncate'>{title}</span>
       {sorted === 'desc' ? (
-        <ChevronDownIcon className='text-muted-foreground ml-1 size-4' />
+        <ChevronDownIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       ) : sorted === 'asc' ? (
-        <ChevronUpIcon className='text-muted-foreground ml-1 size-4' />
+        <ChevronUpIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       ) : (
-        <CaretSortIcon className='text-muted-foreground ml-1 size-4' />
+        <CaretSortIcon className='text-muted-foreground ml-1 size-4 shrink-0' />
       )}
     </Button>
   );

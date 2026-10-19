@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   type ColumnDef,
+  type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
   getCoreRowModel,
@@ -18,14 +19,18 @@ import { departmentsControllerFindList } from '@/api/generated/department-manage
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { attendanceUiCopy, commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { extractList, unwrapData } from '@/lib/api-extract';
 import { isUnauthenticatedError } from '@/lib/error-taxonomy';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
-import { hasPermission } from '@project/permissions';
-import { permissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { presenceColumns, type PresenceItem, type PresenceStatus } from './presence-columns';
 
@@ -51,13 +56,12 @@ const STATUS_TABS: { value: PresenceStatus | 'ALL'; label: string; dotClass?: st
 export function PresenceManagement() {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const user = useAuthStore((state) => state.user);
-  const canViewAll = hasPermission(user?.permissions ?? [], permissions.attendance.viewAll);
 
   const [departmentId, setDepartmentId] = React.useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = React.useState<PresenceStatus | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 50 });
 
@@ -87,7 +91,7 @@ export function PresenceManagement() {
     queryFn: () =>
       attendanceQueryControllerGetPresence({ departmentId: cleanDeptId, status: cleanStatus }),
   });
-  const rawItems = extractList<any>(listResponse);
+  const rawItems = React.useMemo(() => extractList<any>(listResponse), [listResponse]);
 
   // ponytail: server-side search when dataset exceeds 500 items / pagination is added
   const items: PresenceItem[] = React.useMemo(() => {
@@ -118,6 +122,10 @@ export function PresenceManagement() {
     router.replace('/auth/sign-in');
   }, [isAuthError, router]);
 
+  React.useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+  }, [departmentId, selectedStatus, searchQuery, columnFilters]);
+
   const totalCount =
     summary.active + summary.break + summary.upcoming + summary.absent + summary.leave + summary.offDuty;
 
@@ -125,6 +133,7 @@ export function PresenceManagement() {
     setDepartmentId('ALL');
     setSelectedStatus(null);
     setSearchQuery('');
+    setColumnFilters([]);
   };
 
   // Build department options for faceted filter
@@ -147,15 +156,16 @@ export function PresenceManagement() {
   const table = useReactTable({
     data: items,
     columns: cols,
-    state: { sorting, columnVisibility, pagination },
+    state: { sorting, columnFilters, columnVisibility, pagination },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    pageCount: Math.ceil(items.length / pagination.pageSize) || 1,
   });
 
   if (isAuthError) {
@@ -178,7 +188,11 @@ export function PresenceManagement() {
   }
 
   const activeTab = selectedStatus ?? 'ALL';
-  const hasFilters = searchQuery !== '' || departmentId !== 'ALL' || selectedStatus !== null;
+  const hasFilters =
+    searchQuery !== '' ||
+    departmentId !== 'ALL' ||
+    selectedStatus !== null ||
+    columnFilters.length > 0;
 
   const emptyState = !items.length ? (
     <div className='flex flex-col items-center gap-1 py-6'>
@@ -229,16 +243,21 @@ export function PresenceManagement() {
       <div className='flex flex-1 flex-col gap-2'>
         <DataTable table={table} emptyState={emptyState} isLoading={isLoading} animationKey={activeTab}>
           <DataTableToolbar table={table}>
-            <select
-              className='h-8 rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-            >
-              <option value='ALL'>{employeeUiCopy.attendance.presence.allDepartments}</option>
-              {departments.map((dept: { id: string; name: string }) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
-            </select>
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger className='h-8 w-[180px] text-xs'>
+                <SelectValue placeholder={employeeUiCopy.attendance.presence.allDepartments} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='ALL' className='text-xs'>
+                  {employeeUiCopy.attendance.presence.allDepartments}
+                </SelectItem>
+                {departments.map((dept: { id: string; name: string }) => (
+                  <SelectItem key={dept.id} value={dept.id} className='text-xs'>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </DataTableToolbar>
         </DataTable>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import {
   usePeriodLockQuery,
   usePeriodHistoryQuery,
   usePeriodActionMutation,
+  useValidatePeriodCloseQuery,
   type PeriodLockData,
 } from '../../api/period-lock-api';
 import {
@@ -20,12 +22,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useAuthStore } from '@/stores/auth-store';
+import { attendance, hasPermission } from '@/lib/permissions';
 
 interface AttendancePeriodLifecycleHeroProps {
   period: string; // format 'yyyy-MM'
 }
 
 export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecycleHeroProps) {
+  const user = useAuthStore((s) => s.user);
   const { data: lockData, isLoading } = usePeriodLockQuery(period);
   const { data: history = [], refetch: refetchHistory } = usePeriodHistoryQuery(period);
   const actionMutation = usePeriodActionMutation();
@@ -35,6 +40,15 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
   const [promptAction, setPromptAction] = React.useState<'unlock' | 'close' | null>(null);
 
   const status: PeriodLockData['status'] = lockData?.status || 'draft';
+
+  const canReview = hasPermission(user?.permissions, attendance.periodReview);
+  const canApprove = hasPermission(user?.permissions, attendance.periodApprove);
+  const canClose = hasPermission(user?.permissions, attendance.periodClose);
+  const canUnlock = hasPermission(user?.permissions, attendance.periodUnlock);
+
+  const isCloseCandidate = status === 'locked' || status === 'payroll_posted';
+  const { data: closeValidation } = useValidatePeriodCloseQuery(period, isCloseCandidate);
+  const closeBlockedReasons = closeValidation && !closeValidation.valid ? closeValidation.reasons : [];
 
   const steps = [
     { key: 'draft', label: '1. Thu thập chấm công' },
@@ -134,6 +148,13 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
 
             {/* Actions for current state */}
             <div className='flex flex-wrap items-center gap-2'>
+              <Button variant='outline' size='sm' className='h-8 text-xs' asChild>
+                <Link href={`/attendance/management/periods/${period}`}>
+                  <Icons.calendar className='mr-1.5 size-3.5' />
+                  Bảng công chi tiết
+                </Link>
+              </Button>
+
               <Button
                 variant='ghost'
                 size='sm'
@@ -147,7 +168,7 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 Lịch sử kỳ ({history.length})
               </Button>
 
-              {(status === 'draft' || status === 'open') && (
+              {(status === 'draft' || status === 'open') && canReview && (
                 <Button
                   size='sm'
                   variant='default'
@@ -160,7 +181,7 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 </Button>
               )}
 
-              {status === 'in_review' && (
+              {status === 'in_review' && canApprove && (
                 <Button
                   size='sm'
                   variant='default'
@@ -175,17 +196,19 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
 
               {(status === 'locked' || status === 'payroll_posted') && (
                 <>
-                  <Button
-                    size='sm'
-                    variant='default'
-                    className='h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium gap-1'
-                    disabled={actionMutation.isPending}
-                    onClick={() => setPromptAction('close')}
-                  >
-                    <Icons.check className='size-3.5' />
-                    Chốt kỳ công (Close)
-                  </Button>
-                  {status === 'locked' && (
+                  {canClose && (
+                    <Button
+                      size='sm'
+                      variant='default'
+                      className='h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium gap-1'
+                      disabled={actionMutation.isPending}
+                      onClick={() => setPromptAction('close')}
+                    >
+                      <Icons.check className='size-3.5' />
+                      Chốt kỳ công (Close)
+                    </Button>
+                  )}
+                  {status === 'locked' && canUnlock && (
                     <Button
                       size='sm'
                       variant='outline'
@@ -199,7 +222,7 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 </>
               )}
 
-              {status === 'closed' && (
+              {status === 'closed' && canClose && (
                 <Button
                   size='sm'
                   variant='outline'
@@ -241,6 +264,21 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
             </div>
           </div>
 
+          {/* Pre-Close Validation Blockers Warning */}
+          {closeBlockedReasons.length > 0 && (
+            <div className='mt-3.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300'>
+              <div className='flex items-center gap-2 font-semibold'>
+                <Icons.alertCircle className='size-4 shrink-0' />
+                <span>Chưa đủ điều kiện chốt kỳ công ({closeBlockedReasons.length} vướng mắc):</span>
+              </div>
+              <ul className='mt-1.5 list-disc space-y-1 pl-5 text-[11px]'>
+                {closeBlockedReasons.map((reason, idx) => (
+                  <li key={idx}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Responsible Actor Guidance */}
           <div className='mt-3.5 flex items-start gap-2.5 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs'>
             <Icons.activity className='size-4 text-primary shrink-0 mt-0.5' />
@@ -269,6 +307,16 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
               </DialogTitle>
             </DialogHeader>
             <div className='space-y-3 py-2 text-xs'>
+              {promptAction === 'close' && closeBlockedReasons.length > 0 && (
+                <div className='rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-destructive'>
+                  <p className='font-semibold'>Không thể chốt kỳ công do các vướng mắc sau:</p>
+                  <ul className='mt-1 list-disc space-y-0.5 pl-4 text-[11px]'>
+                    {closeBlockedReasons.map((reason, idx) => (
+                      <li key={idx}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className='text-muted-foreground'>
                 {promptAction === 'close'
                   ? 'Sau khi chốt kỳ công, dữ liệu giờ công sẽ trở thành chính thức để lập bảng lương. Vui lòng nhập ghi chú nếu có.'
@@ -287,7 +335,11 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 <Button
                   variant='default'
                   size='sm'
-                  disabled={actionMutation.isPending || (promptAction === 'unlock' && !remarkInput.trim())}
+                  disabled={
+                    actionMutation.isPending ||
+                    (promptAction === 'unlock' && !remarkInput.trim()) ||
+                    (promptAction === 'close' && closeBlockedReasons.length > 0)
+                  }
                   onClick={() =>
                     handleAction(
                       promptAction,

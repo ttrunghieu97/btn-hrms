@@ -255,6 +255,7 @@ export default function ChangePasswordPage() {
                       <Input
                         id={field.name}
                         type={showFields.current ? 'text' : 'password'}
+                        autoComplete="current-password"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
@@ -288,6 +289,7 @@ export default function ChangePasswordPage() {
                       <Input
                         id={field.name}
                         type={showFields.new ? 'text' : 'password'}
+                        autoComplete="new-password"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
@@ -322,6 +324,7 @@ export default function ChangePasswordPage() {
                       <Input
                         id={field.name}
                         type={showFields.confirm ? 'text' : 'password'}
+                        autoComplete="new-password"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {

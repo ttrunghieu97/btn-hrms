@@ -35,9 +35,24 @@ export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, savin
     } as FormValues,
     validators: { onSubmit: createPayrollPeriodSchema },
     onSubmit: ({ value }) => {
+      const dateMatch = value.startsOn.match(/^(\d{4})-(\d{2})/);
+      const parsedYear = dateMatch ? Number(dateMatch[1]) : editing?.year;
+      const parsedMonth = dateMatch ? Number(dateMatch[2]) : editing?.month;
+      const validYear =
+        parsedYear !== undefined && parsedYear >= 1970 && parsedYear <= 2100
+          ? parsedYear
+          : undefined;
+      const validMonth =
+        parsedMonth !== undefined && parsedMonth >= 1 && parsedMonth <= 12
+          ? parsedMonth
+          : undefined;
+
       const payload: CreatePayrollPeriodPayload = {
         code: value.code,
         name: value.name,
+        ...(validYear !== undefined ? { year: validYear } : {}),
+        ...(validMonth !== undefined ? { month: validMonth } : {}),
+        ...(editing?.attendancePeriodId ? { attendancePeriodId: editing.attendancePeriodId } : {}),
         startsOn: value.startsOn,
         endsOn: value.endsOn,
         payDate: value.payDate || undefined,
@@ -57,7 +72,9 @@ export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, savin
     } else {
       form.reset();
     }
-  }, [editing, open, form]);
+    // Omit unstable `form` hook wrapper from deps to prevent effect loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

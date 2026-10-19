@@ -72,9 +72,6 @@ import { WorkflowSideEffectsService } from "../workflow/engine/workflow-side-eff
 import { TaskEventPublisher } from "../events/task-event-publisher";
 import { TaskEventStoreRepository } from "../events/task-event-store.repository";
 import { TaskAuditLogRepository } from "../events/repositories/task-audit-log.repository";
-import { NotificationConsumer } from "../events/consumers/notification.consumer";
-import { ActivityLogConsumer } from "../events/consumers/activity-log.consumer";
-import { AnalyticsConsumer } from "../events/consumers/analytics.consumer";
 
 import { FindTaskByIdUseCase } from "./use-cases/find-task-by-id.usecase";
 import { ListSubtasksUseCase } from "./use-cases/list-subtasks.usecase";
@@ -112,9 +109,6 @@ import { ListSubtasksUseCase } from "./use-cases/list-subtasks.usecase";
     WorkflowEngine,
     // ── Event system ─────────────────────────────────────────────────────────
     TaskEventPublisher,
-    NotificationConsumer,
-    ActivityLogConsumer,
-    AnalyticsConsumer,
     // ── Use cases ────────────────────────────────────────────────────────────
     ListTasksUseCase,
     ListMyTasksUseCase,

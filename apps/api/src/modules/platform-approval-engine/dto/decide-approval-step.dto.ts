@@ -1,13 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
-import { Transform } from "class-transformer";
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from "class-validator";
+import { Transform, Type } from "class-transformer";
 
 export class DecideApprovalStepDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUUID()
   requestId!: string;
 
   @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   stepIndex!: number;
 
   @ApiProperty({ enum: ["approve", "reject"] })

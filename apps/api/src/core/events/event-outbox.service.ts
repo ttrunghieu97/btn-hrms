@@ -1,20 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { registerWorkforceEvents, registerLeaveEvents, registerSchedulingEvents, registerTasksEvents, registerApprovalEvents, registerPayrollEvents, registerRecruitmentEvents, registerAssetEvents, registerOnboardingEvents, registerOffboardingEvents, registerTimesheetEvents } from "../../shared/events/event-types";
+import { registerAllDomainEvents } from "../../shared/events/event-types";
 import { assertEventRegistered, validatePayload } from "../../shared/events/event-registry";
 import { randomUUID } from "crypto";
 import { TracingService } from "../../shared/context/tracing.service";
 
-registerWorkforceEvents();
-registerLeaveEvents();
-registerSchedulingEvents();
-registerTasksEvents();
-registerApprovalEvents();
-registerPayrollEvents();
-registerRecruitmentEvents();
-registerAssetEvents();
-registerOnboardingEvents();
-registerOffboardingEvents();
-registerTimesheetEvents();
+registerAllDomainEvents();
 import {
   assertCanonicalEventEnvelope,
   CanonicalEventEnvelope,
@@ -39,7 +29,9 @@ type EventLike = {
   eventId?: unknown;
   producerContext?: unknown;
   scopeId?: unknown;
+  aggregateId?: unknown;
   payload?: unknown;
+  data?: unknown;
   id?: unknown;
   employeeId?: unknown;
 };
@@ -56,7 +48,17 @@ function eventConstructorName(value: unknown) {
 function payloadAggregateId(payload: unknown) {
   if (typeof payload !== "object" || payload === null) return null;
   const value = payload as EventLike;
-  const aggregateId = value.id ?? value.employeeId;
+  const nestedData =
+    typeof value.data === "object" && value.data !== null
+      ? (value.data as EventLike)
+      : {};
+  const aggregateId =
+    value.aggregateId ??
+    value.id ??
+    value.employeeId ??
+    nestedData.aggregateId ??
+    nestedData.id ??
+    nestedData.employeeId;
   return typeof aggregateId === "string" ? aggregateId : null;
 }
 
@@ -124,11 +126,19 @@ export class EventOutboxService {
     const sourceEventId: string | null = typeof source.eventId === "string" ? source.eventId : null;
     const eventVersion = Number(source.eventVersion ?? 1);
     const producerContext = String(source.producerContext || "core");
-    const scopeId = source.scopeId ?? null;
     const rawPayload: unknown = JSON.parse(
       JSON.stringify(source.payload ?? event),
     );
-    const aggregateId = payloadAggregateId(rawPayload);
+    const nestedData =
+      typeof (rawPayload as EventLike)?.data === "object" &&
+      (rawPayload as EventLike)?.data !== null
+        ? ((rawPayload as EventLike).data as EventLike)
+        : {};
+    const scopeId = source.scopeId ?? nestedData.scopeId ?? null;
+    const aggregateId =
+      typeof source.aggregateId === "string"
+        ? source.aggregateId
+        : payloadAggregateId(rawPayload);
 
     // Inject distributed trace context
     const payload = rawPayload as Record<string, unknown>;

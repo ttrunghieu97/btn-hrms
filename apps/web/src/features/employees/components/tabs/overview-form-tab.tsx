@@ -16,6 +16,11 @@ interface OverviewFormTabProps {
     email: string;
     phoneNumber: string;
     address: string;
+    bankName: string;
+    bankAccountNumber: string;
+    taxCode: string;
+    emergencyContactName: string;
+    emergencyContactPhone: string;
   };
   errors: Record<string, string>;
   genderOptions: Array<{ value: string; label: string }>;
@@ -31,7 +36,7 @@ export function OverviewFormTab({
   onFieldChange,
 }: OverviewFormTabProps) {
   return (
-    <div className='mx-auto max-w-2xl'>
+    <div className='mx-auto w-full max-w-4xl space-y-6'>
       <Section
         id='employee-personal-contact'
         title={employeeUiCopy.personalSection.title}
@@ -145,6 +150,61 @@ export function OverviewFormTab({
           />
         </div>
       </Section>
+
+      <Section
+        id='employee-finance-emergency'
+        title='Tài chính, Thuế & Liên hệ khẩn cấp'
+        description='Thông tin tài khoản nhận lương, mã số thuế cá nhân và người liên hệ khẩn cấp'
+      >
+        <div className='space-y-4'>
+          <div className='grid gap-4 sm:grid-cols-2'>
+            <EditableItem
+              label='Ngân hàng'
+              value={formValues.bankName}
+              editing
+              disabled={isPending}
+              error={errors.bankName}
+              onChange={(value) => onFieldChange('bankName', value)}
+            />
+            <EditableItem
+              label='Số tài khoản ngân hàng'
+              value={formValues.bankAccountNumber}
+              editing
+              disabled={isPending}
+              error={errors.bankAccountNumber}
+              onChange={(value) => onFieldChange('bankAccountNumber', value)}
+            />
+          </div>
+          <EditableItem
+            label='Mã số thuế cá nhân (10 hoặc 13 chữ số)'
+            value={formValues.taxCode}
+            editing
+            disabled={isPending}
+            error={errors.taxCode}
+            onChange={(value) => onFieldChange('taxCode', value)}
+          />
+          <div className='grid gap-4 sm:grid-cols-2'>
+            <EditableItem
+              label='Họ tên liên hệ khẩn cấp'
+              value={formValues.emergencyContactName}
+              editing
+              disabled={isPending}
+              error={errors.emergencyContactName}
+              onChange={(value) => onFieldChange('emergencyContactName', value)}
+            />
+            <EditableItem
+              label='SĐT liên hệ khẩn cấp'
+              value={formValues.emergencyContactPhone}
+              type='tel'
+              editing
+              disabled={isPending}
+              error={errors.emergencyContactPhone}
+              onChange={(value) => onFieldChange('emergencyContactPhone', value)}
+            />
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }
+

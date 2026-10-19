@@ -567,8 +567,9 @@ describe("Phase 6E — Payroll Integrity, SoD, Audit Privacy & Readiness Remedia
       try {
         await useCase.execute({
           employeeId: "emp-secret-1",
-          baseSalary: 95000000,
+          baseSalary: "95000000",
           currency: "VND",
+          payFrequency: "monthly",
           effectiveFrom: "2026-12-01",
           effectiveTo: "2026-01-01",
           components: [{ code: "exec_bonus", name: "Exec Bonus", amount: 50000000 }],
@@ -800,7 +801,6 @@ describe("Phase 6E — Payroll Integrity, SoD, Audit Privacy & Readiness Remedia
             await txDb.insert(schema.payrollCalculationVersions).values({
               code: "v-p6e-active",
               name: "Phase 6E Active Calc Version",
-              formulaConfig: {},
               status: "active",
               effectiveFrom: "2026-01-01",
             });
@@ -931,7 +931,7 @@ describe("Phase 6E — Payroll Integrity, SoD, Audit Privacy & Readiness Remedia
                   id: emp!.id,
                   endDate: "2026-06-15",
                 }),
-              },
+              } as any,
               settlementWriter,
               new RequestContextService(),
             );
@@ -944,9 +944,10 @@ describe("Phase 6E — Payroll Integrity, SoD, Audit Privacy & Readiness Remedia
             ).rejects.toThrow("SIMULATED_ITEM_INSERT_FAILURE");
 
             // Confirm no manual-2026-06 period or payslip remained in PostgreSQL after the failed settlement transaction
-            const leakedPeriod = await txDb.query.payrollPeriods.findFirst({
-              where: (p, { eq }) => eq(p.code, "manual-2026-06"),
-            });
+            const [leakedPeriod] = await txDb
+              .select()
+              .from(schema.payrollPeriods)
+              .where(eq(schema.payrollPeriods.code, "manual-2026-06"));
             expect(leakedPeriod).toBeUndefined();
 
             throw new Error("ROLLBACK_PHASE6E_INTENTIONAL");

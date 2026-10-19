@@ -31,13 +31,18 @@ import { AuthenticatedOnlyPolicy } from "../../../core/security/policies/authent
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { ERROR_REASONS } from "../../../shared/constants/error-reasons";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { throwUnauthorized } from "../../../shared/utils/http-error";
+import { throwForbidden, throwUnauthorized } from "../../../shared/utils/http-error";
 import { GoogleAuthService } from "./services/google-auth.service";
 import { TotpService } from "./services/totp.service";
 import { AuthConfigService } from "./auth-config.service";
 import { ChangePasswordRequestDto } from "./dto/change-password.dto";
 import { LoginRequestDto } from "./dto/login.dto";
 import { RefreshTokenRequestDto } from "./dto/refresh-token.dto";
+import {
+  DisableTotpRequestDto,
+  EnableTotpRequestDto,
+  LinkEmailRequestDto,
+} from "./dto/totp.dto";
 import { ChangePasswordUseCase } from "./use-cases/change-password.usecase";
 import { AuthUser } from "../../../core/security/types/auth-user.interface";
 import { LoginUseCase } from "./use-cases/login.usecase";
@@ -127,6 +132,53 @@ export class AuthController {
     return result;
   }
 
+  private assertCookieRefreshCsrfSafe(req: Request): void {
+    const headers = req.headers ?? {};
+    const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
+    if (secFetchSite === "cross-site") {
+      throwForbidden(
+        "Cross-site cookie-authenticated refresh blocked (CSRF protection)",
+        ERROR_CODES.FORBIDDEN,
+        { reason: "CSRF_CROSS_SITE_BLOCKED" },
+      );
+    }
+
+    const rawOrigin = headers.origin;
+    const origin = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
+    if (!origin) return;
+
+    let normalizedOrigin: string;
+    try {
+      normalizedOrigin = new URL(origin).origin.replace(/\/+$/, "").toLowerCase();
+    } catch {
+      throwForbidden(
+        "Cross-origin cookie-authenticated refresh blocked (CSRF protection)",
+        ERROR_CODES.FORBIDDEN,
+        { reason: "CSRF_ORIGIN_MISMATCH", origin },
+      );
+    }
+
+    const allowedOrigins = new Set(
+      (this.authConfig.getAllowedFrontendOrigins?.() ?? []).map((o) =>
+        o.trim().replace(/\/+$/, "").toLowerCase(),
+      ),
+    );
+    const rawHost = headers.host;
+    const host = (Array.isArray(rawHost) ? rawHost[0] : rawHost)?.trim().toLowerCase();
+    if (host) {
+      allowedOrigins.add(`http://${host}`);
+      allowedOrigins.add(`https://${host}`);
+    }
+
+    if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin!)) {
+      throwForbidden(
+        "Cross-origin cookie-authenticated refresh blocked (CSRF protection)",
+        ERROR_CODES.FORBIDDEN,
+        { reason: "CSRF_ORIGIN_MISMATCH", origin },
+      );
+    }
+  }
+
   @Post("refresh")
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
@@ -153,6 +205,10 @@ export class AuthController {
         ERROR_CODES.AUTH_REFRESH_INVALID,
         { reason: ERROR_REASONS.INVALID_REFRESH_TOKEN },
       );
+    }
+
+    if (!refreshTokenDto?.refreshToken && cookieToken) {
+      this.assertCookieRefreshCsrfSafe(req);
     }
 
     try {
@@ -327,7 +383,7 @@ export class AuthController {
   @ApiOperation({ summary: "Link Google account to current user and update email" })
   async linkEmail(
     @Req() req: Request & { user?: AuthUser },
-    @Body() body: { idToken: string },
+    @Body() body: LinkEmailRequestDto,
   ) {
     const userId = req.user?.id;
     if (!userId) {
@@ -339,6 +395,7 @@ export class AuthController {
   }
 
   @Post("totp/setup")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @CheckPolicy(AuthenticatedOnlyPolicy)
   @ApiBearerAuth()
   @AuditLog({ action: "auth_totp_setup", entity: "auth" })
@@ -350,13 +407,14 @@ export class AuthController {
   }
 
   @Post("totp/enable")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @CheckPolicy(AuthenticatedOnlyPolicy)
   @ApiBearerAuth()
   @AuditLog({ action: "auth_totp_enable", entity: "auth" })
   @ApiOperation({ summary: "Enable TOTP 2FA with verified passcode" })
   async enableTotp(
     @Req() req: Request & { user?: AuthUser },
-    @Body() body: { secret: string; passcode: string },
+    @Body() body: EnableTotpRequestDto,
   ) {
     const userId = req.user?.id;
     if (!userId) throwUnauthorized("Not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED);
@@ -364,14 +422,18 @@ export class AuthController {
   }
 
   @Post("totp/disable")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @CheckPolicy(AuthenticatedOnlyPolicy)
   @ApiBearerAuth()
   @AuditLog({ action: "auth_totp_disable", entity: "auth" })
   @ApiOperation({ summary: "Disable TOTP 2FA" })
-  async disableTotp(@Req() req: Request & { user?: AuthUser }) {
+  async disableTotp(
+    @Req() req: Request & { user?: AuthUser },
+    @Body() body?: DisableTotpRequestDto,
+  ) {
     const userId = req.user?.id;
     if (!userId) throwUnauthorized("Not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED);
-    return this.totpService.disableTotp(userId);
+    return this.totpService.disableTotp(userId, body?.passcode);
   }
 
   @Post("sso/google")

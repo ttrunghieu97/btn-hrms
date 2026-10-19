@@ -7,10 +7,13 @@ import {
   Post,
   Req,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
+import { IsOptional, IsString, MaxLength } from "class-validator";
 import type { Request as ExpressRequest } from "express";
 import { CheckPolicy } from "@/core/security/decorators/check-policy.decorator";
 import { LeavePolicies } from "@/core/security/policies/leave.policy";
+import { throwNotFound } from "@/shared/utils/http-error";
+import { ERROR_CODES } from "@/shared/constants/error-codes";
 import { ApprovalInboxRepository } from "./approval-inbox.repository";
 import { LeaveApprovalGateway } from "./leave-approval.gateway";
 import type { AuthUser } from "@/core/security/types/auth-user.interface";
@@ -20,6 +23,10 @@ interface AuthRequest extends ExpressRequest {
 }
 
 export class InboxDecisionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
   comment?: string;
 }
 
@@ -48,7 +55,13 @@ export class ApprovalInboxController {
     @Req() req: AuthRequest,
   ) {
     const step = await this.gateway.findPendingStepByApprover(id, req.user.id);
-    if (!step) return { error: "No pending step found for this user" };
+    if (!step) {
+      throwNotFound(
+        "No pending approval step found for this user",
+        ERROR_CODES.APPROVAL_STEP_NOT_FOUND,
+        { requestId: id, userId: req.user.id },
+      );
+    }
 
     return this.gateway.decideStep({
       requestId: id,
@@ -68,7 +81,13 @@ export class ApprovalInboxController {
     @Req() req: AuthRequest,
   ) {
     const step = await this.gateway.findPendingStepByApprover(id, req.user.id);
-    if (!step) return { error: "No pending step found for this user" };
+    if (!step) {
+      throwNotFound(
+        "No pending approval step found for this user",
+        ERROR_CODES.APPROVAL_STEP_NOT_FOUND,
+        { requestId: id, userId: req.user.id },
+      );
+    }
 
     return this.gateway.decideStep({
       requestId: id,

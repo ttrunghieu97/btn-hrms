@@ -62,13 +62,18 @@ function getWeekRange() {
   };
 }
 
+import { useAuthStore } from '@/stores/auth-store';
+
 export function MyScheduleView() {
+  const currentEmployeeId = useAuthStore((s) => s.user?.employeeId);
   const [requestSheetOpen, setRequestSheetOpen] = React.useState(false);
   const [reqDate, setReqDate] = React.useState('');
   const [reqType, setReqType] = React.useState<CreateScheduleRequestInput['requestType']>('MORNING_OFF');
   const [reqReason, setReqReason] = React.useState('');
   const createRequestMut = useCreateRequest();
-  const myRequestsQuery = useAllRequests();
+  const myRequestsQuery = useAllRequests(
+    currentEmployeeId ? { employeeId: currentEmployeeId } : undefined
+  );
 
   const weekRange = getWeekRange();
   const rosterQuery = useQuery(
@@ -78,7 +83,11 @@ export function MyScheduleView() {
   const rows = rosterQuery.data?.rows ?? [];
   const isPublished = rosterQuery.data?.publication?.status === 'published_locked';
 
-  const publishedRows = rows.filter((r) => r.assignmentStatus === 'published' || isPublished);
+  const publishedRows = rows.filter(
+    (r) =>
+      (r.assignmentStatus === 'published' || isPublished) &&
+      (!currentEmployeeId || r.employeeId === currentEmployeeId)
+  );
 
   async function handleSubmitRequest() {
     if (!reqDate) return;

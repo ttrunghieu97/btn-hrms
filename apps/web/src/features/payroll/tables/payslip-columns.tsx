@@ -11,7 +11,7 @@ import type { Payslip } from '../types';
 export const onViewPayslipRef = { current: (_id: string) => {} };
 export const onPublishRef = { current: (_id: string) => {} };
 
-function isProvisionalPayslip(row: Payslip): boolean {
+export function isProvisionalPayslip(row: Payslip): boolean {
   const meta = row.metadata ?? {};
   if (
     row.isProvisional === true ||
@@ -24,7 +24,7 @@ function isProvisionalPayslip(row: Payslip): boolean {
   if (row.calculationStatus === 'CONFIRMED' || meta.calculationStatus === 'CONFIRMED') {
     return false;
   }
-  return row.status !== 'published';
+  return false;
 }
 
 function ActionsCell({ row }: { row: Row<Payslip> }) {

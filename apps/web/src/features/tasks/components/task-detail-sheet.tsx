@@ -300,13 +300,13 @@ export function TaskDetailSheet({ taskId, open, onOpenChange, onEdit }: TaskDeta
 
               {task.rejectionReason && (
                 <InfoRow label={taskUiCopy.detail.rejectionReasonLabel}>
-                  <span className='text-red-600 font-semibold'>{task.rejectionReason}</span>
+                  <span className='text-red-600 dark:text-red-400 font-semibold'>{task.rejectionReason}</span>
                 </InfoRow>
               )}
 
               {task.revisionReason && (
                 <InfoRow label={taskUiCopy.detail.revisionReasonLabel}>
-                  <span className='text-orange-600 font-semibold'>{task.revisionReason}</span>
+                  <span className='text-orange-600 dark:text-orange-400 font-semibold'>{task.revisionReason}</span>
                 </InfoRow>
               )}
 

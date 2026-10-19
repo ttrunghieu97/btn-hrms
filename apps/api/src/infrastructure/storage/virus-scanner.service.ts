@@ -66,12 +66,38 @@ export class VirusScannerService {
   }
 
   /**
+   * Scan a readable stream for viruses via ClamAV without buffering the entire file in memory.
+   */
+  async scanStream(
+    stream: NodeJS.ReadableStream,
+    maxBytes = 100 * 1024 * 1024,
+  ): Promise<ScanResult> {
+    if (!this.enabled) {
+      return { status: "clean", details: null };
+    }
+
+    try {
+      return await this.scanStreamViaClamd(stream, maxBytes);
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      this.logger.error({ event: "virus_scan.error", error: msg });
+      const failClosed =
+        String(this.config.get("CLAMAV_FAIL_CLOSED") || "false").toLowerCase() ===
+        "true";
+      if (failClosed) {
+        return { status: "infected", details: `Scan error: ${msg}` };
+      }
+      return { status: "clean", details: `Scan unavailable: ${msg}` };
+    }
+  }
+
+  /**
    * Connect to ClamAV via TCP and send the file using INSTREAM protocol.
    *
    * INSTREAM format:
-   *   - zINSTREAM\0 (4 bytes: length prefix + data chunks)
-   *   - Each chunk: 4-byte LE length prefix + chunk data
-   *   - Terminator: 4-byte LE zero
+   *   - zINSTREAM\0 (command header)
+   *   - Each chunk: 4-byte BE (network byte order) length prefix + chunk data
+   *   - Terminator: 4-byte BE zero
    *   - Response: "stream: OK" or "stream: <virusname> FOUND"
    */
   private scanViaClamd(buffer: Buffer): Promise<ScanResult> {
@@ -80,7 +106,7 @@ export class VirusScannerService {
         // Send INSTREAM command
         socket.write("zINSTREAM\0");
 
-        // Send file in chunks with length-prefixed framing
+        // Send file in chunks with big-endian length-prefixed framing
         const CHUNK_SIZE = 64 * 1024;
         let offset = 0;
         const sendChunk = () => {
@@ -88,7 +114,7 @@ export class VirusScannerService {
             const end = Math.min(offset + CHUNK_SIZE, buffer.length);
             const chunk = buffer.subarray(offset, end);
             const len = Buffer.alloc(4);
-            len.writeUInt32LE(chunk.length, 0);
+            len.writeUInt32BE(chunk.length, 0);
             socket.write(Buffer.concat([len, chunk]));
             offset = end;
           }
@@ -97,6 +123,73 @@ export class VirusScannerService {
           socket.write(terminator);
         };
         sendChunk();
+      });
+
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        reject(new Error("ClamAV scan timeout"));
+      }, this.timeoutMs);
+
+      let response = "";
+      socket.on("data", (data: Buffer) => {
+        response += data.toString("utf-8");
+      });
+
+      socket.on("end", () => {
+        clearTimeout(timeout);
+        const trimmed = response.trim();
+        if (trimmed.includes("OK")) {
+          resolve({ status: "clean", details: null });
+        } else if (trimmed.includes("FOUND")) {
+          const virusName = trimmed.replace(/^stream:\s*/, "").replace(/\s+FOUND$/, "");
+          resolve({ status: "infected", details: virusName });
+        } else {
+          resolve({ status: "error", details: trimmed });
+        }
+      });
+
+      socket.on("error", (err: Error) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+  }
+
+  private scanStreamViaClamd(
+    stream: NodeJS.ReadableStream,
+    maxBytes: number,
+  ): Promise<ScanResult> {
+    return new Promise((resolve, reject) => {
+      const socket = connect(this.port, this.host, () => {
+        socket.write("zINSTREAM\0");
+        void (async () => {
+          const CHUNK_SIZE = 64 * 1024;
+          let totalBytes = 0;
+          try {
+            for await (const rawChunk of stream) {
+              const buf = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
+              totalBytes += buf.length;
+              if (totalBytes > maxBytes) {
+                throw new Error(`Stream exceeds maximum scan size of ${maxBytes} bytes`);
+              }
+              let offset = 0;
+              while (offset < buf.length) {
+                const end = Math.min(offset + CHUNK_SIZE, buf.length);
+                const slice = buf.subarray(offset, end);
+                const len = Buffer.alloc(4);
+                len.writeUInt32BE(slice.length, 0);
+                if (!socket.write(Buffer.concat([len, slice]))) {
+                  await new Promise<void>((r) => socket.once("drain", r));
+                }
+                offset = end;
+              }
+            }
+            socket.write(Buffer.alloc(4, 0));
+          } catch (err) {
+            socket.destroy();
+            reject(err instanceof Error ? err : new Error(String(err)));
+          }
+        })();
       });
 
       const timeout = setTimeout(() => {

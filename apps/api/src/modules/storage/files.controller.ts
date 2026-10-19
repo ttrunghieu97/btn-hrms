@@ -122,8 +122,14 @@ export class FilesController {
     if (decoded.includes("\\")) return null;
     // Allow only safe path characters
     if (!/^[A-Za-z0-9._/-]+$/.test(decoded)) return null;
-    // Allow only known prefixes
-    if (!/^(employees|tasks|temp|archived|attendance)\/[A-Za-z0-9._/-]+$/.test(decoded)) return null;
+    // Allow only known prefixes (including presigned/multipart uploads/* keys)
+    if (
+      !/^(uploads\/(employees|tasks|users|others)|employees|tasks|users|applications|leaves|payroll|temp|archived|attendance)\/[A-Za-z0-9._/-]+$/.test(
+        decoded,
+      )
+    ) {
+      return null;
+    }
     return decoded;
   }
 

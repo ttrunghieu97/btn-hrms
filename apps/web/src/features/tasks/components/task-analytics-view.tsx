@@ -221,7 +221,7 @@ export function TaskAnalyticsView() {
                       <td className='py-2 pr-4 text-right tabular-nums'>{item.totalAssigned}</td>
                       <td className='py-2 pr-4 text-right tabular-nums'>{item.completedCount}</td>
                       <td className='py-2 pr-4 text-right tabular-nums'>{item.activeCount}</td>
-                      <td className='py-2 pr-4 text-right tabular-nums'>{item.overdueCount > 0 ? <span className='text-red-600'>{item.overdueCount}</span> : 0}</td>
+                      <td className='py-2 pr-4 text-right tabular-nums'>{item.overdueCount > 0 ? <span className='text-red-600 dark:text-red-400'>{item.overdueCount}</span> : 0}</td>
                       <td className='py-2 pr-4 text-right tabular-nums'>{item.completionRate.toFixed(1)}%</td>
                       <td className='py-2 text-right tabular-nums'>{item.avgCompletionHours.toFixed(1)}h</td>
                     </tr>

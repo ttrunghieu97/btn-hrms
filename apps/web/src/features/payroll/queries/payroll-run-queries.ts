@@ -76,6 +76,7 @@ export function useGeneratePayrollRunMutation() {
     onSuccess: (_res, id) => {
       queryClient.invalidateQueries({ queryKey: payrollKeys.runs.detail(id) });
       queryClient.invalidateQueries({ queryKey: payrollKeys.runs.lists() });
+      queryClient.invalidateQueries({ queryKey: payrollKeys.payslips.all() });
       notifyMutationSuccess('Tính toán và tạo phiếu lương thành công');
     },
     onError: (error) => {
@@ -137,6 +138,7 @@ export function usePostPayrollRunMutation() {
     onSuccess: (_res, id) => {
       queryClient.invalidateQueries({ queryKey: payrollKeys.runs.detail(id) });
       queryClient.invalidateQueries({ queryKey: payrollKeys.runs.lists() });
+      queryClient.invalidateQueries({ queryKey: payrollKeys.payslips.all() });
       notifyMutationSuccess('Chốt và xuất bảng lương thành công');
     },
     onError: (error) => {

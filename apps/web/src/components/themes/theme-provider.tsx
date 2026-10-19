@@ -33,7 +33,7 @@ const MEDIA_QUERY = '(prefers-color-scheme: dark)';
 const DEFAULT_THEMES = ['light', 'dark'];
 const ThemeContext = React.createContext<UseThemeProps | undefined>(undefined);
 
-function isThemeMode(value: string | undefined): value is ThemeMode {
+function isThemeMode(value: string | null | undefined): value is ThemeMode {
   return value === 'light' || value === 'dark' || value === 'system';
 }
 
@@ -129,7 +129,7 @@ export default function ThemeProvider({
   const [theme, setThemeState] = React.useState<ThemeMode>(initialTheme);
   const [systemTheme, setSystemTheme] = React.useState<ResolvedTheme>('light');
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const mediaQuery = window.matchMedia(MEDIA_QUERY);
     const handleMediaChange = (event: MediaQueryListEvent | MediaQueryList) => {
       setSystemTheme(event.matches ? 'dark' : 'light');
@@ -146,21 +146,35 @@ export default function ThemeProvider({
     return () => mediaQuery.removeListener(handleMediaChange);
   }, []);
 
-  React.useEffect(() => {
-    if (forcedTheme && isThemeMode(forcedTheme)) {
-      setThemeState(forcedTheme);
-      return;
+  React.useLayoutEffect(() => {
+    let effectiveTheme: ThemeMode =
+      forcedTheme && isThemeMode(forcedTheme) ? forcedTheme : theme;
+
+    if (!forcedTheme) {
+      try {
+        const storedTheme = window.localStorage.getItem(storageKey);
+        if (isThemeMode(storedTheme)) {
+          effectiveTheme = storedTheme;
+          if (storedTheme !== theme) {
+            setThemeState(storedTheme);
+          }
+        }
+      } catch {
+        // Ignore storage access failures.
+      }
     }
 
-    try {
-      const storedTheme = window.localStorage.getItem(storageKey);
-      if (isThemeMode(storedTheme ?? undefined) && storedTheme) {
-        setThemeState(storedTheme as ThemeMode);
-      }
-    } catch {
-      // Ignore storage access failures.
-    }
-  }, [forcedTheme, storageKey]);
+    const cleanup = disableTransitionOnChange ? disableTransitionsTemporarily() : undefined;
+
+    applyThemeToDom({
+      theme: effectiveTheme,
+      attribute,
+      enableColorScheme,
+      value
+    });
+
+    cleanup?.();
+  }, [attribute, disableTransitionOnChange, enableColorScheme, forcedTheme, storageKey, systemTheme, theme, value]);
 
   React.useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -178,20 +192,6 @@ export default function ThemeProvider({
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, [storageKey]);
-
-  React.useLayoutEffect(() => {
-    const nextTheme = forcedTheme && isThemeMode(forcedTheme) ? forcedTheme : theme;
-    const cleanup = disableTransitionOnChange ? disableTransitionsTemporarily() : undefined;
-
-    applyThemeToDom({
-      theme: nextTheme,
-      attribute,
-      enableColorScheme,
-      value
-    });
-
-    cleanup?.();
-  }, [attribute, disableTransitionOnChange, enableColorScheme, forcedTheme, theme, value]);
 
   const setTheme = React.useCallback<React.Dispatch<React.SetStateAction<string>>>(
     (valueOrUpdater) => {

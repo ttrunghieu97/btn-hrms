@@ -69,6 +69,16 @@ interface UseDataTableProps<TData>
   tableId?: string;
 }
 
+function getColumnId(column: { id?: string; accessorKey?: unknown }): string | undefined {
+  if (typeof column.id === 'string' && column.id.length > 0) {
+    return column.id;
+  }
+  if (typeof column.accessorKey === 'string' && column.accessorKey.length > 0) {
+    return column.accessorKey;
+  }
+  return undefined;
+}
+
 export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   const {
     columns,
@@ -102,32 +112,52 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
     initialState?.rowSelection ?? {}
   );
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(initialState?.columnVisibility ?? {});
-  const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>(initialState?.columnSizing ?? {});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
+    initialState?.columnVisibility ?? {}
+  );
+  const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>(
+    initialState?.columnSizing ?? {}
+  );
+  const hydratedTableIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!tableId) return;
     try {
       const savedVisibility = localStorage.getItem(`${COLUMN_VISIBILITY_STORAGE_PREFIX}${tableId}`);
       if (savedVisibility) {
-        setColumnVisibility(JSON.parse(savedVisibility) as VisibilityState);
+        const parsed = JSON.parse(savedVisibility) as VisibilityState;
+        const validIds = new Set(
+          columns.map((c) => getColumnId(c)).filter(Boolean) as string[]
+        );
+        const clean = Object.fromEntries(
+          Object.entries(parsed).filter(([key]) => validIds.has(key))
+        );
+        setColumnVisibility(clean);
       }
       const savedSizing = localStorage.getItem(`table_sizing_${tableId}`);
       if (savedSizing) {
         setColumnSizing(JSON.parse(savedSizing) as Record<string, number>);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    } finally {
+      hydratedTableIdRef.current = tableId;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId]);
 
   React.useEffect(() => {
     if (!tableId) return;
-    const validIds = new Set(columns.map((c) => c.id).filter(Boolean) as string[]);
+    if (hydratedTableIdRef.current !== tableId) return;
+    const validIds = new Set(columns.map((c) => getColumnId(c)).filter(Boolean) as string[]);
     const clean = Object.fromEntries(
       Object.entries(columnVisibility).filter(([key]) => validIds.has(key))
     );
     try {
       localStorage.setItem(`${COLUMN_VISIBILITY_STORAGE_PREFIX}${tableId}`, JSON.stringify(clean));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [tableId, columnVisibility, columns]);
 
   const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>(
@@ -138,7 +168,9 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     if (!tableId || Object.keys(columnSizing).length === 0) return;
     try {
       localStorage.setItem(`table_sizing_${tableId}`, JSON.stringify(columnSizing));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [tableId, columnSizing]);
 
   const [paginationParams, setPaginationParams] = useQueryStates(
@@ -158,9 +190,10 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
   const onPaginationChange = React.useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
-      const next = typeof updaterOrValue === 'function'
-        ? updaterOrValue(pagination)
-        : updaterOrValue;
+      const next =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(pagination)
+          : updaterOrValue;
       void setPaginationParams({
         page: next.pageIndex + 1,
         perPage: next.pageSize,
@@ -170,7 +203,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   );
 
   const columnIds = React.useMemo(() => {
-    return new Set(columns.map((column) => column.id).filter(Boolean) as string[]);
+    return new Set(columns.map((column) => getColumnId(column)).filter(Boolean) as string[]);
   }, [columns]);
 
   const [sorting, setSorting] = useQueryState(
@@ -203,12 +236,14 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
     return filterableColumns.reduce<Record<string, Parser<string> | Parser<string[]>>>(
       (acc, column) => {
+        const colId = getColumnId(column) ?? '';
+        if (!colId) return acc;
         if (column.meta?.options) {
-          acc[column.id ?? ''] = parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
+          acc[colId] = parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
             queryStateOptions
           );
         } else {
-          acc[column.id ?? ''] = parseAsString.withOptions(queryStateOptions);
+          acc[colId] = parseAsString.withOptions(queryStateOptions);
         }
         return acc;
       },
@@ -228,11 +263,19 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
     return Object.entries(filterValues).reduce<ColumnFiltersState>((filters, [key, value]) => {
       if (value !== null) {
+        const columnDef = filterableColumns.find((col) => getColumnId(col) === key);
+        const expectsArray = Boolean(
+          columnDef?.meta?.options ||
+            columnDef?.meta?.variant === 'select' ||
+            columnDef?.meta?.variant === 'multiSelect' ||
+            columnDef?.meta?.variant === 'range' ||
+            columnDef?.meta?.variant === 'dateRange'
+        );
         const processedValue = Array.isArray(value)
           ? value
-          : typeof value === 'string' && /[^a-zA-Z0-9]/.test(value)
-            ? value.split(/[^a-zA-Z0-9]+/).filter(Boolean)
-            : [value];
+          : expectsArray
+            ? [value]
+            : value;
 
         filters.push({
           id: key,
@@ -241,37 +284,40 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
       }
       return filters;
     }, []);
-  }, [filterValues, enableAdvancedFilter]);
+  }, [filterValues, enableAdvancedFilter, filterableColumns]);
 
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(initialColumnFilters);
+  const columnFiltersRef = React.useRef<ColumnFiltersState>(initialColumnFilters);
+  columnFiltersRef.current = columnFilters;
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {
       if (enableAdvancedFilter) return;
 
-      setColumnFilters((prev) => {
-        const next = typeof updaterOrValue === 'function' ? updaterOrValue(prev) : updaterOrValue;
+      const prev = columnFiltersRef.current;
+      const next = typeof updaterOrValue === 'function' ? updaterOrValue(prev) : updaterOrValue;
 
-        const filterUpdates = next.reduce<Record<string, string | string[] | null>>(
-          (acc, filter) => {
-            if (filterableColumns.find((column) => column.id === filter.id)) {
-              acc[filter.id] = filter.value as string | string[];
-            }
-            return acc;
-          },
-          {}
-        );
+      columnFiltersRef.current = next;
+      setColumnFilters(next);
 
-        for (const prevFilter of prev) {
-          if (!next.some((filter) => filter.id === prevFilter.id)) {
-            filterUpdates[prevFilter.id] = null;
+      const filterUpdates = next.reduce<Record<string, string | string[] | null>>(
+        (acc, filter) => {
+          if (filterableColumns.find((column) => getColumnId(column) === filter.id)) {
+            acc[filter.id] = filter.value as string | string[];
           }
-        }
+          return acc;
+        },
+        {}
+      );
 
-        debouncedSetFilterValues(filterUpdates);
-        return next;
-      });
+      for (const prevFilter of prev) {
+        if (!next.some((filter) => filter.id === prevFilter.id)) {
+          filterUpdates[prevFilter.id] = null;
+        }
+      }
+
+      debouncedSetFilterValues(filterUpdates);
     },
     [debouncedSetFilterValues, filterableColumns, enableAdvancedFilter]
   );

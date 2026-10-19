@@ -24,4 +24,7 @@ export interface PayrollRunResponseDto {
   createdAt: string;
   updatedAt: string;
   payrollPeriod?: PayrollPeriodSummaryDto;
+  isProvisional?: boolean;
+  /** @nullable */
+  calculationStatus?: string | null;
 }

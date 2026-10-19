@@ -164,6 +164,26 @@ export class UsersRepository {
     return (await this.enrichRows([row], query?.include))[0] ?? null;
   }
 
+  async findTotpStateById(
+    id: string,
+  ): Promise<{
+    id: string;
+    username: string;
+    isTotpEnabled: boolean;
+    totpSecret: string | null;
+  } | null> {
+    const row = await this.db.query.users.findFirst({
+      columns: {
+        id: true,
+        username: true,
+        isTotpEnabled: true,
+        totpSecret: true,
+      },
+      where: eq(users.id, id),
+    });
+    return row ?? null;
+  }
+
   async create(data: typeof schema.users.$inferInsert) {
     const [row] = await this.db.insert(users).values(data).returning();
     return row ?? null;

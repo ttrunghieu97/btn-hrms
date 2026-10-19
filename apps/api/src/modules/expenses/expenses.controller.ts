@@ -6,7 +6,7 @@ import {
   CreateClaimUseCase, SubmitClaimUseCase, ApproveClaimUseCase,
   RejectClaimUseCase, ReimburseClaimUseCase, ListClaimsUseCase, GetClaimUseCase, AddItemUseCase,
 } from "./claim/use-cases";
-import { CreateClaimDto, AddItemDto } from "./dto/expense.dto";
+import { CreateClaimDto, AddItemDto, RejectClaimDto } from "./dto/expense.dto";
 
 @ApiTags("Expenses")
 @ApiBearerAuth()
@@ -33,7 +33,10 @@ export class ExpensesController {
   approve(@Param("id") id: string, @Request() r: any) { return this.approveClaim.execute(id, r.user?.id, r.user?.employeeId); }
   @Post("claims/:id/reject")
   @CheckPolicy(ExpensesPolicies.manage)
-  reject(@Param("id") id: string, @Body("reason") reason?: string) { return this.rejectClaim.execute(id, reason); }
+  reject(@Param("id") id: string, @Body() dto?: RejectClaimDto) {
+    const reason = typeof dto === "string" ? dto : dto?.reason;
+    return this.rejectClaim.execute(id, reason);
+  }
   @Post("claims/:id/reimburse")
   @CheckPolicy(ExpensesPolicies.manage)
   reimburse(@Param("id") id: string) { return this.reimburseClaim.execute(id); }

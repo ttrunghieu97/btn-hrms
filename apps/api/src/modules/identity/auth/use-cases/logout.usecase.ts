@@ -46,7 +46,7 @@ export class LogoutUseCase extends AuthUseCaseBase {
   }
 
   async execute(refreshToken: string, origin?: string, host?: string) {
-    if (origin && host) {
+    if (origin) {
       if (!this.isAllowedLogoutOrigin(origin, host)) {
         throwForbidden(
           "Cross-site logout is not allowed",

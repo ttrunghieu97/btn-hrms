@@ -1,7 +1,7 @@
 import * as bcrypt from "bcrypt";
 import { type JwtService } from "@nestjs/jwt";
 import { type ConfigService } from "@nestjs/config";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
   type AuthRepository,
   type AuthTransaction,
@@ -41,6 +41,16 @@ export abstract class AuthUseCaseBase {
     protected readonly requestContext: RequestContextService,
   ) {
     this.logger = new ContextLogger(this.requestContext, this.constructor.name);
+  }
+
+  protected digestRefreshToken(refreshToken: string): string {
+    return createHash("sha256").update(refreshToken).digest("hex");
+  }
+
+  protected async hashRefreshToken(refreshToken: string): Promise<string> {
+    const rounds = Number(this.configService.get("AUTH_BCRYPT_ROUNDS") || 12);
+    const salt = await bcrypt.genSalt(rounds);
+    return bcrypt.hash(this.digestRefreshToken(refreshToken), salt);
   }
 
   protected async issueTokens(
@@ -91,10 +101,9 @@ export abstract class AuthUseCaseBase {
     userAgent?: string,
     clientIp?: string,
     tx?: AuthTransaction,
+    precomputedHash?: string,
   ) {
-    const rounds = Number(this.configService.get("AUTH_BCRYPT_ROUNDS") || 12);
-    const salt = await bcrypt.genSalt(rounds);
-    const hash = await bcrypt.hash(refreshToken, salt);
+    const hash = precomputedHash ?? (await this.hashRefreshToken(refreshToken));
 
     const token: NewRefreshToken = {
       id: refreshTokenId,

@@ -1,4 +1,5 @@
 import type { SearchProvider, SearchResult, SearchGroup } from './types';
+import { useAuthStore } from '@/stores/auth-store';
 
 /**
  * Search engine — aggregates all registered providers and executes search.
@@ -14,7 +15,6 @@ export class SearchEngine {
   private providers: Map<string, SearchProvider> = new Map();
 
   register(provider: SearchProvider): void {
-    if (this.providers.has(provider.id)) return;
     this.providers.set(provider.id, provider);
   }
 
@@ -33,10 +33,20 @@ export class SearchEngine {
       ? options.providers.map((id) => this.providers.get(id)).filter(Boolean) as SearchProvider[]
       : Array.from(this.providers.values());
 
+    const authUser = useAuthStore.getState().user;
+    const canAccess = (item: SearchResult): boolean => {
+      if (!item.permission) return true;
+      if (!authUser) return true;
+      if (authUser.isSuperAdmin) return true;
+      const perms = authUser.permissions ?? [];
+      return perms.includes('sys:all') || perms.includes(item.permission);
+    };
+
     const results = await Promise.all(
       activeProviders.map(async (provider) => {
         const items = await provider.search(q);
-        return { label: provider.label, results: items } satisfies SearchGroup;
+        const permittedItems = items.filter(canAccess);
+        return { label: provider.label, results: permittedItems } satisfies SearchGroup;
       }),
     );
 

@@ -93,6 +93,30 @@ describe("TotpService", () => {
         service.enableTotp("user-1", "JBSWY3DPEHPK3PXP", "000000"),
       ).rejects.toThrow();
     });
+
+    it("AUDIT-005: rejects re-enrollment when TOTP is already enabled for the user", async () => {
+      usersRepo.findById.mockResolvedValue({
+        id: "user-1",
+        username: "johndoe",
+        isTotpEnabled: true,
+        totpSecret: service.encryptSecret("JBSWY3DPEHPK3PXP"),
+      } as any);
+      const secret = "JBSWY3DPEHPK3PXP";
+      const currentStep = Math.floor(Date.now() / 1000 / 30);
+      const secretBuffer = Buffer.from([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0xde, 0xad, 0xbe, 0xef]);
+      const validCode = service.generateCodeForStep(secretBuffer, currentStep);
+
+      await expect(
+        service.enableTotp("user-1", secret, validCode),
+      ).rejects.toThrow("TOTP 2FA is already enabled for this account");
+    });
+
+    it("AUDIT-005: fails closed when encrypted secret authentication tag is tampered", () => {
+      const encrypted = service.encryptSecret("JBSWY3DPEHPK3PXP");
+      const tampered = encrypted.slice(0, -4) + "ffff";
+      expect(service.decryptSecret(tampered)).toBe("");
+      expect(service.verifyPasscode(tampered, "123456")).toBe(false);
+    });
   });
 
   describe("disableTotp", () => {
@@ -102,6 +126,31 @@ describe("TotpService", () => {
       expect(usersRepo.update).toHaveBeenCalledWith("user-1", {
         totpSecret: null,
         isTotpEnabled: false,
+      });
+    });
+
+    it("AUDIT-005: requires valid 6-digit TOTP passcode when disabling active 2FA", async () => {
+      const secret = "JBSWY3DPEHPK3PXP";
+      usersRepo.findById.mockResolvedValue({
+        id: "user-1",
+        username: "johndoe",
+        isTotpEnabled: true,
+        totpSecret: service.encryptSecret(secret),
+      } as any);
+
+      await expect(service.disableTotp("user-1")).rejects.toThrow(
+        "Valid 6-digit TOTP passcode is required to disable 2FA.",
+      );
+      await expect(service.disableTotp("user-1", "000000")).rejects.toThrow(
+        "Valid 6-digit TOTP passcode is required to disable 2FA.",
+      );
+
+      const currentStep = Math.floor(Date.now() / 1000 / 30);
+      const secretBuffer = Buffer.from([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0xde, 0xad, 0xbe, 0xef]);
+      const validCode = service.generateCodeForStep(secretBuffer, currentStep);
+
+      await expect(service.disableTotp("user-1", validCode)).resolves.toEqual({
+        enabled: false,
       });
     });
   });

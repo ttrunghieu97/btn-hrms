@@ -5,18 +5,30 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTimesheet } from './hooks/use-timesheet';
 import { usePeriodLock } from './hooks/use-period-lock';
 import { DetailSheet } from './components/detail-sheet';
-import { daysInMonth, type TimesheetWorkspaceRecord, type TimesheetWorkspaceEmployee } from './types';
+import {
+  type TimesheetWorkspaceRecord,
+  type TimesheetWorkspaceEmployee,
+} from './types';
 import { getRecord } from './utils';
 import { timekeepingControllerOverrideAttendanceSummary } from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
-import type { OverrideAttendanceSummaryDto, OverrideAttendanceSummaryDtoReason, OverrideAttendanceSummaryDtoOverriddenStatus } from '@/api/generated/model';
-import { cn } from '@/lib/utils';
+import type {
+  OverrideAttendanceSummaryDtoReason,
+  OverrideAttendanceSummaryDtoOverriddenStatus,
+} from '@/api/generated/model';
 import { showToast } from '@/lib/toast';
-import { Icons } from '@/components/icons';
+import { attendanceUiCopy } from '@/lib/app-copy';
+import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -29,7 +41,15 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAuthStore } from '@/stores/auth-store';
+import { attendance, hasPermission } from '@/lib/permissions';
 
 // ─── Period navigation helper ──────────────────────────────────────────
 
@@ -56,12 +76,23 @@ interface AdjustmentModalProps {
   }) => Promise<void>;
 }
 
-function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, onClose, onConfirm }: AdjustmentModalProps) {
+function AdjustmentModal({
+  employeeName,
+  workDate,
+  isNewEntry,
+  currentRecord,
+  onClose,
+  onConfirm,
+}: AdjustmentModalProps) {
   const [reason, setReason] = React.useState('manual_correction');
   const [note, setNote] = React.useState('');
-  const [overriddenStatus, setOverriddenStatus] = React.useState(currentRecord?.status ?? 'present');
+  const [overriddenStatus, setOverriddenStatus] = React.useState(
+    currentRecord?.status ?? 'present',
+  );
   const [workedHours, setWorkedHours] = React.useState(
-    currentRecord?.workedMinutes ? String(Math.round((currentRecord.workedMinutes / 60) * 10) / 10) : '8',
+    currentRecord?.workedMinutes
+      ? String(Math.round((currentRecord.workedMinutes / 60) * 10) / 10)
+      : '8',
   );
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -87,16 +118,26 @@ function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, on
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{isNewEntry ? 'Chấm công thủ công' : 'Điều chỉnh giờ công'} — {employeeName}</DialogTitle>
+          <DialogTitle>
+            {isNewEntry ? 'Chấm công thủ công' : 'Điều chỉnh giờ công'} —{' '}
+            {employeeName}
+          </DialogTitle>
           <DialogDescription>
-            Ngày: <span className="text-foreground font-mono font-semibold">{workDate}</span> · Mọi thay đổi đều được ghi lại lý do cho đối soát.
+            Ngày:{' '}
+            <span className="text-foreground font-mono font-semibold">
+              {workDate}
+            </span>{' '}
+            · Mọi thay đổi đều được ghi lại lý do cho đối soát.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-1.5">
             <Label htmlFor="adj-status">Loại công / Trạng thái</Label>
-            <Select value={overriddenStatus} onValueChange={setOverriddenStatus}>
+            <Select
+              value={overriddenStatus}
+              onValueChange={setOverriddenStatus}
+            >
               <SelectTrigger id="adj-status" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -132,10 +173,18 @@ function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, on
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manual_correction">HR nhập thủ công / Quên quẹt thẻ</SelectItem>
-                <SelectItem value="policy_exception">Ngoại lệ chính sách / Công tác</SelectItem>
-                <SelectItem value="data_fix">Sửa lỗi thiết bị chấm công</SelectItem>
-                <SelectItem value="reconciliation">Đối soát dữ liệu kỳ công</SelectItem>
+                <SelectItem value="manual_correction">
+                  HR nhập thủ công / Quên quẹt thẻ
+                </SelectItem>
+                <SelectItem value="policy_exception">
+                  Ngoại lệ chính sách / Công tác
+                </SelectItem>
+                <SelectItem value="data_fix">
+                  Sửa lỗi thiết bị chấm công
+                </SelectItem>
+                <SelectItem value="reconciliation">
+                  Đối soát dữ liệu kỳ công
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -167,17 +216,32 @@ function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, on
 
 // ─── Close Period Confirmation Dialog ──────────────────────────────────
 
-function CloseModal({ period, missingCount, onClose, onConfirm }: { period: string; missingCount: number; onClose: () => void; onConfirm: (remarks: string) => void }) {
+function CloseModal({
+  period,
+  missingCount,
+  onClose,
+  onConfirm,
+}: {
+  period: string;
+  missingCount: number;
+  onClose: () => void;
+  onConfirm: (remarks: string) => void;
+}) {
   const [r, setR] = React.useState('');
   return (
     <AlertDialog open onOpenChange={(o) => !o && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Đóng / Chốt bảng công tháng {period}</AlertDialogTitle>
+          <AlertDialogTitle>
+            Đóng / Chốt bảng công tháng {period}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {missingCount > 0 ? (
               <span className="text-amber-700 dark:text-amber-400">
-                Hiện còn <strong className="underline">{missingCount} nhân sự</strong> chưa chốt công cá nhân. Việc đóng kỳ sẽ lưu snapshot hiện tại cho phân hệ Payroll.
+                Hiện còn{' '}
+                <strong className="underline">{missingCount} nhân sự</strong>{' '}
+                chưa chốt công cá nhân. Việc đóng kỳ sẽ lưu snapshot hiện tại
+                cho phân hệ Payroll.
               </span>
             ) : (
               'Tất cả nhân sự trong kỳ đã được chốt công. Hệ thống sẽ đóng kỳ và chuyển dữ liệu sang phân hệ Payroll.'
@@ -191,7 +255,9 @@ function CloseModal({ period, missingCount, onClose, onConfirm }: { period: stri
         />
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Hủy</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onConfirm(r)}>Xác nhận Đóng kỳ công</AlertDialogAction>
+          <AlertDialogAction onClick={() => onConfirm(r)}>
+            Xác nhận Đóng kỳ công
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -214,7 +280,9 @@ function ReopenModal({
         <AlertDialogHeader>
           <AlertDialogTitle>Mở lại kỳ công tháng {period}</AlertDialogTitle>
           <AlertDialogDescription>
-            Hệ thống sẽ chuyển trạng thái kỳ công về Đang mở để cho phép HR chỉnh sửa, điều chỉnh dữ liệu chấm công. Thao tác này sẽ được ghi nhận vào nhật ký kiểm toán.
+            Hệ thống sẽ chuyển trạng thái kỳ công về Đang mở để cho phép HR
+            chỉnh sửa, điều chỉnh dữ liệu chấm công. Thao tác này sẽ được ghi
+            nhận vào nhật ký kiểm toán.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Input
@@ -224,20 +292,42 @@ function ReopenModal({
         />
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Hủy</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onConfirm(r)}>Xác nhận Mở lại kỳ công</AlertDialogAction>
+          <AlertDialogAction onClick={() => onConfirm(r)}>
+            Xác nhận Mở lại kỳ công
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
 
+function TimesheetWorkspaceSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <Skeleton className="h-14 w-full rounded-xl" />
+      <div className="flex min-h-0 flex-1 gap-3">
+        <Skeleton className="hidden h-[560px] w-[285px] shrink-0 rounded-xl md:block" />
+        <div className="flex flex-1 flex-col gap-3">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-[420px] w-full flex-1 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Monthly Attendance Page ──────────────────────────────────────
 
-export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string }) {
+export function TimesheetEditorPage({
+  defaultPeriod,
+}: {
+  defaultPeriod?: string;
+}) {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const routePeriod = typeof params?.period === 'string' ? params.period : undefined;
+  const routePeriod =
+    typeof params?.period === 'string' ? params.period : undefined;
   const activePeriod = routePeriod ?? defaultPeriod;
 
   const ts = useTimesheet(activePeriod);
@@ -246,19 +336,36 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
   const navigatePeriod = React.useCallback(
     (delta: number) => {
       const nextPeriod = shiftPeriod(ts.period, delta);
-      const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+      const query = searchParams.toString()
+        ? `?${searchParams.toString()}`
+        : '';
       router.push(`/attendance/management/periods/${nextPeriod}${query}`);
     },
     [router, searchParams, ts.period],
   );
 
   const [adjustingDate, setAdjustingDate] = React.useState<string | null>(null);
-  const [adjustingEmployee, setAdjustingEmployee] = React.useState<TimesheetWorkspaceEmployee | null>(null);
+  const [adjustingEmployee, setAdjustingEmployee] =
+    React.useState<TimesheetWorkspaceEmployee | null>(null);
   const [showClose, setShowClose] = React.useState(false);
   const [showReopen, setShowReopen] = React.useState(false);
 
+  const user = useAuthStore((s) => s.user);
   const canEdit = ts.periodStatus === 'open' || ts.periodStatus === 'in_review';
-  const days = daysInMonth(ts.period);
+  const canLockPeriod =
+    hasPermission(user?.permissions, attendance.periodApprove) ||
+    hasPermission(user?.permissions, attendance.periodClose) ||
+    ts.availableActions.includes('lock') ||
+    ts.availableActions.includes('approve');
+  const canUnlockOrReopenPeriod =
+    ts.periodStatus === 'locked'
+      ? hasPermission(user?.permissions, attendance.periodUnlock) ||
+        ts.availableActions.includes('unlock')
+      : hasPermission(user?.permissions, attendance.periodClose) ||
+        ts.availableActions.includes('reopen');
+  const canTogglePeriodStatus = canEdit
+    ? canLockPeriod
+    : canUnlockOrReopenPeriod;
 
   // Count of employees not yet individually verified (chưa chốt cá nhân)
   const missingCount = React.useMemo(
@@ -266,17 +373,31 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
     [ts.employees],
   );
 
-  const handleLock = React.useCallback(async (remarks: string) => {
-    const ok = await pl.lock(ts.period, remarks);
-    if (ok) ts.reload();
-    setShowClose(false);
-  }, [pl, ts]);
+  const handleLock = React.useCallback(
+    async (remarks: string) => {
+      const ok = await pl.lock(ts.period, remarks);
+      if (ok) await ts.reload();
+      setShowClose(false);
+    },
+    [pl, ts],
+  );
 
-  const handleReopen = React.useCallback(async (remarks: string) => {
-    const ok = await pl.reopen(ts.period, remarks || 'HR mở lại kỳ công');
-    if (ok) ts.reload();
-    setShowReopen(false);
-  }, [pl, ts]);
+  const handleReopen = React.useCallback(
+    async (remarks: string) => {
+      const remarkText =
+        remarks ||
+        (ts.periodStatus === 'locked'
+          ? 'HR mở khóa kỳ công'
+          : 'HR mở lại kỳ công');
+      const ok =
+        ts.periodStatus === 'locked'
+          ? await pl.unlock(ts.period, remarkText)
+          : await pl.reopen(ts.period, remarkText);
+      if (ok) await ts.reload();
+      setShowReopen(false);
+    },
+    [pl, ts],
+  );
 
   const handleOverrideSubmit = async (payload: {
     reason: string;
@@ -291,46 +412,46 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
         workDate: adjustingDate,
         reason: payload.reason as OverrideAttendanceSummaryDtoReason,
         note: payload.note,
-        overriddenStatus: payload.overriddenStatus as OverrideAttendanceSummaryDtoOverriddenStatus,
+        overriddenStatus:
+          payload.overriddenStatus as OverrideAttendanceSummaryDtoOverriddenStatus,
         overriddenWorkedMinutes: payload.overriddenWorkedMinutes,
       });
 
       showToast.success('Đã lưu công thành công');
       await ts.reload();
-    } catch (err: any) {
-      showToast.error(err?.message ?? 'Lưu công thất bại');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lưu công thất bại';
+      showToast.error(msg);
       throw new Error('Override failed');
     }
   };
 
-  const onAdjust = React.useCallback((emp: TimesheetWorkspaceEmployee, workDate: string) => {
-    if (!canEdit) return;
-    setAdjustingEmployee(emp);
-    setAdjustingDate(workDate);
-  }, [canEdit]);
+  const onAdjust = React.useCallback(
+    (emp: TimesheetWorkspaceEmployee, workDate: string) => {
+      if (!canEdit) return;
+      setAdjustingEmployee(emp);
+      setAdjustingDate(workDate);
+    },
+    [canEdit],
+  );
 
   if (ts.loading) {
-    return (
-      <div className="flex items-center justify-center gap-3 py-20">
-        <Spinner />
-        <span className="text-muted-foreground text-sm">Đang tải bảng công tháng…</span>
-      </div>
-    );
+    return <TimesheetWorkspaceSkeleton />;
   }
 
-  if (ts.error) {
+  if (ts.errorObject || ts.error) {
     return (
-      <div className="bg-card border-border rounded-xl border p-6 text-center">
-        <p className="text-destructive text-sm">{ts.error}</p>
-        <Button type="button" variant="outline" className="mt-3" onClick={ts.reload}>
-          Thử lại
-        </Button>
-      </div>
+      <QueryErrorAlert
+        error={ts.errorObject ?? new Error(ts.error ?? 'Unknown error')}
+        subject={attendanceUiCopy.subject}
+        onRetry={() => void ts.reload()}
+        className="rounded-xl border-destructive/50 bg-destructive/5"
+      />
     );
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col h-full">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {/* ── Split workspace ── */}
       <div className="flex min-h-0 flex-1 flex-col">
         <DetailSheet
@@ -338,6 +459,7 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
           employees={ts.employees}
           records={ts.records}
           canEdit={canEdit}
+          canTogglePeriodStatus={canTogglePeriodStatus}
           onAdjust={onAdjust}
           onReload={ts.reload}
           navigatePeriod={navigatePeriod}
@@ -348,14 +470,33 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
       </div>
 
       {/* ── Dialogs ── */}
-      {showClose && <CloseModal period={ts.period} missingCount={missingCount} onClose={() => setShowClose(false)} onConfirm={handleLock} />}
-      {showReopen && <ReopenModal period={ts.period} onClose={() => setShowReopen(false)} onConfirm={handleReopen} />}
+      {showClose && (
+        <CloseModal
+          period={ts.period}
+          missingCount={missingCount}
+          onClose={() => setShowClose(false)}
+          onConfirm={handleLock}
+        />
+      )}
+      {showReopen && (
+        <ReopenModal
+          period={ts.period}
+          onClose={() => setShowReopen(false)}
+          onConfirm={handleReopen}
+        />
+      )}
       {adjustingDate && adjustingEmployee && (
         <AdjustmentModal
           employeeName={adjustingEmployee.fullName}
           workDate={adjustingDate}
-          isNewEntry={!getRecord(ts.records, adjustingEmployee.id, adjustingDate)}
-          currentRecord={getRecord(ts.records, adjustingEmployee.id, adjustingDate)}
+          isNewEntry={
+            !getRecord(ts.records, adjustingEmployee.id, adjustingDate)
+          }
+          currentRecord={getRecord(
+            ts.records,
+            adjustingEmployee.id,
+            adjustingDate,
+          )}
           onClose={() => setAdjustingDate(null)}
           onConfirm={handleOverrideSubmit}
         />

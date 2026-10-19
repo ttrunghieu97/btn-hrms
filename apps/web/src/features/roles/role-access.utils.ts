@@ -1,6 +1,6 @@
 export function canEditRole(role?: { type?: string; isSystem?: boolean; code?: string } | null) {
   if (!role) return true;
-  return role.code !== 'system_admin';
+  return role.code !== 'system_admin' && role.code !== 'super_admin';
 }
 
 export function requiresExceptionGrantFields() {

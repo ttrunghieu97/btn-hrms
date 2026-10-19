@@ -49,7 +49,7 @@ export type IntentResult =
  * may return a short-list of possible actions per state, and
  * the UI picks the matching one based on target state.
  */
-function inferAction(from: TaskState, to: TaskState): TaskAction | null {
+export function inferAction(from: TaskState, to: TaskState): TaskAction | null {
   switch (`${from}->${to}`) {
     case 'created->assigned': return 'assign';
     case 'declined->assigned': return 'assign';
@@ -63,6 +63,34 @@ function inferAction(from: TaskState, to: TaskState): TaskAction | null {
     case 'revision->submitted': return 'resubmit';
     default: return null;
   }
+}
+
+/**
+ * Resolve the target column `TaskState` when dropping onto either a column
+ * container (`overId` is a column key) or a card inside a column (`overId` is a task UUID).
+ */
+export function resolveTargetColumnState(
+  overId: string | number,
+  columnsRecord: Record<string, readonly Task[]>,
+  allTasks?: readonly Task[],
+): TaskState | null {
+  const rawId = String(overId);
+  if (rawId in columnsRecord) {
+    return rawId as TaskState;
+  }
+
+  for (const [columnState, columnTasks] of Object.entries(columnsRecord)) {
+    if (columnTasks.some((t) => t.id === rawId)) {
+      return columnState as TaskState;
+    }
+  }
+
+  const matchedTask = allTasks?.find((t) => t.id === rawId);
+  if (matchedTask?.status) {
+    return matchedTask.status as TaskState;
+  }
+
+  return null;
 }
 
 /**
@@ -87,7 +115,11 @@ export function createBoardIntent(
 
   // Validate against machine
   const guard = canTransition(
-    { state: fromState, createdById: '', assigneeId: null },
+    {
+      state: fromState,
+      createdById: task.createdByUserId ?? '',
+      assigneeId: task.assignee?.id ?? null,
+    },
     action,
     actor,
   );

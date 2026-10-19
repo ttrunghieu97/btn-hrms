@@ -603,6 +603,23 @@ export class AttendanceTimekeepingRepository
     return updated ?? null;
   }
 
+  async updateExceptionNote(
+    id: string,
+    resolutionNote: string,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [updated] = await db
+      .update(schema.attendanceExceptions)
+      .set({
+        resolutionNote,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.attendanceExceptions.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
   async listTimesheetSummaries(query: {
     employeeId?: string;
     departmentId?: string;

@@ -18,10 +18,8 @@ import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRequirements, useReplaceRequirements, type RequirementInput } from '../api/requirements-queries';
 import { shiftsTemplatesQueryOptions } from '../api/queries';
-import { positionsControllerFindAll } from '@/api/generated/positions/positions';
-import { extractList } from '@/lib/api-extract';
+import { usePositionsQuery } from '@/features/employees';
 import { commonUiCopy, shiftUiCopy } from '@/lib/app-copy';
-import { useQuery as useQueryStd } from '@tanstack/react-query';
 
 interface Props {
   date: string;
@@ -30,10 +28,7 @@ interface Props {
 export function RequirementsEditor({ date }: Props) {
   const { data: reqData, isLoading } = useRequirements(date);
   const templatesQuery = useQuery(shiftsTemplatesQueryOptions({ page: 1, limit: 100 }));
-  const positionsQuery = useQueryStd({
-    queryKey: ['positions-all'],
-    queryFn: () => positionsControllerFindAll().then(r => extractList<{ id: string; name: string }>(r)),
-  });
+  const positionsQuery = usePositionsQuery();
   const replaceMut = useReplaceRequirements();
 
   const [items, setItems] = useState<RequirementInput[]>([]);
@@ -124,7 +119,7 @@ export function RequirementsEditor({ date }: Props) {
                 <div className='flex-1'>
                   <Label className='text-xs'>{shiftUiCopy.requirements.shiftLabel}</Label>
                   <select
-                    className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    className='flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm [&>option]:bg-popover [&>option]:text-popover-foreground'
                     value={item.shiftTemplateId ?? ''}
                     onChange={e => updateRow(i, 'shiftTemplateId', e.target.value || null)}
                   >
@@ -137,7 +132,7 @@ export function RequirementsEditor({ date }: Props) {
                 <div className='flex-1'>
                   <Label className='text-xs'>{shiftUiCopy.requirements.positionLabel}</Label>
                   <select
-                    className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    className='flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm [&>option]:bg-popover [&>option]:text-popover-foreground'
                     value={item.workRoleId ?? ''}
                     onChange={e => updateRow(i, 'workRoleId', e.target.value || null)}
                   >

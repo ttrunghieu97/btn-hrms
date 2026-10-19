@@ -87,13 +87,19 @@ export class LeaveApprovalListener implements OnModuleInit {
       if (outcome === "approved") {
         decisionResult = await this.decisionHandler.handleApproval({
           leaveRequestId,
-          decidedByUserId: decidedByUserId ?? "system",
+          decidedByUserId: decidedByUserId ?? null,
+          decidedAt: new Date(completedAt),
+        });
+      } else if (outcome === "cancelled") {
+        decisionResult = await this.decisionHandler.handleCancellation({
+          leaveRequestId,
+          decidedByUserId: decidedByUserId ?? null,
           decidedAt: new Date(completedAt),
         });
       } else {
         decisionResult = await this.decisionHandler.handleRejection({
           leaveRequestId,
-          decidedByUserId: decidedByUserId ?? "system",
+          decidedByUserId: decidedByUserId ?? null,
           decidedAt: new Date(completedAt),
           rejectionReason: null,
         });

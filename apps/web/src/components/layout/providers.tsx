@@ -2,7 +2,7 @@
 import React from 'react';
 import { ActiveThemeProvider } from '../themes/active-theme';
 import QueryProvider from './query-provider';
-import { PermissionCatalogProvider } from '@/features/permissions/PermissionCatalogProvider';
+import { PermissionCatalogProvider } from '@/features/permissions';
 import { GlobalErrorHandler } from '@/components/global-error-handler';
 
 export default function Providers({

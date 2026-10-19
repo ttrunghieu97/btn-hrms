@@ -1,36 +1,26 @@
 import { useState, useCallback } from 'react';
+import {
+  timekeepingControllerApprovePeriod,
+  timekeepingControllerClosePeriod,
+  timekeepingControllerLockPeriod,
+  timekeepingControllerReopenPeriod,
+  timekeepingControllerReviewPeriod,
+  timekeepingControllerUnlockPeriod,
+} from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
 import { showToast } from '@/lib/toast';
-
-const LOCKS_URL = '/api/v1/timekeeping/period-locks';
 
 export function usePeriodLock() {
   const [locking, setLocking] = useState(false);
   const [lockError, setLockError] = useState<string | null>(null);
 
-  const post = useCallback(async (endpoint: string, body: Record<string, unknown>): Promise<boolean> => {
+  const runAction = useCallback(async (actionName: string, fn: () => Promise<unknown>): Promise<boolean> => {
     setLocking(true);
     setLockError(null);
     try {
-      const res = await fetch(`${LOCKS_URL}/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = text;
-        try {
-          const parsed = JSON.parse(text);
-          const errObj = parsed?.error ?? parsed;
-          message = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message ?? text);
-        } catch { /* keep raw text */ }
-        setLockError(message);
-        showToast.error(message);
-        return false;
-      }
+      await fn();
       return true;
-    } catch (err: any) {
-      const msg = err?.message ?? `Failed to ${endpoint} period`;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : `Failed to ${actionName} period`;
       setLockError(msg);
       showToast.error(msg);
       return false;
@@ -39,12 +29,36 @@ export function usePeriodLock() {
     }
   }, []);
 
-  const lock = useCallback((period: string, remarks?: string) => post('lock', { period, remarks }), [post]);
-  const unlock = useCallback((period: string, remarks: string) => post('unlock', { period, remarks }), [post]);
-  const close = useCallback((period: string, remarks: string) => post('close', { period, remarks }), [post]);
-  const reopen = useCallback((period: string, remarks: string) => post('reopen', { period, remarks }), [post]);
-  const review = useCallback((period: string) => post('review', { period }), [post]);
-  const approve = useCallback((period: string) => post('approve', { period }), [post]);
+  const lock = useCallback(
+    (period: string, remarks?: string) =>
+      runAction('lock', () => timekeepingControllerLockPeriod({ period, remarks })),
+    [runAction]
+  );
+  const unlock = useCallback(
+    (period: string, remarks: string) =>
+      runAction('unlock', () => timekeepingControllerUnlockPeriod({ period, remarks })),
+    [runAction]
+  );
+  const close = useCallback(
+    (period: string, remarks: string) =>
+      runAction('close', () => timekeepingControllerClosePeriod({ period, remarks })),
+    [runAction]
+  );
+  const reopen = useCallback(
+    (period: string, remarks: string) =>
+      runAction('reopen', () => timekeepingControllerReopenPeriod({ period, remarks })),
+    [runAction]
+  );
+  const review = useCallback(
+    (period: string) =>
+      runAction('review', () => timekeepingControllerReviewPeriod({ period })),
+    [runAction]
+  );
+  const approve = useCallback(
+    (period: string) =>
+      runAction('approve', () => timekeepingControllerApprovePeriod({ period })),
+    [runAction]
+  );
 
   return { lock, unlock, close, reopen, review, approve, locking, lockError, clearLockError: () => setLockError(null) };
 }

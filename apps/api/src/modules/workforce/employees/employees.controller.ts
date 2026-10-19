@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -25,6 +26,8 @@ import {
 } from "./dto/employee-response.dto";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeDto } from "./dto/update-employee.dto";
+import { UpdateMyProfileDto } from "./dto/update-my-profile.dto";
+import { SubmitResignationDto } from "./dto/submit-resignation.dto";
 import { EmployeeDataPipe } from "./employee-data.pipe";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
@@ -39,6 +42,8 @@ import { GetEmployeeByUserUseCase } from "./use-cases/get-employee-by-user.useca
 import { GetEmployeeUseCase } from "./use-cases/get-employee.usecase";
 import { CreateEmployeeUseCase } from "./use-cases/create-employee.usecase";
 import { UpdateEmployeeUseCase } from "./use-cases/update-employee.usecase";
+import { UpdateMyProfileUseCase } from "./use-cases/update-my-profile.usecase";
+import { SubmitResignationRequestUseCase } from "./use-cases/submit-resignation-request.usecase";
 
 function hasSensitiveAccess(user: AuthUser): boolean {
   return EmployeePolicies.viewSensitive.handle(user);
@@ -54,6 +59,8 @@ export class EmployeesController {
     private readonly getEmployee: GetEmployeeUseCase,
     private readonly createEmployee: CreateEmployeeUseCase,
     private readonly updateEmployee: UpdateEmployeeUseCase,
+    private readonly updateMyProfileUseCase: UpdateMyProfileUseCase,
+    private readonly submitResignationUseCase: SubmitResignationRequestUseCase,
     private readonly queryScopeService: QueryScopeService,
   ) {}
 
@@ -81,6 +88,31 @@ export class EmployeesController {
   @ApiOkResponse({ type: EmployeeEnvelopeDto })
   getMyProfile(@Request() req: { user: AuthUser }) {
     return this.getEmployeeByUser.execute(req.user.id, true, true);
+  }
+
+  @Patch("me")
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @CheckPolicy(EmployeePolicies.viewSelf)
+  @AuditLog({ action: "employee_self_update", entity: "employee" })
+  @ApiOperation({ summary: "Update current employee contact, bank, tax, and emergency info" })
+  @ApiOkResponse({ type: EmployeeEnvelopeDto })
+  updateMyProfile(
+    @Request() req: { user: AuthUser },
+    @Body() dto: UpdateMyProfileDto,
+  ) {
+    return this.updateMyProfileUseCase.execute(req.user.id, dto);
+  }
+
+  @Post("me/resignation")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @CheckPolicy(EmployeePolicies.viewSelf)
+  @AuditLog({ action: "employee_resignation_request", entity: "employee" })
+  @ApiOperation({ summary: "Submit self-service resignation request" })
+  submitResignation(
+    @Request() req: { user: AuthUser },
+    @Body() dto: SubmitResignationDto,
+  ) {
+    return this.submitResignationUseCase.execute(req.user.id, dto);
   }
 
   @Get(":id")

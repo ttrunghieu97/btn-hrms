@@ -1,26 +1,51 @@
 import type { SearchProvider, SearchResult } from '../types';
+import { employeesControllerFindAll } from '@/api/generated/employees-hr-management/employees-hr-management';
+import { extractList } from '@/lib/api-extract';
+
+interface EmployeeSearchItem {
+  id?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  email?: string;
+  departmentName?: string;
+  positionName?: string;
+}
 
 /**
- * Employee search provider.
- * Phase 1: mock data filtered by query. Phase 2: API-backed.
+ * Employee search provider — queries the real employees endpoint.
  */
-const mockEmployees: SearchResult[] = [
-  { id: 'emp-1', type: 'employee', title: 'Nguyen Van A', subtitle: 'Software Engineer — Engineering', href: '/employees/emp-1', permission: 'employee:view' },
-  { id: 'emp-2', type: 'employee', title: 'Tran Thi B', subtitle: 'HR Manager — Human Resources', href: '/employees/emp-2', permission: 'employee:view' },
-  { id: 'emp-3', type: 'employee', title: 'Le Van C', subtitle: 'Accountant — Finance', href: '/employees/emp-3', permission: 'employee:view' },
-  { id: 'emp-4', type: 'employee', title: 'Pham Thi D', subtitle: 'Team Lead — Engineering', href: '/employees/emp-4', permission: 'employee:view' },
-  { id: 'emp-5', type: 'employee', title: 'Hoang Van E', subtitle: 'Product Manager — Product', href: '/employees/emp-5', permission: 'employee:view' },
-];
-
 export const employeeSearchProvider: SearchProvider = {
   id: 'employees',
   label: 'Employees',
   search: async (query: string): Promise<SearchResult[]> => {
-    const q = query.toLowerCase();
-    return mockEmployees.filter(
-      (e) =>
-        e.title.toLowerCase().includes(q) ||
-        (e.subtitle ?? '').toLowerCase().includes(q),
-    );
+    const q = query.trim();
+    if (!q) return [];
+    try {
+      const response = await employeesControllerFindAll({ search: q, limit: 5 });
+      const items = extractList<EmployeeSearchItem>(response);
+      return items
+        .map((emp): SearchResult | null => {
+          const identifier = emp.username || emp.id;
+          if (!identifier) return null;
+          const title =
+            emp.fullName?.trim() ||
+            [emp.lastName, emp.firstName].filter(Boolean).join(' ').trim() ||
+            identifier;
+          const subtitleParts = [emp.positionName, emp.departmentName, emp.email].filter(Boolean);
+          return {
+            id: String(identifier),
+            type: 'employee',
+            title,
+            subtitle: subtitleParts.join(' — ') || undefined,
+            href: `/employees/${encodeURIComponent(String(identifier))}`,
+            permission: 'employees:view:all',
+          };
+        })
+        .filter((item): item is SearchResult => item !== null);
+    } catch {
+      return [];
+    }
   },
 };

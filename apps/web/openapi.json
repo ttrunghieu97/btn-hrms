@@ -1565,6 +1565,23 @@
             }
           },
           {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by canonical employee status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "working",
+                "probation",
+                "terminated",
+                "leave",
+                "suspended",
+                "retired"
+              ]
+            }
+          },
+          {
             "name": "includeDeleted",
             "required": false,
             "in": "query",
@@ -1676,6 +1693,71 @@
           }
         ],
         "summary": "Get current employee profile",
+        "tags": [
+          "Employees HR Management"
+        ]
+      },
+      "patch": {
+        "operationId": "EmployeesController_updateMyProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMyProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeEnvelopeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update current employee contact, bank, tax, and emergency info",
+        "tags": [
+          "Employees HR Management"
+        ]
+      }
+    },
+    "/api/v1/employees/me/resignation": {
+      "post": {
+        "operationId": "EmployeesController_submitResignation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitResignationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit self-service resignation request",
         "tags": [
           "Employees HR Management"
         ]
@@ -1798,6 +1880,23 @@
                 "probation",
                 "terminated",
                 "deleted"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by canonical employee status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "working",
+                "probation",
+                "terminated",
+                "leave",
+                "suspended",
+                "retired"
               ]
             }
           },
@@ -2081,6 +2180,45 @@
         ]
       }
     },
+    "/api/v1/employees/{id}/probation/evaluate": {
+      "post": {
+        "operationId": "EmployeeAdminController_evaluateProbation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateProbationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Evaluate probation outcome (confirm, extend, or fail)",
+        "tags": [
+          "Employee Admin"
+        ]
+      }
+    },
     "/api/v1/employees/{id}/terminate": {
       "put": {
         "operationId": "EmployeeAdminController_terminate",
@@ -2174,6 +2312,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RehireEmployeeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2244,6 +2392,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminateEmployeeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2302,6 +2460,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestTransferDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2413,6 +2581,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectTransferDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2507,6 +2685,16 @@
       "post": {
         "operationId": "EmployeeAdminController_bulkStatus",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkStatusDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2527,6 +2715,16 @@
       "post": {
         "operationId": "EmployeeAdminController_bulkArchiveOp",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkArchiveDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2714,6 +2912,23 @@
                 "probation",
                 "terminated",
                 "deleted"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by canonical employee status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "working",
+                "probation",
+                "terminated",
+                "leave",
+                "suspended",
+                "retired"
               ]
             }
           },
@@ -4852,6 +5067,45 @@
         ]
       }
     },
+    "/api/v1/timekeeping/exceptions/{id}/explain": {
+      "patch": {
+        "operationId": "TimekeepingController_explainAttendanceException",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplainAttendanceExceptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Explanation submitted"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit employee explanation for an attendance exception",
+        "tags": [
+          "Attendance Timekeeping"
+        ]
+      }
+    },
     "/api/v1/timekeeping/exceptions/{id}/resolve": {
       "patch": {
         "operationId": "TimekeepingController_resolveAttendanceException",
@@ -5123,7 +5377,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UnlockPeriodDto"
+                "$ref": "#/components/schemas/LockPeriodDto"
               }
             }
           }
@@ -8777,7 +9031,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get GPS history (for managers)",
+        "summary": "Get GPS history (scoped by user permissions)",
         "tags": [
           "GPS Logs"
         ]
@@ -10087,6 +10341,34 @@
       }
     },
     "/api/v1/onboarding/processes": {
+      "post": {
+        "operationId": "BoardingProcessController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOnboardingProcessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually create an onboarding process for an employee",
+        "tags": [
+          "Onboarding Processes"
+        ]
+      },
       "get": {
         "operationId": "BoardingProcessController_findAll",
         "parameters": [
@@ -10104,6 +10386,22 @@
             "in": "query",
             "schema": {
               "type": "number"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -10318,6 +10616,22 @@
             "in": "query",
             "schema": {
               "type": "number"
+            }
+          },
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -13370,6 +13684,35 @@
           }
         ],
         "summary": "Get dashboard widgets for the current user",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/attendance-stats": {
+      "get": {
+        "operationId": "DashboardController_getAttendanceStats",
+        "parameters": [
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get attendance analytics statistics",
         "tags": [
           "Dashboard"
         ]
@@ -18427,6 +18770,10 @@
             "type": "string",
             "nullable": true
           },
+          "probationEndDate": {
+            "type": "string",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "nullable": true
@@ -18612,6 +18959,56 @@
           "error"
         ]
       },
+      "UpdateMyProfileDto": {
+        "type": "object",
+        "properties": {
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "emergencyContactName": {
+            "type": "string",
+            "nullable": true
+          },
+          "emergencyContactPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankAccountNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "taxCode": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SubmitResignationDto": {
+        "type": "object",
+        "properties": {
+          "requestedLastWorkingDate": {
+            "type": "string",
+            "description": "Requested last working date (YYYY-MM-DD)"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Resignation reason"
+          }
+        },
+        "required": [
+          "requestedLastWorkingDate",
+          "reason"
+        ]
+      },
       "CreateEmployeeDto": {
         "type": "object",
         "properties": {}
@@ -18748,6 +19145,33 @@
           "status"
         ]
       },
+      "EvaluateProbationDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "extend",
+              "fail"
+            ]
+          },
+          "effectiveDate": {
+            "type": "string",
+            "description": "Effective date (YYYY-MM-DD)"
+          },
+          "newProbationEndDate": {
+            "type": "string",
+            "description": "Required when decision is 'extend' (YYYY-MM-DD)"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "TerminateEmployeeDto": {
         "type": "object",
         "properties": {
@@ -18768,6 +19192,133 @@
         "required": [
           "reason",
           "effectiveDate"
+        ]
+      },
+      "RehireEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "hireDate": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "working",
+              "probation"
+            ],
+            "default": "working"
+          },
+          "departmentId": {
+            "type": "string"
+          },
+          "positionId": {
+            "type": "string"
+          },
+          "managerEmployeeId": {
+            "type": "string"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "contractType": {
+            "type": "string"
+          },
+          "contractStatus": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hireDate",
+          "status",
+          "contractType",
+          "contractStatus"
+        ]
+      },
+      "RequestTransferDto": {
+        "type": "object",
+        "properties": {
+          "effectiveDate": {
+            "type": "string"
+          },
+          "toDepartmentId": {
+            "type": "string"
+          },
+          "toPositionId": {
+            "type": "string"
+          },
+          "toManagerEmployeeId": {
+            "type": "string"
+          },
+          "toJobTitle": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effectiveDate",
+          "toDepartmentId"
+        ]
+      },
+      "RejectTransferDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "BulkStatusDto": {
+        "type": "object",
+        "properties": {
+          "employeeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "working",
+              "probation",
+              "terminated",
+              "leave",
+              "suspended",
+              "retired"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "effectiveDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "employeeIds",
+          "status"
+        ]
+      },
+      "BulkArchiveDto": {
+        "type": "object",
+        "properties": {
+          "employeeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "employeeIds"
         ]
       },
       "CreateEducationDto": {
@@ -19607,6 +20158,18 @@
         "required": [
           "type",
           "reason"
+        ]
+      },
+      "ExplainAttendanceExceptionDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Employee explanation for the attendance exception"
+          }
+        },
+        "required": [
+          "note"
         ]
       },
       "ResolveAttendanceExceptionDto": {
@@ -21910,6 +22473,27 @@
           }
         }
       },
+      "CreateOnboardingProcessDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "description": "Employee to onboard"
+          },
+          "templateId": {
+            "type": "string",
+            "description": "Onboarding template to use"
+          },
+          "joinDate": {
+            "type": "string",
+            "description": "Override join date (defaults to employee.startDate)"
+          }
+        },
+        "required": [
+          "employeeId",
+          "templateId"
+        ]
+      },
       "OffboardingChecklistItemDto": {
         "type": "object",
         "properties": {
@@ -22287,6 +22871,14 @@
           },
           "payrollPeriod": {
             "$ref": "#/components/schemas/PayrollPeriodSummaryDto"
+          },
+          "isProvisional": {
+            "type": "boolean",
+            "default": true
+          },
+          "calculationStatus": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [

@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
+import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
 import {
   fetchApprovalPolicies,
   fetchApprovalPolicy,
@@ -48,7 +49,13 @@ export function useCreateApprovalPolicyMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createApprovalPolicy,
-    onSuccess: () => qc.invalidateQueries({ queryKey: approvalKeys.policies() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: approvalKeys.policies() });
+      notifyMutationSuccess('Tạo chính sách phê duyệt thành công');
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể tạo chính sách phê duyệt');
+    },
   });
 }
 
@@ -56,7 +63,13 @@ export function useUpdateApprovalPolicyMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateApprovalPolicy>[1] }) => updateApprovalPolicy(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: approvalKeys.policies() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: approvalKeys.policies() });
+      notifyMutationSuccess('Cập nhật chính sách phê duyệt thành công');
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể cập nhật chính sách phê duyệt');
+    },
   });
 }
 
@@ -64,7 +77,13 @@ export function useDeactivateApprovalPolicyMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deactivateApprovalPolicy,
-    onSuccess: () => qc.invalidateQueries({ queryKey: approvalKeys.policies() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: approvalKeys.policies() });
+      notifyMutationSuccess('Đã ngừng kích hoạt chính sách phê duyệt');
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể ngừng kích hoạt chính sách phê duyệt');
+    },
   });
 }
 
@@ -92,6 +111,10 @@ export function useRequestApprovalMutation() {
     mutationFn: requestApproval,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: approvalKeys.requests() });
+      notifyMutationSuccess('Đã gửi yêu cầu phê duyệt');
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể gửi yêu cầu phê duyệt');
     },
   });
 }
@@ -101,9 +124,15 @@ export function useDecideApprovalStepMutation() {
   return useMutation({
     mutationFn: ({ requestId, data }: { requestId: string; data: Parameters<typeof decideApprovalStep>[1] }) =>
       decideApprovalStep(requestId, data),
-    onSuccess: () => {
+    onSuccess: (_res, { data }) => {
       qc.invalidateQueries({ queryKey: approvalKeys.requests() });
       qc.invalidateQueries({ queryKey: approvalKeys.inbox() });
+      notifyMutationSuccess(
+        data.decision === 'approve' ? 'Đã phê duyệt yêu cầu' : 'Đã từ chối yêu cầu'
+      );
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể xử lý bước phê duyệt');
     },
   });
 }
@@ -115,6 +144,10 @@ export function useCancelApprovalRequestMutation() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: approvalKeys.requests() });
       qc.invalidateQueries({ queryKey: approvalKeys.inbox() });
+      notifyMutationSuccess('Đã hủy yêu cầu phê duyệt');
+    },
+    onError: (error) => {
+      notifyMutationError(error, 'Không thể hủy yêu cầu phê duyệt');
     },
   });
 }

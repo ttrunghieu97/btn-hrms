@@ -34,7 +34,7 @@ export function DataTablePagination<TData>({
   pageCount: controlledPageCount,
   pageSize: controlledPageSize,
   total: controlledTotal,
-  pageSizeOptions = [10, 20, 50, 100],
+  pageSizeOptions = [10, 20, 50, 100, 200],
   onPageChange,
   onPageSizeChange,
   className,
@@ -53,9 +53,19 @@ export function DataTablePagination<TData>({
     ? table.getState().pagination.pageSize
     : controlledPageSize ?? 20;
 
-  const totalItems = table
-    ? (table.getRowCount?.() ?? table.getFilteredRowModel().rows.length)
-    : controlledTotal;
+  const resolvedPageSizeOptions = React.useMemo(
+    () =>
+      Array.from(new Set([...pageSizeOptions, currentPageSize]))
+        .filter((size) => Number.isFinite(size) && size > 0)
+        .sort((a, b) => a - b),
+    [pageSizeOptions, currentPageSize]
+  );
+
+  const totalItems =
+    controlledTotal ??
+    (table
+      ? (table.getRowCount?.() ?? table.getFilteredRowModel().rows.length)
+      : undefined);
 
   const selectedRowsCount = table
     ? table.getFilteredSelectedRowModel().rows.length
@@ -124,7 +134,7 @@ export function DataTablePagination<TData>({
               <SelectValue placeholder={String(currentPageSize)} />
             </SelectTrigger>
             <SelectContent side='top'>
-              {pageSizeOptions.map((size) => (
+              {resolvedPageSizeOptions.map((size) => (
                 <SelectItem key={size} value={String(size)} className='text-xs'>
                   {size}
                 </SelectItem>

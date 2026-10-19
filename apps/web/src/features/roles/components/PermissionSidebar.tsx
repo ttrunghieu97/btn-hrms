@@ -146,12 +146,12 @@ export function PermissionSidebar({
           </div>
 
           {criticalCount > 0 && (
-            <div className="rounded-lg border border-red-200/50 bg-red-50/20 p-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-red-700 uppercase tracking-wide">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wide">
                 <Icons.warning className="h-3.5 w-3.5" />
                 {criticalCount} {['quyền nhạy cảm'].join('')}
               </div>
-              <p className="text-[10px] text-red-600/80 mt-1">
+              <p className="text-[10px] text-red-600/80 dark:text-red-300/80 mt-1">
                 {['Các quyền này có thể ảnh hưởng đến bảo mật hệ thống.'].join('')}
               </p>
             </div>
@@ -265,7 +265,7 @@ export function PermissionSidebar({
                             {permission.critical ? (
                               <Badge variant="destructive" className="text-[8px] px-1 py-0 font-bold uppercase tracking-wide">{roleUiCopy.matrix.criticalBadge.toUpperCase()}</Badge>
                             ) : isChecked ? (
-                              <Badge variant="outline" className="text-[8px] px-1 py-0 font-bold uppercase text-green-600 border-green-200 bg-green-50/20 tracking-wide">{roleUiCopy.matrix.safeBadge.toUpperCase()}</Badge>
+                              <Badge variant="outline" className="text-[8px] px-1 py-0 font-bold uppercase text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 tracking-wide">{roleUiCopy.matrix.safeBadge.toUpperCase()}</Badge>
                             ) : null}
                           </div>
                           <p className="text-[10px] text-muted-foreground/80 leading-relaxed">

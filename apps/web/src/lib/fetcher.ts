@@ -108,19 +108,47 @@ async function parseError(res: Response, requestId: string): Promise<ApiError> {
   });
 }
 
+export function normalizeHeaders(
+  input?: HeadersInit | Record<string, string | readonly string[] | undefined>
+): Headers {
+  const headers = new Headers();
+  if (!input) return headers;
+  if (input instanceof Headers) {
+    input.forEach((value, key) => {
+      headers.set(key, value);
+    });
+    return headers;
+  }
+  if (Array.isArray(input)) {
+    for (const [key, value] of input) {
+      if (key && value !== undefined) {
+        headers.set(key, String(value));
+      }
+    }
+    return headers;
+  }
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    headers.set(key, Array.isArray(value) ? value.join(', ') : String(value));
+  }
+  return headers;
+}
+
 async function execute<T>(
   url: string,
   init: RequestInit,
   attempt = 0
 ): Promise<T> {
-  const requestId = (init.headers as Record<string, string> | undefined)?.['x-request-id']
-    ?? getRequestId();
+  const headers = normalizeHeaders(init.headers);
+  const requestId = headers.get('x-request-id') ?? getRequestId();
   void setSentryRequestId(requestId);
 
   const token = tokenStore.get();
-  const headers = new Headers(init.headers);
-  if (token && !headers.has('Authorization')) {
+  if (token && (attempt > 0 || !headers.has('Authorization'))) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (typeof init.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
   headers.set('x-request-id', requestId);
 
@@ -200,12 +228,12 @@ async function execute<T>(
       return new Promise<OrvalResponse<T>>((resolve, reject) => {
         subscribeRefresh({
           resolve: async (newToken) => {
-            const retryHeaders = new Headers(init.headers);
+            const retryHeaders = normalizeHeaders(init.headers);
             retryHeaders.set('Authorization', `Bearer ${newToken}`);
             try {
               resolve(await execute<T>(url, { ...init, headers: retryHeaders }, 1));
             } catch (e) {
-              reject(e);
+              reject(e instanceof Error ? e : new Error(String(e)));
             }
           },
           reject

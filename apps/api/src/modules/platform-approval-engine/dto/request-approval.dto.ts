@@ -16,11 +16,6 @@ export class RequestApprovalDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
-  requestedByUserId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
 }

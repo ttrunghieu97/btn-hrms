@@ -2,7 +2,11 @@ import { Injectable, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "node:crypto";
 import { UsersRepository } from "../../users/repositories/users.repository";
-import { throwBadRequest, throwNotFound } from "../../../../shared/utils/http-error";
+import {
+  throwBadRequest,
+  throwConflict,
+  throwNotFound,
+} from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -62,9 +66,22 @@ export class TotpService {
       this.configService?.get<string>("TOTP_ENCRYPTION_KEY") ||
       this.configService?.get<string>("AUTH_JWT_SECRET") ||
       process.env.TOTP_ENCRYPTION_KEY ||
-      process.env.AUTH_JWT_SECRET ||
-      "btn-hrms-totp-default-encryption-secret-key-32";
-    this.encryptionKey = crypto.createHash("sha256").update(rawKey).digest();
+      process.env.AUTH_JWT_SECRET;
+    const nodeEnv =
+      this.configService?.get<string>("NODE_ENV") ||
+      process.env.NODE_ENV ||
+      "development";
+
+    if (!rawKey && nodeEnv === "production") {
+      throw new Error(
+        "TOTP_ENCRYPTION_KEY or AUTH_JWT_SECRET must be configured in production",
+      );
+    }
+
+    this.encryptionKey = crypto
+      .createHash("sha256")
+      .update(rawKey || "btn-hrms-totp-dev-only-encryption-secret-key-32")
+      .digest();
   }
 
   encryptSecret(secret: string): string {
@@ -80,16 +97,19 @@ export class TotpService {
       return payload; // backward compatibility with legacy unencrypted secrets
     }
     const parts = payload.split(":");
-    if (parts.length !== 4) return payload;
+    if (parts.length !== 4) return "";
     try {
       const iv = Buffer.from(parts[1]!, "hex");
       const tag = Buffer.from(parts[2]!, "hex");
       const ciphertext = Buffer.from(parts[3]!, "hex");
+      if (iv.length !== TOTP_IV_LENGTH || tag.length !== 16 || ciphertext.length === 0) {
+        return "";
+      }
       const decipher = crypto.createDecipheriv(TOTP_CIPHER_ALGORITHM, this.encryptionKey, iv);
       decipher.setAuthTag(tag);
       return decipher.update(ciphertext) + decipher.final("utf-8");
     } catch {
-      return payload;
+      return "";
     }
   }
 
@@ -110,12 +130,34 @@ export class TotpService {
     };
   }
 
+  private async loadUserTotpState(userId: string): Promise<{
+    isTotpEnabled?: boolean;
+    totpSecret?: string | null;
+  } | null> {
+    if (typeof this.usersRepo.findTotpStateById === "function") {
+      return this.usersRepo.findTotpStateById(userId);
+    }
+    return (await this.usersRepo.findById(userId)) as {
+      isTotpEnabled?: boolean;
+      totpSecret?: string | null;
+    } | null;
+  }
+
   /**
    * Enables TOTP for user after validating the provided passcode with the generated secret.
    */
   async enableTotp(userId: string, secret: string, passcode: string) {
     if (!passcode || passcode.length !== 6 || !/^\d{6}$/.test(passcode)) {
       throwBadRequest("Invalid 6-digit TOTP passcode format", ERROR_CODES.INVALID_REQUEST, { userId });
+    }
+
+    const existingUser = await this.loadUserTotpState(userId);
+    if (existingUser?.isTotpEnabled) {
+      throwConflict(
+        "TOTP 2FA is already enabled for this account. Disable it first before re-enrolling.",
+        ERROR_CODES.CONFLICT,
+        { userId },
+      );
     }
 
     const isValid = this.verifyPasscode(secret, passcode);
@@ -132,9 +174,26 @@ export class TotpService {
   }
 
   /**
-   * Disables TOTP 2FA for user.
+   * Disables TOTP 2FA for user after verifying current TOTP passcode when 2FA is active.
    */
-  async disableTotp(userId: string) {
+  async disableTotp(userId: string, passcode?: string) {
+    const existingUser = await this.loadUserTotpState(userId);
+    if (existingUser?.isTotpEnabled && existingUser.totpSecret) {
+      if (!passcode || !this.verifyPasscode(existingUser.totpSecret, passcode)) {
+        throwBadRequest(
+          "Valid 6-digit TOTP passcode is required to disable 2FA.",
+          ERROR_CODES.INVALID_REQUEST,
+          { userId },
+        );
+      }
+    } else if (passcode !== undefined && (!passcode || !/^\d{6}$/.test(passcode))) {
+      throwBadRequest(
+        "Invalid 6-digit TOTP passcode format",
+        ERROR_CODES.INVALID_REQUEST,
+        { userId },
+      );
+    }
+
     await this.usersRepo.update(userId, {
       totpSecret: null,
       isTotpEnabled: false,

@@ -147,12 +147,12 @@ export function ReviewChangesDialog({
                     
                     {/* Scope diff description */}
                     {change.type === 'added' && (
-                      <p className="text-xs text-green-600 font-medium">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                         {roleUiCopy.matrix.grantWithScope} <span className="font-bold">{getScopeLabel(change.toScope)}</span>
                       </p>
                     )}
                     {change.type === 'scope_changed' && (
-                      <p className="text-xs text-amber-600 font-medium">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                         {roleUiCopy.matrix.scopeChanged} <span className="line-through text-muted-foreground">{getScopeLabel(change.fromScope)}</span>
                         <Icons.arrowRight className="inline h-3 w-3 mx-1 align-middle text-muted-foreground" />
                         <span className="font-bold">{getScopeLabel(change.toScope)}</span>
@@ -163,17 +163,17 @@ export function ReviewChangesDialog({
                   {/* Badges for Change Type */}
                   <div className="shrink-0">
                     {change.type === 'added' && (
-                      <Badge className="bg-green-100 hover:bg-green-100 text-green-800 font-semibold px-2 py-0.5 border border-green-200">
+                      <Badge variant="success" className="font-semibold px-2 py-0.5 border border-emerald-500/30">
                         + {change.actionId.toUpperCase()}
                       </Badge>
                     )}
                     {change.type === 'removed' && (
-                      <Badge variant="destructive" className="bg-red-100 hover:bg-red-100 text-red-800 font-semibold px-2 py-0.5 border border-red-200">
+                      <Badge variant="destructive" className="font-semibold px-2 py-0.5">
                         - {change.actionId.toUpperCase()}
                       </Badge>
                     )}
                     {change.type === 'scope_changed' && (
-                      <Badge className="bg-amber-100 hover:bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 border border-amber-200">
+                      <Badge variant="warning" className="font-semibold px-2 py-0.5 border border-amber-500/30">
                         {roleUiCopy.matrix.scopeBadge}
                       </Badge>
                     )}

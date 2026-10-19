@@ -84,6 +84,17 @@ export const columns: ColumnDef<User>[] = [
           </Badge>
         );
       }
+      if (user.roles && user.roles.length > 0) {
+        return (
+          <div className="flex flex-wrap gap-1">
+            {user.roles.map((r, idx) => (
+              <Badge key={String(r.id ?? idx)} variant="secondary" className="whitespace-nowrap">
+                {String(r.name ?? '')}
+              </Badge>
+            ))}
+          </div>
+        );
+      }
       if (user.roleIds && user.roleIds.length > 0) {
         return (
           <Badge variant="secondary" className="whitespace-nowrap">
@@ -106,11 +117,21 @@ export const columns: ColumnDef<User>[] = [
     header: ({ column }: { column: Column<User, unknown> }) => (
       <DataTableColumnHeader column={column} title={userUiCopy.table.lastLoginLabel} />
     ),
-    cell: () => (
-      <span className="text-muted-foreground text-sm">
-        {userUiCopy.table.notAvailable}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const lastLoginAt = row.original.lastLoginAt;
+      if (!lastLoginAt) {
+        return (
+          <span className="text-muted-foreground text-sm">
+            {userUiCopy.table.notAvailable}
+          </span>
+        );
+      }
+      const parsed = new Date(lastLoginAt);
+      const formatted = Number.isNaN(parsed.getTime())
+        ? userUiCopy.table.notAvailable
+        : parsed.toLocaleString('vi-VN');
+      return <span className="text-muted-foreground text-sm">{formatted}</span>;
+    },
     meta: { label: userUiCopy.table.lastLoginLabel, variant: 'text' as const, icon: Icons.text }
   },
   {

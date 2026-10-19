@@ -54,8 +54,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}
       DATABASE_DIRECT_URL: postgres://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@btn-hrms-postgres:5432/${POSTGRES_DB:-hrms}
 
-      # Redis
-      REDIS_URL: redis://btn-hrms-redis:6379
+      # Redis (Optional — defaults to in-memory cache & PostgreSQL outbox when empty)
+      REDIS_URL: "${REDIS_URL:-}"
 
       # Auth
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET required}

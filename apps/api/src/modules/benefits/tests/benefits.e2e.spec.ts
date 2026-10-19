@@ -92,7 +92,7 @@ describe("Benefits Integration Acceptance (Journey 9)", () => {
   it("executes full lifecycle: plan created (draft) → blocks un-published enrollment → published → employee enrolled (pending) → approved (active) → BenefitEnrollmentApprovedEvent staged and visible in list", async () => {
     const plan = await createPlan.execute({
       name: "Comprehensive Health Care 2026",
-      coverageType: "employee_and_family",
+      coverageType: "family",
       employerContribution: 2500000,
       employeeContribution: 500000,
       effectiveFrom: "2026-05-01",
@@ -104,7 +104,7 @@ describe("Benefits Integration Acceptance (Journey 9)", () => {
       enrollEmployee.execute({
         planId: plan.id,
         employeeId: "emp-101",
-        coverageType: "employee_and_family",
+        coverageType: "family",
       }),
     ).rejects.toThrow("Plan must be published");
 
@@ -121,7 +121,7 @@ describe("Benefits Integration Acceptance (Journey 9)", () => {
     const enrollment = await enrollEmployee.execute({
       planId: plan.id,
       employeeId: "emp-101",
-      coverageType: "employee_and_family",
+      coverageType: "family",
       effectiveFrom: "2026-05-01",
     });
     expect(enrollment.status).toBe("pending");
@@ -151,7 +151,7 @@ describe("Benefits Integration Acceptance (Journey 9)", () => {
       planId: plan.id,
       employeeId: "emp-101",
       status: "active",
-      coverageType: "employee_and_family",
+      coverageType: "family",
       effectiveFrom: "2026-05-01",
       enrolledAt: "2026-04-01T08:00:00.000Z",
     });

@@ -2,6 +2,7 @@
 
 import { EmployeeStatusBadge } from '../display/employee-status-badge';
 import { EmployeeContractCard } from '../cards/contract/employee-contract-card';
+import { EmployeeEducationCard } from '../cards/employee-education-card';
 import { EmployeeQualificationsCard } from '../cards/employee-qualifications-card';
 import {
   getEmployeeName,
@@ -51,11 +52,14 @@ function calculateTenure(startDate: string | null): string | null {
 
 function EmploymentSummaryCard({ employee }: { employee: EmployeeResponseDto }) {
   const tenure = calculateTenure(employee.startDate);
+  const probationEndDate = (
+    employee as EmployeeResponseDto & { probationEndDate?: string | null }
+  ).probationEndDate;
 
   return (
     <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-emerald-500 hover:shadow-md transition-all duration-300'>
       <div className='flex items-center gap-3 border-b px-4 py-3'>
-        <div className='bg-emerald-500/10 p-1.5 rounded-lg text-emerald-600'>
+        <div className='bg-emerald-500/10 p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400'>
           <Icons.department className='size-4' />
         </div>
         <h3 className='text-sm font-semibold text-foreground/90'>{employeeUiCopy.jobInfo}</h3>
@@ -85,6 +89,12 @@ function EmploymentSummaryCard({ employee }: { employee: EmployeeResponseDto }) 
           <div className='flex items-center justify-between'>
             <span className='text-muted-foreground text-xs'>Ngày vào</span>
             <span className='font-medium'>{formatDateVN(employee.startDate)}</span>
+          </div>
+        )}
+        {probationEndDate && (
+          <div className='flex items-center justify-between'>
+            <span className='text-muted-foreground text-xs'>Kết thúc thử việc</span>
+            <span className='font-medium text-amber-600 dark:text-amber-400'>{formatDateVN(probationEndDate)}</span>
           </div>
         )}
         {tenure && (
@@ -124,7 +134,7 @@ function RecordsCompletenessCard({ employee }: { employee: EmployeeResponseDto }
   return (
     <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-teal-500 hover:shadow-md transition-all duration-300'>
       <div className='flex items-center gap-3 border-b px-4 py-3'>
-        <div className='bg-teal-500/10 p-1.5 rounded-lg text-teal-600'>
+        <div className='bg-teal-500/10 p-1.5 rounded-lg text-teal-600 dark:text-teal-400'>
           <Icons.forms className='size-4' />
         </div>
         <h3 className='text-sm font-semibold text-foreground/90'>Hồ sơ giấy tờ</h3>
@@ -155,7 +165,7 @@ function RecordsCompletenessCard({ employee }: { employee: EmployeeResponseDto }
                     (24 * 60 * 60 * 1000),
                 );
                 return (
-                  <div key={cert.id} className='flex items-center gap-1.5 text-xs text-amber-600'>
+                  <div key={cert.id} className='flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400'>
                     <Icons.warning className='size-3 shrink-0' />
                     <span className='truncate'>{cert.name}</span>
                     <span className='shrink-0'>({daysLeft} ngày)</span>
@@ -167,7 +177,7 @@ function RecordsCompletenessCard({ employee }: { employee: EmployeeResponseDto }
         )}
 
         {completedCount === totalRequired && expiringCerts.length === 0 && (
-          <p className='flex items-center gap-1.5 text-xs text-emerald-600'>
+          <p className='flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400'>
             <Icons.circleCheck className='size-3.5' />
             Đầy đủ
           </p>
@@ -188,7 +198,7 @@ function AssetsSummaryCard({ employee }: { employee: EmployeeResponseDto }) {
   return (
     <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-amber-500 hover:shadow-md transition-all duration-300'>
       <div className='flex items-center gap-3 border-b px-4 py-3'>
-        <div className='bg-amber-500/10 p-1.5 rounded-lg text-amber-600'>
+        <div className='bg-amber-500/10 p-1.5 rounded-lg text-amber-600 dark:text-amber-400'>
           <Icons.product className='size-4' />
         </div>
         <h3 className='text-sm font-semibold text-foreground/90'>{employeeUiCopy.handedOverAssets}</h3>
@@ -275,7 +285,7 @@ function RecentActivityCard({ employee }: { employee: EmployeeResponseDto }) {
   return (
     <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-indigo-500 hover:shadow-md transition-all duration-300'>
       <div className='flex items-center gap-3 border-b px-4 py-3'>
-        <div className='bg-indigo-500/10 p-1.5 rounded-lg text-indigo-600'>
+        <div className='bg-indigo-500/10 p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400'>
           <Icons.activity className='size-4' />
         </div>
         <h3 className='text-sm font-semibold text-foreground/90'>Hoạt động gần đây</h3>
@@ -352,7 +362,7 @@ function PersonalInfoSection({ employee }: { employee: EmployeeResponseDto }) {
   return (
     <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-all duration-300'>
       <div className='flex items-center gap-3 border-b px-4 py-3'>
-        <div className='bg-blue-500/10 p-1.5 rounded-lg text-blue-600'>
+        <div className='bg-blue-500/10 p-1.5 rounded-lg text-blue-600 dark:text-blue-400'>
           <Icons.user className='size-4' />
         </div>
         <h3 className='flex-1 text-sm font-semibold text-foreground/90'>{employeeUiCopy.personalInfoTitle}</h3>
@@ -398,7 +408,8 @@ export function OverviewTab({ employee, isEditing }: OverviewTabProps) {
         <AssetsSummaryCard employee={employee} />
       </div>
 
-      {/* Row 5: Qualifications */}
+      {/* Row 5: Education & Qualifications */}
+      <EmployeeEducationCard employeeId={employee.id} />
       <EmployeeQualificationsCard employeeId={employee.id} />
 
       {/* Row 6: Recent Activity */}

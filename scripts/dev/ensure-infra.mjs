@@ -16,7 +16,7 @@ try {
   // Container not found or stopped
 }
 
-console.log('🚀 [Docker Infra] Khởi động Postgres, MinIO, Redis, GlitchTip...');
+console.log('🚀 [Docker Infra] Khởi động Postgres & MinIO...');
 try {
   execSync(`docker compose -f ${COMPOSE_FILE} start`, { stdio: 'inherit' });
 } catch {

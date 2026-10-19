@@ -41,6 +41,7 @@ export interface ExceptionItem {
   reason?: string;
   description?: string;
   note?: string;
+  resolutionNote?: string | null;
   status: string;
   createdAt?: string;
   [key: string]: unknown;

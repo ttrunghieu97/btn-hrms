@@ -6,6 +6,24 @@ import { toast } from 'sonner';
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { EmployeeStatusBadge } from '../display/employee-status-badge';
 import { formatDateVN } from '@/lib/date';
@@ -23,6 +41,7 @@ import {
   useDepartmentsQuery,
   useEmployeeBoardingStatusQuery,
   useEmployeeWorkflowInstancesQuery,
+  useEvaluateProbationMutation,
   useRejectTransferMutation,
 } from '../../queries/employee-queries';
 import { ChangeEmployeeStatusDialog, type LifecycleStatus } from '../dialogs/lifecycle/change-employee-status-dialog';
@@ -277,6 +296,58 @@ export function EmployeeLifecycleWorkflowHero({
   const [terminateOpen, setTerminateOpen] = React.useState(false);
   const [rehireOpen, setRehireOpen] = React.useState(false);
   const [transferOpen, setTransferOpen] = React.useState(false);
+  const [probationEvalOpen, setProbationEvalOpen] = React.useState(false);
+  const [probationDecision, setProbationDecision] = React.useState<'confirm' | 'extend' | 'fail'>('confirm');
+  const [probationEffectiveDate, setProbationEffectiveDate] = React.useState(
+    () => new Date().toISOString().split('T')[0] ?? '',
+  );
+  const [probationExtendedEndDate, setProbationExtendedEndDate] = React.useState('');
+  const [probationNotes, setProbationNotes] = React.useState('');
+
+  const probationEndDate = (
+    employee as EmployeeResponseDto & { probationEndDate?: string | null }
+  ).probationEndDate;
+
+  const evaluateProbationMut = useEvaluateProbationMutation(queryClient, {
+    onSuccess: (res) => {
+      if (res.decision === 'confirm') {
+        toast.success('Đã xác nhận đạt thử việc và chuyển nhân viên chính thức.');
+      } else if (res.decision === 'extend') {
+        toast.success('Đã gia hạn thời gian thử việc.');
+      } else {
+        toast.success('Đã ghi nhận kết quả không đạt thử việc và chấm dứt hợp đồng.');
+      }
+      setProbationEvalOpen(false);
+      setProbationNotes('');
+      setProbationExtendedEndDate('');
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiError
+          ? getVietnameseApiErrorMessage(err, 'Không thể lưu kết quả đánh giá thử việc')
+          : 'Không thể lưu kết quả đánh giá thử việc',
+      );
+    },
+  });
+
+  const handleProbationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (probationDecision === 'extend' && !probationExtendedEndDate) {
+      toast.error('Vui lòng chọn ngày kết thúc thử việc mới khi gia hạn.');
+      return;
+    }
+    evaluateProbationMut.mutate({
+      id: employee.id,
+      data: {
+        decision: probationDecision,
+        ...(probationEffectiveDate ? { effectiveDate: probationEffectiveDate } : {}),
+        ...(probationDecision === 'extend' && probationExtendedEndDate
+          ? { extendedEndDate: probationExtendedEndDate }
+          : {}),
+        ...(probationNotes.trim() ? { notes: probationNotes.trim() } : {}),
+      },
+    });
+  };
 
   // Mutations for active workflows
   const cancelScheduledTerminationMut = useCancelScheduledTerminationMutation(queryClient, {
@@ -387,6 +458,7 @@ export function EmployeeLifecycleWorkflowHero({
                 {employee.department?.name ?? 'Chưa phân phòng ban'}
                 {employee.position?.name ? ` · ${employee.position.name}` : ''}
                 {employee.startDate ? ` · Bắt đầu: ${formatDateVN(employee.startDate)}` : ''}
+                {probationEndDate ? ` · Hạn thử việc: ${formatDateVN(probationEndDate)}` : ''}
               </p>
             </div>
           </div>
@@ -396,15 +468,20 @@ export function EmployeeLifecycleWorkflowHero({
             {canEdit && !isEditing && (
               <>
                 {guidance.primaryActionType === 'activate' && (
-                  <Button
-                    type='button'
-                    size='sm'
-                    className='bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm'
-                    onClick={handleOpenActivate}
-                  >
-                    <Icons.check className='mr-1.5 size-4' />
-                    {guidance.primaryActionLabel}
-                  </Button>
+                  <>
+                    <Button
+                      type='button'
+                      size='sm'
+                      className='bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm'
+                      onClick={() => {
+                        setProbationDecision('confirm');
+                        setProbationEvalOpen(true);
+                      }}
+                    >
+                      <Icons.check className='mr-1.5 size-4' />
+                      Đánh giá / Gia hạn thử việc
+                    </Button>
+                  </>
                 )}
 
                 {guidance.primaryActionType === 'resume' && (
@@ -801,6 +878,91 @@ export function EmployeeLifecycleWorkflowHero({
         open={rehireOpen}
         onOpenChange={setRehireOpen}
       />
+
+      {/* Probation Evaluation Dialog (PD-01) */}
+      <Dialog open={probationEvalOpen} onOpenChange={setProbationEvalOpen}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Đánh giá kết quả thử việc</DialogTitle>
+            <DialogDescription>
+              Xác nhận kết quả thử việc cho nhân viên <strong>{getEmployeeName(employee)}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleProbationSubmit} className='space-y-4'>
+            <div className='space-y-1.5'>
+              <Label>Quyết định đánh giá *</Label>
+              <Select
+                value={probationDecision}
+                onValueChange={(v) => setProbationDecision(v as 'confirm' | 'extend' | 'fail')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='confirm'>
+                    Đạt thử việc — Chuyển chính thức (Working)
+                  </SelectItem>
+                  <SelectItem value='extend'>
+                    Gia hạn thêm thời gian thử việc
+                  </SelectItem>
+                  <SelectItem value='fail'>
+                    Không đạt thử việc — Chấm dứt hợp đồng
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {probationDecision === 'extend' ? (
+              <div className='space-y-1.5'>
+                <Label>Ngày kết thúc thử việc mới *</Label>
+                <Input
+                  type='date'
+                  required
+                  value={probationExtendedEndDate}
+                  onChange={(e) => setProbationExtendedEndDate(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div className='space-y-1.5'>
+                <Label>Ngày hiệu lực quyết định</Label>
+                <Input
+                  type='date'
+                  value={probationEffectiveDate}
+                  onChange={(e) => setProbationEffectiveDate(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className='space-y-1.5'>
+              <Label>Nhận xét / Lý do quyết định</Label>
+              <Textarea
+                rows={3}
+                value={probationNotes}
+                onChange={(e) => setProbationNotes(e.target.value)}
+                placeholder='Nhập nhận xét đánh giá năng lực thử việc hoặc lý do gia hạn...'
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setProbationEvalOpen(false)}
+                disabled={evaluateProbationMut.isPending}
+              >
+                Huỷ
+              </Button>
+              <Button
+                type='submit'
+                disabled={evaluateProbationMut.isPending}
+                variant={probationDecision === 'fail' ? 'destructive' : 'default'}
+              >
+                {evaluateProbationMut.isPending ? 'Đang xử lý...' : 'Xác nhận quyết định'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -9,4 +9,6 @@
 export type OffboardingControllerFindAllParams = {
 page: number;
 limit: number;
+employeeId: string;
+status: string;
 };

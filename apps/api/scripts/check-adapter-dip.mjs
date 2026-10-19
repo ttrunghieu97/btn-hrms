@@ -16,7 +16,7 @@
  *   ARCH_MODE=warn|enforce-new|enforce-all
  */
 import { readFile, access } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve, relative, dirname, normalize } from "node:path";
 import { glob } from "glob";
 import { fileURLToPath } from "node:url";
@@ -87,7 +87,7 @@ try {
 const BASELINE_SET = new Set(baselineWarned);
 
 function readImports(filePath) {
-  const src = readFile(filePath, "utf8");
+  const src = readFileSync(filePath, "utf8");
   const pattern = /from\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
   const values = [];
   let match;

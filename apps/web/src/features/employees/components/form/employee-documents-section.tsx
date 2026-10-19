@@ -4,7 +4,7 @@ import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EmployeeAttachmentUploadControl } from './employee-attachment-upload-control';
 
-const DOCUMENT_UPLOAD_HINT = ['PNG', 'JPG', 'WEBP', 'PDF'].join(', ') + ' &bull; Toi da 5MB';
+const DOCUMENT_UPLOAD_HINT = ['PNG', 'JPG', 'WEBP', 'PDF'].join(', ') + ' • Tối đa 5MB';
 
 export interface DocumentField {
   id: string;

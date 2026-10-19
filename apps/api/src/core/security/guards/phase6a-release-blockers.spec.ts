@@ -375,7 +375,7 @@ describe("Phase 6A — Release Blocker Remediation Suite", () => {
         parsedEnv.DATABASE_URL;
       expect(dbUrl).toBeDefined();
 
-      const sql = postgres(dbUrl, { max: 1, connect_timeout: 3 });
+      const sql = postgres(dbUrl!, { max: 1, connect_timeout: 3 });
       try {
         await expect(
           sql.begin(async (tx) => {

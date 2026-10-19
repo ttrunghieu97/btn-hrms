@@ -106,6 +106,22 @@ export class PlatformApprovalEngineRepository {
     return db.update(approvalSteps).set(patch).where(eq(approvalSteps.id, stepId));
   }
 
+  async updateStepIfPending(
+    stepId: string,
+    patch: Record<string, unknown>,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [updated] = await db
+      .update(approvalSteps)
+      .set(patch)
+      .where(
+        and(eq(approvalSteps.id, stepId), eq(approvalSteps.status, "pending")),
+      )
+      .returning();
+    return updated ?? null;
+  }
+
   skipPendingSteps(requestId: string, tx?: AppDatabase) {
     const db = tx ?? this.db;
     return db
@@ -135,6 +151,25 @@ export class PlatformApprovalEngineRepository {
     return db.update(approvalRequests).set(patch).where(eq(approvalRequests.id, requestId));
   }
 
+  async updateRequestIfPending(
+    requestId: string,
+    patch: Record<string, unknown>,
+    tx?: AppDatabase,
+  ) {
+    const db = tx ?? this.db;
+    const [updated] = await db
+      .update(approvalRequests)
+      .set(patch)
+      .where(
+        and(
+          eq(approvalRequests.id, requestId),
+          eq(approvalRequests.status, "pending"),
+        ),
+      )
+      .returning();
+    return updated ?? null;
+  }
+
   findRequestBySubject(subjectType: string, subjectId: string, tx?: AppDatabase) {
     const db = tx ?? this.db;
     return db.query.approvalRequests.findFirst({
@@ -152,6 +187,7 @@ export class PlatformApprovalEngineRepository {
         eq(approvalSteps.status, "pending"),
         eq(approvalSteps.approverUserId, userId),
       ),
+      orderBy: (t: any, { asc }: any) => [asc(t.stepIndex)],
     });
   }
 

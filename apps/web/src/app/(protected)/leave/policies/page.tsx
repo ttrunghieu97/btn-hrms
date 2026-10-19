@@ -1,5 +1,5 @@
 import { buildDashboardMetadataTitle, routeLabels } from '@/lib/app-copy';
-import { LeavePoliciesView } from '@/features/leave/components/leave-policies-view';
+import { LeavePoliciesView } from '@/features/leave';
 
 export const metadata = {
   title: buildDashboardMetadataTitle(routeLabels.policies),

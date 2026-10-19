@@ -138,4 +138,34 @@ describe("UpdateUserAccessControlUseCase", () => {
 
     expect(accessControlRepo.replaceUserAccessControl).not.toHaveBeenCalled();
   });
+
+  it("AUDIT-001: blocks non-superadmin from assigning a custom role containing sys:all permission", async () => {
+    requestContext.get.mockReturnValue({ userId: "hr-manager", isSuperAdmin: false } as any);
+    accessControlRepo.findRolesByIds.mockResolvedValue([
+      { id: "role-custom", code: "custom_admin", isSystem: false } as any,
+    ]);
+    accessControlRepo.getRolePermissionCodesForRoles = jest.fn().mockResolvedValue(["sys:all"]);
+
+    await expect(
+      useCase.execute("user-1", ["role-custom"], []),
+    ).rejects.toThrow("Only super administrators can assign roles containing system administrator permissions.");
+
+    expect(accessControlRepo.replaceUserAccessControl).not.toHaveBeenCalled();
+  });
+
+  it("AUDIT-001: blocks non-superadmin from granting permissions they do not possess", async () => {
+    requestContext.get.mockReturnValue({
+      userId: "hr-manager",
+      isSuperAdmin: false,
+      permissions: ["users:edit", "employees:view"],
+    } as any);
+
+    await expect(
+      useCase.execute("user-1", [], ["payroll:manage"]),
+    ).rejects.toThrow(
+      "Cannot grant permissions or roles containing permissions that the actor does not possess.",
+    );
+
+    expect(accessControlRepo.replaceUserAccessControl).not.toHaveBeenCalled();
+  });
 });

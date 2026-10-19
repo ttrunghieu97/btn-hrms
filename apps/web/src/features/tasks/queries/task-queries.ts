@@ -317,6 +317,7 @@ export function useUpdateTaskMutation(queryClient: QueryClient) {
     onSettled: async (_d, _e, vars) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
         queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) })
       ]);
     }
@@ -326,8 +327,11 @@ export function useUpdateTaskMutation(queryClient: QueryClient) {
 export function useRemoveTaskMutation(queryClient: QueryClient) {
   return useMutation({
     mutationFn: (id: string) => tasksControllerRemove(id),
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+    onSettled: async (_d, _e, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      ]);
     }
   });
 }
@@ -338,7 +342,9 @@ export function useAcceptTaskMutation(queryClient: QueryClient) {
     onSettled: async (_d, _e, id) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: taskKeys.activities(id) })
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.transitions(id) })
       ]);
     }
   });
@@ -349,10 +355,12 @@ export function useRejectTaskMutation(queryClient: QueryClient) {
     mutationFn: (vars: { id: string; data: RejectTaskDto }) =>
       tasksControllerReject(vars.id, vars.data, idem()),
     onSettled: async (_d, _e, vars) => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.activities(vars.id)
-      });
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.transitions(vars.id) })
+      ]);
     }
   });
 }
@@ -362,10 +370,12 @@ export function useSubmitTaskMutation(queryClient: QueryClient) {
     mutationFn: (vars: { id: string; data: SubmitTaskDto }) =>
       tasksControllerSubmit(vars.id, vars.data, idem()),
     onSettled: async (_d, _e, vars) => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.activities(vars.id)
-      });
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.transitions(vars.id) })
+      ]);
     }
   });
 }
@@ -374,8 +384,12 @@ export function useApproveTaskMutation(queryClient: QueryClient) {
   return useMutation({
     mutationFn: (id: string) => tasksControllerApprove(id, idem()),
     onSettled: async (_d, _e, id) => {
-      await queryClient.invalidateQueries({ queryKey: taskKeys.activities(id) });
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.transitions(id) })
+      ]);
     }
   });
 }
@@ -385,10 +399,12 @@ export function useReturnTaskMutation(queryClient: QueryClient) {
     mutationFn: (vars: { id: string; data: ReturnTaskDto }) =>
       tasksControllerReturnTask(vars.id, vars.data, idem()),
     onSettled: async (_d, _e, vars) => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.activities(vars.id)
-      });
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.transitions(vars.id) })
+      ]);
     }
   });
 }
@@ -400,6 +416,7 @@ export function useTransitionTaskMutation(queryClient: QueryClient) {
     onSettled: async (_d, _e, vars) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
         queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) }),
         queryClient.invalidateQueries({ queryKey: taskKeys.transitions(vars.id) })
       ]);
@@ -412,9 +429,11 @@ export function useAddCommentMutation(queryClient: QueryClient) {
     mutationFn: (vars: { id: string; data: CreateTaskCommentDto }) =>
       tasksControllerCreateComment(vars.id, vars.data),
     onSettled: async (_d, _e, vars) => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.comments(vars.id)
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.comments(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) })
+      ]);
     }
   });
 }
@@ -424,9 +443,11 @@ export function useRemoveCommentMutation(queryClient: QueryClient) {
     mutationFn: (vars: { id: string; commentId: string }) =>
       tasksControllerRemoveComment(vars.id, vars.commentId),
     onSettled: async (_d, _e, vars) => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.comments(vars.id)
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.comments(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.detail(vars.id) }),
+        queryClient.invalidateQueries({ queryKey: taskKeys.activities(vars.id) })
+      ]);
     }
   });
 }

@@ -1,5 +1,21 @@
 export const TAB_FIELDS: Record<string, string[]> = {
-  overview: ['lastName', 'firstName', 'dob', 'gender', 'identityNumber', 'identityDate', 'identityPlace', 'email', 'phoneNumber', 'address'],
+  overview: [
+    'lastName',
+    'firstName',
+    'dob',
+    'gender',
+    'identityNumber',
+    'identityDate',
+    'identityPlace',
+    'email',
+    'phoneNumber',
+    'address',
+    'bankName',
+    'bankAccountNumber',
+    'taxCode',
+    'emergencyContactName',
+    'emergencyContactPhone',
+  ],
   employment: ['username', 'employeeCode', 'departmentId', 'positionId', 'status', 'startDate', 'endDate'],
   documents: ['certifications'],
 };

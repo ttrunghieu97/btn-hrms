@@ -17,6 +17,15 @@ import { customFetch } from '@/lib/fetcher';
 
 import { queryPolicyPresets } from '@/lib/query-client';
 import { perPageParser, pageParser } from '@/lib/pagination';
+import { COMPANY_DOCUMENT_OPTIONS } from '../utils/employee-form-model';
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  COMPANY_DOCUMENT_OPTIONS.map((opt) => [opt.id, opt.label])
+);
+
+function getDocumentTypeLabel(docType: string): string {
+  return DOCUMENT_TYPE_LABELS[docType] ?? docType;
+}
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -80,9 +89,9 @@ const columns: ColumnDef<DocumentRow>[] = [
     meta: { label: 'Phòng ban' },
   },
   {
-    id: 'documentType', accessorFn: (r) => r.documentType,
+    id: 'documentType', accessorFn: (r) => getDocumentTypeLabel(r.documentType),
     header: 'Loại hồ sơ',
-    cell: ({ row }) => <Badge variant='secondary' className='font-normal'>{row.original.documentType}</Badge>,
+    cell: ({ row }) => <Badge variant='secondary' className='font-normal'>{getDocumentTypeLabel(row.original.documentType)}</Badge>,
     meta: { label: 'Loại hồ sơ' },
   },
   {
@@ -214,7 +223,7 @@ export function DocumentsView() {
               </div>
               <div>
                 <h4 className='text-sm font-semibold mb-2'>Loại hồ sơ</h4>
-                <Badge variant='secondary'>{selectedDoc.documentType}</Badge>
+                <Badge variant='secondary'>{getDocumentTypeLabel(selectedDoc.documentType)}</Badge>
               </div>
               <div>
                 <h4 className='text-sm font-semibold mb-2'>Trạng thái</h4>

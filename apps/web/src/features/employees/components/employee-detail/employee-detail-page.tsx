@@ -162,6 +162,8 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   const lastAvatarFileRef = React.useRef<File | null>(null);
   const avatarUploadRequestRef = React.useRef(0);
   const [isAvatarUploading, setIsAvatarUploading] = React.useState(false);
+  const [isStagingForSave, setIsStagingForSave] = React.useState(false);
+  const draftIdRef = React.useRef(getRequestId());
   const fieldUploadRequestRef = React.useRef(new Map<string, number>());
   const [fieldUploadKeys, setFieldUploadKeys] = React.useState<Set<string>>(() => new Set());
 
@@ -176,10 +178,15 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   });
   const employeeCodeCheckRequestRef = React.useRef(0);
   const initialSnapshotRef = React.useRef('');
+  const hydratedEmployeeIdRef = React.useRef<string | null>(currentEmployee?.id ?? null);
 
   /* Reset form when employee changes */
   React.useEffect(() => {
-    if (mode === 'edit') return;
+    const nextEmployeeId = currentEmployee?.id ?? null;
+    const isNewEmployeeHydration =
+      nextEmployeeId !== null && hydratedEmployeeIdRef.current !== nextEmployeeId;
+    if (mode === 'edit' && !isNewEmployeeHydration) return;
+    hydratedEmployeeIdRef.current = nextEmployeeId;
     const fresh = createFormValues(currentEmployee);
     setFormValues(fresh);
     initialSnapshotRef.current = JSON.stringify(fresh);
@@ -331,6 +338,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       const fresh = createFormValues(nextEmployee);
       setFormValues(fresh);
       initialSnapshotRef.current = JSON.stringify(fresh);
+      draftIdRef.current = getRequestId();
       setErrors({});
       setAvatarPreview((current) => {
         if (current) URL.revokeObjectURL(current);
@@ -353,7 +361,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   });
 
   const isMutating = updateMutation.isPending;
-  const isUploading = isAvatarUploading || fieldUploadKeys.size > 0;
+  const isUploading = isAvatarUploading || isStagingForSave || fieldUploadKeys.size > 0;
   const isPending = isMutating;
   const isSavePending = isMutating || isUploading;
 
@@ -380,7 +388,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
         const uploaded = await uploadTempFile({
           file,
           purpose: 'avatar',
-          draftId: getRequestId(),
+          draftId: draftIdRef.current,
         });
         if (avatarUploadRequestRef.current !== requestId) return;
         setFormValues((current) => ({
@@ -403,7 +411,6 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
     const currentAvatar = formValues.avatar;
     if (avatarPreview) URL.revokeObjectURL(avatarPreview);
     setAvatarPreview(null);
-    setErrors({});
     lastAvatarFileRef.current = null;
     if (currentAvatar.status === 'existing' && currentAvatar.attachmentId) {
       setFormValues((current) => ({
@@ -438,7 +445,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
             ),
           }));
         },
-        { fieldUploadRequestRef, setFieldUploadKeys, draftId: getRequestId() },
+        { fieldUploadRequestRef, setFieldUploadKeys, draftId: draftIdRef.current },
       );
     },
     [],
@@ -469,7 +476,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
             ),
           }));
         },
-        { fieldUploadRequestRef, setFieldUploadKeys, draftId: getRequestId() },
+        { fieldUploadRequestRef, setFieldUploadKeys, draftId: draftIdRef.current },
       );
     },
     [],
@@ -507,6 +514,8 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   const handleCancelEdit = () => {
     avatarUploadRequestRef.current += 1;
     setIsAvatarUploading(false);
+    setIsStagingForSave(false);
+    draftIdRef.current = getRequestId();
     fieldUploadRequestRef.current = new Map();
     setFieldUploadKeys(new Set());
     setAvatarPreview((current) => {
@@ -521,6 +530,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   };
 
   const handleSave = async () => {
+    if (isSavePending) return;
     const validation = updateEmployeeFormSchema.safeParse({
       email: formValues.email.trim(),
       firstName: formValues.firstName.trim(),
@@ -538,6 +548,11 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       identityNumber: formValues.identityNumber.trim(),
       identityDate: formValues.identityDate,
       identityPlace: formValues.identityPlace.trim(),
+      bankName: formValues.bankName.trim(),
+      bankAccountNumber: formValues.bankAccountNumber.trim(),
+      taxCode: formValues.taxCode.trim(),
+      emergencyContactName: formValues.emergencyContactName.trim(),
+      emergencyContactPhone: formValues.emergencyContactPhone.trim(),
       certifications: formValues.certifications.map((cert) => ({
         name: cert.name.trim(),
         issuedBy: cert.issuedBy.trim(),
@@ -559,9 +574,10 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       const errorTab = findFirstErrorTab(nextErrors);
       if (errorTab && errorTab !== activeTab) {
         setActiveTab(errorTab);
-        const label = VIEW_TABS.find((t) => t.value === errorTab)?.label ?? errorTab;
-        toast.error(`${validation.error.issues[0]?.message ?? feedbackCopy.warning.reviewForm}
-Kiểm tra tab "${label}"`);
+        const label = EDIT_TABS.find((t) => t.value === errorTab)?.label ?? errorTab;
+        toast.error(
+          `${validation.error.issues[0]?.message ?? feedbackCopy.warning.reviewForm} (${label})`,
+        );
       } else {
         toast.error(validation.error.issues[0]?.message ?? feedbackCopy.warning.reviewForm);
       }
@@ -589,61 +605,116 @@ Kiểm tra tab "${label}"`);
       return;
     }
 
+    const invalidCertification = formValues.certifications.find((c) => {
+      const hasAny =
+        c.name.trim() ||
+        c.issuedBy.trim() ||
+        c.issuedDate ||
+        c.expiredDate ||
+        c.file ||
+        c.tempFileToken;
+      if (!hasAny) return false;
+      return !(c.name.trim() && c.issuedBy.trim() && c.issuedDate);
+    });
+
+    if (invalidCertification) {
+      toast.error(feedbackCopy.warning.certificationIncomplete);
+      return;
+    }
+
     let updatedValues = formValues;
-
-    /* Upload pending files */
-    if (updatedValues.avatar.file && !updatedValues.avatar.tempFileToken) {
-      try {
-        const uploaded = await uploadTempFile({
-          file: updatedValues.avatar.file,
-          purpose: 'avatar',
-          draftId: getRequestId(),
-        });
-        updatedValues = {
-          ...updatedValues,
-          avatar: { ...updatedValues.avatar, tempFileToken: uploaded.tempFileToken, previewUrl: uploaded.url, file: undefined },
-        };
-      } catch {
-        toast.error(employeeUiCopy.uploadAvatarFailed);
-        return;
-      }
-    }
-
-    for (const doc of updatedValues.documents) {
-      if (!doc.file) continue;
-      try {
-        const uploaded = await uploadTempFile({ file: doc.file, purpose: 'document', draftId: getRequestId() });
-        updatedValues = {
-          ...updatedValues,
-          documents: updatedValues.documents.map((d) =>
-            d.id === doc.id ? { ...d, tempFileToken: uploaded.tempFileToken, url: uploaded.url, file: undefined } as DocumentField : d,
-          ),
-        };
-      } catch {
-        toast.error(feedbackCopy.failure.upload(feedbackEntity.evidence));
-        return;
-      }
-    }
-
-    for (const cert of updatedValues.certifications) {
-      if (!cert.file) continue;
-      try {
-        const uploaded = await uploadTempFile({ file: cert.file, purpose: 'certification', draftId: getRequestId() });
-        updatedValues = {
-          ...updatedValues,
-          certifications: updatedValues.certifications.map((c) =>
-            c.id === cert.id ? { ...c, tempFileToken: uploaded.tempFileToken, fileUrl: uploaded.url, file: undefined } as CertificationField : c,
-          ),
-        };
-      } catch {
-        toast.error(feedbackCopy.failure.upload(feedbackEntity.evidence));
-        return;
-      }
-    }
+    setIsStagingForSave(true);
 
     try {
-      await updateMutation.mutateAsync({ id: currentEmployee!.id, data: buildEmployeePayload(updatedValues) });
-    } catch {}
+      /* Upload pending files */
+      if (updatedValues.avatar.file && !updatedValues.avatar.tempFileToken) {
+        try {
+          const uploaded = await uploadTempFile({
+            file: updatedValues.avatar.file,
+            purpose: 'avatar',
+            draftId: draftIdRef.current,
+          });
+          updatedValues = {
+            ...updatedValues,
+            avatar: {
+              ...updatedValues.avatar,
+              tempFileToken: uploaded.tempFileToken,
+              previewUrl: uploaded.url,
+              file: undefined,
+            },
+          };
+          setFormValues(updatedValues);
+        } catch {
+          toast.error(employeeUiCopy.uploadAvatarFailed);
+          return;
+        }
+      }
+
+      for (const doc of updatedValues.documents) {
+        if (!doc.file || doc.tempFileToken) continue;
+        try {
+          const uploaded = await uploadTempFile({
+            file: doc.file,
+            purpose: 'document',
+            draftId: draftIdRef.current,
+          });
+          updatedValues = {
+            ...updatedValues,
+            documents: updatedValues.documents.map((d) =>
+              d.id === doc.id
+                ? ({
+                    ...d,
+                    tempFileToken: uploaded.tempFileToken,
+                    url: uploaded.url,
+                    file: undefined,
+                  } as DocumentField)
+                : d,
+            ),
+          };
+          setFormValues(updatedValues);
+        } catch {
+          toast.error(feedbackCopy.failure.upload(feedbackEntity.evidence));
+          return;
+        }
+      }
+
+      for (const cert of updatedValues.certifications) {
+        if (!cert.file || cert.tempFileToken) continue;
+        try {
+          const uploaded = await uploadTempFile({
+            file: cert.file,
+            purpose: 'certification',
+            draftId: draftIdRef.current,
+          });
+          updatedValues = {
+            ...updatedValues,
+            certifications: updatedValues.certifications.map((c) =>
+              c.id === cert.id
+                ? ({
+                    ...c,
+                    tempFileToken: uploaded.tempFileToken,
+                    fileUrl: uploaded.url,
+                    file: undefined,
+                  } as CertificationField)
+                : c,
+            ),
+          };
+          setFormValues(updatedValues);
+        } catch {
+          toast.error(feedbackCopy.failure.upload(feedbackEntity.evidence));
+          return;
+        }
+      }
+
+      await updateMutation.mutateAsync({
+        id: currentEmployee!.id,
+        data: buildEmployeePayload(updatedValues),
+      });
+    } catch {
+      /* Handled by mutation onError */
+    } finally {
+      setIsStagingForSave(false);
+    }
   };
 
   const tabErrorCounts = React.useMemo(() => getTabErrorCounts(errors), [errors]);
@@ -703,6 +774,11 @@ Kiểm tra tab "${label}"`);
                 email: formValues.email,
                 phoneNumber: formValues.phoneNumber,
                 address: formValues.address,
+                bankName: formValues.bankName,
+                bankAccountNumber: formValues.bankAccountNumber,
+                taxCode: formValues.taxCode,
+                emergencyContactName: formValues.emergencyContactName,
+                emergencyContactPhone: formValues.emergencyContactPhone,
               }}
               errors={errors}
               genderOptions={[...GENDER_OPTIONS]}

@@ -45,3 +45,31 @@ export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefi
 
   return PUBLIC_ROUTES.ACCOUNT_NO_PERMISSIONS;
 }
+
+const INTERNAL_ORIGIN = 'http://internal.local';
+
+/**
+ * Validates and normalizes an internal redirect target to prevent Open Redirect attacks.
+ * Rejects protocol-relative URLs (`//evil.com`), backslash tricks (`/\evil.com`),
+ * external origins, non-slash prefixes, and control characters.
+ */
+export function sanitizeInternalRedirectPath(
+  raw: string | null | undefined,
+  fallback = '/'
+): string {
+  if (!raw || typeof raw !== 'string') return fallback;
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith('/')) return fallback;
+  if (trimmed.startsWith('//') || trimmed.startsWith('/\\')) return fallback;
+  if (/[\u0000-\u001F\u007F\\]/.test(trimmed)) return fallback;
+
+  try {
+    const parsed = new URL(trimmed, INTERNAL_ORIGIN);
+    if (parsed.origin !== INTERNAL_ORIGIN) return fallback;
+    if (parsed.pathname.startsWith('//')) return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+

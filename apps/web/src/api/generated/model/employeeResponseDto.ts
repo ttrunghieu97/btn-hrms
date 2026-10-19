@@ -39,6 +39,8 @@ export interface EmployeeResponseDto {
   /** @nullable */
   lastWorkingDate: string | null;
   /** @nullable */
+  probationEndDate?: string | null;
+  /** @nullable */
   status: string | null;
   /** @nullable */
   contractType: string | null;

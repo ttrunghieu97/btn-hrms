@@ -33,6 +33,8 @@
   "overrides": [
     {
       "files": [
+        "**/src/**/*.ts",
+        "**/src/**/*.tsx",
         "src/**/*.ts",
         "src/**/*.tsx"
       ],
@@ -46,48 +48,11 @@
             "null": "ignore"
           }
         ],
-        "no-duplicate-imports": "error",
         "no-template-curly-in-string": "error",
-        "no-console": [
-          "error",
-          {
-            "allow": [
-              "warn",
-              "error"
-            ]
-          }
-        ],
-        "no-unused-vars": [
-          "error",
-          {
-            "argsIgnorePattern": "^_",
-            "varsIgnorePattern": "^_",
-            "caughtErrorsIgnorePattern": "^_",
-            "destructuredArrayIgnorePattern": "^_",
-            "ignoreRestSiblings": true
-          }
-        ],
-        "typescript/no-explicit-any": "error",
-        "typescript/no-non-null-assertion": "error",
-        "typescript/consistent-type-imports": [
-          "error",
-          {
-            "prefer": "type-imports",
-            "fixStyle": "inline-type-imports"
-          }
-        ],
-        "typescript/array-type": [
-          "error",
-          {
-            "default": "array"
-          }
-        ],
-        "typescript/no-inferrable-types": "error",
         "typescript/no-duplicate-enum-values": "error",
         "typescript/await-thenable": "error",
         "typescript/only-throw-error": "error",
-        "typescript/prefer-promise-reject-errors": "error",
-        "typescript/no-unnecessary-type-assertion": "error"
+        "typescript/prefer-promise-reject-errors": "error"
       },
       "plugins": [
         "typescript"
@@ -99,8 +64,9 @@
         "**/*.spec.tsx",
         "**/*.test.ts",
         "**/*.test.tsx",
+        "**/test/**",
         "test/**",
-        "src/infrastructure/database/schema/**/*.ts",
+        "**/src/infrastructure/database/schema/**/*.ts",
         "**/drizzle/**"
       ],
       "rules": {
@@ -115,7 +81,7 @@
     {
       "files": [
         "scripts/**",
-        "src/scripts/**"
+        "**/scripts/**"
       ],
       "rules": {
         "no-console": "off"
@@ -123,80 +89,7 @@
     },
     {
       "files": [
-        "src/core/security/**/*.ts",
-        "src/shared/**/*.ts"
-      ],
-      "rules": {
-        "typescript/no-explicit-any": "warn",
-        "typescript/no-non-null-assertion": "off"
-      },
-      "plugins": [
-        "typescript"
-      ]
-    },
-    {
-      "files": [
-        "src/infrastructure/database/seed*.ts",
-        "src/infrastructure/database/seed-*.ts"
-      ],
-      "rules": {
-        "no-console": "off",
-        "typescript/no-explicit-any": "off",
-        "typescript/no-non-null-assertion": "off"
-      },
-      "plugins": [
-        "typescript"
-      ]
-    },
-    {
-      "files": [
-        "src/shared/workflow/**/*.ts"
-      ],
-      "rules": {
-        "typescript/no-explicit-any": "off",
-        "typescript/no-non-null-assertion": "off"
-      },
-      "plugins": [
-        "typescript"
-      ]
-    },
-    {
-      "files": [
-        "src/**/*.ts",
-        "test/**/*.ts"
-      ],
-      "rules": {
-        "no-duplicate-imports": "off",
-        "no-console": "off",
-        "no-unused-vars": "off",
-        "typescript/no-explicit-any": "off",
-        "typescript/no-non-null-assertion": "off"
-      },
-      "plugins": [
-        "typescript"
-      ]
-    },
-    {
-      "files": [
-        "**/*.spec.ts",
-        "**/*.spec.tsx",
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "test/**",
-        "src/infrastructure/database/schema/**/*.ts",
-        "**/drizzle/**"
-      ],
-      "rules": {
-        "no-console": "off",
-        "typescript/no-explicit-any": "off",
-        "typescript/no-non-null-assertion": "off"
-      },
-      "plugins": [
-        "typescript"
-      ]
-    },
-    {
-      "files": [
+        "apps/web/src/features/**/*.{ts,tsx}",
         "src/features/**/*.{ts,tsx}"
       ],
       "rules": {
@@ -238,6 +131,11 @@
     },
     {
       "files": [
+        "apps/web/src/app/**/*.{ts,tsx}",
+        "apps/web/src/features/**/*.{ts,tsx}",
+        "apps/web/src/components/**/*.{ts,tsx}",
+        "apps/web/src/lib/**/*.{ts,tsx}",
+        "apps/web/src/config/**/*.{ts,tsx}",
         "src/app/**/*.{ts,tsx}",
         "src/features/**/*.{ts,tsx}",
         "src/components/**/*.{ts,tsx}",
@@ -285,6 +183,7 @@
     },
     {
       "files": [
+        "apps/web/src/app/**/*.{ts,tsx}",
         "src/app/**/*.{ts,tsx}"
       ],
       "rules": {

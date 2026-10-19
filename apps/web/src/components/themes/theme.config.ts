@@ -6,7 +6,15 @@ export const DEFAULT_THEME = 'coral';
 
 export const THEMES = [
   {
-    name: 'shadcn Default',
+    name: 'Elevated Zinc (Mặc định)',
     value: 'coral'
+  },
+  {
+    name: 'Warm Daylight & Slate',
+    value: 'slate'
+  },
+  {
+    name: 'High-Contrast Enterprise',
+    value: 'contrast'
   }
 ];

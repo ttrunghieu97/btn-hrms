@@ -31,25 +31,32 @@ export class RolesRepository {
   async findRoleContextByUserId(
     userId: string,
   ): Promise<{ roleNames: string[]; permissions: string[] }> {
-    const rows = await this.db
-      .select({
-        roleName: schema.roles.name,
-        permissionCode: schema.rolePermissions.permissionCode,
-      })
-      .from(schema.userRoles)
-      .innerJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
-      .leftJoin(
-        schema.rolePermissions,
-        eq(schema.rolePermissions.roleId, schema.userRoles.roleId),
-      )
-      .where(eq(schema.userRoles.userId, userId));
+    const [rows, denialRows] = await Promise.all([
+      this.db
+        .select({
+          roleName: schema.roles.name,
+          permissionCode: schema.rolePermissions.permissionCode,
+        })
+        .from(schema.userRoles)
+        .innerJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
+        .leftJoin(
+          schema.rolePermissions,
+          eq(schema.rolePermissions.roleId, schema.userRoles.roleId),
+        )
+        .where(eq(schema.userRoles.userId, userId)),
+      this.db
+        .select({ permissionCode: schema.accessDenials.permissionCode })
+        .from(schema.accessDenials)
+        .where(eq(schema.accessDenials.userId, userId)),
+    ]);
 
+    const deniedSet = new Set(denialRows.map((d) => d.permissionCode));
     const roleNames = [...new Set(rows.map((row) => row.roleName))];
     const permissions = [
       ...new Set(
         rows
           .map((row) => row.permissionCode)
-          .filter((code): code is string => Boolean(code)),
+          .filter((code): code is string => Boolean(code) && !deniedSet.has(code as string)),
       ),
     ];
 

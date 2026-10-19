@@ -26,7 +26,7 @@ export class RecruitmentDecisionHandler {
   async handleDecision(params: {
     subjectType: RecruitmentApprovalSubject;
     subjectId: string;
-    decision: "approved" | "rejected";
+    decision: "approved" | "rejected" | "cancelled";
     decidedAt: Date;
   }): Promise<void> {
     if (params.subjectType === "requisition") {
@@ -42,7 +42,7 @@ export class RecruitmentDecisionHandler {
 
   private async applyRequisitionDecision(
     requisitionId: string,
-    decision: "approved" | "rejected",
+    decision: "approved" | "rejected" | "cancelled",
   ): Promise<void> {
     const existing = await this.requisitionsRepo.findById(requisitionId);
     if (!existing) {
@@ -55,13 +55,14 @@ export class RecruitmentDecisionHandler {
       );
       return;
     }
-    await this.requisitionsRepo.updateStatus(requisitionId, decision);
-    this.logger.log(`Requisition ${requisitionId} → ${decision}`);
+    const targetStatus = decision === "cancelled" ? "draft" : decision;
+    await this.requisitionsRepo.updateStatus(requisitionId, targetStatus);
+    this.logger.log(`Requisition ${requisitionId} → ${targetStatus} (decision: ${decision})`);
   }
 
   private async applyOfferDecision(
     offerId: string,
-    decision: "approved" | "rejected",
+    decision: "approved" | "rejected" | "cancelled",
     decidedAt: Date,
   ): Promise<void> {
     const existing = await this.offersRepo.findById(offerId);
@@ -75,12 +76,13 @@ export class RecruitmentDecisionHandler {
       );
       return;
     }
+    const targetStatus = decision === "cancelled" ? "draft" : decision;
     await this.offersRepo.updateStatus(
       offerId,
-      decision,
+      targetStatus,
       undefined,
-      decidedAt,
+      decision === "cancelled" ? undefined : decidedAt,
     );
-    this.logger.log(`Offer ${offerId} → ${decision}`);
+    this.logger.log(`Offer ${offerId} → ${targetStatus} (decision: ${decision})`);
   }
 }

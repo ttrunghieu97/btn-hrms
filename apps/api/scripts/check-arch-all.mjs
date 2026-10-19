@@ -75,11 +75,8 @@ const CHECKS = [
   { name: "DB Access",           cmd: "node", args: ["./scripts/check-direct-db-classified.mjs"],   severity: "fail" },
   { name: "Module Cycles",        cmd: "node", args: ["./scripts/check-module-cycles.mjs"],           severity: "fail" },
   { name: "Adapter DIP",          cmd: "node", args: ["./scripts/check-adapter-dip.mjs"],            severity: "fail" },
+  { name: "Compatibility Debt",   cmd: "node", args: ["./scripts/check-compatibility-cleanup.mjs"],  severity: "fail" },
 ];
-
-if (!SKIP_V1) {
-  CHECKS.push({ name: "DB Access (legacy)", cmd: "node", args: ["./scripts/check-direct-db-access.mjs"], severity: "warn" });
-}
 
 // --------------- run checks ---------------
 const results = [];

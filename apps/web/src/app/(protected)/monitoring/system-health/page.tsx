@@ -1,6 +1,5 @@
 import { SystemHealthCard } from '@/features/monitoring';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import { monitoringCopy } from '@/locales/vi';
 import type { Metadata } from 'next';
 

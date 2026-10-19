@@ -81,13 +81,50 @@ export class UpdateUserAccessControlUseCase {
       );
     }
 
-    // 5. System roles check
+    // 5. System roles and role-bound permission escalation check
+    let rolePermissionCodes: string[] = [];
     if (roleIds.length > 0 && !actorIsSuperAdmin) {
       const assignedRoles = await this.accessControlRepo.findRolesByIds(roleIds);
-      const hasSystemRole = assignedRoles.some((r) => r.isSystem || r.code === "super_admin");
+      const hasSystemRole = assignedRoles.some(
+        (r) => r.isSystem || r.code === "super_admin" || r.code === "system_admin",
+      );
       if (hasSystemRole) {
         throwForbidden(
           "Only super administrators can assign system administrator roles.",
+          ERROR_CODES.PERMISSION_DENIED,
+          { reason: ERROR_REASONS.MISSING_PERMISSION },
+        );
+      }
+
+      if (typeof this.accessControlRepo.getRolePermissionCodesForRoles === "function") {
+        rolePermissionCodes = await this.accessControlRepo.getRolePermissionCodesForRoles(roleIds);
+        const roleHasSuperAdminPermission = rolePermissionCodes.some(
+          (code) => code.toLowerCase() === "sys:all" || code.toUpperCase() === "ALL",
+        );
+        if (roleHasSuperAdminPermission) {
+          throwForbidden(
+            "Only super administrators can assign roles containing system administrator permissions.",
+            ERROR_CODES.PERMISSION_DENIED,
+            { reason: ERROR_REASONS.MISSING_PERMISSION },
+          );
+        }
+      }
+    }
+
+    // 6. Privilege-grant ceiling: non-superadmin cannot grant permissions they do not possess
+    if (
+      !actorIsSuperAdmin &&
+      Array.isArray(actor?.permissions) &&
+      !actor.permissions.some(
+        (code) => code.toLowerCase() === "sys:all" || code.toUpperCase() === "ALL",
+      )
+    ) {
+      const actorPermSet = new Set(actor.permissions);
+      const combinedRequested = [...permissionCodes, ...rolePermissionCodes];
+      const unauthorizedPerms = combinedRequested.filter((code) => !actorPermSet.has(code));
+      if (unauthorizedPerms.length > 0) {
+        throwForbidden(
+          "Cannot grant permissions or roles containing permissions that the actor does not possess.",
           ERROR_CODES.PERMISSION_DENIED,
           { reason: ERROR_REASONS.MISSING_PERMISSION },
         );

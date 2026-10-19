@@ -23,7 +23,9 @@ export function MetricCard({ title, value, trend, icon, subtitle, className }: M
             {trend && (
               <p className={cn(
                 'text-xs mt-1 flex items-center gap-1',
-                trend.direction === 'up' ? 'text-green-600' : 'text-red-600',
+                trend.direction === 'up'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-red-600 dark:text-red-400',
               )}>
                 {trend.direction === 'up' ? '↑' : '↓'} {trend.percentage}%
               </p>

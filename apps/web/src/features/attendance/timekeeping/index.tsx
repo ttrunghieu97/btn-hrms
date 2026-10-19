@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { format, parseISO, subDays, addDays } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
@@ -10,12 +10,18 @@ import { toDateString } from '../utils/attendance-utils';
 import { OverviewTab } from './components/overview-tab';
 import { ExceptionsTab } from './components/exceptions-tab';
 import { AdjustmentsTab } from './components/adjustments-tab';
+import { ReconciliationTab } from './components/reconciliation-tab';
 import { AttendancePeriodLifecycleHero } from './components/attendance-period-lifecycle-hero';
-
-const CURRENT = format(new Date(), 'yyyy-MM');
+import { OvertimeRequestsSection } from '../components/overtime-requests-section';
 
 export function TimekeepingView() {
-  const [dateRange, setDateRange] = React.useState({ from: CURRENT + '-01', to: toDateString(new Date()) });
+  const [dateRange, setDateRange] = React.useState(() => {
+    const now = new Date();
+    return {
+      from: toDateString(startOfMonth(now)),
+      to: toDateString(endOfMonth(now)),
+    };
+  });
   const [tab, setTab] = React.useState('timesheet');
 
   const currentPeriod = dateRange.from.slice(0, 7);
@@ -33,11 +39,10 @@ export function TimekeepingView() {
             size='icon'
             aria-label='Kỳ trước'
             onClick={() => {
-              const from = parseISO(dateRange.from);
-              const to = parseISO(dateRange.to);
+              const prevMonth = subMonths(parseISO(dateRange.from), 1);
               setDateRange({
-                from: toDateString(subDays(from, 30)),
-                to: toDateString(subDays(to, 30)),
+                from: toDateString(startOfMonth(prevMonth)),
+                to: toDateString(endOfMonth(prevMonth)),
               });
             }}
           >
@@ -51,11 +56,10 @@ export function TimekeepingView() {
             size='icon'
             aria-label='Kỳ sau'
             onClick={() => {
-              const from = parseISO(dateRange.from);
-              const to = parseISO(dateRange.to);
+              const nextMonth = addMonths(parseISO(dateRange.from), 1);
               setDateRange({
-                from: toDateString(addDays(from, 30)),
-                to: toDateString(addDays(to, 30)),
+                from: toDateString(startOfMonth(nextMonth)),
+                to: toDateString(endOfMonth(nextMonth)),
               });
             }}
           >
@@ -70,10 +74,12 @@ export function TimekeepingView() {
 
       {/* Main Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className='flex-wrap'>
           <TabsTrigger value='timesheet'>{attendanceUiCopy.timekeeping.tabs.timesheet}</TabsTrigger>
           <TabsTrigger value='exceptions'>{attendanceUiCopy.timekeeping.tabs.exceptions}</TabsTrigger>
+          <TabsTrigger value='overtime'>Làm thêm giờ (OT)</TabsTrigger>
           <TabsTrigger value='adjust'>{attendanceUiCopy.timekeeping.tabs.adjust}</TabsTrigger>
+          <TabsTrigger value='reconcile'>Đối soát công - lương</TabsTrigger>
         </TabsList>
 
         <TabsContent value='timesheet' className='mt-4'>
@@ -84,10 +90,19 @@ export function TimekeepingView() {
           <ExceptionsTab dateRange={dateRange} />
         </TabsContent>
 
+        <TabsContent value='overtime' className='mt-4'>
+          <OvertimeRequestsSection />
+        </TabsContent>
+
         <TabsContent value='adjust' className='mt-4'>
           <AdjustmentsTab dateRange={dateRange} />
+        </TabsContent>
+
+        <TabsContent value='reconcile' className='mt-4'>
+          <ReconciliationTab period={currentPeriod} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+

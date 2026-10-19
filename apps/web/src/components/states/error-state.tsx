@@ -41,51 +41,10 @@ const variantFallback: Record<ErrorVariant, { title: string; description: string
   default: { title: 'Có lỗi xảy ra', description: 'Vui lòng thử lại.' },
 };
 
-function httpErrorVariant(error: { status?: number; code?: string; message?: string }): ErrorVariant | null {
-  const status = error.status;
-  if (status === 401) return 'default';
-  if (status === 403) return 'permission';
-  if (status === 404) return 'not-found';
-  if (status === 429) return 'server-error';
-  if (status && status >= 500) return 'server-error';
-  return null;
-}
-
-function isNetworkError(error: { code?: string; message?: string }): boolean {
-  if (error.code === 'ERR_NETWORK' || error.code === 'NETWORK_ERROR') return true;
-  const msg = (error.message ?? '').toLowerCase();
-  return msg.includes('network') || msg.includes('fetch') || msg.includes('abort');
-}
-
 export function ErrorState({ error, onRetry, variant = 'default', subject, capture = true, className }: ErrorStateProps) {
-  // If actual error exists, try to auto-map or delegate to AppErrorState
+  // When an actual error object is provided, always delegate to AppErrorState
+  // so error-taxonomy classification, Sentry reporting, and requestId display run consistently.
   if (error) {
-    const httpVariant = httpErrorVariant(error);
-    if (httpVariant || isNetworkError(error)) {
-      // Show preset fallback for known HTTP/network errors
-      const fb = variantFallback[httpVariant ?? 'offline'];
-      const icon = httpVariant === 'permission' ? <Icons.shield className='text-destructive/60 size-12' />
-        : httpVariant === 'not-found' ? <Icons.search className='text-muted-foreground/40 size-12' />
-        : <Icons.alertCircle className='text-destructive/60 size-12' />;
-
-      return (
-        <div className={cn('text-muted-foreground flex flex-1 flex-col items-center justify-center gap-4 py-16', className)}>
-          {icon}
-          <div className='space-y-1 text-center'>
-            <p className='text-sm font-medium'>{fb.title}</p>
-            <p className='text-xs'>{fb.description}</p>
-          </div>
-          {onRetry && (
-            <Button variant='outline' size='sm' onClick={onRetry}>
-              <Icons.refresh />
-              Thử lại
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    // Fall through to AppErrorState for errors with actual error messages
     return (
       <AppErrorState
         error={error}

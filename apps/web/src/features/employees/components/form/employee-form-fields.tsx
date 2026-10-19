@@ -57,11 +57,16 @@ export function EditableItem({
   const inputId = React.useId();
 
   return (
-    <div className="space-y-1.5 rounded-xl border border-border/50 bg-background/70 p-3">
+    <div
+      className={cn(
+        "space-y-1.5",
+        !editing && "rounded-xl border border-border/50 bg-background/70 p-3",
+      )}
+    >
       <div className="flex items-center justify-between">
         <label
           htmlFor={editing ? inputId : undefined}
-          className="text-muted-foreground text-[11px] font-medium tracking-wide cursor-pointer"
+          className="text-foreground text-xs font-medium tracking-wide cursor-pointer"
         >
           {label}
           {required ? <span className="ml-1 text-destructive">*</span> : null}
@@ -133,11 +138,16 @@ export function EditableTextarea({
   const inputId = React.useId();
 
   return (
-    <div className="space-y-1.5 rounded-xl border border-border/50 bg-background/70 p-3">
+    <div
+      className={cn(
+        "space-y-1.5",
+        !editing && "rounded-xl border border-border/50 bg-background/70 p-3",
+      )}
+    >
       <div className="flex items-center justify-between">
         <label
           htmlFor={editing ? inputId : undefined}
-          className="text-muted-foreground text-[11px] font-medium tracking-wide cursor-pointer"
+          className="text-foreground text-xs font-medium tracking-wide cursor-pointer"
         >
           {label}
           {required ? <span className="ml-1 text-destructive">*</span> : null}
@@ -209,11 +219,16 @@ export function EditableSelect({
   const selectId = React.useId();
 
   return (
-    <div className="space-y-1.5 rounded-xl border border-border/50 bg-background/70 p-3">
+    <div
+      className={cn(
+        "space-y-1.5",
+        !editing && "rounded-xl border border-border/50 bg-background/70 p-3",
+      )}
+    >
       <div className="flex items-center justify-between">
         <label
           htmlFor={editing ? selectId : undefined}
-          className="text-muted-foreground text-[11px] font-medium tracking-wide cursor-pointer"
+          className="text-foreground text-xs font-medium tracking-wide cursor-pointer"
         >
           {label}
           {required ? <span className="ml-1 text-destructive">*</span> : null}

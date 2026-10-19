@@ -4,7 +4,6 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { NotificationCard } from '@/components/ui/notification-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageHeader } from '@/components/layout/page-header';
 import { notificationActionRoutes, notificationUiCopy } from '@/locales/vi/notifications';
 import { getQueryClient } from '@/lib/query-client';
 import { useRouter } from 'next/navigation';
@@ -67,17 +66,17 @@ export default function NotificationsPage() {
 
   return (
     <div className='flex flex-1 flex-col min-h-0 gap-4'>
-      <PageHeader
-        title={notificationUiCopy.pageTitle}
-        description={notificationUiCopy.pageDescription}
-        actions={
-          count > 0 ? (
-            <Button variant='outline' size='sm' onClick={markAllAsRead}>
-              {notificationUiCopy.markAllAsRead}
-            </Button>
-          ) : undefined
-        }
-      />
+      <div className='flex flex-wrap items-center justify-between gap-2'>
+        <div className='space-y-1'>
+          <h2 className='text-lg font-semibold tracking-tight'>{notificationUiCopy.pageTitle}</h2>
+          <p className='text-muted-foreground text-sm'>{notificationUiCopy.pageDescription}</p>
+        </div>
+        {count > 0 && (
+          <Button variant='outline' size='sm' onClick={markAllAsRead}>
+            {notificationUiCopy.markAllAsRead}
+          </Button>
+        )}
+      </div>
       <Tabs defaultValue='all' className='flex flex-1 flex-col min-h-0'>
         <TabsList>
           <TabsTrigger value='all'>{notificationUiCopy.tabs.all(notifications.length)}</TabsTrigger>

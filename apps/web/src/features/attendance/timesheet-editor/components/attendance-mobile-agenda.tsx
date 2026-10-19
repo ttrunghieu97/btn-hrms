@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { format, isToday } from 'date-fns';
+import { isToday } from 'date-fns';
 import type { TimesheetWorkspaceEmployee, TimesheetWorkspaceRecord } from '../types';
 import {
   DAY_FULL,
@@ -19,7 +19,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { AppEmptyState } from '@/components/ui/app-empty-state';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -36,9 +35,6 @@ interface AttendanceMobileAgendaProps {
   canEdit: boolean;
   onSelectEmployee: (emp: TimesheetWorkspaceEmployee) => void;
   onAdjust: (employee: TimesheetWorkspaceEmployee, workDate: string) => void;
-  navigatePeriod?: (delta: number) => void;
-  periodStatus?: string | null;
-  onToggleMatrix?: () => void;
 }
 
 function getInitials(name: string) {
@@ -119,24 +115,10 @@ export function AttendanceMobileAgenda({
   canEdit,
   onSelectEmployee,
   onAdjust,
-  navigatePeriod,
-  periodStatus,
 }: AttendanceMobileAgendaProps) {
-  const [empSearch, setEmpSearch] = React.useState('');
   const [dayFilter, setDayFilter] = React.useState<'all' | 'work' | 'absence' | 'weekend'>('all');
 
   const totalDays = React.useMemo(() => daysInMonth(period), [period]);
-
-  // Filtered employees for the picker
-  const filteredEmployees = React.useMemo(() => {
-    if (!empSearch.trim()) return employees;
-    const q = empSearch.toLowerCase().trim();
-    return employees.filter(
-      (e) =>
-        e.fullName.toLowerCase().includes(q) ||
-        e.employeeCode.toLowerCase().includes(q)
-    );
-  }, [employees, empSearch]);
 
   // Current employee index
   const currentIndex = employees.findIndex((e) => e.id === selectedEmployee.id);
@@ -198,49 +180,36 @@ export function AttendanceMobileAgenda({
     return daysList;
   }, [daysList, dayFilter]);
 
-  const isPeriodOpen = periodStatus === 'open';
-
   return (
     <div className='flex flex-col gap-3.5 w-full'>
       {/* ── Employee Selection & Fast Switch Bar ── */}
-      <div className='flex flex-col gap-2.5 rounded-xl border border-border/70 bg-card p-3 shadow-2xs'>
+      <div className='flex flex-col gap-2.5 rounded-xl border border-border bg-card p-3.5 shadow-xs'>
         <div className='flex items-center justify-between gap-2'>
           <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
             Nhân sự đang xem
           </span>
-          <div className='flex items-center gap-1.5'>
-            <Badge
-              variant='outline'
-              className={cn(
-                'text-[10px] font-mono font-medium',
-                selectedEmployee.verificationStatus === 'done'
-                  ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                  : 'border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10'
-              )}
-            >
-              {selectedEmployee.verificationStatus === 'done' ? 'Đã chốt công' : 'Chưa chốt'}
-            </Badge>
-            <Badge
-              variant='outline'
-              className={cn(
-                'text-[10px] font-mono',
-                isPeriodOpen ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/40' : 'text-muted-foreground bg-muted'
-              )}
-            >
-              Kỳ: {isPeriodOpen ? 'Đang mở' : 'Đã đóng'}
-            </Badge>
-          </div>
+          <Badge
+            variant='outline'
+            className={cn(
+              'text-[10px] font-mono font-medium',
+              selectedEmployee.verificationStatus === 'done'
+                ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                : 'border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10'
+            )}
+          >
+            {selectedEmployee.verificationStatus === 'done' ? 'Đã chốt công' : 'Chưa chốt'}
+          </Badge>
         </div>
 
         {/* Selected Employee Info Card */}
         <div className='flex items-center gap-3'>
-          <Avatar className='size-11 shrink-0'>
-            <AvatarFallback className='text-sm bg-primary/10 text-primary font-semibold'>
+          <Avatar className='size-10 shrink-0 border'>
+            <AvatarFallback className='text-xs bg-primary/10 text-primary font-semibold'>
               {getInitials(selectedEmployee.fullName)}
             </AvatarFallback>
           </Avatar>
           <div className='flex flex-col min-w-0 flex-1'>
-            <span className='font-semibold text-sm sm:text-base text-foreground truncate'>
+            <span className='font-semibold text-sm text-foreground truncate'>
               {selectedEmployee.fullName}
             </span>
             <span className='text-xs text-muted-foreground truncate'>
@@ -259,7 +228,7 @@ export function AttendanceMobileAgenda({
             }}
           >
             <SelectTrigger
-              className='h-11 min-h-[44px] text-xs sm:text-sm bg-background font-medium'
+              className='h-9 text-xs bg-background font-medium'
               aria-label='Chọn nhân viên khác'
             >
               <SelectValue placeholder='Chọn nhân viên…' />
@@ -280,9 +249,9 @@ export function AttendanceMobileAgenda({
             disabled={!prevEmployee}
             onClick={() => prevEmployee && onSelectEmployee(prevEmployee)}
             aria-label='Nhân viên trước đó'
-            className='h-11 w-11 min-h-[44px] min-w-[44px] shrink-0'
+            className='size-9 shrink-0'
           >
-            <Icons.chevronLeft className='size-5' />
+            <Icons.chevronLeft className='size-4' />
           </Button>
 
           <Button
@@ -292,47 +261,9 @@ export function AttendanceMobileAgenda({
             disabled={!nextEmployee}
             onClick={() => nextEmployee && onSelectEmployee(nextEmployee)}
             aria-label='Nhân viên tiếp theo'
-            className='h-11 w-11 min-h-[44px] min-w-[44px] shrink-0'
+            className='size-9 shrink-0'
           >
-            <Icons.chevronRight className='size-5' />
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Period Month Navigation & Day Filter Pills ── */}
-      <div className='flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 shadow-2xs'>
-        <div className='flex items-center justify-between gap-1'>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            aria-label='Tháng trước'
-            disabled={!navigatePeriod}
-            onClick={() => navigatePeriod?.(-1)}
-            className='h-11 w-11 min-h-[44px] min-w-[44px] rounded-lg shrink-0'
-          >
-            <Icons.chevronLeft className='size-5' />
-          </Button>
-
-          <div className='flex flex-col items-center justify-center flex-1 min-w-0 px-2'>
-            <span className='font-bold text-sm sm:text-base font-mono text-foreground'>
-              Tháng {period}
-            </span>
-            <span className='text-[11px] text-muted-foreground'>
-              Tổng số {totalDays} ngày trong kỳ công
-            </span>
-          </div>
-
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            aria-label='Tháng sau'
-            disabled={!navigatePeriod}
-            onClick={() => navigatePeriod?.(1)}
-            className='h-11 w-11 min-h-[44px] min-w-[44px] rounded-lg shrink-0'
-          >
-            <Icons.chevronRight className='size-5' />
+            <Icons.chevronRight className='size-4' />
           </Button>
         </div>
 
@@ -340,14 +271,16 @@ export function AttendanceMobileAgenda({
         <div
           role='tablist'
           aria-label='Lọc ngày trong tháng'
-          className='flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar -mx-1 px-1'
+          className='flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar'
         >
-          {[
-            { id: 'all', label: `Tất cả (${daysList.length})` },
-            { id: 'work', label: 'Có đi làm' },
-            { id: 'absence', label: 'Vắng / Nghỉ' },
-            { id: 'weekend', label: 'Cuối tuần' },
-          ].map((tab) => {
+          {(
+            [
+              { id: 'all', label: `Tất cả (${daysList.length})` },
+              { id: 'work', label: 'Có đi làm' },
+              { id: 'absence', label: 'Vắng / Nghỉ' },
+              { id: 'weekend', label: 'Cuối tuần' },
+            ] as const
+          ).map((tab) => {
             const isSelected = dayFilter === tab.id;
             return (
               <button
@@ -355,9 +288,9 @@ export function AttendanceMobileAgenda({
                 type='button'
                 role='tab'
                 aria-selected={isSelected}
-                onClick={() => setDayFilter(tab.id as any)}
+                onClick={() => setDayFilter(tab.id)}
                 className={cn(
-                  'inline-flex min-h-[44px] items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium shrink-0 transition-colors border',
+                  'inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium shrink-0 transition-colors border',
                   isSelected
                     ? 'bg-primary text-primary-foreground border-primary shadow-2xs font-semibold'
                     : 'bg-background text-muted-foreground border-border/70 hover:bg-muted/50 hover:text-foreground'

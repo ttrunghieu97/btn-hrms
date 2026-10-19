@@ -128,6 +128,28 @@ describe('payroll periods', () => {
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
   });
+
+  describe('toPayrollPeriod mapper', () => {
+    it('preserves attendancePeriodId and derives valid year/month from startsOn or dto', async () => {
+      const { toPayrollPeriod } = await import('../api/payroll-period-mapper');
+
+      const mapped = toPayrollPeriod({
+        id: 'period-1',
+        code: 'P2026-04',
+        name: 'Kỳ lương tháng 4/2026',
+        startsOn: '2026-04-01',
+        endsOn: '2026-04-30',
+        attendancePeriodId: 'att-period-2026-04',
+        status: 'open',
+        createdAt: '2026-04-01T00:00:00Z',
+        updatedAt: '2026-04-01T00:00:00Z',
+      });
+
+      expect(mapped.year).toBe(2026);
+      expect(mapped.month).toBe(4);
+      expect(mapped.attendancePeriodId).toBe('att-period-2026-04');
+    });
+  });
 });
 
 describe('payroll runs', () => {

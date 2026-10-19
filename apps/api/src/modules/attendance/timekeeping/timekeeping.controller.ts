@@ -25,6 +25,7 @@ import {
 import { OverrideAttendanceSummaryDto } from "./dto/override-attendance-summary.dto";
 import { AttendanceCapturePolicyService } from "../attendances/services/attendance-capture-policy.service";
 import { ResolveAttendanceExceptionDto } from "./dto/resolve-attendance-exception.dto";
+import { ExplainAttendanceExceptionDto } from "./dto/explain-attendance-exception.dto";
 import { Idempotent } from "../../../infrastructure/idempotency/idempotency.decorator";
 import { CreateClockEventUseCase } from "./use-cases/create-clock-event.usecase";
 import { CreateManualCorrectionUseCase } from "./use-cases/create-manual-correction.usecase";
@@ -33,6 +34,7 @@ import { ListClockEventsUseCase } from "./use-cases/list-clock-events.usecase";
 import { OverrideAttendanceSummaryUseCase } from "./use-cases/override-attendance-summary.usecase";
 import { QueryAttendanceTimesheetUseCase } from "./use-cases/query-attendance-timesheet.usecase";
 import { ResolveAttendanceExceptionUseCase } from "./use-cases/resolve-attendance-exception.usecase";
+import { ExplainAttendanceExceptionUseCase } from "./use-cases/explain-attendance-exception.usecase";
 import { TimesheetService } from "./services/timesheet.service";
 import { PeriodLockService } from "./services/period-lock.service";
 import { PayrollReconciliationService } from "./services/payroll-reconciliation.service";
@@ -64,6 +66,7 @@ export class TimekeepingController {
     private readonly listClockEvents: ListClockEventsUseCase,
     private readonly listExceptions: ListAttendanceExceptionsUseCase,
     private readonly resolveException: ResolveAttendanceExceptionUseCase,
+    private readonly explainException: ExplainAttendanceExceptionUseCase,
     private readonly overrideSummary: OverrideAttendanceSummaryUseCase,
     private readonly queryTimesheet: QueryAttendanceTimesheetUseCase,
     private readonly attendanceCapturePolicy: AttendanceCapturePolicyService,
@@ -119,7 +122,7 @@ export class TimekeepingController {
   }
 
   @Get("exceptions")
-  @CheckPolicy(AttendancePolicies.timesheetView)
+  @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "List attendance exceptions" })
   @ApiOkResponse({ description: "List of exceptions" })
   async listAttendanceExceptions(
@@ -127,6 +130,22 @@ export class TimekeepingController {
     @Query() query: AttendanceExceptionQueryDto,
   ) {
     return this.listExceptions.execute(query, req?.user);
+  }
+
+  @Patch("exceptions/:id/explain")
+  @CheckPolicy(AttendancePolicies.view)
+  @AuditLog({
+    action: "attendance_exception_explain",
+    entity: "attendance_exception",
+  })
+  @ApiOperation({ summary: "Submit employee explanation for an attendance exception" })
+  @ApiOkResponse({ description: "Explanation submitted" })
+  async explainAttendanceException(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Request() req: ExpressRequest & { user: AuthUser },
+    @Body() body: ExplainAttendanceExceptionDto,
+  ) {
+    return this.explainException.execute(id, req.user, body);
   }
 
   @Patch("exceptions/:id/resolve")

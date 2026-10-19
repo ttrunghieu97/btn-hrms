@@ -1,31 +1,16 @@
 import path from 'node:path';
-import fs from 'node:fs';
 import os from 'node:os';
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
-import * as dotenv from 'dotenv';
-
-// Fallback to .env.example if .env is missing
-const envPath = path.resolve(__dirname, '.env');
-const examplePath = path.resolve(__dirname, '.env.example');
-if (!fs.existsSync(envPath) && fs.existsSync(examplePath)) {
-  dotenv.config({ path: examplePath });
-}
-
-
-
 
 const baseConfig: NextConfig = {
   output: process.env.BUILD_STANDALONE === "true" ? "standalone" : undefined,
   // Required for standalone mode in a pnpm monorepo: traces dependencies from workspace root
   outputFileTracingRoot: path.resolve(__dirname, '../../'),
   allowedDevOrigins: [
-    '10.8.1.84',
-    '10.10.3.100',
-    '10.10.3.231',
-    'server2',
-    'server2:8080',
-    'server2:3000',
+    'localhost',
+    '127.0.0.1',
+    'hrms.hieutt.id.vn',
     ...(process.env.ALLOWED_DEV_ORIGINS
       ? process.env.ALLOWED_DEV_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
       : []),
@@ -82,14 +67,14 @@ const baseConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "api.slingacademy.com",
-        port: "",
+        protocol: "http",
+        hostname: "localhost",
+        port: "9002",
       },
       {
         protocol: "http",
-        hostname: "localhost",
-        port: "9000",
+        hostname: "127.0.0.1",
+        port: "9002",
       },
     ],
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { envClient } from '@/lib/env.client';
 import { tokenStore } from '@/lib/token-store';
@@ -11,6 +11,7 @@ const SOCKET_URL = envClient.apiBaseUrl;
 type ChatSocketCallbacks = {
   onNewMessage: (message: Message) => void;
   onTyping: (data: {
+    conversationId?: string;
     userId: string;
     username: string;
     isTyping: boolean;
@@ -24,8 +25,13 @@ export function useChatSocket(callbacks: ChatSocketCallbacks) {
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
 
+  const token = useSyncExternalStore(
+    tokenStore.subscribe,
+    () => tokenStore.get(),
+    () => null
+  );
+
   useEffect(() => {
-    const token = tokenStore.get();
     if (!token) return;
 
     const socket = io(`${SOCKET_URL}/chat`, {
@@ -46,15 +52,19 @@ export function useChatSocket(callbacks: ChatSocketCallbacks) {
     );
     socket.on(
       'typing',
-      (data: { userId: string; username: string; isTyping: boolean }) =>
-        callbacksRef.current.onTyping(data)
+      (data: {
+        conversationId?: string;
+        userId: string;
+        username: string;
+        isTyping: boolean;
+      }) => callbacksRef.current.onTyping(data)
     );
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, []);
+  }, [token]);
 
   const sendMessage = useCallback(
     (

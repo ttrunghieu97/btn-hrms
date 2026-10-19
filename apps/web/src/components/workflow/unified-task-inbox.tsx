@@ -12,7 +12,7 @@ import { extractList } from '@/lib/api-extract';
 import { WorkflowStateBadge } from './workflow-state-badge';
 
 // Unified Backend Workflow Task Query
-import { useMyWorkflowTasks } from '@/features/workflow/queries/workflow-tasks';
+import { useMyWorkflowTasks } from '@/features/workflow';
 
 // API queries & mutations across domains
 import { useApprovalInboxControllerList } from '@/api/generated/approval-inbox/approval-inbox';
@@ -121,7 +121,7 @@ export function UnifiedTaskInbox() {
         id: `leave-${l.leaveRequestId || l.approvalRequestId}`,
         domain: 'leave',
         domainLabel: 'Nghỉ phép',
-        domainIcon: <Icons.calendar className='size-3.5 text-blue-600' />,
+        domainIcon: <Icons.calendar className='size-3.5 text-blue-600 dark:text-blue-400' />,
         workflowId: 'leave-request',
         title: `${l.requester?.fullName || 'Nhân viên'} xin ${l.leaveType?.name || 'nghỉ phép'}`,
         subtitle: `${l.totalUnits ?? 1} ngày • ${l.reason || 'Không có lý do'}`,
@@ -138,12 +138,12 @@ export function UnifiedTaskInbox() {
         canDirectReject: true,
         onApprove: () =>
           approveLeaveMut.mutate({
-            id: l.leaveRequestId,
+            id: l.approvalRequestId || l.leaveRequestId,
             data: { comment: 'Duyệt từ Task Inbox' },
           }),
         onReject: () =>
           rejectLeaveMut.mutate({
-            id: l.leaveRequestId,
+            id: l.approvalRequestId || l.leaveRequestId,
             data: { comment: 'Từ chối từ Task Inbox' },
           }),
         isActionPending: approveLeaveMut.isPending || rejectLeaveMut.isPending,
@@ -156,7 +156,7 @@ export function UnifiedTaskInbox() {
         id: `expense-${c.id}`,
         domain: 'expense',
         domainLabel: 'Chi phí',
-        domainIcon: <Icons.billing className='size-3.5 text-amber-600' />,
+        domainIcon: <Icons.billing className='size-3.5 text-amber-600 dark:text-amber-400' />,
         workflowId: 'expense-claim',
         title: `Đề nghị thanh toán #${c.id.slice(0, 8)}`,
         subtitle: `${c.amount ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(c.amount) : '0 ₫'} • ${c.description || 'Chi tiêu công tác'}`,
@@ -183,7 +183,7 @@ export function UnifiedTaskInbox() {
         id: `asset-${a.id}`,
         domain: 'asset',
         domainLabel: 'Thiết bị',
-        domainIcon: <Icons.laptop className='size-3.5 text-indigo-600' />,
+        domainIcon: <Icons.laptop className='size-3.5 text-indigo-600 dark:text-indigo-400' />,
         workflowId: 'asset-request',
         title: `Yêu cầu cấp phát thiết bị #${a.id.slice(0, 8)}`,
         subtitle: a.reason || 'Trang thiết bị làm việc',
@@ -204,7 +204,7 @@ export function UnifiedTaskInbox() {
         id: `schedule-${s.id}`,
         domain: 'schedule',
         domainLabel: 'Đổi ca',
-        domainIcon: <Icons.activity className='size-3.5 text-emerald-600' />,
+        domainIcon: <Icons.activity className='size-3.5 text-emerald-600 dark:text-emerald-400' />,
         workflowId: 'schedule-request',
         title: `${s.employeeName} đề xuất đổi/nghỉ ca`,
         subtitle: `Ngày: ${formatDateVN(s.date)} • ${s.reason || 'Lý do cá nhân'}`,
@@ -231,7 +231,7 @@ export function UnifiedTaskInbox() {
         id: `payroll-${p.id}`,
         domain: 'payroll',
         domainLabel: 'Bảng lương',
-        domainIcon: <Icons.creditCard className='size-3.5 text-rose-600' />,
+        domainIcon: <Icons.creditCard className='size-3.5 text-rose-600 dark:text-rose-400' />,
         workflowId: 'payroll-run',
         title: `Kỳ tính lương #${p.id.slice(0, 8)}`,
         subtitle: `Trạng thái: ${p.status} • Cần thẩm định tổng quỹ lương`,
@@ -252,7 +252,7 @@ export function UnifiedTaskInbox() {
         id: `attendance-${e.id}`,
         domain: 'attendance',
         domainLabel: 'Chấm công',
-        domainIcon: <Icons.clock className='size-3.5 text-amber-600' />,
+        domainIcon: <Icons.clock className='size-3.5 text-amber-600 dark:text-amber-400' />,
         workflowId: 'attendance-period',
         title: `Ngoại lệ chấm công: ${e.employeeName || 'Nhân viên'}`,
         subtitle: `${e.type || 'Bất thường'} • Ngày: ${formatDateVN(e.date || e.workDate)}`,
@@ -272,7 +272,7 @@ export function UnifiedTaskInbox() {
         id: `offboarding-${o.id}`,
         domain: 'offboarding',
         domainLabel: 'Thôi việc',
-        domainIcon: <Icons.userOff className='size-3.5 text-rose-600' />,
+        domainIcon: <Icons.userOff className='size-3.5 text-rose-600 dark:text-rose-400' />,
         workflowId: 'offboarding-clearance',
         title: `Bàn giao thôi việc: #${o.id.slice(0, 8)}`,
         subtitle: `Bắt đầu: ${o.startDate ? formatDateVN(o.startDate) : 'N/A'} • Chờ hoàn tất clearance & bàn giao`,
@@ -309,13 +309,13 @@ export function UnifiedTaskInbox() {
     if (!serverTasksData?.tasks) return null;
 
     const domainIcons: Record<string, React.ReactNode> = {
-      leave: <Icons.calendar className='size-3.5 text-blue-600' />,
-      expense: <Icons.billing className='size-3.5 text-amber-600' />,
-      asset: <Icons.laptop className='size-3.5 text-indigo-600' />,
-      schedule: <Icons.activity className='size-3.5 text-emerald-600' />,
-      payroll: <Icons.creditCard className='size-3.5 text-rose-600' />,
-      attendance: <Icons.clock className='size-3.5 text-amber-600' />,
-      offboarding: <Icons.userOff className='size-3.5 text-rose-600' />,
+      leave: <Icons.calendar className='size-3.5 text-blue-600 dark:text-blue-400' />,
+      expense: <Icons.billing className='size-3.5 text-amber-600 dark:text-amber-400' />,
+      asset: <Icons.laptop className='size-3.5 text-indigo-600 dark:text-indigo-400' />,
+      schedule: <Icons.activity className='size-3.5 text-emerald-600 dark:text-emerald-400' />,
+      payroll: <Icons.creditCard className='size-3.5 text-rose-600 dark:text-rose-400' />,
+      attendance: <Icons.clock className='size-3.5 text-amber-600 dark:text-amber-400' />,
+      offboarding: <Icons.userOff className='size-3.5 text-rose-600 dark:text-rose-400' />,
     };
 
     return serverTasksData.tasks.map((t) => {
@@ -510,7 +510,7 @@ export function UnifiedTaskInbox() {
           </div>
         ) : filteredTasks.length === 0 ? (
           <div className='flex flex-col items-center justify-center rounded-xl border border-dashed py-10 text-center text-muted-foreground'>
-            <div className='flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 mb-2'>
+            <div className='flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-2'>
               <Icons.check className='size-6' />
             </div>
             <p className='text-sm font-semibold text-foreground'>

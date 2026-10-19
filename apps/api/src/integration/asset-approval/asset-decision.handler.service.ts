@@ -23,7 +23,7 @@ export class AssetDecisionHandler {
   async handleDecision(params: {
     subjectType: AssetApprovalSubject;
     subjectId: string;
-    decision: "approved" | "rejected";
+    decision: "approved" | "rejected" | "cancelled";
     decidedAt: Date;
   }): Promise<void> {
     await this.applyRequestDecision(params.subjectId, params.decision);
@@ -31,7 +31,7 @@ export class AssetDecisionHandler {
 
   private async applyRequestDecision(
     requestId: string,
-    decision: "approved" | "rejected",
+    decision: "approved" | "rejected" | "cancelled",
   ): Promise<void> {
     const existing = await this.requestRepo.findById(requestId);
     if (!existing) {

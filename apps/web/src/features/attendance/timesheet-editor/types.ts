@@ -1,5 +1,3 @@
-const WS_URL = '/api/v1/timekeeping/timesheet-workspace';
-
 export interface TimesheetWorkspaceEmployee {
   id: string;
   employeeCode: string;

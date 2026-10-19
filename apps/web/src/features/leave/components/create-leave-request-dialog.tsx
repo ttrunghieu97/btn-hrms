@@ -35,24 +35,67 @@ interface CreateLeaveRequestDialogProps {
 
 export function CreateLeaveRequestDialog({ employeeId, children }: CreateLeaveRequestDialogProps) {
   const [open, setOpen] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [form, setForm] = useState({
     employeeId: employeeId ?? '',
     leaveTypeId: '',
     startDate: '',
     endDate: '',
-    startSession: 'full_day' as const,
-    endSession: 'full_day' as const,
+    startSession: 'full_day' as 'full_day' | 'morning' | 'afternoon',
+    endSession: 'full_day' as 'full_day' | 'morning' | 'afternoon',
     totalUnits: '',
     reason: '',
   });
+
+  useEffect(() => {
+    if (employeeId) {
+      setForm((prev) => (prev.employeeId === employeeId ? prev : { ...prev, employeeId }));
+    }
+  }, [employeeId]);
+
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) return;
+    const start = new Date(`${form.startDate}T00:00:00`);
+    const end = new Date(`${form.endDate}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return;
+    const diffDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    let units = diffDays;
+    if (diffDays === 1) {
+      units = form.startSession === 'full_day' ? 1 : 0.5;
+    } else {
+      if (form.startSession !== 'full_day') units -= 0.5;
+      if (form.endSession !== 'full_day') units -= 0.5;
+    }
+    const nextUnits = String(Math.max(0.5, units));
+    setForm((prev) => (prev.totalUnits === nextUnits ? prev : { ...prev, totalUnits: nextUnits }));
+  }, [form.startDate, form.endDate, form.startSession, form.endSession]);
 
   const { data: typesData } = useQuery(leaveTypesQueryOptions());
   const createLeave = useCreateLeaveRequest();
 
   async function handleCreate() {
-    if (!form.leaveTypeId || !form.startDate || !form.endDate || !form.totalUnits) return;
+    setValidationError(null);
+    const resolvedEmployeeId = form.employeeId || employeeId || '';
+    if (!resolvedEmployeeId) {
+      setValidationError('Không xác định được hồ sơ nhân viên.');
+      return;
+    }
+    if (!form.leaveTypeId || !form.startDate || !form.endDate || !form.totalUnits) {
+      setValidationError('Vui lòng nhập đầy đủ loại nghỉ, ngày bắt đầu, ngày kết thúc và số ngày.');
+      return;
+    }
+    if (form.endDate < form.startDate) {
+      setValidationError('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
+      return;
+    }
+    const parsedUnits = Number(form.totalUnits);
+    if (!Number.isFinite(parsedUnits) || parsedUnits <= 0) {
+      setValidationError('Số ngày nghỉ phải lớn hơn 0.');
+      return;
+    }
+
     const dto: CreateLeaveRequestDto = {
-      employeeId: form.employeeId,
+      employeeId: resolvedEmployeeId,
       leaveTypeId: form.leaveTypeId,
       startDate: form.startDate,
       endDate: form.endDate,
@@ -61,18 +104,22 @@ export function CreateLeaveRequestDialog({ employeeId, children }: CreateLeaveRe
       totalUnits: form.totalUnits,
       reason: form.reason || undefined,
     };
-    await createLeave.mutateAsync({ data: dto });
-    setOpen(false);
-    setForm({
-      employeeId: employeeId ?? '',
-      leaveTypeId: '',
-      startDate: '',
-      endDate: '',
-      startSession: 'full_day',
-      endSession: 'full_day',
-      totalUnits: '',
-      reason: '',
-    });
+    try {
+      await createLeave.mutateAsync({ data: dto });
+      setOpen(false);
+      setForm({
+        employeeId: employeeId ?? '',
+        leaveTypeId: '',
+        startDate: '',
+        endDate: '',
+        startSession: 'full_day',
+        endSession: 'full_day',
+        totalUnits: '',
+        reason: '',
+      });
+    } catch {
+      // Handled by useCreateLeaveRequest onError notification
+    }
   }
 
   const types = extractList<{ id: string; name: string }>(typesData);
@@ -85,9 +132,14 @@ export function CreateLeaveRequestDialog({ employeeId, children }: CreateLeaveRe
       <DialogContent className='sm:max-w-[500px]'>
         <DialogHeader>
           <DialogTitle>{leaveUiCopy.createRequest}</DialogTitle>
-          <DialogDescription>{/* description */}</DialogDescription>
+          <DialogDescription>Điền thông tin đơn xin nghỉ phép để gửi phê duyệt.</DialogDescription>
         </DialogHeader>
         <div className='grid gap-4 py-4'>
+          {validationError && (
+            <div role='alert' className='rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive'>
+              {validationError}
+            </div>
+          )}
           <div className='grid grid-cols-2 gap-4'>
             <div className='grid gap-2'>
               <Label htmlFor='leave-start-date'>{"Ngày bắt đầu"}</Label>
@@ -104,6 +156,7 @@ export function CreateLeaveRequestDialog({ employeeId, children }: CreateLeaveRe
               <Input
                 id='leave-end-date'
                 type='date'
+                min={form.startDate || undefined}
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                 required

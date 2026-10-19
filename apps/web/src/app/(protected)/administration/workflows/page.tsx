@@ -1,4 +1,4 @@
-import { WorkflowAdminView } from '@/features/workflow-engine/components/workflow-admin-view';
+import { WorkflowAdminView } from '@/features/workflow';
 import { buildDashboardMetadataTitle } from '@/lib/app-copy';
 import { requireServerSession } from '@/lib/server/auth-session';
 

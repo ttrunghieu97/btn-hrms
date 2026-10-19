@@ -35,6 +35,11 @@ export interface EditFormValues {
   identityNumber: string;
   identityDate: string;
   identityPlace: string;
+  bankName: string;
+  bankAccountNumber: string;
+  taxCode: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
   documents: DocumentField[];
   certifications: CertificationField[];
 }
@@ -158,12 +163,23 @@ export function createFormValues(employee: EmployeeResponseDto | null): EditForm
     identityNumber: employee?.identityNumber ?? '',
     identityDate: toDateInputValue(employee?.identityDate),
     identityPlace: employee?.identityPlace?.trim() || '',
+    bankName: employee?.bankName ?? '',
+    bankAccountNumber: employee?.bankAccountNumber ?? '',
+    taxCode: employee?.taxCode ?? '',
+    emergencyContactName: employee?.emergencyContactName ?? '',
+    emergencyContactPhone: employee?.emergencyContactPhone ?? '',
     documents: createDocumentFields(employee),
     certifications: createCertificationFields(employee),
   };
 }
 
 export function buildEmployeePayload(formValues: EditFormValues): any {
+  const cleanSensitive = (val?: string) => {
+    const trimmed = val?.trim() ?? '';
+    if (!trimmed || trimmed.startsWith('••••••••')) return undefined;
+    return trimmed;
+  };
+
   return {
     username: formValues.username || undefined,
     firstName: formValues.firstName || undefined,
@@ -179,9 +195,14 @@ export function buildEmployeePayload(formValues: EditFormValues): any {
     startDate: formValues.startDate || undefined,
     endDate: formValues.endDate || undefined,
     status: formValues.status || undefined,
-    identityNumber: formValues.identityNumber || undefined,
+    identityNumber: cleanSensitive(formValues.identityNumber),
     identityDate: formValues.identityDate || undefined,
     identityPlace: formValues.identityPlace || undefined,
+    bankName: formValues.bankName?.trim() || undefined,
+    bankAccountNumber: cleanSensitive(formValues.bankAccountNumber),
+    taxCode: cleanSensitive(formValues.taxCode),
+    emergencyContactName: formValues.emergencyContactName?.trim() || undefined,
+    emergencyContactPhone: formValues.emergencyContactPhone?.trim() || undefined,
     avatar: formValues.avatar.tempFileToken
       ? { mode: 'replace' as const, tempFileToken: formValues.avatar.tempFileToken }
       : formValues.avatar.status === 'existing'

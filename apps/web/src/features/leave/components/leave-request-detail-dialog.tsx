@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 
 export interface LeaveRequestDetailItem {
   id: string;
+  approvalRequestId?: string;
   employeeId?: string;
   employeeName?: string;
   leaveTypeId?: string;
@@ -69,7 +70,7 @@ export function LeaveRequestDetailDialog({
   const handleApprove = () => {
     approveMutation.mutate(
       {
-        id: item.id,
+        id: item.approvalRequestId || item.id,
         data: { comment: decisionComment || 'Đã phê duyệt' },
       },
       {
@@ -88,7 +89,7 @@ export function LeaveRequestDetailDialog({
     }
     rejectMutation.mutate(
       {
-        id: item.id,
+        id: item.approvalRequestId || item.id,
         data: { comment: decisionComment || 'Không duyệt theo quy định' },
       },
       {

@@ -35,7 +35,9 @@ import type {
   EmployeeListEnvelopeDto,
   EmployeesControllerFindAllParams,
   EmployeesControllerFindOneParams,
-  UpdateEmployeeDto
+  SubmitResignationDto,
+  UpdateEmployeeDto,
+  UpdateMyProfileDto
 } from '../model';
 
 import { customFetch } from '../../../lib/fetcher';
@@ -544,7 +546,205 @@ export function useEmployeesControllerGetMyProfile<TData = Awaited<ReturnType<ty
 
 
 
-export type employeesControllerFindOneResponse200 = {
+export type employeesControllerUpdateMyProfileResponse200 = {
+  data: EmployeeEnvelopeDto
+  status: 200
+}
+
+export type employeesControllerUpdateMyProfileResponseSuccess = (employeesControllerUpdateMyProfileResponse200) & {
+  headers: Headers;
+};
+;
+
+export type employeesControllerUpdateMyProfileResponse = (employeesControllerUpdateMyProfileResponseSuccess)
+
+export const getEmployeesControllerUpdateMyProfileUrl = () => {
+
+
+
+
+  return `/api/v1/employees/me`
+}
+
+/**
+ * @summary Update current employee contact, bank, tax, and emergency info
+ */
+export const employeesControllerUpdateMyProfile = async (updateMyProfileDto: UpdateMyProfileDto, options?: Parameters<typeof customFetch>[1]): Promise<employeesControllerUpdateMyProfileResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeesControllerUpdateMyProfileResponse>(getEmployeesControllerUpdateMyProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateMyProfileDto)
+  }
+);}
+
+
+
+
+
+export const getEmployeesControllerUpdateMyProfileMutationKey = () => ['employeesControllerUpdateMyProfile'] as const;
+
+export const getEmployeesControllerUpdateMyProfileMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>, TError,EmployeesControllerUpdateMyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>, TError,EmployeesControllerUpdateMyProfileMutationVariables, TContext> => {
+
+const mutationKey = getEmployeesControllerUpdateMyProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>, EmployeesControllerUpdateMyProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  employeesControllerUpdateMyProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeesControllerUpdateMyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>>
+    export type EmployeesControllerUpdateMyProfileMutationBody = UpdateMyProfileDto
+    export type EmployeesControllerUpdateMyProfileMutationError = unknown
+    export type EmployeesControllerUpdateMyProfileMutationVariables = {data: UpdateMyProfileDto}
+
+    /**
+ * @summary Update current employee contact, bank, tax, and emergency info
+ */
+export const useEmployeesControllerUpdateMyProfile = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>, TError,EmployeesControllerUpdateMyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeesControllerUpdateMyProfile>>,
+        TError,
+        EmployeesControllerUpdateMyProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEmployeesControllerUpdateMyProfileMutationOptions(options), queryClient);
+    }
+    export type employeesControllerSubmitResignationResponse201 = {
+  data: void
+  status: 201
+}
+
+export type employeesControllerSubmitResignationResponseSuccess = (employeesControllerSubmitResignationResponse201) & {
+  headers: Headers;
+};
+;
+
+export type employeesControllerSubmitResignationResponse = (employeesControllerSubmitResignationResponseSuccess)
+
+export const getEmployeesControllerSubmitResignationUrl = () => {
+
+
+
+
+  return `/api/v1/employees/me/resignation`
+}
+
+/**
+ * @summary Submit self-service resignation request
+ */
+export const employeesControllerSubmitResignation = async (submitResignationDto: SubmitResignationDto, options?: Parameters<typeof customFetch>[1]): Promise<employeesControllerSubmitResignationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeesControllerSubmitResignationResponse>(getEmployeesControllerSubmitResignationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(submitResignationDto)
+  }
+);}
+
+
+
+
+
+export const getEmployeesControllerSubmitResignationMutationKey = () => ['employeesControllerSubmitResignation'] as const;
+
+export const getEmployeesControllerSubmitResignationMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeesControllerSubmitResignation>>, TError,EmployeesControllerSubmitResignationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeesControllerSubmitResignation>>, TError,EmployeesControllerSubmitResignationMutationVariables, TContext> => {
+
+const mutationKey = getEmployeesControllerSubmitResignationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeesControllerSubmitResignation>>, EmployeesControllerSubmitResignationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  employeesControllerSubmitResignation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeesControllerSubmitResignationMutationResult = NonNullable<Awaited<ReturnType<typeof employeesControllerSubmitResignation>>>
+    export type EmployeesControllerSubmitResignationMutationBody = SubmitResignationDto
+    export type EmployeesControllerSubmitResignationMutationError = unknown
+    export type EmployeesControllerSubmitResignationMutationVariables = {data: SubmitResignationDto}
+
+    /**
+ * @summary Submit self-service resignation request
+ */
+export const useEmployeesControllerSubmitResignation = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeesControllerSubmitResignation>>, TError,EmployeesControllerSubmitResignationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeesControllerSubmitResignation>>,
+        TError,
+        EmployeesControllerSubmitResignationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEmployeesControllerSubmitResignationMutationOptions(options), queryClient);
+    }
+    export type employeesControllerFindOneResponse200 = {
   data: EmployeeEnvelopeDto
   status: 200
 }

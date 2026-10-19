@@ -3,13 +3,11 @@ import {
   MiddlewareConsumer,
   NestModule,
   RequestMethod,
-  Logger,
 } from "@nestjs/common";
 import { ScheduleModule } from "@nestjs/schedule";
 import { CacheModule } from "@nestjs/cache-manager";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
-import { redisStore } from "cache-manager-ioredis-yet";
 import { AppController } from "./app.controller";
 import { GetReadinessUseCase } from "./use-cases/get-readiness.usecase";
 import { GetStrictReadinessUseCase } from "./use-cases/get-strict-readiness.usecase";
@@ -19,7 +17,7 @@ import { SecurityModule } from "../infrastructure/security/security.module";
 import { JwtAuthGuard } from "../core/security/guards/jwt-auth.guard";
 import { AuthorizationGuard } from "../core/security/guards/authorization.guard";
 import { UserOrIpThrottlerGuard } from "../core/security/guards/user-or-ip-throttler.guard";
-import rateLimitConfig from "../config/rate-limit.config";
+import rateLimitConfig from "../shared/config/rate-limit.config";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { AuditLogInterceptor } from "../shared/interceptors/audit-log.interceptor";
 import { RequestLoggingInterceptor } from "../shared/interceptors/request-logging.interceptor";
@@ -36,9 +34,7 @@ import { MetricsInterceptor } from "../shared/metrics/metrics.interceptor";
 import { StorageModule as InfrastructureStorageModule } from "../infrastructure/storage/storage.module";
 import { StorageDomainModule } from "../modules/storage/storage.module";
 import { RedisModule } from "../infrastructure/redis/redis.module";
-import { QueueModule } from "../infrastructure/queue/queue.module";
 import { ContractsModule } from "../contracts";
-import { KafkaModule } from "../modules/tasks/events/kafka/kafka.module";
 
 import { IdentityDomainModule } from "../modules/identity/identity.module";
 import { WorkforceDomainModule } from "../modules/workforce/workforce.module";
@@ -83,17 +79,14 @@ import * as fs from "node:fs";
       validate: validateEnv,
       envFilePath: [
         ".env",
-        ".env.example",
         "../../.env",
-        "../../.env.example",
       ].filter((f) => fs.existsSync(f)),
       load: [rateLimitConfig],
     }),
-    KafkaModule.forRootAsync(),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ([{
+      useFactory: () => ([{
         name: "default",
         ttl: 60_000,
         limit: 300,
@@ -102,38 +95,10 @@ import * as fs from "node:fs";
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => {
-        const ttl = Number(config.get("PERMISSIONS_CACHE_TTL") || 300);
-        const max = Number(config.get("PERMISSIONS_CACHE_MAX") || 1000);
-        const redisUrl = String(config.get("REDIS_URL") || "").trim();
-
-        if (redisUrl) {
-          try {
-            const store = await redisStore({
-              url: redisUrl,
-              lazyConnect: true,
-              enableReadyCheck: false,
-              connectTimeout: 3_000,
-              maxRetriesPerRequest: 1,
-              enableOfflineQueue: false,
-              retryStrategy: (times: number) =>
-                times > 3 ? null : Math.min(times * 200, 1_000),
-            });
-            // lazyConnect: ioredis connects on first .get()/.set() call.
-            // No blocking, no retry storm at boot.
-            return { store, ttl };
-          } catch (err) {
-            const logger = new Logger("CacheModule");
-            logger.warn(
-              `Redis cache unavailable, falling back to in-memory: ${
-                err instanceof Error ? err.message : String(err)
-              }`,
-            );
-          }
-        }
-
-        return { ttl, max };
-      },
+      useFactory: (config: ConfigService) => ({
+        ttl: Number(config.get("PERMISSIONS_CACHE_TTL") || 300),
+        max: Number(config.get("PERMISSIONS_CACHE_MAX") || 1000),
+      }),
     }),
     DatabaseModule,
     IdempotencyModule,
@@ -145,7 +110,6 @@ import * as fs from "node:fs";
     ContractsModule,
     EventsModule,
     RedisModule,
-    QueueModule,
     IdentityDomainModule,
     OrganizationDomainModule,
     LeaveDomainModule,

@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { timekeepingControllerGetTimesheetWorkspace } from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
+import { unwrapData } from '@/lib/api-extract';
 import {
   type TimesheetWorkspaceEmployee,
   type TimesheetWorkspaceRecord,
@@ -7,11 +10,10 @@ import {
   type PeriodStatus,
 } from '../types';
 
-const WS_URL = '/api/v1/timekeeping/timesheet-workspace';
-
 export interface TimesheetState {
   loading: boolean;
   error: string | null;
+  errorObject: unknown;
   employees: TimesheetWorkspaceEmployee[];
   records: TimesheetWorkspaceRecord[];
   periodStatus: PeriodStatus | null;
@@ -22,7 +24,11 @@ export interface TimesheetState {
   setPeriod: (period: string) => void;
 }
 
+export const getTimesheetWorkspaceQueryKey = (period: string) =>
+  ['/api/v1/attendances/timekeeping/workspace', { period }] as const;
+
 export function useTimesheet(initialPeriod?: string): TimesheetState {
+  const queryClient = useQueryClient();
   const now = new Date();
   const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [period, setPeriod] = useState(initialPeriod ?? defaultPeriod);
@@ -31,57 +37,41 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
     if (initialPeriod && initialPeriod !== period) {
       setPeriod(initialPeriod);
     }
-  }, [initialPeriod]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [employees, setEmployees] = useState<TimesheetWorkspaceEmployee[]>([]);
-  const [records, setRecords] = useState<TimesheetWorkspaceRecord[]>([]);
-  const [periodStatus, setPeriodStatus] = useState<PeriodStatus | null>(null);
-  const [availableActions, setAvailableActions] = useState<string[]>([]);
-  const [totals, setTotals] = useState<TimesheetWorkspacePeriodTotals | null>(null);
+  }, [initialPeriod, period]);
 
-  const fetchData = useCallback(async (p: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams({ period: p });
-      const res = await fetch(`${WS_URL}?${params}`);
-
-      if (!res.ok) {
-        const text = await res.text();
-        let message = `Failed to load workspace: ${res.status}`;
-        try {
-          const parsed = JSON.parse(text);
-          const errObj = parsed?.error ?? parsed;
-          const extracted = typeof errObj === 'string' ? errObj : (errObj?.message ?? parsed?.message);
-          if (extracted) message = extracted;
-        } catch { /* fallback to status text */ }
-        setError(message);
-        return;
-      }
-
-      const body = await res.json();
-      const data: TimesheetWorkspaceResponse = body.data ?? body;
-      setEmployees(data.employees ?? []);
-      setRecords(data.records ?? []);
-      setPeriodStatus(data.periodStatus ?? null);
-      setAvailableActions(data.availableActions ?? []);
-      setTotals(data.totals ?? null);
-    } catch (err: any) {
-      setError(err?.message ?? 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchData(period);
-  }, [period, fetchData]);
+  const query = useQuery({
+    queryKey: getTimesheetWorkspaceQueryKey(period),
+    queryFn: async () => {
+      const res = await timekeepingControllerGetTimesheetWorkspace({ period });
+      return unwrapData<TimesheetWorkspaceResponse>(res);
+    },
+  });
 
   const reload = useCallback(async () => {
-    await fetchData(period);
-  }, [period, fetchData]);
+    await queryClient.invalidateQueries({
+      queryKey: getTimesheetWorkspaceQueryKey(period),
+    });
+  }, [queryClient, period]);
 
-  return { loading, error, employees, records, periodStatus, availableActions, totals, period, reload, setPeriod };
+  const data = query.data;
+  const errorMsg =
+    query.error instanceof Error
+      ? query.error.message
+      : query.error
+        ? 'Không thể tải dữ liệu bảng công'
+        : null;
+
+  return {
+    loading: query.isLoading,
+    error: errorMsg,
+    errorObject: query.error ?? null,
+    employees: data?.employees ?? [],
+    records: data?.records ?? [],
+    periodStatus: data?.periodStatus ?? null,
+    availableActions: data?.availableActions ?? [],
+    totals: data?.totals ?? null,
+    period,
+    reload,
+    setPeriod,
+  };
 }

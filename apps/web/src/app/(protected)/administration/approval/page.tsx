@@ -10,7 +10,6 @@ export const metadata = {
 
 export default async function ApprovalAdminPage() {
   await requireServerSession();
-  await requireServerSession();
   return (
     <div className="space-y-6">
 

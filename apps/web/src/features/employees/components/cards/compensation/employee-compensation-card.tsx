@@ -354,7 +354,7 @@ export function EmployeeCompensationCard({
                                 {cfg?.label}
                               </span>
                               {isPosition && jobTitle && (
-                                <Badge variant="outline" className="text-[10px] font-mono text-purple-600 border-purple-300">
+                                <Badge variant="outline" className="text-[10px] font-mono text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-500/40">
                                   {jobTitle}
                                 </Badge>
                               )}

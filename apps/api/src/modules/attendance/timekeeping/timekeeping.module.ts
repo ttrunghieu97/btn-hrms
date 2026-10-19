@@ -22,6 +22,7 @@ import { ListAttendanceExceptionsUseCase } from "./use-cases/list-attendance-exc
 import { OverrideAttendanceSummaryUseCase } from "./use-cases/override-attendance-summary.usecase";
 import { RecomputeAttendanceDayUseCase } from "./use-cases/recompute-attendance-day.usecase";
 import { ResolveAttendanceExceptionUseCase } from "./use-cases/resolve-attendance-exception.usecase";
+import { ExplainAttendanceExceptionUseCase } from "./use-cases/explain-attendance-exception.usecase";
 import { QueryAttendanceTimesheetUseCase } from "./use-cases/query-attendance-timesheet.usecase";
 import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-workspace.usecase";
 
@@ -51,6 +52,7 @@ import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-work
     OverrideAttendanceSummaryUseCase,
     RecomputeAttendanceDayUseCase,
     ResolveAttendanceExceptionUseCase,
+    ExplainAttendanceExceptionUseCase,
     QueryAttendanceTimesheetUseCase,
   ],
   exports: [

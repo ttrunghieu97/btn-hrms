@@ -78,6 +78,11 @@ export interface EmployeeFormValues {
   identityNumber: string;
   identityDate: string;
   identityPlace: string;
+  bankName: string;
+  bankAccountNumber: string;
+  taxCode: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
   documents: EmployeeDocumentFormField[];
   certifications: EmployeeCertificationFormField[];
 }
@@ -122,6 +127,11 @@ export function createEmptyEmployeeFormValues(): EmployeeFormValues {
     identityNumber: '',
     identityDate: '',
     identityPlace: '',
+    bankName: '',
+    bankAccountNumber: '',
+    taxCode: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
     documents: COMPANY_DOCUMENT_OPTIONS.map((option) => ({
       id: option.id,
       documentType: option.id,
@@ -325,6 +335,11 @@ export function createEmployeeFormValues(
     identityNumber: employee?.identityNumber ?? '',
     identityDate: toDateInputValue(employee?.identityDate),
     identityPlace: employee?.identityPlace?.trim() || '',
+    bankName: employee?.bankName ?? '',
+    bankAccountNumber: employee?.bankAccountNumber ?? '',
+    taxCode: employee?.taxCode ?? '',
+    emergencyContactName: employee?.emergencyContactName ?? '',
+    emergencyContactPhone: employee?.emergencyContactPhone ?? '',
     documents: createDocumentFields(employee),
     certifications: createCertificationFields(employee),
   };
@@ -345,6 +360,12 @@ export function buildEmployeeTextPayload(
   formValues: EmployeeFormValues,
   options: { includeUsername?: boolean } = {},
 ): Record<string, unknown> {
+  const cleanSensitive = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed.startsWith('••••••••')) return undefined;
+    return trimmed;
+  };
+
   return {
     ...(options.includeUsername ? { username: formValues.username?.trim() || undefined } : {}),
     firstName: formValues.firstName.trim(),
@@ -360,8 +381,13 @@ export function buildEmployeeTextPayload(
     positionId: formValues.positionId,
     startDate: formValues.startDate || undefined,
     endDate: formValues.endDate || undefined,
-    identityNumber: formValues.identityNumber.trim() || undefined,
+    identityNumber: cleanSensitive(formValues.identityNumber),
     identityDate: formValues.identityDate || undefined,
     identityPlace: formValues.identityPlace.trim() || undefined,
+    bankName: formValues.bankName.trim() || undefined,
+    bankAccountNumber: cleanSensitive(formValues.bankAccountNumber),
+    taxCode: cleanSensitive(formValues.taxCode),
+    emergencyContactName: formValues.emergencyContactName.trim() || undefined,
+    emergencyContactPhone: formValues.emergencyContactPhone.trim() || undefined,
   };
 }

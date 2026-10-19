@@ -68,7 +68,7 @@ function EvidenceCell({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 font-mono font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded px-2 py-1 text-xs transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1 font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 rounded px-2 py-1 text-xs transition-all active:scale-95 cursor-pointer"
           >
             <span>{formatted}</span>
             {image && <Icons.camera className="h-3 w-3 opacity-80 shrink-0" />}
@@ -77,7 +77,7 @@ function EvidenceCell({
         <PopoverContent className="w-72 p-3 space-y-3">
           <div className="flex justify-between items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-b border-border pb-1.5">
             <span>{label}</span>
-            <span className="font-mono text-muted-foreground">{formatted}</span>
+            <span className="tabular-nums text-muted-foreground">{formatted}</span>
           </div>
           {lunchDutyType && (
             <div className="flex items-center gap-2 border-b border-border pb-2 mb-1">
@@ -92,7 +92,7 @@ function EvidenceCell({
               <Image src={image} alt={label} fill className="object-cover" unoptimized />
             </div>
           )}
-          <div className="space-y-1 text-[11px] text-muted-foreground font-mono">
+          <div className="space-y-1 text-[11px] text-muted-foreground tabular-nums">
             <div>{employeeUiCopy.attendance.presence.gpsLabel} {meta?.gps ? <span className="text-foreground">{meta.gps}</span> : <span className="text-muted-foreground/70 italic">{employeeUiCopy.attendance.presence.skipGpsLabel}</span>}</div>
             <div>{employeeUiCopy.attendance.presence.ipLabel} {meta?.ip ? <span className="text-foreground">{meta.ip}</span> : <span className="text-muted-foreground/70 italic">{attendanceUiCopy.table.notAvailable}</span>}</div>
             <div>{employeeUiCopy.attendance.presence.verificationPrefix}{meta?.verificationStatus === 'success' ? <span className="text-emerald-600 dark:text-emerald-400">{employeeUiCopy.attendance.presence.verifiedBadge}</span> : <span className="text-amber-600 dark:text-amber-400">{employeeUiCopy.attendance.presence.missingPhotoBadge}</span>}</div>
@@ -298,7 +298,7 @@ export const getColumns = (
     enableSorting: false,
     cell: ({ row }) => {
       const total = calculateTotalHours(toSessionRecord(row.original));
-      return <span className='text-xs font-mono font-semibold text-sky-400'>{total || '-'}</span>;
+      return <span className='text-xs tabular-nums font-semibold text-sky-600 dark:text-sky-400'>{total || '-'}</span>;
     }
   },
   {
@@ -309,7 +309,7 @@ export const getColumns = (
       const totalMinutes = getTotalMinutes(row.original);
       const overtimeMinutes = totalMinutes ? Math.max(totalMinutes - 8 * 60, 0) : 0;
       return (
-        <span className='text-xs font-mono font-semibold text-rose-400'>
+        <span className='text-xs tabular-nums font-semibold text-rose-600 dark:text-rose-400'>
           {overtimeMinutes ? formatDecimalHours(overtimeMinutes) + 'h' : '-'}
         </span>
       );

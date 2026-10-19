@@ -88,7 +88,10 @@ export class AttendanceAggregateService {
     year: number,
     month: number,
   ): Promise<OvertimeSummary> {
-    const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+    const mm = String(month).padStart(2, "0");
+    const from = `${year}-${mm}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const to = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
     const [row] = await this.db
       .select({
         approvedMinutes:
@@ -100,7 +103,10 @@ export class AttendanceAggregateService {
       })
       .from(schema.attendanceOvertimeRequests)
       .where(
-        sql`${schema.attendanceOvertimeRequests.workDate} LIKE ${monthStr + "%"}`,
+        and(
+          gte(schema.attendanceOvertimeRequests.workDate, from),
+          lte(schema.attendanceOvertimeRequests.workDate, to),
+        ),
       );
 
     return {
@@ -146,9 +152,9 @@ export class AttendanceAggregateService {
     const [row] = await this.db
       .select({
         presentRecords:
-          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'late', 'early_leave') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
         totalRecords:
-          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day', 'absent', 'unpaid_leave') THEN 1 END)::int`,
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'late', 'early_leave', 'absent', 'leave') THEN 1 END)::int`,
         avgWorkedMinutes:
           sql<number>`coalesce(avg(CASE WHEN ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN ${schema.attendanceDailySummaries.workedMinutes} END), 0)::float`,
       })
@@ -181,9 +187,9 @@ export class AttendanceAggregateService {
       .select({
         departmentId: schema.employees.departmentId,
         presentRecords:
-          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'late', 'early_leave') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
         totalRecords:
-          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day', 'absent', 'unpaid_leave') THEN 1 END)::int`,
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'late', 'early_leave', 'absent', 'leave') THEN 1 END)::int`,
       })
       .from(schema.attendanceDailySummaries)
       .innerJoin(

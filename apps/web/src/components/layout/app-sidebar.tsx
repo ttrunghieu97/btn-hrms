@@ -21,8 +21,8 @@ import {
   useSidebar
 } from '@/components/ui/sidebar';
 import { UserAvatarProfile } from '@/components/user-avatar-profile';
-import { useNotificationsQuery } from '@/features/notifications/queries/notification-queries';
-import { useNav } from '@/features/nav';
+import { useNotificationsQuery } from '@/features/notifications';
+import { useNav, type NavResponse } from '@/features/nav';
 import { extractProtectedAssetUrl } from '@/lib/asset-url';
 import { appCopy } from '@/lib/app-copy';
 import { useAuthStore } from '@/stores/auth-store';
@@ -32,8 +32,6 @@ import * as React from 'react';
 import { Icons } from '../icons';
 import { SidebarBrand } from '../sidebar-brand';
 import { SidebarThemeToggle } from '../sidebar-theme-toggle';
-
-import type { NavResponse } from '@/features/nav/types/nav-types';
 
 export default function AppSidebar({ initialNavData }: { initialNavData?: NavResponse }) {
   const pathname = usePathname();
@@ -178,7 +176,7 @@ export default function AppSidebar({ initialNavData }: { initialNavData?: NavRes
                     <Icons.account className='mr-2 h-4 w-4' />
                     {appCopy.nav.items.profile}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { isMobile && setOpenMobile(false); router.push('/change-password'); }}>
+                  <DropdownMenuItem onClick={() => { isMobile && setOpenMobile(false); router.push('/account/change-password'); }}>
                     <Icons.lock className='mr-2 h-4 w-4' />
                     {appCopy.nav.items.changePassword}
                   </DropdownMenuItem>

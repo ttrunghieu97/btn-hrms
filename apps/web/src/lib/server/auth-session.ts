@@ -1,12 +1,12 @@
 import { cache } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { usersControllerGetMe } from '@/api/generated/users-management/users-management';
 import type { UserMeResponseDto } from '@/api/generated/model';
 import { unwrapData } from '@/lib/api-extract';
+import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import { appLogger } from '@/lib/logger';
 import { getErrorObservabilityContext, resolveAppError } from '@/lib/error-taxonomy';
-import { cacheDel, cacheGet, cacheSet } from './redis';
 
 type ServerSessionResult =
   | { status: 'authenticated'; user: UserMeResponseDto }
@@ -16,30 +16,42 @@ const ACCESS_COOKIE_NAME = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token'
 const REFRESH_COOKIE_NAME = process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token';
 
 const SESSION_CACHE_TTL_MS = 30_000;
-
-function sessionCacheKey(token: string): string {
-  return `session:${token}`;
-}
+const SESSION_CACHE_MAX_ENTRIES = 1_000;
 
 const memorySessionCache = new Map<string, { user: UserMeResponseDto; expires: number }>();
 
-async function getCachedSession(token: string): Promise<UserMeResponseDto | null> {
+function getCachedSession(token: string): UserMeResponseDto | null {
   const cachedMem = memorySessionCache.get(token);
   if (cachedMem && cachedMem.expires > Date.now()) {
     return cachedMem.user;
   }
-  return cacheGet<UserMeResponseDto>(sessionCacheKey(token));
+  if (cachedMem) {
+    memorySessionCache.delete(token);
+  }
+  return null;
 }
 
-async function setCachedSession(token: string, user: UserMeResponseDto): Promise<void> {
-  memorySessionCache.set(token, { user, expires: Date.now() + SESSION_CACHE_TTL_MS });
-  await cacheSet(sessionCacheKey(token), user, SESSION_CACHE_TTL_MS);
+function setCachedSession(token: string, user: UserMeResponseDto): void {
+  const now = Date.now();
+  if (memorySessionCache.size >= SESSION_CACHE_MAX_ENTRIES) {
+    for (const [k, v] of memorySessionCache.entries()) {
+      if (v.expires <= now) {
+        memorySessionCache.delete(k);
+      }
+    }
+    if (memorySessionCache.size >= SESSION_CACHE_MAX_ENTRIES) {
+      const oldestKey = memorySessionCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        memorySessionCache.delete(oldestKey);
+      }
+    }
+  }
+  memorySessionCache.set(token, { user, expires: now + SESSION_CACHE_TTL_MS });
 }
 
 export async function evictServerSessionCache(token?: string | null): Promise<void> {
   if (!token) return;
   memorySessionCache.delete(token);
-  await cacheDel(sessionCacheKey(token));
 }
 
 // --- Retry ---
@@ -88,12 +100,12 @@ export async function hasServerAuthCookies(): Promise<boolean> {
 }
 
 async function fetchServerUser(cookieHeader: string, accessToken?: string): Promise<UserMeResponseDto> {
-  const headers: Record<string, string> = { cookie: cookieHeader };
+  const headersObj: Record<string, string> = { cookie: cookieHeader };
   if (accessToken) {
-    headers.authorization = `Bearer ${accessToken}`;
+    headersObj.authorization = `Bearer ${accessToken}`;
   }
   const response = await usersControllerGetMe({
-    headers,
+    headers: headersObj,
   });
   return unwrapData<UserMeResponseDto>(response);
 }
@@ -108,7 +120,7 @@ const resolveServerSession = cache(async (): Promise<ServerSessionResult> => {
 
   const accessToken = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
   if (accessToken) {
-    const cached = await getCachedSession(accessToken);
+    const cached = getCachedSession(accessToken);
     if (cached) {
       return { status: 'authenticated', user: cached };
     }
@@ -122,7 +134,7 @@ const resolveServerSession = cache(async (): Promise<ServerSessionResult> => {
       200,
     );
     if (accessToken) {
-      await setCachedSession(accessToken, user);
+      setCachedSession(accessToken, user);
     }
     return { status: 'authenticated', user };
   } catch (error) {
@@ -142,7 +154,16 @@ const resolveServerSession = cache(async (): Promise<ServerSessionResult> => {
  * in server component context — only in Server Actions or Route Handlers.
  */
 async function tryServerRefresh(loginUrl: string): Promise<never> {
-  const params = new URLSearchParams({ loginUrl });
+  let redirectTo = '/';
+  try {
+    const h = await headers();
+    const rawPath = h.get('x-forwarded-path') ?? h.get('next-url');
+    redirectTo = sanitizeInternalRedirectPath(rawPath, '/');
+  } catch {
+    redirectTo = '/';
+  }
+  const safeLoginUrl = sanitizeInternalRedirectPath(loginUrl, '/auth/sign-in');
+  const params = new URLSearchParams({ loginUrl: safeLoginUrl, redirectTo });
   redirect(`/api/auth/refresh-ssr?${params.toString()}`);
 }
 

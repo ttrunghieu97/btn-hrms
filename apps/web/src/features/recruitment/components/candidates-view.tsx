@@ -19,7 +19,9 @@ import {
 } from '@/lib/mutation-feedback';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -45,13 +47,18 @@ import { InterviewsPanel } from './interviews-view';
 
 const copy = recruitmentUiCopy.candidates;
 
-/** Board columns: active stages left-to-right, plus a terminal bucket. */
-const BOARD_STAGES: Array<{ key: string; label: string }> = [
+/** Board columns: active stages left-to-right, plus terminal stages when toggled. */
+const ACTIVE_BOARD_STAGES: Array<{ key: string; label: string }> = [
   { key: 'applied', label: recruitmentUiCopy.stages.applied },
   { key: 'screening', label: recruitmentUiCopy.stages.screening },
   { key: 'interview', label: recruitmentUiCopy.stages.interview },
   { key: 'offer', label: recruitmentUiCopy.stages.offer },
   { key: 'hired', label: recruitmentUiCopy.stages.hired },
+];
+
+const TERMINAL_BOARD_STAGES: Array<{ key: string; label: string }> = [
+  { key: 'rejected', label: recruitmentUiCopy.stages.rejected },
+  { key: 'withdrawn', label: recruitmentUiCopy.stages.withdrawn },
 ];
 
 const ADVANCE_TARGETS: Record<string, AdvanceStageDtoToStage[]> = {
@@ -67,6 +74,8 @@ export function CandidatesView() {
   );
   const applications = extractList<ApplicationRow>(data);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showClosedStages, setShowClosedStages] = useState(false);
 
   if (error && !isLoading) {
     return (
@@ -79,7 +88,24 @@ export function CandidatesView() {
     );
   }
 
-  if (applications.length === 0 && !isLoading) {
+  if (isLoading) {
+    return (
+      <div className='flex gap-4 overflow-x-auto pb-2'>
+        {ACTIVE_BOARD_STAGES.map((stage) => (
+          <div key={stage.key} className='flex w-64 shrink-0 flex-col gap-2'>
+            <div className='flex items-center justify-between px-1'>
+              <Skeleton className='h-4 w-24' />
+              <Skeleton className='h-4 w-6' />
+            </div>
+            <Skeleton className='h-24 w-full rounded-lg' />
+            <Skeleton className='h-24 w-full rounded-lg' />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (applications.length === 0) {
     return (
       <AppEmptyState
         icon={<Icons.page className='size-10' />}
@@ -89,11 +115,54 @@ export function CandidatesView() {
     );
   }
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredApplications = normalizedQuery
+    ? applications.filter((app) => {
+        const name = app.candidate?.fullName?.toLowerCase() ?? '';
+        const email = app.candidate?.email?.toLowerCase() ?? '';
+        const phone = app.candidate?.phone?.toLowerCase() ?? '';
+        return (
+          name.includes(normalizedQuery) ||
+          email.includes(normalizedQuery) ||
+          phone.includes(normalizedQuery)
+        );
+      })
+    : applications;
+
+  const closedCount = applications.filter(
+    (a) => a.currentStage === 'rejected' || a.currentStage === 'withdrawn',
+  ).length;
+
+  const visibleStages = showClosedStages
+    ? [...ACTIVE_BOARD_STAGES, ...TERMINAL_BOARD_STAGES]
+    : ACTIVE_BOARD_STAGES;
+
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
+      <div className='flex flex-wrap items-center justify-between gap-2'>
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder='Tìm ứng viên theo tên, email, SĐT...'
+          className='h-9 w-full sm:w-72'
+        />
+        <Button
+          type='button'
+          variant={showClosedStages ? 'secondary' : 'outline'}
+          size='sm'
+          onClick={() => setShowClosedStages((prev) => !prev)}
+        >
+          {showClosedStages
+            ? 'Ẩn hồ sơ Từ chối / Rút lui'
+            : `Hiện Từ chối / Rút lui (${closedCount})`}
+        </Button>
+      </div>
+
       <div className='flex gap-4 overflow-x-auto pb-2'>
-        {BOARD_STAGES.map((stage) => {
-          const cards = applications.filter((a) => a.currentStage === stage.key);
+        {visibleStages.map((stage) => {
+          const cards = filteredApplications.filter(
+            (a) => a.currentStage === stage.key,
+          );
           return (
             <div key={stage.key} className='flex w-64 shrink-0 flex-col gap-2'>
               <div className='flex items-center justify-between px-1'>

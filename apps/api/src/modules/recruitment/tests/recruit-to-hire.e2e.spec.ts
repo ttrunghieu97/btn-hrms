@@ -337,7 +337,7 @@ describe("Recruit-to-Hire Integration Acceptance (Journey 1)", () => {
 
     const hiredEvent = stagedEvents.find((e) => e instanceof CandidateHiredEvent);
     expect(hiredEvent).toBeDefined();
-    expect(hiredEvent.data).toMatchObject({
+    expect(hiredEvent!.data).toMatchObject({
       offerId: offer.id,
       applicationId: submission.id,
       candidateEmail: "minh.anh@example.com",

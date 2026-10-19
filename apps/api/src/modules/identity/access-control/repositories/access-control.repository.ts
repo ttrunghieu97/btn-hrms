@@ -123,4 +123,13 @@ export class AccessControlRepository {
       .from(schema.roles)
       .where(inArray(schema.roles.id, roleIds));
   }
+
+  async getRolePermissionCodesForRoles(roleIds: string[]): Promise<string[]> {
+    if (roleIds.length === 0) return [];
+    const rows = await this.db
+      .select({ permissionCode: schema.rolePermissions.permissionCode })
+      .from(schema.rolePermissions)
+      .where(inArray(schema.rolePermissions.roleId, roleIds));
+    return [...new Set(rows.map((row) => row.permissionCode))];
+  }
 }

@@ -6,6 +6,7 @@ import { MetricsService } from "../../../shared/metrics/metrics.service";
 import {
   throwNotFound,
   throwBadRequest,
+  throwForbidden,
 } from "../../../shared/utils/http-error";
 import { ContextLogger } from "../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../shared/context/request-context.service";
@@ -66,6 +67,22 @@ export class MultipartCompleteUseCase {
     const file = await this.storage.getFileById(fileId);
     if (!file) {
       throwNotFound("File not found", "FILE_NOT_FOUND");
+    }
+
+    const actor =
+      typeof this.requestContext?.get === "function"
+        ? this.requestContext.get()
+        : undefined;
+    if (
+      actor?.userId &&
+      !actor.isSuperAdmin &&
+      file.uploadedBy &&
+      file.uploadedBy !== actor.userId
+    ) {
+      throwForbidden(
+        "Cannot complete a multipart upload initiated by another user",
+        "FORBIDDEN",
+      );
     }
 
     if (file.status !== "pending_upload") {

@@ -80,7 +80,7 @@ export class FileAccessService {
 
     if (
       file.ownerType === "leave" &&
-      (perms.includes("leave:view") || perms.includes("leave:approve") || perms.includes("leave:view:all") || perms.includes("leave:view:department") || perms.includes("leave:manage"))
+      (perms.includes("leave:view") || perms.includes("leave:approve") || perms.includes("leave:view:all") || perms.includes("leave:manage"))
     ) {
       return true;
     }

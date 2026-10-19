@@ -110,6 +110,8 @@ export function FileUploader(props: FileUploaderProps) {
     prop: valueProp,
     onChange: onValueChange
   });
+  const filesRef = React.useRef<File[] | undefined>(files);
+  filesRef.current = files;
 
   const onDrop = React.useCallback(
     (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
@@ -124,9 +126,11 @@ export function FileUploader(props: FileUploaderProps) {
       }
 
       const newFiles = acceptedFiles.map((file) =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file)
-        })
+        file.type.startsWith('image/')
+          ? Object.assign(file, {
+              preview: URL.createObjectURL(file)
+            })
+          : file
       );
 
       const updatedFiles = files ? [...files, ...newFiles] : newFiles;
@@ -146,6 +150,11 @@ export function FileUploader(props: FileUploaderProps) {
         toast.promise(onUpload(updatedFiles), {
           loading: feedbackCopy.file.uploading(target),
           success: () => {
+            updatedFiles.forEach((file) => {
+              if (isFileWithPreview(file)) {
+                URL.revokeObjectURL(file.preview);
+              }
+            });
             setFiles([]);
             return feedbackCopy.file.uploaded(target);
           },
@@ -159,22 +168,24 @@ export function FileUploader(props: FileUploaderProps) {
 
   function onRemove(index: number) {
     if (!files) return;
+    const removed = files[index];
+    if (removed && isFileWithPreview(removed)) {
+      URL.revokeObjectURL(removed.preview);
+    }
     const newFiles = files.filter((_, i) => i !== index);
     setFiles(newFiles);
-    onValueChange?.(newFiles);
   }
 
   // Revoke preview url when component unmounts
   React.useEffect(() => {
     return () => {
-      if (!files) return;
-      files.forEach((file) => {
+      if (!filesRef.current) return;
+      filesRef.current.forEach((file) => {
         if (isFileWithPreview(file)) {
           URL.revokeObjectURL(file.preview);
         }
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isDisabled = disabled || (files?.length ?? 0) >= maxFiles;

@@ -1,4 +1,4 @@
-export { useNav } from './hooks/useNav';
+export { useNav, navKeys } from './hooks/useNav';
 export { fetchNav } from './api/nav-api';
 export type {
   NavItemDefinition,

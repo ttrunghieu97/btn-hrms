@@ -251,6 +251,17 @@ export class EventOutboxRepository {
     return row ?? null;
   }
 
+  async releaseLease(id: string) {
+    const [row] = await this.db
+      .update(schema.eventOutbox)
+      .set({
+        leaseUntil: markLeaseReleased(),
+      })
+      .where(eq(schema.eventOutbox.id, id))
+      .returning();
+    return row ?? null;
+  }
+
   async recordPermanentFailure(
     id: string,
     errorMessage: string,

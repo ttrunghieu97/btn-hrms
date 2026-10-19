@@ -125,6 +125,10 @@ export function CameraCaptureDialog({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const cameraAttemptRef = useRef(0);
+  const isOpenRef = useRef(open);
+  isOpenRef.current = open;
+  const isEncodingRef = useRef(false);
 
   // Camera state
   const [cameraStatus, setCameraStatus] = useState<
@@ -142,6 +146,7 @@ export function CameraCaptureDialog({
 
   // ── Camera lifecycle ────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
+    cameraAttemptRef.current += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -151,6 +156,7 @@ export function CameraCaptureDialog({
 
   const startCamera = useCallback(async () => {
     stopCamera();
+    const attemptId = cameraAttemptRef.current;
     setCameraErrorTitle(null);
     setValidationError(null);
 
@@ -171,10 +177,15 @@ export function CameraCaptureDialog({
       const ms = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
+      if (!isOpenRef.current || cameraAttemptRef.current !== attemptId) {
+        ms.getTracks().forEach(t => t.stop());
+        return;
+      }
       streamRef.current = ms;
       setCameraStatus('ready');
       if (videoRef.current) void videoRef.current.play();
     } catch (err: any) {
+      if (!isOpenRef.current || cameraAttemptRef.current !== attemptId) return;
       setCameraStatus('error');
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -296,7 +307,7 @@ export function CameraCaptureDialog({
 
   // ── Confirm / Retake ────────────────────────────────────────────────
   const confirmCapture = useCallback(() => {
-    if (isConfirming) return;
+    if (isConfirming || isEncodingRef.current) return;
     if (pendingFile && pendingSource) {
       startConfirmTransition(() => {
         onCapture(pendingFile, pendingSource);
@@ -305,11 +316,15 @@ export function CameraCaptureDialog({
       return;
     }
     if (capturedPreview && canvasRef.current && pendingSource === 'camera') {
+      isEncodingRef.current = true;
       canvasRef.current.toBlob(
         blob => {
+          isEncodingRef.current = false;
           if (!blob) return;
-          onCapture(new File([blob], 'attendance-capture.jpg', { type: 'image/jpeg' }), 'camera');
-          onOpenChange(false);
+          startConfirmTransition(() => {
+            onCapture(new File([blob], 'attendance-capture.jpg', { type: 'image/jpeg' }), 'camera');
+            onOpenChange(false);
+          });
         },
         'image/jpeg',
         0.85,

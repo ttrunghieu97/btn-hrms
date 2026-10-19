@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreateRoleUseCase } from './create-role.usecase';
 
 const makeAuditLog = () => ({ write: jest.fn().mockResolvedValue(undefined) });
@@ -33,7 +33,10 @@ function buildUseCase(overrides: {
 }
 
 describe('CreateRoleUseCase', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    requestContext.get.mockReturnValue({ userId: 'actor-1' });
+  });
 
   it('blocks creating a role with isSystem=true and logs FAILED audit event', async () => {
     const { useCase, auditLog } = buildUseCase({});
@@ -41,6 +44,45 @@ describe('CreateRoleUseCase', () => {
     expect(auditLog.write).toHaveBeenCalledWith(
       expect.objectContaining({ result: 'FAILED', action: 'ROLE_CREATE_FAILED' }),
     );
+  });
+
+  it('AUDIT-001: blocks non-superadmin from creating a role with sys:all or ALL permission', async () => {
+    requestContext.get.mockReturnValue({
+      userId: 'actor-1',
+      isSuperAdmin: false,
+      permissions: ['roles:manage'],
+    });
+    const { useCase, auditLog } = buildUseCase({});
+    await expect(
+      useCase.execute({ name: 'Escalated', permissions: ['sys:all'] }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(auditLog.write).toHaveBeenCalledWith(
+      expect.objectContaining({ result: 'FAILED', action: 'ROLE_CREATE_FAILED' }),
+    );
+  });
+
+  it('AUDIT-001: blocks non-superadmin from granting permissions they do not possess', async () => {
+    requestContext.get.mockReturnValue({
+      userId: 'actor-1',
+      isSuperAdmin: false,
+      permissions: ['roles:manage', 'employees:view'],
+    });
+    const { useCase } = buildUseCase({});
+    await expect(
+      useCase.execute({ name: 'PayrollHijack', permissions: ['payroll:manage'] }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('AUDIT-001: blocks non-superadmin from using reserved super_admin role code', async () => {
+    requestContext.get.mockReturnValue({
+      userId: 'actor-1',
+      isSuperAdmin: false,
+      permissions: ['roles:manage'],
+    });
+    const { useCase } = buildUseCase({});
+    await expect(
+      useCase.execute({ name: 'Custom Super', code: 'super_admin' }),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('blocks duplicate role name and logs FAILED audit event', async () => {

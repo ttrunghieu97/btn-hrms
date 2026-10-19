@@ -36,6 +36,7 @@ import type {
   CreateManualCorrectionDto,
   EmployeeVerificationDto,
   EmployeeVerificationListDto,
+  ExplainAttendanceExceptionDto,
   LockPeriodDto,
   OverrideAttendanceSummaryDto,
   ResolveAttendanceExceptionDto,
@@ -653,7 +654,107 @@ export function useTimekeepingControllerListAttendanceExceptions<TData = Awaited
 
 
 
-export type timekeepingControllerResolveAttendanceExceptionResponse200 = {
+export type timekeepingControllerExplainAttendanceExceptionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type timekeepingControllerExplainAttendanceExceptionResponseSuccess = (timekeepingControllerExplainAttendanceExceptionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type timekeepingControllerExplainAttendanceExceptionResponse = (timekeepingControllerExplainAttendanceExceptionResponseSuccess)
+
+export const getTimekeepingControllerExplainAttendanceExceptionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/timekeeping/exceptions/${id}/explain`
+}
+
+/**
+ * @summary Submit employee explanation for an attendance exception
+ */
+export const timekeepingControllerExplainAttendanceException = async (id: string,
+    explainAttendanceExceptionDto: ExplainAttendanceExceptionDto, options?: Parameters<typeof customFetch>[1]): Promise<timekeepingControllerExplainAttendanceExceptionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<timekeepingControllerExplainAttendanceExceptionResponse>(getTimekeepingControllerExplainAttendanceExceptionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(explainAttendanceExceptionDto)
+  }
+);}
+
+
+
+
+
+export const getTimekeepingControllerExplainAttendanceExceptionMutationKey = () => ['timekeepingControllerExplainAttendanceException'] as const;
+
+export const getTimekeepingControllerExplainAttendanceExceptionMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>, TError,TimekeepingControllerExplainAttendanceExceptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>, TError,TimekeepingControllerExplainAttendanceExceptionMutationVariables, TContext> => {
+
+const mutationKey = getTimekeepingControllerExplainAttendanceExceptionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>, TimekeepingControllerExplainAttendanceExceptionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  timekeepingControllerExplainAttendanceException(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TimekeepingControllerExplainAttendanceExceptionMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>>
+    export type TimekeepingControllerExplainAttendanceExceptionMutationBody = ExplainAttendanceExceptionDto
+    export type TimekeepingControllerExplainAttendanceExceptionMutationError = unknown
+    export type TimekeepingControllerExplainAttendanceExceptionMutationVariables = {id: string;data: ExplainAttendanceExceptionDto}
+
+    /**
+ * @summary Submit employee explanation for an attendance exception
+ */
+export const useTimekeepingControllerExplainAttendanceException = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>, TError,TimekeepingControllerExplainAttendanceExceptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof timekeepingControllerExplainAttendanceException>>,
+        TError,
+        TimekeepingControllerExplainAttendanceExceptionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTimekeepingControllerExplainAttendanceExceptionMutationOptions(options), queryClient);
+    }
+    export type timekeepingControllerResolveAttendanceExceptionResponse200 = {
   data: void
   status: 200
 }
@@ -1364,7 +1465,7 @@ export const getTimekeepingControllerClosePeriodUrl = () => {
 /**
  * @summary Close attendance period — final, no further edits
  */
-export const timekeepingControllerClosePeriod = async (unlockPeriodDto: UnlockPeriodDto, options?: Parameters<typeof customFetch>[1]): Promise<timekeepingControllerClosePeriodResponse> => {
+export const timekeepingControllerClosePeriod = async (lockPeriodDto: LockPeriodDto, options?: Parameters<typeof customFetch>[1]): Promise<timekeepingControllerClosePeriodResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1385,7 +1486,7 @@ return customFetch<timekeepingControllerClosePeriodResponse>(getTimekeepingContr
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(unlockPeriodDto)
+    body: JSON.stringify(lockPeriodDto)
   }
 );}
 
@@ -1423,9 +1524,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type TimekeepingControllerClosePeriodMutationResult = NonNullable<Awaited<ReturnType<typeof timekeepingControllerClosePeriod>>>
-    export type TimekeepingControllerClosePeriodMutationBody = UnlockPeriodDto
+    export type TimekeepingControllerClosePeriodMutationBody = LockPeriodDto
     export type TimekeepingControllerClosePeriodMutationError = unknown
-    export type TimekeepingControllerClosePeriodMutationVariables = {data: UnlockPeriodDto}
+    export type TimekeepingControllerClosePeriodMutationVariables = {data: LockPeriodDto}
 
     /**
  * @summary Close attendance period — final, no further edits

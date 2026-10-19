@@ -62,7 +62,9 @@ export function ExceptionsTab({ dateRange }: { dateRange: DateRange }) {
                 <TableCell>{item.date || item.workDate ? formatDateVN(item.date ?? item.workDate) : '--'}</TableCell>
                 <TableCell>{item.employeeName ?? (item.employee?.firstName ? `${item.employee.firstName} ${item.employee.lastName}` : '--')}</TableCell>
                 <TableCell>{item.type ?? item.exceptionType ?? item.reason ?? '--'}</TableCell>
-                <TableCell className='max-w-xs truncate text-muted-foreground'>{item.description ?? item.note ?? '--'}</TableCell>
+                <TableCell className='max-w-xs truncate text-muted-foreground'>
+                  {item.resolutionNote ?? item.description ?? item.note ?? '--'}
+                </TableCell>
                 <TableCell><Badge variant={getExceptionStateBadgeVariant(item.status)}>{getExceptionStateLabel(item.status)}</Badge></TableCell>
                 <TableCell>{item.createdAt ? formatDateVN(item.createdAt) : '--'}</TableCell>
                 <TableCell className='text-right'>

@@ -1,63 +1,29 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useMemo } from 'react';
-import {
-  AdminSystemHealth,
-  AdminSecurityOverview,
-  AdminQuickActions,
-} from '@/features/workspace';
-import { ActivityCenterFeed } from '@/components/platform';
+type AdminPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-/**
- * Platform Administration workspace.
- * Route: /admin
- * Access: admin, super_admin roles
- */
-export default function AdminPage() {
-  const healthStatus = useMemo(() => ({
-    api: 'up' as const,
-    database: 'up' as const,
-    storage: 'up' as const,
-    queue: 'up' as const,
-  }), []);
+function buildRedirectUrl(
+  targetPath: string,
+  params?: Record<string, string | string[] | undefined>,
+): string {
+  if (!params) return targetPath;
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined) qs.append(key, item);
+      }
+    } else if (value !== undefined) {
+      qs.set(key, value);
+    }
+  }
+  const query = qs.toString();
+  return query ? `${targetPath}?${query}` : targetPath;
+}
 
-  const securityData = useMemo(() => ({
-    totalUsers: 1245,
-    activeSessions: 342,
-    failedLoginsToday: 12,
-    permissionChanges: 5,
-  }), []);
-
-  return (
-    <div className="container mx-auto max-w-5xl space-y-8 py-6 px-4">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Platform Administration</h1>
-        <p className="text-sm text-muted-foreground">
-          System status, security, and configuration management.
-        </p>
-      </div>
-
-      {/* System health */}
-      <section className="space-y-3">
-        <AdminSystemHealth status={healthStatus} />
-      </section>
-
-      {/* Security overview */}
-      <section className="space-y-3">
-        <AdminSecurityOverview data={securityData} />
-      </section>
-
-      {/* Recent security activity */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-medium">Recent Activity</h3>
-        <ActivityCenterFeed limit={5} types={['security', 'system']} showFilters={false} />
-      </section>
-
-      {/* Admin actions */}
-      <section className="space-y-3">
-        <AdminQuickActions />
-      </section>
-    </div>
-  );
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  redirect(buildRedirectUrl('/administration/users', resolvedParams));
 }

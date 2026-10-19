@@ -25,8 +25,6 @@ export class RefreshTokensUseCase extends AuthUseCaseBase {
   async execute(refreshToken: string): Promise<AuthResponseDto> {
     const payload = await this.verifyRefreshToken(refreshToken);
 
-
-
     const gracePeriodMs = Number(
       this.configService.get("REFRESH_GRACE_PERIOD_MS") || 30_000,
     );
@@ -58,7 +56,40 @@ export class RefreshTokensUseCase extends AuthUseCaseBase {
       );
     }
 
-    const isMatch = await bcrypt.compare(refreshToken, tokenRecord.tokenHash);
+    const isRevoked = tokenRecord.revokedAt !== null && tokenRecord.revokedAt !== undefined;
+    const isSupersededPastGrace =
+      tokenRecord.supersededAt !== null &&
+      tokenRecord.supersededAt !== undefined &&
+      Date.now() - tokenRecord.supersededAt.getTime() > gracePeriodMs;
+
+    if (isRevoked || isSupersededPastGrace) {
+      await this.authRepo.revokeRefreshTokenFamily(tokenRecord.userId);
+      await this.authRepo.recordRefreshTokenReuse({
+        actorUserId: tokenRecord.userId,
+        tokenId: tokenRecord.id,
+        clientIp: tokenRecord.clientIp ?? null,
+        userAgent: tokenRecord.userAgent ?? null,
+      });
+      this.logger.warn({
+        msg: "refresh_token_reuse_detected",
+        userId: tokenRecord.userId,
+        tokenId: tokenRecord.id,
+        revoked: isRevoked,
+        supersededPastGrace: isSupersededPastGrace,
+      });
+      throwUnauthorized(
+        "Phiên làm việc hết hạn hoặc không hợp lệ!",
+        ERROR_CODES.AUTH_REFRESH_INVALID,
+        {
+          reason: ERROR_REASONS.TOKEN_MISMATCH,
+        },
+      );
+    }
+
+    const isMatch = await bcrypt.compare(
+      this.digestRefreshToken(refreshToken),
+      tokenRecord.tokenHash,
+    );
     if (!isMatch) {
       await this.authRepo.revokeRefreshTokenFamily(tokenRecord.userId);
       await this.authRepo.recordRefreshTokenReuse({
@@ -119,8 +150,11 @@ export class RefreshTokensUseCase extends AuthUseCaseBase {
       };
     }
 
-    // Normal rotation: supersede old token (don't delete), issue new pair
+    // Normal rotation: supersede old token (don't delete), issue new pair.
+    // Pre-compute the BCrypt hash BEFORE entering the DB transaction so CPU hashing
+    // never holds a database transaction lock.
     const newTokens = await this.issueTokens(user.id, user.email || "", user.authorizationVersion ?? 1);
+    const newTokenHash = await this.hashRefreshToken(newTokens.refreshToken);
 
     await this.authRepo.transaction(async (tx) => {
       await this.authRepo.supersedeRefreshToken(tokenRecord.id, tx);
@@ -132,6 +166,7 @@ export class RefreshTokensUseCase extends AuthUseCaseBase {
         tokenRecord.userAgent || undefined,
         tokenRecord.clientIp || undefined,
         tx,
+        newTokenHash,
       );
     });
 

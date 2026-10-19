@@ -55,6 +55,24 @@ export class UpdateUserPermissionsUseCase {
       );
     }
 
+    if (
+      !actorIsSuperAdmin &&
+      Array.isArray(actor?.permissions) &&
+      !actor.permissions.some(
+        (code) => code.toLowerCase() === "sys:all" || code.toUpperCase() === "ALL",
+      )
+    ) {
+      const actorPermSet = new Set(actor.permissions);
+      const unauthorizedPerms = permissionCodes.filter((code) => !actorPermSet.has(code));
+      if (unauthorizedPerms.length > 0) {
+        throwForbidden(
+          "Cannot grant permissions that the actor does not possess.",
+          ERROR_CODES.PERMISSION_DENIED,
+          { reason: ERROR_REASONS.MISSING_PERMISSION },
+        );
+      }
+    }
+
     await this.authRepo.transaction(async (tx) => {
       await this.permissionsRepo.replaceUserPermissions(
         userId,

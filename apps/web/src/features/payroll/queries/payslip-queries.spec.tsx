@@ -100,4 +100,53 @@ describe('payslip queries', () => {
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
   });
+
+  describe('toPayslip & isProvisionalPayslip', () => {
+    it('does not mark standard draft payslip as provisional when calculationStatus is omitted', async () => {
+      const { toPayslip } = await import('../api/payslip-mapper');
+      const { isProvisionalPayslip } = await import('../tables/payslip-columns');
+
+      const mapped = toPayslip({
+        id: 'ps-1',
+        payrollRunId: 'run-1',
+        employeeId: 'emp-1',
+        grossPay: '15000000',
+        totalDeductions: '1500000',
+        netPay: '13500000',
+        currency: 'VND',
+        status: 'draft',
+        metadata: null,
+        createdAt: '2026-04-01T00:00:00Z',
+        updatedAt: '2026-04-01T00:00:00Z',
+      });
+
+      expect(mapped.isProvisional).toBe(false);
+      expect(mapped.calculationStatus).toBeUndefined();
+      expect(isProvisionalPayslip(mapped)).toBe(false);
+    });
+
+    it('marks payslip as provisional when calculationStatus is PROVISIONAL_POLICY_UNCONFIRMED', async () => {
+      const { toPayslip } = await import('../api/payslip-mapper');
+      const { isProvisionalPayslip } = await import('../tables/payslip-columns');
+
+      const mapped = toPayslip({
+        id: 'ps-2',
+        payrollRunId: 'run-1',
+        employeeId: 'emp-1',
+        grossPay: '15000000',
+        totalDeductions: '1500000',
+        netPay: '13500000',
+        currency: 'VND',
+        status: 'draft',
+        metadata: { calculationStatus: 'PROVISIONAL_POLICY_UNCONFIRMED' },
+        createdAt: '2026-04-01T00:00:00Z',
+        updatedAt: '2026-04-01T00:00:00Z',
+      });
+
+      expect(mapped.isProvisional).toBe(true);
+      expect(mapped.calculationStatus).toBe('PROVISIONAL_POLICY_UNCONFIRMED');
+      expect(isProvisionalPayslip(mapped)).toBe(true);
+    });
+  });
 });
+

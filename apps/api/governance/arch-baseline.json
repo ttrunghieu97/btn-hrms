@@ -186,18 +186,19 @@
   "adapter-dip": {
     "warned": [
       { "from": "src/contracts/adapters/attendance-summaries-reader.adapter.ts", "to": "src/modules/attendance/attendance-summaries/repositories/attendance-summaries.repository.ts", "reason": "Should go via port" },
+      { "from": "src/contracts/adapters/boarding-process-reader.adapter.ts", "to": "src/modules/onboarding/repositories/onboarding-process.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/department-reader.adapter.ts", "to": "src/modules/organization/departments/repositories/departments.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/employee-reader.adapter.ts", "to": "src/modules/workforce/employees/repositories/employees.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/employee-shift-reader.adapter.ts", "to": "src/modules/scheduling/shifts/schedule-roster/repositories/workforce-shifts.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/identity-admin.adapter.ts", "to": "src/modules/identity/auth/repositories/auth.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/location-reader.adapter.ts", "to": "src/modules/organization/locations/repositories/locations.repository.ts", "reason": "Should go via port" },
       { "from": "src/contracts/adapters/position-reader.adapter.ts", "to": "src/modules/organization/positions/repositories/positions.repository.ts", "reason": "Should go via port" },
-      { "from": "src/contracts/adapters/workflow-engine.adapter.ts", "to": "src/modules/platform-workflow-engine/repositories/platform-workflow-engine.repository.ts", "reason": "Should go via port" },
       { "from": "src/integration/asset-approval/asset-approval-policy.resolver.ts", "to": "src/modules/platform-approval-engine/repositories/platform-approval-engine.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/asset-approval/asset-decision.handler.service.ts", "to": "src/modules/asset-management/request/repositories/asset-request.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/leave-approval/leave-approval-policy.resolver.ts", "to": "src/modules/platform-approval-engine/repositories/platform-approval-engine.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/leave-approval/leave-decision.handler.service.ts", "to": "src/modules/leave/leave-management/repositories/leave-requests.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/payroll-approval/payroll-approval-policy.resolver.ts", "to": "src/modules/platform-approval-engine/repositories/platform-approval-engine.repository.ts", "reason": "Integration must use contract, not direct repo" },
+      { "from": "src/integration/payroll-approval/payroll-decision.handler.service.ts", "to": "src/modules/payroll/payroll-runs/repositories/payroll-runs.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/recruitment-approval/recruitment-approval-policy.resolver.ts", "to": "src/modules/platform-approval-engine/repositories/platform-approval-engine.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/recruitment-approval/recruitment-decision.handler.service.ts", "to": "src/modules/recruitment/offers/repositories/offers.repository.ts", "reason": "Integration must use contract, not direct repo" },
       { "from": "src/integration/recruitment-approval/recruitment-decision.handler.service.ts", "to": "src/modules/recruitment/requisitions/repositories/requisitions.repository.ts", "reason": "Integration must use contract, not direct repo" }
@@ -205,12 +206,8 @@
   },
   "boundary": {
     "violations": [
-      { "signature": "[schema-import-outside-repository] src/modules/asset-management/issue/subscribers/employee-terminated.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts", "reason": "Subscriber needs idempotency table reference" },
       { "signature": "[schema-import-outside-repository] src/modules/attendance/attendance-summaries/read-model/attendance-summary-read.service.ts imports src/infrastructure/database/schema/index.ts", "reason": "Read-model projection needs schema for type queries" },
       { "signature": "[schema-import-outside-repository] src/modules/attendance/attendances/use-cases/get-employees-presence.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Presence query needs direct schema access, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/attendance/subscribers/employee-lifecycle.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts", "reason": "Subscriber needs idempotency table reference" },
-      { "signature": "[schema-import-outside-repository] src/modules/attendance/timekeeping/use-cases/override-attendance-summary.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Override needs schema types, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/identity/access-control/handlers/employee-lifecycle.handler.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts", "reason": "Handler needs idempotency table reference" },
       { "signature": "[schema-import-outside-repository] src/modules/identity/auth/services/authorization-version.service.ts imports src/infrastructure/database/schema/index.ts", "reason": "Auth version check, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/identity/auth/use-cases/link-email.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Auth use-case, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/identity/auth/use-cases/list-login-history.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Auth use-case, legacy" },
@@ -219,20 +216,15 @@
       { "signature": "[schema-import-outside-repository] src/modules/identity/auth/use-cases/revoke-user-session.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Auth use-case, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/identity/auth/use-cases/sso-login.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "SSO login, pre-scope, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/identity/users/use-cases/get-user-security.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Security query, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/leave/subscribers/employee-lifecycle.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts", "reason": "Subscriber needs idempotency table reference" },
       { "signature": "[schema-import-outside-repository] src/modules/onboarding/infrastructure/seeds/seed-onboarding-templates.ts imports src/infrastructure/database/schema/index.ts", "reason": "Seed script, not runtime code" },
-      { "signature": "[schema-import-outside-repository] src/modules/payroll/interfaces/event-subscribers/employee-terminated.subscriber.ts imports src/infrastructure/database/schema/_shared/consumer-idempotency.ts", "reason": "Subscriber needs idempotency table reference" },
-      { "signature": "[schema-import-outside-repository] src/modules/scheduling/schedule-core/use-cases/replace-requirements.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Bulk replace needs schema types, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/scheduling/shifts/schedule-roster/services/coverage.service.ts imports src/infrastructure/database/schema/index.ts", "reason": "Coverage query needs schema types, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/workforce/application/use-cases/terminate-employee.usecase.ts imports src/infrastructure/database/schema/workforce/tables.ts", "reason": "Terminate needs direct schema access, legacy" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/contract-event.provider.ts imports src/infrastructure/database/schema/index.ts", "reason": "Timeline projection provider" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/position-event.provider.ts imports src/infrastructure/database/schema/index.ts", "reason": "Timeline projection provider" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/status-event.provider.ts imports src/infrastructure/database/schema/index.ts", "reason": "Timeline projection provider" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employee-timeline/providers/system-event.provider.ts imports src/infrastructure/database/schema/index.ts", "reason": "Timeline projection provider" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employees/services/education-aggregation.service.ts imports src/infrastructure/database/schema/index.ts", "reason": "Aggregation service, read-model" },
       { "signature": "[schema-import-outside-repository] src/modules/workforce/employees/services/employee-lifecycle.service.ts imports src/infrastructure/database/schema/workforce/tables.ts", "reason": "Lifecycle service, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/workforce/employees/use-cases/apply-transfer.usecase.ts imports src/infrastructure/database/schema/workforce/tables.ts", "reason": "Transfer needs raw tx, legacy" },
-      { "signature": "[schema-import-outside-repository] src/modules/workforce/employees/use-cases/list-employee-status-history.usecase.ts imports src/infrastructure/database/schema/index.ts", "reason": "Status history query, legacy" }
+      { "signature": "[schema-import-outside-repository] src/modules/workforce/employees/use-cases/apply-transfer.usecase.ts imports src/infrastructure/database/schema/workforce/tables.ts", "reason": "Transfer needs raw tx, legacy" }
     ]
   },
   "cycles": {

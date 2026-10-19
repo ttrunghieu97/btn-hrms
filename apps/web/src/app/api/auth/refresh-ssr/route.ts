@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import { buildBackendUrl } from '@/lib/server/backend-proxy';
 
 function requestOrigin(request: NextRequest): string {
@@ -8,8 +9,14 @@ function requestOrigin(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
-  const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/';
-  const loginUrl = request.nextUrl.searchParams.get('loginUrl') || '/auth/sign-in';
+  const redirectTo = sanitizeInternalRedirectPath(
+    request.nextUrl.searchParams.get('redirectTo'),
+    '/'
+  );
+  const loginUrl = sanitizeInternalRedirectPath(
+    request.nextUrl.searchParams.get('loginUrl'),
+    '/auth/sign-in'
+  );
 
   const cookieHeader = request.headers.get('cookie') || '';
   if (!cookieHeader) {

@@ -59,6 +59,16 @@ export class UpdateRoleUseCase {
       (code) => code.toLowerCase() === 'sys:all' || code.toUpperCase() === 'ALL',
     );
     if (hasSuperAdminPermission && !ctx?.isSuperAdmin) {
+      await this.auditLog.write({
+        actorUserId: ctx?.userId ?? undefined,
+        action: IDENTITY_AUDIT_ACTIONS.ROLE_UPDATE_FAILED,
+        entity: 'role',
+        entityId: id,
+        result: 'FAILED',
+        reason: ERROR_CODES.PERMISSION_DENIED,
+        traceId,
+        metadata: { roleCode: existing.code, permissions },
+      });
       throwForbidden(
         'Only super administrators can grant system administrator permissions to roles',
         ERROR_CODES.PERMISSION_DENIED,
@@ -66,7 +76,57 @@ export class UpdateRoleUseCase {
       );
     }
 
-    const oldPermissions = existing.permissions;
+    const oldPermissions = existing.permissions ?? [];
+    const affectedUserIds =
+      permissions !== undefined ? await this.rolesRepository.findUserIdsWithRole(id) : [];
+
+    if (permissions !== undefined && !ctx?.isSuperAdmin) {
+      if (ctx?.userId && affectedUserIds.includes(ctx.userId)) {
+        await this.auditLog.write({
+          actorUserId: ctx.userId,
+          action: IDENTITY_AUDIT_ACTIONS.ROLE_UPDATE_FAILED,
+          entity: 'role',
+          entityId: id,
+          result: 'FAILED',
+          reason: ERROR_CODES.PERMISSION_DENIED,
+          traceId,
+          metadata: { roleCode: existing.code },
+        });
+        throwForbidden(
+          'You cannot modify permissions of a role currently assigned to yourself',
+          ERROR_CODES.PERMISSION_DENIED,
+          { reason: ERROR_REASONS.MISSING_PERMISSION },
+        );
+      }
+
+      if (
+        Array.isArray(ctx?.permissions) &&
+        !ctx.permissions.some((code) => code.toLowerCase() === 'sys:all' || code.toUpperCase() === 'ALL')
+      ) {
+        const actorPermSet = new Set(ctx.permissions);
+        const existingPermSet = new Set(oldPermissions);
+        const newlyGrantedWithoutPossession = permissions.filter(
+          (code) => !existingPermSet.has(code) && !actorPermSet.has(code),
+        );
+        if (newlyGrantedWithoutPossession.length > 0) {
+          await this.auditLog.write({
+            actorUserId: ctx?.userId ?? undefined,
+            action: IDENTITY_AUDIT_ACTIONS.ROLE_UPDATE_FAILED,
+            entity: 'role',
+            entityId: id,
+            result: 'FAILED',
+            reason: ERROR_CODES.PERMISSION_DENIED,
+            traceId,
+            metadata: { roleCode: existing.code, unauthorizedPerms: newlyGrantedWithoutPossession },
+          });
+          throwForbidden(
+            'Cannot grant permissions that the actor does not possess',
+            ERROR_CODES.PERMISSION_DENIED,
+            { reason: ERROR_REASONS.MISSING_PERMISSION },
+          );
+        }
+      }
+    }
 
     const db = this.scopedDb.getDb();
     const updatedRole = await db.transaction(async (tx) => {
@@ -95,12 +155,11 @@ export class UpdateRoleUseCase {
 
     if (permissions !== undefined) {
       // Invalidate cache, bump authorizationVersion, and revoke tokens for all users with this role
-      const userIds = await this.rolesRepository.findUserIdsWithRole(id);
-      if (userIds.length > 0) {
-        await this.authorizationVersion.bumpMany(userIds);
-        await this.permissionCache.invalidateMany(userIds);
+      if (affectedUserIds.length > 0) {
+        await this.authorizationVersion.bumpMany(affectedUserIds);
+        await this.permissionCache.invalidateMany(affectedUserIds);
         await Promise.allSettled(
-          userIds.map((userId) => this.authRepo.revokeAllRefreshTokens(userId)),
+          affectedUserIds.map((userId) => this.authRepo.revokeAllRefreshTokens(userId)),
         );
       }
     }

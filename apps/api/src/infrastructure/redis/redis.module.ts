@@ -1,7 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Redis from "ioredis";
-import { RedisCacheService } from "./redis-cache.service";
 import { RedisEventsService } from "./redis-events.service";
 import { RedisService } from "./redis.service";
 
@@ -29,14 +28,6 @@ function createRedisClient(redisUrl: string | null): Redis | null {
       inject: [ConfigService],
     },
     {
-      provide: "REDIS_CACHE_CLIENT",
-      useFactory: (config: ConfigService) => {
-        const redisUrl = String(config.get("REDIS_URL") || "").trim();
-        return createRedisClient(redisUrl || null);
-      },
-      inject: [ConfigService],
-    },
-    {
       provide: "REDIS_EVENTS_CLIENT",
       useFactory: (config: ConfigService) => {
         const redisUrl = String(config.get("REDIS_URL") || "").trim();
@@ -44,10 +35,9 @@ function createRedisClient(redisUrl: string | null): Redis | null {
       },
       inject: [ConfigService],
     },
-    RedisCacheService,
     RedisEventsService,
     RedisService,
   ],
-  exports: [RedisCacheService, RedisEventsService, RedisService],
+  exports: [RedisEventsService, RedisService],
 })
 export class RedisModule {}

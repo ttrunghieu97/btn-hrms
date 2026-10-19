@@ -120,15 +120,15 @@ describe(GetMyWorkflowTasksUseCase.name, () => {
     expect(result.countsByDomain.expense).toBe(0);
 
     // Urgent (payroll) should be sorted before high (leave)
-    expect(result.tasks[0].domain).toBe("payroll");
-    expect(result.tasks[1].domain).toBe("leave");
+    expect(result.tasks[0]!.domain).toBe("payroll");
+    expect(result.tasks[1]!.domain).toBe("leave");
   });
 
   it("filters tasks by domain when requested", async () => {
     const result = await useCase.execute("u-1", "leave");
 
     expect(result.total).toBe(1);
-    expect(result.tasks[0].domain).toBe("leave");
+    expect(result.tasks[0]!.domain).toBe("leave");
     // countsByDomain should still reflect total across all domains
     expect(result.countsByDomain.all).toBe(2);
     expect(result.countsByDomain.payroll).toBe(1);

@@ -126,7 +126,7 @@ function createStatefulLeaveHarness(initialAvailableQuota = 5) {
     };
   }
 
-  const leaveRepo = {
+  const leaveRepo: Record<string, any> = {
     findEmployeeById: jest.fn(async (id: string) =>
       id === employee.id ? employee : null,
     ),
@@ -644,6 +644,8 @@ describe("Phase 5B — BIZ-001: Leave Quota & Approval Consistency Regression Su
       outcome: "approved",
       decidedByUserId: "approver-1",
       completedAt: "2026-08-01T10:00:00.000Z",
+      idempotencyKey: `idem-${req.id}`,
+      policyKey: "leave_approval",
     });
 
     // Deliver the same event twice via listener AND once directly to decisionHandler
@@ -687,6 +689,8 @@ describe("Phase 5B — BIZ-001: Leave Quota & Approval Consistency Regression Su
       outcome: "approved",
       decidedByUserId: "approver-1",
       completedAt: "2026-08-01T10:00:00.000Z",
+      idempotencyKey: `idem-${req.id}`,
+      policyKey: "leave_approval",
     });
 
     // Inject transient DB failure right after updateStatusWithGuard when incrementUsedBalance runs

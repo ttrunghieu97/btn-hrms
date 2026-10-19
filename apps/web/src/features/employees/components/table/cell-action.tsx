@@ -26,6 +26,17 @@ import {
   useResetEmployeePasswordMutation,
   useRestoreEmployeeMutation,
 } from '../../queries/employee-queries';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { getEmployeeName } from '../../utils/employee-display';
 import { EmployeeDeleteDialog } from '../dialogs/employee-delete-dialog';
 import { ResetPasswordDialog } from '../dialogs/reset-password-dialog';
 import { TerminateEmployeeDialog } from '../dialogs/lifecycle/terminate-employee-dialog';
@@ -39,16 +50,12 @@ interface CellActionProps {
   data: EmployeeResponseDto;
 }
 
-
-function getEmployeeName(employee: EmployeeResponseDto) {
-  return [employee.firstName, employee.lastName].filter(Boolean).join(' ') || employee.username;
-}
-
 export function CellAction({ data }: CellActionProps) {
   const router = useRouter();
   const queryClient = getQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [purgeOpen, setPurgeOpen] = React.useState(false);
   const [resetPwOpen, setResetPwOpen] = React.useState(false);
   const [terminateOpen, setTerminateOpen] = React.useState(false);
   const [changeStatusOpen, setChangeStatusOpen] = React.useState(false);
@@ -117,6 +124,7 @@ export function CellAction({ data }: CellActionProps) {
   const purgeMutation = usePurgeEmployeeMutation(queryClient, {
     onSuccess: () => {
       toast.success('Đã xoá vĩnh viễn hồ sơ nhân viên.');
+      setPurgeOpen(false);
     },
     onError: (error) => {
       toast.error(
@@ -148,6 +156,31 @@ export function CellAction({ data }: CellActionProps) {
           removeMutation.mutate(data.id);
         }}
       />
+      <AlertDialog open={purgeOpen} onOpenChange={setPurgeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xoá vĩnh viễn hồ sơ nhân viên?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này sẽ xoá vĩnh viễn hồ sơ của <strong>{getEmployeeName(data)}</strong> khỏi hệ thống và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={purgeMutation.isPending}>
+              {commonUiCopy.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              disabled={purgeMutation.isPending}
+              onClick={() => {
+                if (!data.id) return;
+                purgeMutation.mutate(data.id);
+              }}
+            >
+              {purgeMutation.isPending ? 'Đang xoá...' : 'Xoá vĩnh viễn'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ResetPasswordDialog
         open={resetPwOpen}
         onOpenChange={setResetPwOpen}
@@ -204,7 +237,7 @@ export function CellAction({ data }: CellActionProps) {
                 setPresetTargetStatus('working');
                 setChangeStatusOpen(true);
               }}
-              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+              className='text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300 font-semibold'
             >
               <Icons.check className='mr-2 h-4 w-4' /> Chuyển chính thức (Activate)
             </DropdownMenuItem>
@@ -216,7 +249,7 @@ export function CellAction({ data }: CellActionProps) {
                 setPresetTargetStatus('working');
                 setChangeStatusOpen(true);
               }}
-              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+              className='text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300 font-semibold'
             >
               <Icons.check className='mr-2 h-4 w-4' /> Tiếp nhận đi làm lại
             </DropdownMenuItem>
@@ -236,7 +269,7 @@ export function CellAction({ data }: CellActionProps) {
           {canManage && data.status === 'terminated' && (
             <DropdownMenuItem
               onClick={() => setRehireOpen(true)}
-              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+              className='text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300 font-semibold'
             >
               <Icons.add className='mr-2 h-4 w-4' /> Tái tuyển dụng (Rehire)
 
@@ -283,7 +316,7 @@ export function CellAction({ data }: CellActionProps) {
                 if (!data.id) return;
                 restoreMutation.mutate(data.id);
               }}
-              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+              className='text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300 font-semibold'
             >
               <Icons.refresh className='mr-2 h-4 w-4' /> Khôi phục hồ sơ
             </DropdownMenuItem>
@@ -294,10 +327,7 @@ export function CellAction({ data }: CellActionProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 disabled={purgeMutation.isPending}
-                onClick={() => {
-                  if (!data.id) return;
-                  purgeMutation.mutate(data.id);
-                }}
+                onClick={() => setPurgeOpen(true)}
                 className='text-destructive focus:text-destructive'
               >
                 <Icons.trash className='mr-2 h-4 w-4' /> Xoá vĩnh viễn

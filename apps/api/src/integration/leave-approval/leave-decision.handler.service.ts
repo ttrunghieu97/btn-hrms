@@ -274,4 +274,87 @@ export class LeaveDecisionHandler {
       return { applied: true, finalStatus: "rejected" as const };
     });
   }
+
+  async handleCancellation(params: {
+    leaveRequestId: string;
+    decidedByUserId: string | null;
+    decidedAt: Date;
+  }): Promise<{ applied: boolean; finalStatus: string } | undefined> {
+    const { leaveRequestId, decidedByUserId, decidedAt } = params;
+
+    const link = await this.linkRepo.findByLeaveRequestId(leaveRequestId);
+    if (!link) {
+      this.logger.warn(
+        `No approval link for leave ${leaveRequestId} — ignoring cancellation`,
+      );
+      return undefined;
+    }
+
+    return this.leaveRepo.transaction(async (tx) => {
+      const existing = await this.leaveRepo.findById(leaveRequestId, tx);
+      if (!existing) {
+        this.logger.warn(`Leave ${leaveRequestId} not found for cancellation`);
+        return undefined;
+      }
+
+      if (existing.status === "cancelled") {
+        if (this.linkRepo.updateStatus) {
+          await this.linkRepo.updateStatus(leaveRequestId, "cancelled", tx);
+        }
+        return { applied: false, finalStatus: "cancelled" };
+      }
+
+      if (this.lifecycle.isTerminalState(existing.status)) {
+        this.logger.warn(
+          `Leave ${leaveRequestId} is in terminal state ${existing.status} — ignoring late cancellation`,
+        );
+        return { applied: false, finalStatus: existing.status };
+      }
+
+      this.lifecycle.assertTransition(existing.status, "cancelled", leaveRequestId);
+
+      const updatedRecord = await this.leaveRepo.updateStatusWithGuard(
+        leaveRequestId,
+        existing.status,
+        {
+          status: "cancelled",
+          cancelledAt: decidedAt,
+        },
+        tx,
+      );
+      if (!updatedRecord) {
+        this.logger.warn(
+          `Leave ${leaveRequestId} was modified concurrently — skipping cancellation`,
+        );
+        return { applied: false, finalStatus: "cancelled" };
+      }
+
+      if (this.linkRepo.updateStatus) {
+        await this.linkRepo.updateStatus(leaveRequestId, "cancelled", tx);
+      }
+
+      await this.leaveRepo.createAuditLog(
+        decidedByUserId,
+        "leave_request_cancel",
+        leaveRequestId,
+        { previousStatus: existing.status, newStatus: "cancelled" },
+        tx,
+      );
+
+      await this.eventOutbox.stage(
+        {
+          eventType: "leave.request.cancelled",
+          eventVersion: 1,
+          aggregateId: leaveRequestId,
+          payload: {
+            leaveRequestId,
+            employeeId: existing.employeeId,
+          },
+        },
+        tx,
+      );
+
+      return { applied: true, finalStatus: "cancelled" as const };
+    });
+  }
 }

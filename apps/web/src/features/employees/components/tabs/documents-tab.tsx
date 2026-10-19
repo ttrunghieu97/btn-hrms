@@ -3,9 +3,14 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { getFileName, toAssetUrl } from '../../utils/employee-display';
+import { toAssetUrl } from '../../utils/employee-display';
+import { COMPANY_DOCUMENT_OPTIONS } from '../../utils/employee-form-model';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import type { EmployeeResponseDto, EmployeeDocumentDto, EmployeeCertificationDto } from '@/api/generated/model';
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  COMPANY_DOCUMENT_OPTIONS.map((opt) => [opt.id, opt.label])
+);
 
 interface DocumentsTabProps {
   employee: EmployeeResponseDto | null;
@@ -22,7 +27,7 @@ export function DocumentsTab({ employee }: DocumentsTabProps) {
       {/* Documents */}
       <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-sky-500 hover:shadow-md transition-all duration-300'>
         <div className='flex items-center gap-3 border-b px-4 py-3'>
-          <div className='bg-sky-500/10 p-1.5 rounded-lg text-sky-600'>
+          <div className='bg-sky-500/10 p-1.5 rounded-lg text-sky-600 dark:text-sky-400'>
             <Icons.post className='size-4' />
           </div>
           <div>
@@ -40,9 +45,12 @@ export function DocumentsTab({ employee }: DocumentsTabProps) {
               const docUrl = doc.attachment
                 ? toAssetUrl(doc.attachment.url ?? doc.attachment.attachmentId)
                 : (doc as { url?: string }).url ?? '';
+              const docLabel = doc.documentType
+                ? (DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType)
+                : employeeUiCopy.profileDocumentPrefix(idx + 1);
               return (
                 <div key={idx} className='flex items-center justify-between px-4 py-2.5 text-sm'>
-                  <span className='text-foreground/80'>{doc.documentType ?? employeeUiCopy.profileDocumentPrefix(idx + 1)}</span>
+                  <span className='text-foreground/80'>{docLabel}</span>
                   {docUrl ? (
                     <Button variant='ghost' size='sm' asChild>
                       <a href={docUrl} target='_blank' rel='noopener noreferrer'>
@@ -66,7 +74,7 @@ export function DocumentsTab({ employee }: DocumentsTabProps) {
       {/* Certifications */}
       <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-indigo-500 hover:shadow-md transition-all duration-300'>
         <div className='flex items-center gap-3 border-b px-4 py-3'>
-          <div className='bg-indigo-500/10 p-1.5 rounded-lg text-indigo-600'>
+          <div className='bg-indigo-500/10 p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400'>
             <Icons.badgeCheck className='size-4' />
           </div>
           <div>

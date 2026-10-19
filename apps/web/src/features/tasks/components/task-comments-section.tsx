@@ -9,6 +9,7 @@ import { feedbackCopy, feedbackEntity } from '@/lib/feedback-copy';
 import { getQueryClient } from '@/lib/query-client';
 import { formatDateTimeVN } from '@/lib/date';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   useTaskCommentsQuery,
   useAddCommentMutation,
@@ -20,6 +21,7 @@ interface TaskComment {
   id: string;
   content: string;
   createdAt: string;
+  authorId?: string | null;
   author?: {
     id: string;
     username: string;
@@ -39,8 +41,36 @@ interface StagedAttachment {
   isImage: boolean;
 }
 
+/**
+ * Only allow safe HTTP(S) URLs or single-slash internal relative paths (`/api/files/...`).
+ * Rejects `javascript:`, `data:`, `vbscript:`, `file:`, and protocol-relative `//` URLs.
+ */
+export function sanitizeCommentUrl(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+  // Block ASCII control characters
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // Custom parser to render Markdown images and attachment links in comment body
-function CommentContent({ content }: { content: string }) {
+export function CommentContent({ content }: { content: string }) {
   if (!content) return null;
 
   // Split by markdown image or link tokens to parse them sequentially
@@ -54,14 +84,18 @@ function CommentContent({ content }: { content: string }) {
         const imgMatch = /^!\[(.*?)\]\((.*?)\)$/.exec(part);
         if (imgMatch) {
           const [, alt, url] = imgMatch;
+          const safeUrl = sanitizeCommentUrl(url ?? '');
+          if (!safeUrl) {
+            return <span key={idx}>{part}</span>;
+          }
           return (
             <div key={idx} className="my-2 max-w-sm overflow-hidden rounded-lg border bg-muted/20 shadow-xs">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={url}
+                src={safeUrl}
                 alt={alt}
                 className="max-h-60 w-full object-contain cursor-pointer hover:brightness-95 transition-all"
-                onClick={() => window.open(url, '_blank')}
+                onClick={() => window.open(safeUrl, '_blank', 'noopener,noreferrer')}
               />
             </div>
           );
@@ -71,10 +105,14 @@ function CommentContent({ content }: { content: string }) {
         const linkMatch = /^\[(.*?)\]\((.*?)\)$/.exec(part);
         if (linkMatch) {
           const [, text, url] = linkMatch;
+          const safeUrl = sanitizeCommentUrl(url ?? '');
+          if (!safeUrl) {
+            return <span key={idx}>{part}</span>;
+          }
           return (
             <a
               key={idx}
-              href={url}
+              href={safeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-semibold text-primary hover:underline hover:text-primary/80 mr-1"
@@ -93,6 +131,7 @@ function CommentContent({ content }: { content: string }) {
 
 export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const queryClient = getQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const commentsQuery = useTaskCommentsQuery(taskId);
   const addComment = useAddCommentMutation(queryClient);
   const removeComment = useRemoveCommentMutation(queryClient);
@@ -275,15 +314,23 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
                 <span className="text-muted-foreground text-[10px]">
                   {formatDateTimeVN(comment.createdAt)}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all"
-                  onClick={() => handleDelete(comment.id)}
-                  disabled={removeComment.isPending}
-                >
-                  <Icons.trash className="h-3 w-3" />
-                </Button>
+                {Boolean(
+                  currentUser &&
+                    (currentUser.isSuperAdmin ||
+                      (comment.authorId && comment.authorId === currentUser.id) ||
+                      (comment.author?.id && comment.author.id === currentUser.id) ||
+                      (comment.author?.username && comment.author.username === currentUser.username))
+                ) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all"
+                    onClick={() => handleDelete(comment.id)}
+                    disabled={removeComment.isPending}
+                  >
+                    <Icons.trash className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </div>
             {/* Rendered content containing structured markdown files/images */}

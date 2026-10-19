@@ -4,10 +4,12 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import { AppDatabase } from "../../../../infrastructure/database/database-client.type";
 import {
+  accessDenials,
+  accessGrants,
   permissions,
   userPermissions,
 } from "../../../../infrastructure/database/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
 
 @Injectable()
@@ -64,6 +66,7 @@ export class PermissionsRepository extends BaseRepository<
   }
 
   async findUserPermissionCodes(userId: string) {
+    const now = new Date();
     const directQuery = this.db
       .select({
         code: permissions.code,
@@ -84,8 +87,25 @@ export class PermissionsRepository extends BaseRepository<
       )
       .where(eq(schema.userRoles.userId, userId));
 
+    const grantQuery = this.db
+      .select({ code: accessGrants.permissionCode })
+      .from(accessGrants)
+      .where(
+        and(
+          eq(accessGrants.userId, userId),
+          lte(accessGrants.startsAt, now),
+          gt(accessGrants.expiresAt, now),
+          isNull(accessGrants.revokedAt),
+        ),
+      );
+
+    const denialQuery = this.db
+      .select({ code: accessDenials.permissionCode })
+      .from(accessDenials)
+      .where(eq(accessDenials.userId, userId));
+
     const allPerms = await this.db.execute(
-      sql`(${directQuery}) UNION (${roleQuery})`,
+      sql`((${directQuery}) UNION (${roleQuery}) UNION (${grantQuery})) EXCEPT (${denialQuery})`,
     );
 
     return (allPerms as unknown as { code: string }[]).map((p) => p.code);

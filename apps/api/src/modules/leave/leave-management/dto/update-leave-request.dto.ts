@@ -1,6 +1,6 @@
-import { PartialType } from "@nestjs/swagger";
+import { OmitType, PartialType } from "@nestjs/swagger";
 import { CreateLeaveRequestDto } from "./create-leave-request.dto";
 
-export class UpdateLeaveRequestDto extends PartialType(CreateLeaveRequestDto) {}
-
-
+export class UpdateLeaveRequestDto extends PartialType(
+  OmitType(CreateLeaveRequestDto, ["employeeId", "leaveTypeId"] as const),
+) {}

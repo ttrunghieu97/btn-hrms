@@ -631,7 +631,7 @@ describe("Phase 6G — Residual Payroll Findings Remediation Suite (P6F-001, P6F
                   id: emp!.id,
                   endDate: "2026-06-15",
                 }),
-              },
+              } as any,
               settlementWriterAdapter,
               new RequestContextService(),
             );

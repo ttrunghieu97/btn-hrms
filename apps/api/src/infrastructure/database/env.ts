@@ -12,11 +12,6 @@ export function loadEnv(): void {
   for (const envPath of candidates) {
     if (fs.existsSync(envPath)) {
       dotenv.config({ path: envPath, override: false });
-    } else {
-      const examplePath = `${envPath}.example`;
-      if (fs.existsSync(examplePath)) {
-        dotenv.config({ path: examplePath, override: false });
-      }
     }
   }
 }

@@ -21,7 +21,26 @@ export class EventIdempotencyRepository {
 
   async markProcessed(consumerId: string, eventId: string, tx?: AppDatabase): Promise<void> {
     const target = tx ?? this.db;
-    await target.insert(schema.consumerIdempotency).values({ consumerId, eventId });
+    try {
+      const insertBuilder = target.insert(schema.consumerIdempotency).values({
+        consumerId,
+        eventId,
+      });
+      if (typeof (insertBuilder as any)?.onConflictDoNothing === "function") {
+        await (insertBuilder as any).onConflictDoNothing();
+      } else {
+        await insertBuilder;
+      }
+    } catch (err: any) {
+      if (
+        err?.code === "23505" ||
+        String(err).includes("unique") ||
+        String(err).includes("duplicate")
+      ) {
+        return;
+      }
+      throw err;
+    }
   }
 
   async runIdempotent<T>(

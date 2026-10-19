@@ -1,7 +1,6 @@
 import { PermissionWorkspace } from '@/features/roles';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import type { Metadata } from 'next';
 
 interface RoleWorkspacePageProps {

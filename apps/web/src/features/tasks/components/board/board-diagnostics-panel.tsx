@@ -46,7 +46,9 @@ export function BoardDiagnosticsPanel({ diagnostics }: { diagnostics: BoardDiagn
               <div
                 key={i}
                 className={`rounded px-2 py-1 font-mono ${
-                  issue.severity === 'error' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+                  issue.severity === 'error'
+                    ? 'bg-red-500/15 text-red-700 dark:text-red-300'
+                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                 }`}
               >
                 <span className='font-semibold'>[{issue.severity}]</span>{' '}

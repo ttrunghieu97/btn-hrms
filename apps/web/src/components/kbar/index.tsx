@@ -1,5 +1,6 @@
 'use client';
 import { navGroups } from '@/config/nav-config';
+import { useNav } from '@/features/nav';
 import { KBarAnimator, KBarPortal, KBarPositioner, KBarProvider, KBarSearch } from 'kbar';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
@@ -9,19 +10,50 @@ import { useFilteredNavGroups } from '@/hooks/use-nav';
 
 export default function KBar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { data: serverNavGroups } = useNav();
   const filteredGroups = useFilteredNavGroups(navGroups);
 
-  // These action are for the navigation
+  // These actions are for navigation — prefer server-driven useNav() groups (matching AppSidebar)
   const actions = useMemo(() => {
-    // Define navigateTo inside the useMemo callback to avoid dependency array issues
     const navigateTo = (url: string) => {
       router.push(url);
     };
 
+    if (serverNavGroups && serverNavGroups.length > 0) {
+      return serverNavGroups.flatMap((group) =>
+        group.items.flatMap((navItem) => {
+          const baseAction =
+            navItem.href && navItem.href !== '#' && navItem.state !== 'disabled'
+              ? {
+                  id: `nav-${navItem.id}`,
+                  name: navItem.label,
+                  keywords: `${navItem.label} ${group.label}`.toLowerCase(),
+                  section: group.label || 'Navigation',
+                  subtitle: `Go to ${navItem.label}`,
+                  perform: () => navigateTo(navItem.href)
+                }
+              : null;
+
+          const childActions =
+            navItem.children
+              ?.filter((child) => child.href && child.href !== '#' && child.state !== 'disabled')
+              .map((childItem) => ({
+                id: `nav-${childItem.id}`,
+                name: childItem.label,
+                keywords: `${childItem.label} ${navItem.label}`.toLowerCase(),
+                section: navItem.label,
+                subtitle: `Go to ${childItem.label}`,
+                perform: () => navigateTo(childItem.href)
+              })) ?? [];
+
+          return baseAction ? [baseAction, ...childActions] : childActions;
+        })
+      );
+    }
+
     const allItems = filteredGroups.flatMap((group) => group.items);
 
     return allItems.flatMap((navItem) => {
-      // Only include base action if the navItem has a real URL and is not just a container
       const baseAction =
         navItem.url !== '#'
           ? {
@@ -35,7 +67,6 @@ export default function KBar({ children }: { children: React.ReactNode }) {
             }
           : null;
 
-      // Map child items into actions
       const childActions =
         navItem.items?.map((childItem) => ({
           id: `${childItem.title.toLowerCase()}Action`,
@@ -47,10 +78,9 @@ export default function KBar({ children }: { children: React.ReactNode }) {
           perform: () => navigateTo(childItem.url)
         })) ?? [];
 
-      // Return only valid actions (ignoring null base actions for containers)
       return baseAction ? [baseAction, ...childActions] : childActions;
     });
-  }, [router, filteredGroups]);
+  }, [router, serverNavGroups, filteredGroups]);
 
   return (
     <KBarProvider actions={actions}>

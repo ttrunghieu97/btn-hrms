@@ -25,7 +25,13 @@ declare global {
             element: HTMLElement,
             options: { theme?: string; size?: string; shape?: string; text?: string }
           ) => void;
-          prompt: () => void;
+          prompt: (
+            momentListener?: (notification: {
+              isNotDisplayed?: () => boolean;
+              isSkippedMoment?: () => boolean;
+              isDismissedMoment?: () => boolean;
+            }) => void
+          ) => void;
         };
       };
     };
@@ -57,10 +63,12 @@ export function GoogleSsoButton({ onSuccess, label, variant = 'login' }: GoogleS
         });
       }
 
-      // Wait for google lib to be ready
-      await new Promise<void>((resolve) => {
+      // Wait for google lib to be ready (with 5s timeout)
+      await new Promise<void>((resolve, reject) => {
+        const deadline = Date.now() + 5000;
         const check = () => {
           if (window.google?.accounts?.id) resolve();
+          else if (Date.now() >= deadline) reject(new Error('Google Identity Services timed out'));
           else setTimeout(check, 100);
         };
         check();
@@ -78,10 +86,15 @@ export function GoogleSsoButton({ onSuccess, label, variant = 'login' }: GoogleS
         auto_select: variant === 'login',
       });
 
-      if (variant === 'link') {
-        // For linking, just prompt the user to select account
-        window.google!.accounts.id.prompt();
-      }
+      window.google!.accounts.id.prompt((notification) => {
+        if (
+          notification?.isNotDisplayed?.() ||
+          notification?.isSkippedMoment?.() ||
+          notification?.isDismissedMoment?.()
+        ) {
+          setLoading(false);
+        }
+      });
     } catch (err) {
       console.error('Google SSO error:', err);
       setLoading(false);

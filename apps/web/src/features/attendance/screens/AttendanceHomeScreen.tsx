@@ -1,11 +1,29 @@
 'use client';
 
 import * as React from 'react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { formatDateVN } from '@/lib/date';
+import { getVietnameseApiErrorMessage } from '@/lib/api-error-message';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAttendanceHome, AttendanceState, AttendanceUIState } from '../hooks/useAttendanceHome';
 import { ShiftCard } from '../components/home/ShiftCard';
 import { GPSStatusBadge } from '../components/home/GPSStatusBadge';
 import { AttendanceActionButton } from '../components/home/AttendanceActionButton';
+import { OvertimeRequestsSection } from '../components/overtime-requests-section';
+import { useExceptionsQuery, useExplainExceptionMutation } from '../api/timekeeping-queries';
+import type { ExceptionItem } from '../timekeeping/types';
 import { Icons } from '@/components/icons';
 import { toDateString } from '../utils/attendance-utils';
 import { SESSION_TYPE_TO_LABEL } from '../constants';
@@ -168,6 +186,32 @@ export function AttendanceHomeScreen({ onPunch }: AttendanceHomeScreenProps) {
     error,
   } = useAttendanceHome();
 
+  const exceptionsQuery = useExceptionsQuery({ status: 'pending', limit: 20 });
+  const pendingExceptions = (exceptionsQuery.data?.records ?? []) as ExceptionItem[];
+  const explainMutation = useExplainExceptionMutation();
+  const [explainTarget, setExplainTarget] = React.useState<ExceptionItem | null>(null);
+  const [explanationText, setExplanationText] = React.useState('');
+
+  const handleExplainSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!explainTarget || !explanationText.trim()) return;
+    explainMutation.mutate(
+      { id: explainTarget.id, explanation: explanationText.trim() },
+      {
+        onSuccess: () => {
+          toast.success('Đã gửi giải trình ngoại lệ chấm công thành công.');
+          setExplainTarget(null);
+          setExplanationText('');
+        },
+        onError: (err) => {
+          toast.error(
+            getVietnameseApiErrorMessage(err, 'Không thể gửi giải trình ngoại lệ chấm công'),
+          );
+        },
+      },
+    );
+  };
+
   // Client-side calculate total working time
   const totalWorkingSeconds = React.useMemo(() => {
     let total = 0;
@@ -240,66 +284,170 @@ export function AttendanceHomeScreen({ onPunch }: AttendanceHomeScreenProps) {
         <p className="text-sm text-muted-foreground">{employeeUiCopy.attendance.presence.shiftInstructions}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Left column: Shift card and primary action buttons */}
-        <div className="space-y-4">
-          <ShiftCard shift={shift} />
+      {!shift && sortedSessions.length === 0 && state === AttendanceState.NO_SHIFT ? (
+        <ShiftCard shift={null} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* Left column: Shift card and primary action buttons */}
+          <div className="space-y-4">
+            <ShiftCard shift={shift} />
 
-          {/* GPS status */}
-          {!!(geofence && geofence.latitude && geofence.longitude && geofence.radiusMeters) && 
-            (state === AttendanceState.READY || state === AttendanceState.NO_SHIFT) && (
-              <GPSStatusBadge gpsPermission={gpsPermission} gpsError={gpsError} isGpsValid={isGpsValid} onRefresh={refetchLocation} />
-          )}
+            {/* GPS status */}
+            {!!(geofence && geofence.latitude && geofence.longitude && geofence.radiusMeters) && 
+              (state === AttendanceState.READY || state === AttendanceState.NO_SHIFT) && (
+                <GPSStatusBadge gpsPermission={gpsPermission} gpsError={gpsError} isGpsValid={isGpsValid} onRefresh={refetchLocation} />
+            )}
 
-          {/* Primary action button */}
-          {(canCheckIn || canCheckOut) && (activeSession || state === AttendanceState.NO_SHIFT) && (
-            <AttendanceActionButton
-              state={state}
-              isGpsValid={isGpsValid}
-              canCheckIn={canCheckIn}
-              canCheckOut={canCheckOut}
-              onCheckIn={() => {
-                const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
-                onPunch(toDateString(new Date()), label, 'checkin');
-              }}
-              onCheckOut={() => {
-                const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
-                onPunch(toDateString(new Date()), label, 'checkout');
-              }}
-              isLoading={false}
-            />
-          )}
+            {/* Primary action button */}
+            {(canCheckIn || canCheckOut) && (activeSession || state === AttendanceState.NO_SHIFT) && (
+              <AttendanceActionButton
+                state={state}
+                isGpsValid={isGpsValid}
+                canCheckIn={canCheckIn}
+                canCheckOut={canCheckOut}
+                onCheckIn={() => {
+                  const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
+                  onPunch(toDateString(new Date()), label, 'checkin');
+                }}
+                onCheckOut={() => {
+                  const label = activeSession ? (SESSION_TYPE_TO_LABEL[activeSession.type] ?? 'morning') : 'morning';
+                  onPunch(toDateString(new Date()), label, 'checkout');
+                }}
+                isLoading={false}
+              />
+            )}
 
-          {/* Fallback button when no actionable session */}
-          {!activeSession && !canCheckIn && !canCheckOut && state !== (AttendanceState as any).INITIALIZING && (
-            <AttendanceActionButton
-              state={state}
-              isGpsValid={isGpsValid}
-              canCheckIn={false}
-              canCheckOut={false}
-              onCheckIn={() => {}}
-              onCheckOut={() => {}}
-              isLoading={false}
-            />
-          )}
+            {/* Fallback button when no actionable session */}
+            {!activeSession && !canCheckIn && !canCheckOut && state !== (AttendanceState as any).INITIALIZING && (
+              <AttendanceActionButton
+                state={state}
+                isGpsValid={isGpsValid}
+                canCheckIn={false}
+                canCheckOut={false}
+                onCheckIn={() => {}}
+                onCheckOut={() => {}}
+                isLoading={false}
+              />
+            )}
+          </div>
+
+          {/* Right column: Sessions list */}
+          <div className="space-y-4">
+            {sortedSessions.length > 0 ? (
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{employeeUiCopy.attendance.presence.todaySessionsTitle}</h3>
+                {sortedSessions.map((s) => (
+                  <SessionCard key={s.id} {...s} onAction={handleSessionAction} />
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
+      )}
 
-        {/* Right column: Sessions list */}
-        <div className="space-y-4">
-          {sortedSessions.length > 0 ? (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{employeeUiCopy.attendance.presence.todaySessionsTitle}</h3>
-              {sortedSessions.map((s) => (
-                <SessionCard key={s.id} {...s} onAction={handleSessionAction} />
-              ))}
-            </div>
-          ) : state === AttendanceState.NO_SHIFT && sortedSessions.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card p-4 text-center">
-              <p className="text-sm text-muted-foreground">{employeeUiCopy.attendance.presence.noShiftToday}</p>
-            </div>
-          ) : null}
+      {/* Pending Attendance Exceptions & Self-Service Explanation (ATT-4) */}
+      {pendingExceptions.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Icons.warning className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <h3 className="text-sm font-semibold text-foreground">
+              Cảnh báo ngoại lệ chấm công cần giải trình ({pendingExceptions.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-amber-500/20 text-xs">
+            {pendingExceptions.map((exc) => (
+              <div
+                key={exc.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">
+                      Ngày: {exc.date || exc.workDate ? formatDateVN(exc.date ?? exc.workDate) : '—'}
+                    </span>
+                    <Badge variant="outline" className="text-[11px] border-amber-500/40">
+                      {exc.type ?? exc.exceptionType ?? 'Ngoại lệ chấm công'}
+                    </Badge>
+                  </div>
+                  {(exc.resolutionNote || exc.description || exc.note) && (
+                    <p className="text-muted-foreground">
+                      Ghi chú / Giải trình: {exc.resolutionNote ?? exc.description ?? exc.note}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs bg-background"
+                  onClick={() => {
+                    setExplainTarget(exc);
+                    setExplanationText(exc.resolutionNote ?? '');
+                  }}
+                >
+                  <Icons.edit className="mr-1 size-3.5" />
+                  Gửi giải trình
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Overtime Requests & Approvals Section (ATT-2) */}
+      <OvertimeRequestsSection />
+
+      {/* Explain Attendance Exception Dialog */}
+      <Dialog
+        open={Boolean(explainTarget)}
+        onOpenChange={(open) => {
+          if (!open) setExplainTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gửi giải trình ngoại lệ chấm công</DialogTitle>
+            <DialogDescription>
+              Ngày công:{' '}
+              <strong>
+                {explainTarget?.date || explainTarget?.workDate
+                  ? formatDateVN(explainTarget?.date ?? explainTarget?.workDate)
+                  : '—'}
+              </strong>{' '}
+              — Loại ngoại lệ:{' '}
+              <strong>
+                {explainTarget?.type ?? explainTarget?.exceptionType ?? 'Ngoại lệ'}
+              </strong>
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleExplainSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nội dung giải trình *</Label>
+              <Textarea
+                rows={3}
+                required
+                value={explanationText}
+                onChange={(e) => setExplanationText(e.target.value)}
+                placeholder="Nhập lý do đi muộn / về sớm / quên chấm công để Quản lý hoặc HR xem xét..."
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setExplainTarget(null)}
+                disabled={explainMutation.isPending}
+              >
+                Huỷ
+              </Button>
+              <Button type="submit" disabled={explainMutation.isPending}>
+                {explainMutation.isPending ? 'Đang gửi...' : 'Gửi giải trình'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

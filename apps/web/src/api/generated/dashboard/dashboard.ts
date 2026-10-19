@@ -26,6 +26,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DashboardControllerGetAttendanceStatsParams,
   DashboardResponseEnvelopeDto
 } from '../model';
 
@@ -225,6 +226,198 @@ export function useDashboardControllerGetDashboard<TData = Awaited<ReturnType<ty
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getDashboardControllerGetDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type dashboardControllerGetAttendanceStatsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type dashboardControllerGetAttendanceStatsResponseSuccess = (dashboardControllerGetAttendanceStatsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type dashboardControllerGetAttendanceStatsResponse = (dashboardControllerGetAttendanceStatsResponseSuccess)
+
+export const getDashboardControllerGetAttendanceStatsUrl = (params?: DashboardControllerGetAttendanceStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/dashboard/attendance-stats?${stringifiedParams}` : `/api/v1/dashboard/attendance-stats`
+}
+
+/**
+ * @summary Get attendance analytics statistics
+ */
+export const dashboardControllerGetAttendanceStats = async (params?: DashboardControllerGetAttendanceStatsParams, options?: Parameters<typeof customFetch>[1]): Promise<dashboardControllerGetAttendanceStatsResponse> => {
+
+  return customFetch<dashboardControllerGetAttendanceStatsResponse>(getDashboardControllerGetAttendanceStatsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDashboardControllerGetAttendanceStatsInfiniteQueryKey = (params?: DashboardControllerGetAttendanceStatsParams,) => {
+    return [
+    'infinite', `/api/v1/dashboard/attendance-stats`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getDashboardControllerGetAttendanceStatsQueryKey = (params?: DashboardControllerGetAttendanceStatsParams,) => {
+    return [
+    `/api/v1/dashboard/attendance-stats`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDashboardControllerGetAttendanceStatsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>, TError = unknown>(params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDashboardControllerGetAttendanceStatsInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>> = ({ signal }) => dashboardControllerGetAttendanceStats(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DashboardControllerGetAttendanceStatsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>
+export type DashboardControllerGetAttendanceStatsInfiniteQueryError = unknown
+
+
+export function useDashboardControllerGetAttendanceStatsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>, TError = unknown>(
+ params: undefined |  DashboardControllerGetAttendanceStatsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetAttendanceStatsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetAttendanceStatsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get attendance analytics statistics
+ */
+
+export function useDashboardControllerGetAttendanceStatsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDashboardControllerGetAttendanceStatsInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getDashboardControllerGetAttendanceStatsQueryOptions = <TData = Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError = unknown>(params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDashboardControllerGetAttendanceStatsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>> = ({ signal }) => dashboardControllerGetAttendanceStats(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DashboardControllerGetAttendanceStatsQueryResult = NonNullable<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>>
+export type DashboardControllerGetAttendanceStatsQueryError = unknown
+
+
+export function useDashboardControllerGetAttendanceStats<TData = Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError = unknown>(
+ params: undefined |  DashboardControllerGetAttendanceStatsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetAttendanceStats<TData = Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetAttendanceStats<TData = Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get attendance analytics statistics
+ */
+
+export function useDashboardControllerGetAttendanceStats<TData = Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError = unknown>(
+ params?: DashboardControllerGetAttendanceStatsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetAttendanceStats>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDashboardControllerGetAttendanceStatsQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

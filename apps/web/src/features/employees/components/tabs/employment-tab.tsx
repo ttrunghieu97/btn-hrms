@@ -36,17 +36,7 @@ export function EmploymentTab({
   return (
     <div className='space-y-6'>
       {/* Contract section */}
-      <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-purple-500 hover:shadow-md transition-all duration-300'>
-        <div className='flex items-center gap-3 border-b px-4 py-3'>
-          <div className='bg-purple-500/10 p-1.5 rounded-lg text-purple-600'>
-            <Icons.page className='size-4' />
-          </div>
-          <h3 className='text-sm font-semibold text-foreground/90'>{employeeUiCopy.employmentContract}</h3>
-        </div>
-        <div className='px-4 py-3'>
-          <EmployeeContractCard employeeId={employee.id} />
-        </div>
-      </div>
+      <EmployeeContractCard employeeId={employee.id} />
 
       {/* Compensation & Allowances */}
       <EmployeeCompensationCard
@@ -58,7 +48,7 @@ export function EmploymentTab({
       {/* Position history */}
       <div className='rounded-xl border bg-card/60 shadow-sm border-l-4 border-l-orange-500 hover:shadow-md transition-all duration-300'>
         <div className='flex items-center gap-3 border-b px-4 py-3'>
-          <div className='bg-orange-500/10 p-1.5 rounded-lg text-orange-600'>
+          <div className='bg-orange-500/10 p-1.5 rounded-lg text-orange-600 dark:text-orange-400'>
             <Icons.user className='size-4' />
           </div>
           <div>
@@ -94,9 +84,33 @@ export function EmploymentTab({
         )}
       </div>
 
+      {/* Social Insurance */}
+      <SocialInsuranceCard employeeId={employee.id} />
+
+      {/* Account security & Password reset (non-destructive) */}
+      {canResetPassword && (
+        <div className='rounded-xl border bg-card/60 px-4 py-3 shadow-sm'>
+          <div className='flex items-center justify-between gap-4'>
+            <div className='space-y-0.5'>
+              <p className='text-sm font-medium'>{employeeUiCopy.resetPasswordLabel}</p>
+              <p className='text-muted-foreground text-xs'>{employeeUiCopy.resetPasswordDescription}</p>
+            </div>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={onResetPasswordClick}
+            >
+              <Icons.lock className='mr-1.5 size-4' />
+              {employeeUiCopy.table.resetPassword}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Danger zone */}
-      {(canTerminate || canDelete || canResetPassword) && (
-        <div className='rounded-lg border border-destructive/20 bg-destructive/5'>
+      {(canTerminate || canDelete) && (
+        <div className='rounded-xl border border-destructive/20 bg-destructive/5'>
           <div className='border-b border-destructive/20 px-4 py-3'>
             <h3 className='text-sm font-semibold text-destructive'>{employeeUiCopy.manageEmployeeTitle}</h3>
           </div>
@@ -135,27 +149,9 @@ export function EmploymentTab({
                 </Button>
               </div>
             )}
-            {canResetPassword && (
-              <div className='flex items-center justify-between'>
-                <div className='space-y-0.5'>
-                  <p className='text-sm font-medium'>{employeeUiCopy.resetPasswordLabel}</p>
-                  <p className='text-muted-foreground text-xs'>{employeeUiCopy.resetPasswordDescription}</p>
-                </div>
-                <Button
-                  type='button'
-                  variant='destructive'
-                  size='sm'
-                  onClick={onResetPasswordClick}
-                >
-                  <Icons.lock className='mr-1.5 size-4' />
-                  {employeeUiCopy.table.resetPassword}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
-      <SocialInsuranceCard employeeId={employee.id} />
     </div>
   );
 }

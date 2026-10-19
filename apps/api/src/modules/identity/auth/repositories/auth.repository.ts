@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import * as schema from "../../../../infrastructure/database/schema";
-import { and, eq, isNull, isNotNull, lt, gt, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
 import { CONTRACTS_TOKENS } from "../../../../contracts/contracts.tokens";
 import { AuditLogPort } from "../../../../contracts/ports/audit-log.port";
@@ -244,17 +244,11 @@ export class AuthRepository extends BaseRepository<
     );
   }
 
-  findActiveRefreshToken(tokenId: string, userId: string, gracePeriodMs = 30_000) {
-    const graceThreshold = new Date(Date.now() - gracePeriodMs);
+  findActiveRefreshToken(tokenId: string, userId: string, _gracePeriodMs = 30_000) {
     return this.db.query.refreshTokens.findFirst({
       where: and(
         eq(schema.refreshTokens.id, tokenId),
         eq(schema.refreshTokens.userId, userId),
-        isNull(schema.refreshTokens.revokedAt),
-        or(
-          isNull(schema.refreshTokens.supersededAt),
-          gt(schema.refreshTokens.supersededAt, graceThreshold),
-        ),
       ),
     });
   }
@@ -264,7 +258,12 @@ export class AuthRepository extends BaseRepository<
     return db
       .update(schema.refreshTokens)
       .set({ supersededAt: new Date() })
-      .where(eq(schema.refreshTokens.id, tokenId));
+      .where(
+        and(
+          eq(schema.refreshTokens.id, tokenId),
+          isNull(schema.refreshTokens.supersededAt),
+        ),
+      );
   }
 
   deleteRefreshTokenById(tokenId: string, tx?: PostgresJsDatabase<typeof schema>) {
@@ -293,19 +292,9 @@ export class AuthRepository extends BaseRepository<
 
   async deleteExpiredOrRevokedRefreshTokens(now: Date, tx?: PostgresJsDatabase<typeof schema>) {
     const db = tx ?? this.db;
-    const supersededGrace = new Date(now.getTime() - 60_000);
     const deleted = await db
       .delete(schema.refreshTokens)
-      .where(
-        or(
-          lt(schema.refreshTokens.expiresAt, now),
-          isNotNull(schema.refreshTokens.revokedAt),
-          and(
-            isNotNull(schema.refreshTokens.supersededAt),
-            lt(schema.refreshTokens.supersededAt, supersededGrace),
-          ),
-        ),
-      )
+      .where(lt(schema.refreshTokens.expiresAt, now))
       .returning({ id: schema.refreshTokens.id });
     return deleted.length;
   }

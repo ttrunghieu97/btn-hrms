@@ -46,39 +46,30 @@ export async function prefetchSchedulePage(
     to: format(addDays(weekStart, 6), 'yyyy-MM-dd'),
   };
 
-  try {
-    await queryClient.fetchQuery(
-      shiftsRosterQueryOptions(rosterParams, requestInit),
-    );
-  } catch {
-    queryClient.removeQueries({ queryKey: shiftsKeys.roster(rosterParams) });
-  }
-
-  // ── Management tab: templates (first page) ──
   const templateFilters = getShiftTemplateListFilters();
-  try {
-    await queryClient.fetchQuery(
-      shiftsTemplatesQueryOptions(templateFilters, requestInit),
-    );
-  } catch {
-    queryClient.removeQueries({ queryKey: shiftsKeys.templates(templateFilters) });
-  }
 
-  // ── Management tab: assignments (first page) ──
-  try {
-    await queryClient.fetchQuery(
-      shiftsAssignmentsQueryOptions({ limit: 10 }, requestInit),
-    );
-  } catch {
-    queryClient.removeQueries({ queryKey: shiftsKeys.assignments({ limit: 10 }) });
-  }
-
-  // ── Requests / My-schedule tabs ──
-  try {
-    await queryClient.fetchQuery(allRequestsQueryOptions(undefined, requestInit));
-  } catch {
-    queryClient.removeQueries({ queryKey: requestKeys.all() });
-  }
+  await Promise.all([
+    queryClient
+      .fetchQuery(shiftsRosterQueryOptions(rosterParams, requestInit))
+      .catch(() => {
+        queryClient.removeQueries({ queryKey: shiftsKeys.roster(rosterParams) });
+      }),
+    queryClient
+      .fetchQuery(shiftsTemplatesQueryOptions(templateFilters, requestInit))
+      .catch(() => {
+        queryClient.removeQueries({ queryKey: shiftsKeys.templates(templateFilters) });
+      }),
+    queryClient
+      .fetchQuery(shiftsAssignmentsQueryOptions({ limit: 10 }, requestInit))
+      .catch(() => {
+        queryClient.removeQueries({ queryKey: shiftsKeys.assignments({ limit: 10 }) });
+      }),
+    queryClient
+      .fetchQuery(allRequestsQueryOptions(undefined, requestInit))
+      .catch(() => {
+        queryClient.removeQueries({ queryKey: requestKeys.all() });
+      }),
+  ]);
 
   return {
     queryClient,

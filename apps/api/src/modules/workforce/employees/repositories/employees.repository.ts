@@ -286,4 +286,16 @@ export class EmployeesRepository extends BaseRepository<
   async listStatusHistory(employeeId: string, limit = 50) {
     return this.readRepo.listStatusHistory(employeeId, limit);
   }
+
+  async insertStatusHistory(
+    values: typeof schema.employeeStatusHistory.$inferInsert,
+    tx?: Tx,
+  ) {
+    if (tx) {
+      return tx.insert(schema.employeeStatusHistory).values(values);
+    }
+    return this.transaction((innerTx) =>
+      innerTx.insert(schema.employeeStatusHistory).values(values),
+    );
+  }
 }

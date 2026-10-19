@@ -50,9 +50,11 @@ export function EmployeeSummaryHeader({
   onAvatarRemoveClick,
 }: EmployeeSummaryHeaderProps) {
   const tenure = calculateTenure(employee.startDate);
+  const isCreateMode = !employee.id;
+  const fullName = [employee.lastName, employee.firstName].filter(Boolean).join(' ').trim();
 
   return (
-    <div className='flex items-start gap-5'>
+    <div className='flex items-center gap-5'>
       <EmployeeAvatarUpload
         src={avatarUrl}
         alt={getEmployeeName(employee)}
@@ -64,28 +66,42 @@ export function EmployeeSummaryHeader({
         onUploadClick={onAvatarUploadClick}
         onRemoveClick={onAvatarRemoveClick}
       />
-      <div className='min-w-0 flex-1 space-y-4'>
+      <div className='min-w-0 flex-1 space-y-3'>
         <div>
-          <div className='mb-2 flex flex-wrap items-center gap-2'>
-            <EmployeeStatusBadge status={getSmartStatus(employee).kind} />
-            {isEditing && (
-              <span className='rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground'>
-                {employeeUiCopy.footerEditing}
+          <div className='mb-1.5 flex flex-wrap items-center gap-2'>
+            {isCreateMode ? (
+              <span className='rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
+                Tạo hồ sơ mới
               </span>
+            ) : (
+              <>
+                <EmployeeStatusBadge status={getSmartStatus(employee).kind} />
+                {isEditing && (
+                  <span className='rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground'>
+                    {employeeUiCopy.footerEditing}
+                  </span>
+                )}
+              </>
             )}
           </div>
 
           <h2 className='truncate text-lg font-semibold'>
-            {getEmployeeName(employee)}
+            {isCreateMode ? (fullName || 'Hồ sơ nhân viên mới') : getEmployeeName(employee)}
           </h2>
 
           <p className='text-muted-foreground text-sm'>
-            {formatValue(employee.employeeCode)}
-            {employee.position?.name && (
-              <> · {employee.position.name}</>
-            )}
-            {employee.department?.name && (
-              <> · {employee.department.name}</>
+            {isCreateMode && !employee.employeeCode && !employee.position?.name && !employee.department?.name ? (
+              'Điền thông tin cá nhân, giấy tờ và công việc để khởi tạo nhân sự'
+            ) : (
+              <>
+                {formatValue(employee.employeeCode)}
+                {employee.position?.name && (
+                  <> · {employee.position.name}</>
+                )}
+                {employee.department?.name && (
+                  <> · {employee.department.name}</>
+                )}
+              </>
             )}
           </p>
 

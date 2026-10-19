@@ -32,8 +32,7 @@ export class StorageUrlService {
   }
 
   getUrl(key: string): string {
-    if (this.isS3Url()) return `/files/${key}`;
-    return `/public/${key}`;
+    return `/files/${key}`;
   }
 
   getPublicUrl(key: string): string | null {

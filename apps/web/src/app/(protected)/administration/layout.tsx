@@ -9,6 +9,7 @@ const tabs = [
   { href: '/administration/roles', label: routeLabels.roleManagement },
   { href: '/administration/approval', label: routeLabels.approval },
   { href: '/administration/workflows', label: 'Quy trình động' },
+  { href: '/administration/audit-logs', label: 'Nhật ký hệ thống' },
 ];
 
 export default function AdministrationLayout({ children }: { children: React.ReactNode }) {

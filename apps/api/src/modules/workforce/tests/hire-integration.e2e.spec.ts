@@ -446,6 +446,8 @@ describe("Core HR, Lifecycle, Approval & Payroll Integration Acceptance (Journey
         hireDate: "2026-09-01",
         status: "working",
         departmentId: "dept-eng",
+        contractType: "indefinite",
+        contractStatus: "active",
         reason: "Boomerang hire",
       });
       expect(rehired).toEqual({

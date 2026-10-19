@@ -49,7 +49,7 @@ export function EmployeeTabBar({
   tabs = DEFAULT_TABS,
 }: EmployeeTabBarProps) {
   return (
-    <div className='shrink-0 border-b border-border/60 bg-background/95 px-6 py-4 pr-14 backdrop-blur'>
+    <div className='shrink-0 border-b border-border/60 bg-background/95 px-6 py-4 backdrop-blur'>
       <div className='flex items-start justify-between gap-4'>
         <div className='min-w-0 flex-1'>
           <EmployeeSummaryHeader

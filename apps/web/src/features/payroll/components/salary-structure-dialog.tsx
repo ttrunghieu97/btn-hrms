@@ -42,11 +42,15 @@ export function SalaryStructureDialog({ open, onOpenChange, onSave, saving }: Pr
     },
   });
 
+  const prevOpenRef = useRef(open);
   useEffect(() => {
-    if (!open) {
+    if (prevOpenRef.current && !open) {
       form.reset();
     }
-  }, [open, form]);
+    prevOpenRef.current = open;
+    // Omit unstable `form` wrapper returned by useAppForm from deps to prevent render/effect loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,7 +85,11 @@ export function SalaryStructureDialog({ open, onOpenChange, onSave, saving }: Pr
                   <field.Field>
                     <Select
                       value={field.state.value}
-                      onValueChange={(v) => field.handleChange(v as FormValues['payFrequency'])}
+                      onValueChange={(v) => {
+                        if (v && v !== field.state.value) {
+                          field.handleChange(v as FormValues['payFrequency']);
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />

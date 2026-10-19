@@ -32,6 +32,7 @@ export async function POST() {
   // Delete the HTTP-only cookies on the frontend/BFF side
   cookieStore.delete(accessCookieName);
   cookieStore.delete(refreshCookieName);
+  cookieStore.delete('session_perms');
 
   return NextResponse.json({ ok: true });
 }

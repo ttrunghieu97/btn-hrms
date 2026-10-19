@@ -10,12 +10,15 @@ import {
   extractWebhookSubscriptions,
 } from '@/features/integrations';
 
+const s3ConfigSummary = process.env.NEXT_PUBLIC_STORAGE_ENDPOINT
+  ? `${process.env.NEXT_PUBLIC_STORAGE_ENDPOINT} (hrms-uploads)`
+  : 'S3-compatible object storage (hrms-uploads)';
+
 const baseIntegrations = [
-  { id: 'sso', title: 'Google SSO', description: 'Single sign-on via Google Workspace', status: 'connected' as const, configSummary: 'client-id@google-oauth-123.apps.googleusercontent.com' },
-  { id: 'smtp', title: 'SMTP', description: 'Email delivery for notifications', status: 'connected' as const, configSummary: 'smtp.sendgrid.net:587' },
-  { id: 's3', title: 'S3 / MinIO', description: 'Object storage for file uploads', status: 'connected' as const, configSummary: 's3.ap-southeast-1.amazonaws.com' },
-  { id: 'redis', title: 'Redis', description: 'Cache, event bus, and queue backend', status: 'connected' as const, configSummary: 'redis-01.internal:6379' },
-  { id: 'queue', title: 'BullMQ', description: 'Background job processing', status: 'connected' as const, configSummary: 'redis://redis-01.internal:6379' },
+  { id: 'sso', title: 'Google SSO', description: 'Single sign-on via Google Workspace', status: 'connected' as const, configSummary: 'Google OAuth 2.0' },
+  { id: 'smtp', title: 'SMTP', description: 'Email delivery for notifications', status: 'connected' as const, configSummary: 'SMTP notification transport' },
+  { id: 's3', title: 'S3 / MinIO', description: 'Object storage for file uploads', status: 'connected' as const, configSummary: s3ConfigSummary },
+  { id: 'outbox', title: 'PostgreSQL Outbox', description: 'Transactional event bus & background dispatcher', status: 'connected' as const, configSummary: 'InternalEventBus + EventOutboxDispatcher' },
   { id: 'otel', title: 'OpenTelemetry', description: 'Traces, metrics, and logs export', status: 'disabled' as const, configSummary: 'OTEL endpoint not configured' },
 ];
 

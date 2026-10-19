@@ -107,17 +107,33 @@ export function DataTable<TData>({
         <div className='rpi-table-full h-full min-h-0 flex-1'>
           <ScrollArea className='h-full w-full'>
             <Table
-              className={cn(table.getAllFlatColumns().some((col) => col.getCanResize()) && 'table-fixed')}
+              className={cn(
+                'w-full',
+                (Object.keys(table.getState().columnSizing).length > 0 ||
+                  Boolean(table.getState().columnSizingInfo?.isResizingColumn)) &&
+                  'table-fixed'
+              )}
               style={{
-                width: table.getAllFlatColumns().some((col) => col.getCanResize())
-                  ? table.getTotalSize()
-                  : undefined
+                width:
+                  Object.keys(table.getState().columnSizing).length > 0 ||
+                  Boolean(table.getState().columnSizingInfo?.isResizingColumn)
+                    ? table.getTotalSize()
+                    : undefined,
+                minWidth: '100%'
               }}
             >
-              {table.getAllFlatColumns().some((col) => col.getCanResize()) && (
+              {(Object.keys(table.getState().columnSizing).length > 0 ||
+                Boolean(table.getState().columnSizingInfo?.isResizingColumn)) && (
                 <colgroup>
                   {table.getVisibleFlatColumns().map((column) => (
-                    <col key={column.id} style={{ width: column.getSize() }} />
+                    <col
+                      key={column.id}
+                      className={cn(
+                        (column.columnDef.meta as { responsivePriority?: string } | undefined)?.responsivePriority === 'supporting' && 'rpi-priority-supporting',
+                        (column.columnDef.meta as { responsivePriority?: string } | undefined)?.responsivePriority === 'rich' && 'rpi-priority-rich'
+                      )}
+                      style={{ width: column.getSize() }}
+                    />
                   ))}
                 </colgroup>
               )}
@@ -129,7 +145,7 @@ export function DataTable<TData>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'relative group/resizable',
+                          'relative group/resizable whitespace-nowrap',
                           (header.column.columnDef.meta as { responsivePriority?: string } | undefined)?.responsivePriority === 'supporting' && 'rpi-priority-supporting',
                           (header.column.columnDef.meta as { responsivePriority?: string } | undefined)?.responsivePriority === 'rich' && 'rpi-priority-rich'
                         )}
@@ -137,7 +153,7 @@ export function DataTable<TData>({
                           ...getCommonPinningStyles({ column: header.column })
                         }}
                       >
-                        <div className={cn(header.column.getCanResize() && 'truncate w-full pr-3')}>
+                        <div className={cn(header.column.getCanResize() && 'flex items-center overflow-hidden w-full pr-2')}>
                           {header.isPlaceholder
                              ? null
                              : flexRender(header.column.columnDef.header, header.getContext())}

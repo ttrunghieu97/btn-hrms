@@ -94,7 +94,12 @@ export class RecruitmentApprovalListener implements OnModuleInit {
         return;
       }
 
-      const decision = outcome === "approved" ? "approved" : "rejected";
+      const decision: "approved" | "rejected" | "cancelled" =
+        outcome === "approved"
+          ? "approved"
+          : outcome === "cancelled"
+            ? "cancelled"
+            : "rejected";
 
       await this.decisionHandler.handleDecision({
         subjectType,

@@ -1,10 +1,8 @@
 ## Execution Rules
 
 ### General & Safety
-- State assumptions. Unsure → ask.
-- Multiple meanings → present options.
-- Simpler path → say so.
-- Confused → stop, name it, ask.
+- **Autonomous Mode Override (`/goal` or `CLAUDE.md`)**: When executing under `/goal` or following `CLAUDE.md`, **DO NOT** stop to ask the user, present options, or wait for confirmation on routine engineering or domain ambiguities. Infer safe HRMS defaults, record assumptions in `docs/adr/` and `docs/LEDGER.md`, suppress all human-in-the-loop gates inside `.agents/skills/*/SKILL.md`, and continue autonomously.
+- **Interactive Mode Default**: In standard interactive turns (outside `/goal` / `CLAUDE.md`), state assumptions; if unsure → ask; if multiple meanings → present options; if simpler path → say so; if confused → stop, name it, ask.
 - Touch only required lines. No adjacent cleanup unless caused by change.
 - Match style. Remove imports/vars/fns made unused.
 - Delete dead code (unused functions, imports, variables, unreachable code). Dev stage — clean up aggressively.

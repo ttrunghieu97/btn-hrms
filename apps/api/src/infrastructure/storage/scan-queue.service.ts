@@ -136,15 +136,18 @@ export class ScanQueueService implements OnModuleInit, OnModuleDestroy {
       .where(eq(schema.files.id, row.id));
 
     try {
-      // Fetch the file from storage for scanning
+      // Stream the file from storage directly to ClamAV without buffering full file in memory
       const { stream } = await this.storage.getObjectStream(row.key);
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      let result;
+      if (typeof this.scanner.scanStream === "function") {
+        result = await this.scanner.scanStream(stream);
+      } else {
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        result = await this.scanner.scan(Buffer.concat(chunks));
       }
-      const fileBuffer = Buffer.concat(chunks);
-
-      const result = await this.scanner.scan(fileBuffer);
 
       await this.db
         .update(schema.files)

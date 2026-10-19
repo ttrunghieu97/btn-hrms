@@ -12,7 +12,9 @@ export interface EventDefinition {
   deprecated?: boolean;
   /** List of required top-level payload fields. null = any shape accepted */
   requiredFields?: string[] | null;
-  /** Allow unknown fields beyond the required set */
+  /** List of optional top-level payload fields allowed in strict mode */
+  optionalFields?: string[];
+  /** Allow unknown fields beyond the required + optional set */
   strict?: boolean;
 }
 
@@ -78,9 +80,14 @@ export function validatePayload(eventType: string, version: number, payload: unk
   }
 
   if (def.strict !== false) {
+    const allowedFields = [
+      ...def.requiredFields,
+      ...(def.optionalFields ?? []),
+    ];
     for (const key of Object.keys(data)) {
-      if (!def.requiredFields.includes(key)) {
-        throw new Error(`Unknown field "${key}" in strict schema ${eventType}.v${version}. Allowed: ${def.requiredFields.join(", ")}`);
+      if (key === "__trace") continue;
+      if (!allowedFields.includes(key)) {
+        throw new Error(`Unknown field "${key}" in strict schema ${eventType}.v${version}. Allowed: ${allowedFields.join(", ")}`);
       }
     }
   }

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { HydrationBoundary } from '@tanstack/react-query';
 import { CalendarView } from '@/features/schedule';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import { prefetchSchedulePage } from '@/features/shifts/server';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';

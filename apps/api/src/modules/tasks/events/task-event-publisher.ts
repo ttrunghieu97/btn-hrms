@@ -3,10 +3,8 @@
  * Publishes domain events to the event store and Kafka (when available).
  */
 
-import { Injectable, Logger, Optional } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import type { Kafka, Producer } from "kafkajs";
-import { InjectKafka } from "./kafka/kafka.decorators";
 import { RequestContextService } from "../../../shared/context/request-context.service";
 import { MetricsService } from "../../../shared/metrics/metrics.service";
 import {
@@ -27,40 +25,27 @@ export interface PublishOptions {
   payload: Record<string, any>;
 }
 
+interface EventBrokerProducer {
+  send(payload: {
+    topic: string;
+    messages: Array<{
+      key: string;
+      value: string;
+      headers: Record<string, string>;
+    }>;
+  }): Promise<void>;
+}
+
 @Injectable()
 export class TaskEventPublisher {
   private readonly logger = new Logger(TaskEventPublisher.name);
-  private producer: Producer | null = null;
+  private producer: EventBrokerProducer | null = null;
 
   constructor(
     private readonly eventStore: TaskEventStoreRepository,
     private readonly requestContext: RequestContextService,
     private readonly metrics: MetricsService,
-    @Optional() @InjectKafka() private readonly kafka: Kafka | null,
-  ) {
-    if (this.kafka) {
-      this.producer = this.kafka.producer({ idempotent: true });
-    }
-  }
-
-  async onModuleInit() {
-    if (this.producer) {
-      try {
-        await this.producer.connect();
-        this.logger.log("Kafka producer connected");
-      } catch (err) {
-        this.logger.warn(
-          "Kafka producer connection failed — events will be stored only",
-          err,
-        );
-        this.producer = null;
-      }
-    }
-  }
-
-  async onModuleDestroy() {
-    await this.producer?.disconnect().catch(() => undefined);
-  }
+  ) {}
 
   async publish(opts: PublishOptions): Promise<void> {
     const event = await this.enqueue(opts);

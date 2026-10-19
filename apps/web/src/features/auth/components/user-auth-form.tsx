@@ -12,7 +12,7 @@ import { appCopy } from '@/lib/app-copy';
 import { useAuthStore } from '@/stores/auth-store';
 import { GoogleSsoButton } from './google-sso-button';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getPreferredLandingRoute } from '@/lib/auth-landing';
+import { getPreferredLandingRoute, sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import Link from 'next/link';
 
 
@@ -49,9 +49,10 @@ export default function UserAuthForm() {
         try {
           const user = await signIn(value.username, value.password);
           if (user) {
-            const next = searchParams.get('next');
-            if (next) {
-              router.replace(next);
+            const rawNext = searchParams.get('next');
+            const safeNext = sanitizeInternalRedirectPath(rawNext, '');
+            if (safeNext) {
+              router.replace(safeNext);
               return;
             }
 
@@ -64,7 +65,9 @@ export default function UserAuthForm() {
             return;
           }
 
-          throw error;
+          setSubmitError(
+            getVietnameseApiErrorMessage(error, 'Không thể đăng nhập lúc này. Vui lòng thử lại sau.')
+          );
         }
       }
   });
@@ -100,6 +103,7 @@ export default function UserAuthForm() {
                         <TooltipTrigger asChild>
                           <button
                             type='button'
+                            suppressHydrationWarning
                             aria-label='Thông tin tên đăng nhập'
                             className='text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-sm transition-colors'
                           >
@@ -145,6 +149,7 @@ export default function UserAuthForm() {
                         <TooltipTrigger asChild>
                           <button
                             type='button'
+                            suppressHydrationWarning
                             aria-label='Thông tin mật khẩu'
                             className='text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-sm transition-colors'
                           >
@@ -173,6 +178,7 @@ export default function UserAuthForm() {
                       />
                       <button
                         type='button'
+                        suppressHydrationWarning
                         onClick={() => setShowPassword(!showPassword)}
                         tabIndex={-1}
                         className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground p-1 transition-colors focus:outline-none'

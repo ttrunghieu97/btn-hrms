@@ -41,6 +41,7 @@ import {
 import {
   CreateCourseDto,
   AssignCourseDto,
+  EnrollCourseDto,
   CourseResponseDto,
   EnrollmentResponseDto,
   CreateSessionDto,
@@ -110,8 +111,8 @@ export class LearningController {
   ) {
     return this.assignCourse.execute(d, r.user?.id);
   }
-  @Post("enrollments") enroll(@Body("courseId") courseId: string, @Request() r: any) {
-    return this.enrollCourse.execute(courseId, r.user?.employeeId ?? r.user?.id);
+  @Post("enrollments") enroll(@Body() d: EnrollCourseDto, @Request() r: any) {
+    return this.enrollCourse.execute(d.courseId, r.user?.employeeId ?? r.user?.id);
   }
   @Post("enrollments/:id/complete") complete(@Param("id") id: string) {
     return this.completeCourse.execute(id);

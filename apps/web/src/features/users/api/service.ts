@@ -1,15 +1,12 @@
-import { employeesControllerCreate, employeesControllerUpdate } from '@/api/generated/employees-hr-management/employees-hr-management';
+import { employeesControllerCreate } from '@/api/generated/employees-hr-management/employees-hr-management';
 import { employeeAdminControllerRemove } from '@/api/generated/employee-admin/employee-admin';
 import { usersControllerFindAll } from '@/api/generated/users-management/users-management';
 import type {
   CreateEmployeeDto,
-  UpdateEmployeeDto,
-  UserListResponseDto,
   UsersControllerFindAllParams
 } from '@/api/generated/model';
 
 type EmployeesControllerCreateBody = CreateEmployeeDto;
-type EmployeesControllerUpdateBody = UpdateEmployeeDto;
 import { extractPagination, unwrapData } from '@/lib/api-extract';
 import { userUiCopy } from '@/lib/app-copy';
 import type { UserFilters, UsersResponse, UserMutationPayload } from './types';
@@ -30,15 +27,6 @@ function mapSort(sort?: string): string | undefined {
 }
 
 function toCreatePayload(data: UserMutationPayload): EmployeesControllerCreateBody {
-  return {
-    firstName: data.firstName,
-    lastName: data.lastName,
-    ...(data.email ? { email: data.email } : {}),
-    ...(data.phoneNumber ? { phoneNumber: data.phoneNumber } : {})
-  };
-}
-
-function toUpdatePayload(data: UserMutationPayload): EmployeesControllerUpdateBody {
   return {
     firstName: data.firstName,
     lastName: data.lastName,
@@ -79,12 +67,6 @@ export async function getUsersWithRequest(
 
 export async function createUser(data: UserMutationPayload) {
   return unwrapData(await employeesControllerCreate(toCreatePayload(data)));
-}
-
-export async function updateUser(username: string, data: UserMutationPayload) {
-  return unwrapData(
-    await employeesControllerUpdate(username, toUpdatePayload(data))
-  );
 }
 
 export async function deleteUser(username: string) {

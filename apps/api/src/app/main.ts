@@ -8,7 +8,6 @@ import {
 
 import { NestFactory } from "@nestjs/core";
 import { type NestExpressApplication } from "@nestjs/platform-express";
-import { join } from "path";
 import { BadRequestException, Logger, ValidationPipe } from "@nestjs/common";
 import { SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
@@ -147,10 +146,6 @@ async function bootstrap() {
       referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     }),
   );
-
-  app.useStaticAssets(join(process.cwd(), "public"), {
-    prefix: "/public/",
-  });
 
   app.setGlobalPrefix("api/v1");
 

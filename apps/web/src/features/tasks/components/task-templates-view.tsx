@@ -12,6 +12,7 @@ import {
   useTaskTemplatesControllerUpdate,
 } from '@/api/generated/task-templates/task-templates';
 import { getTasksControllerListQueryKey } from '@/api/generated/tasks/tasks';
+import { taskKeys } from '../queries/task-queries';
 import type { CreateTaskTemplateDtoPriority } from '@/api/generated/model/createTaskTemplateDtoPriority';
 import type { UpdateTaskTemplateDtoPriority } from '@/api/generated/model/updateTaskTemplateDtoPriority';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +104,9 @@ export function TaskTemplatesView() {
     void queryClient.invalidateQueries({
       queryKey: getTaskTemplatesControllerFindAllQueryKey(),
     });
+    void queryClient.invalidateQueries({
+      queryKey: taskKeys.templates(),
+    });
   };
 
   const createMutation = useTaskTemplatesControllerCreate({
@@ -150,6 +154,9 @@ export function TaskTemplatesView() {
         toast.success('Đã khởi tạo công việc mới từ mẫu');
         void queryClient.invalidateQueries({
           queryKey: getTasksControllerListQueryKey(),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: taskKeys.lists(),
         });
       },
       onError: (err: unknown) => {

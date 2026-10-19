@@ -84,7 +84,7 @@ export const getGPSLogsControllerFindAllUrl = (params?: GPSLogsControllerFindAll
 }
 
 /**
- * @summary Get GPS history (for managers)
+ * @summary Get GPS history (scoped by user permissions)
  */
 export const gPSLogsControllerFindAll = async (params?: GPSLogsControllerFindAllParams, options?: Parameters<typeof customFetch>[1]): Promise<gPSLogsControllerFindAllResponse> => {
 
@@ -161,7 +161,7 @@ export function useGPSLogsControllerFindAllInfinite<TData = InfiniteData<Awaited
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get GPS history (for managers)
+ * @summary Get GPS history (scoped by user permissions)
  */
 
 export function useGPSLogsControllerFindAllInfinite<TData = InfiniteData<Awaited<ReturnType<typeof gPSLogsControllerFindAll>>>, TError = unknown>(
@@ -228,7 +228,7 @@ export function useGPSLogsControllerFindAll<TData = Awaited<ReturnType<typeof gP
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get GPS history (for managers)
+ * @summary Get GPS history (scoped by user permissions)
  */
 
 export function useGPSLogsControllerFindAll<TData = Awaited<ReturnType<typeof gPSLogsControllerFindAll>>, TError = unknown>(

@@ -45,7 +45,7 @@ export const navGroups: NavGroup[] = [
         visible: isModuleNavVisible('organization'),
         items: [],
         access: {
-          permissions: ['organization:view']
+          permissions: ['departments:view', 'locations:view']
         }
       }
     ]
@@ -62,9 +62,11 @@ export const navGroups: NavGroup[] = [
         items: [],
         access: {
           permissions: [
+            'attendance:check',
             'attendance:view:self',
             'attendance:view:department',
-            'attendance:view:all'
+            'attendance:view:all',
+            'gps-logs:view'
           ]
         }
       }
@@ -198,7 +200,9 @@ export const navGroups: NavGroup[] = [
         isActive: false,
         visible: isModuleNavVisible('schedule'),
         items: [],
-        access: { permissions: ['schedule:view'] }
+        access: {
+          permissions: ['schedule:view:self', 'schedule:view:department', 'schedule:view:all']
+        }
       }
     ]
   },
@@ -253,7 +257,7 @@ export const navGroups: NavGroup[] = [
         visible: isModuleNavVisible('payroll'),
         items: [],
         access: {
-          permissions: ['payroll:view']
+          permissions: ['payroll:view', 'payroll:view:self', 'payroll:view:all']
         }
       }
     ]
@@ -272,6 +276,7 @@ export const navGroups: NavGroup[] = [
           permissions: [
             'users:view',
             'users:edit',
+            'roles:view',
             'approval-policies:view',
             'approval-requests:view'
           ]
@@ -301,7 +306,7 @@ export const navGroups: NavGroup[] = [
         disabled: false,
         visible: isModuleNavVisible('account'),
         items: [],
-        access: { permissions: ['notifications:view'] }
+        access: { permissions: ['notifications:view:self'] }
       },
       {
         title: appCopy.nav.items.changePassword,

@@ -1,6 +1,7 @@
 export { employeesQueryOptions } from './api/queries';
 export {
   useDepartmentsQuery,
+  usePositionsQuery,
   useEmployeeStatusHistoryQuery,
   useChangeEmployeeStatusMutation,
   useRehireEmployeeMutation,
@@ -11,9 +12,13 @@ export { employeeKeys, timelineKeys } from './queries/employee-queries';
 export { contractKeys } from './api/contract-queries';
 export type { ContractData } from './api/contract-queries';
 export type { TimelineEventDto } from './api/timeline';
-export { EmployeeCreatePage, EmployeesTable, ContractsView, DocumentsView } from './components';
+export { EmployeeCreatePage, EmployeesTable, EmployeesTableSkeleton, ContractsView, DocumentsView } from './components';
 export { EmployeeLifecycleWorkflowHero } from './components/workflow/employee-lifecycle-workflow-hero';
 export { EmployeeLifecycleHistoryCard } from './components/workflow/employee-lifecycle-history-card';
 export { ChangeEmployeeStatusDialog } from './components/dialogs/lifecycle/change-employee-status-dialog';
 export { RehireEmployeeDialog } from './components/dialogs/lifecycle/rehire-employee-dialog';
+export { EmployeeContractCard } from './components/cards/contract/employee-contract-card';
+export { SocialInsuranceCard } from './components/cards/social-insurance-card';
+export { EmployeeEducationCard } from './components/cards/employee-education-card';
+
 

@@ -1,4 +1,4 @@
-﻿import { createKeyFactory } from '@/lib/query-keys';
+import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
 
 describe('shift queries', () => {
@@ -36,5 +36,13 @@ describe('shift queries', () => {
 
   it('uses the default query policy preset', () => {
     expect(queryPolicyPresets['static'].staleTime).toBeDefined();
+  });
+
+  it('includes filter params in allRequestsQueryOptions queryKey (FE-035)', () => {
+    const { allRequestsQueryOptions } = require('./request-queries');
+    expect(allRequestsQueryOptions().queryKey).toEqual(['schedule-requests']);
+    expect(
+      allRequestsQueryOptions({ status: 'pending', employeeId: 'emp-1' }).queryKey
+    ).toEqual(['schedule-requests', { status: 'pending', employeeId: 'emp-1' }]);
   });
 });

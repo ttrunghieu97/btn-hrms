@@ -1,4 +1,4 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "./auth.controller";
 
 describe("AuthController refresh", () => {
@@ -101,5 +101,41 @@ describe("AuthController refresh", () => {
     ).rejects.toBe(err);
 
     expect(res.clearCookie).not.toHaveBeenCalled();
+  });
+
+  it("AUDIT-005: blocks cross-site cookie-authenticated refresh (CSRF protection)", async () => {
+    const { controller, refreshTokens } = makeController();
+    const res = makeResponse();
+
+    await expect(
+      controller.refresh(
+        {},
+        {
+          cookies: { refresh_token: "rt-1" },
+          headers: { "sec-fetch-site": "cross-site" },
+        } as any,
+        res,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(refreshTokens.execute).not.toHaveBeenCalled();
+  });
+
+  it("AUDIT-005: blocks cookie-authenticated refresh from untrusted Origin header", async () => {
+    const { controller, refreshTokens } = makeController();
+    const res = makeResponse();
+
+    await expect(
+      controller.refresh(
+        {},
+        {
+          cookies: { refresh_token: "rt-1" },
+          headers: { origin: "https://evil.example.com" },
+        } as any,
+        res,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(refreshTokens.execute).not.toHaveBeenCalled();
   });
 });

@@ -9,4 +9,6 @@
 export type BoardingProcessControllerFindAllParams = {
 page: number;
 limit: number;
+employeeId: string;
+status: string;
 };

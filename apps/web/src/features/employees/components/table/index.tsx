@@ -13,6 +13,16 @@ import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
 import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,6 +30,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
   SelectContent,
@@ -45,12 +63,16 @@ import {
 import { columns } from './columns';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import { downloadTableAsCsv } from '@/lib/csv/export-csv';
 import { useAuthStore } from '@/stores/auth-store';
 import { employeesControllerFindOne } from '@/api/generated/employees-hr-management/employees-hr-management';
 import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { createTableSearchParams } from '@/lib/pagination';
 import { LaborReportExportDialog } from '../dialogs/labor-report-export-dialog';
+import { EmployeeStatusBadge } from '../display/employee-status-badge';
+import { EmployeeContractCard } from '../cards/contract/employee-contract-card';
+import { getEmployeeName, getInitials, formatDate } from '../../utils/employee-display';
+import { getSmartStatus } from '../../utils/employee-status';
+import { extractProtectedAssetUrl } from '@/lib/asset-url';
 
 const EMPLOYEE_STATUS_TABS = [
   {
@@ -154,8 +176,16 @@ export function EmployeesTable() {
   const canManage =
     isSuperAdmin ||
     hasAnyPermission(userPermissions, [permissions.employees.manage]);
+  const canEdit =
+    isSuperAdmin ||
+    hasAnyPermission(userPermissions, [
+      permissions.employees.edit,
+      permissions.employees.manage,
+    ]);
   const [mounted, setMounted] = React.useState(false);
   const [bulkStatusOpen, setBulkStatusOpen] = React.useState(false);
+  const [bulkArchiveOpen, setBulkArchiveOpen] = React.useState(false);
+  const [isExportingCsv, setIsExportingCsv] = React.useState(false);
   const [bulkTargetStatus, setBulkTargetStatus] =
     React.useState<BulkChangeStatusVariables['status']>('working');
   const [bulkEffectiveDate, setBulkEffectiveDate] = React.useState<string>(todayString());
@@ -219,9 +249,18 @@ export function EmployeesTable() {
   const pageCount = Math.max(1, Math.ceil((data?.totalEmployees ?? 0) / params.perPage));
   const hasFilters = Boolean(params.name ?? params.departmentIds ?? (resolvedTab !== 'active' ? true : false));
 
-  const handleRowClick = React.useCallback((employee: EmployeeResponseDto) => {
-    router.push(`/employees/${employee.id}`);
-  }, [router]);
+  const previewEmployee = React.useMemo(
+    () => (params.detail ? employees.find((emp) => emp.id === params.detail) ?? null : null),
+    [employees, params.detail]
+  );
+
+  const handleRowClick = React.useCallback(
+    (employee: EmployeeResponseDto) => {
+      if (employee.deletedAt) return;
+      void setParams({ detail: employee.id }, { shallow: true });
+    },
+    [setParams]
+  );
 
   const departmentOptions = React.useMemo(
     () =>
@@ -233,7 +272,7 @@ export function EmployeesTable() {
   );
 
   const cols = React.useMemo(() => {
-    return columns(handleRowClick).map((column) => {
+    return columns().map((column) => {
       if (column.id !== 'department') return column;
       return {
         ...column,
@@ -244,7 +283,7 @@ export function EmployeesTable() {
         id: 'departmentIds'
       };
     });
-  }, [departmentOptions, handleRowClick]);
+  }, [departmentOptions]);
 
   const { table } = useDataTable({
     data: employees,
@@ -258,6 +297,74 @@ export function EmployeesTable() {
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map((row) => row.original.id);
+
+  const handleExportCsv = React.useCallback(async () => {
+    if (isExportingCsv) return;
+    setIsExportingCsv(true);
+    try {
+      let targetEmployees: EmployeeResponseDto[] = [];
+      if (selectedRows.length > 0) {
+        targetEmployees = selectedRows.map((r) => r.original);
+      } else {
+        const allData = await queryClient.fetchQuery(
+          employeesQueryOptions({ ...filters, page: 1, limit: 1000 })
+        );
+        targetEmployees = allData?.employees ?? employees;
+      }
+
+      if (targetEmployees.length === 0) return;
+
+      const escapeField = (val: string) =>
+        val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')
+          ? `"${val.replace(/"/g, '""')}"`
+          : val;
+
+      const headers = [
+        'Họ và tên',
+        'Mã nhân viên',
+        'Tài khoản',
+        'Email',
+        'Số điện thoại',
+        'Phòng ban',
+        'Chức vụ',
+        'Trạng thái',
+        'Ngày vào làm',
+        'Ngày kết thúc',
+      ];
+
+      const rows = targetEmployees.map((emp) => [
+        getEmployeeName(emp),
+        emp.employeeCode ?? '',
+        emp.username ?? '',
+        emp.email ?? '',
+        emp.phoneNumber ?? '',
+        emp.department?.name ?? '',
+        emp.position?.name ?? '',
+        getSmartStatus(emp).label,
+        emp.startDate ? formatDate(emp.startDate, '') : '',
+        emp.endDate ? formatDate(emp.endDate, '') : '',
+      ]);
+
+      const csvContent = [
+        headers.map(escapeField).join(','),
+        ...rows.map((r) => r.map((v) => escapeField(String(v ?? ''))).join(',')),
+      ].join('\r\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = EMPLOYEE_EXPORT_FILENAME;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Không thể xuất danh sách nhân viên ra file CSV.');
+    } finally {
+      setIsExportingCsv(false);
+    }
+  }, [employees, filters, isExportingCsv, queryClient, selectedRows]);
 
   const bulkStatusMut = useBulkChangeStatusMutation(queryClient, {
     onSuccess: (res) => {
@@ -277,6 +384,7 @@ export function EmployeesTable() {
     onSuccess: (res) => {
       toast.success(`Đã lưu trữ thành công ${res.succeeded}/${res.total} hồ sơ nhân viên.`);
       table.resetRowSelection();
+      setBulkArchiveOpen(false);
     },
     onError: () => {
       toast.error('Không thể lưu trữ hàng loạt hồ sơ nhân viên.');
@@ -401,7 +509,7 @@ export function EmployeesTable() {
               variant='outline'
               className='h-7 text-xs text-destructive hover:text-destructive border-destructive/30'
               disabled={bulkArchiveMut.isPending}
-              onClick={() => bulkArchiveMut.mutate(selectedIds)}
+              onClick={() => setBulkArchiveOpen(true)}
             >
               <Icons.trash className='mr-1.5 size-3.5' />
               Lưu trữ hàng loạt ({selectedIds.length})
@@ -418,6 +526,11 @@ export function EmployeesTable() {
           animationKey={resolvedActiveStatus}
           totalRowsLabel='Tổng số nhân viên'
           totalRows={data?.totalEmployees ?? 0}
+          onRowClick={
+            resolvedActiveStatus !== 'deleted'
+              ? (row) => handleRowClick(row.original)
+              : undefined
+          }
           onRowMouseEnter={(row) => prefetchEmployeeDetail(row.original.id)}
         >
           <DataTableToolbar table={table}>
@@ -426,16 +539,146 @@ export function EmployeesTable() {
               type='button'
               variant='outline'
               size='sm'
-              disabled={!mounted || employees.length === 0}
-              onClick={() => downloadTableAsCsv(table.getRowModel().rows, EMPLOYEE_EXPORT_FILENAME)}
+              disabled={!mounted || employees.length === 0 || isExportingCsv}
+              onClick={() => void handleExportCsv()}
               suppressHydrationWarning
             >
-              <Icons.fileTypeXls className='mr-1.5 size-4' />
-              {EXPORT_LABEL}
+              {isExportingCsv ? (
+                <Icons.spinner className='mr-1.5 size-4 animate-spin' />
+              ) : (
+                <Icons.fileTypeXls className='mr-1.5 size-4' />
+              )}
+              {selectedIds.length > 0 ? `${EXPORT_LABEL} (${selectedIds.length})` : EXPORT_LABEL}
             </Button>
           </DataTableToolbar>
         </DataTable>
       </div>
+
+      {/* Quick-Peek Employee Sheet (Master-Detail Hybrid) */}
+      <Sheet
+        open={Boolean(previewEmployee)}
+        onOpenChange={(open) => {
+          if (!open) {
+            void setParams({ detail: null }, { shallow: true });
+          }
+        }}
+      >
+        <SheetContent side='right' className='flex w-full flex-col sm:max-w-lg overflow-y-auto'>
+          <SheetHeader className='border-b pb-4'>
+            <SheetTitle>Thông tin nhanh nhân viên</SheetTitle>
+            <SheetDescription>
+              Tóm tắt hồ sơ nhân sự và hợp đồng hiện hành
+            </SheetDescription>
+          </SheetHeader>
+          {previewEmployee && (
+            <div className='flex flex-1 flex-col justify-between gap-6 py-4'>
+              <div className='space-y-5'>
+                {/* Header Summary */}
+                <div className='flex items-start gap-3.5'>
+                  <Avatar className='size-12 border'>
+                    <AvatarImage
+                      src={extractProtectedAssetUrl(previewEmployee.avatar) || ''}
+                      alt={getEmployeeName(previewEmployee)}
+                    />
+                    <AvatarFallback className='bg-primary/10 text-primary font-semibold'>
+                      {getInitials(previewEmployee)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className='min-w-0 flex-1 space-y-1'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <h3 className='truncate text-base font-semibold'>
+                        {getEmployeeName(previewEmployee)}
+                      </h3>
+                      <EmployeeStatusBadge status={getSmartStatus(previewEmployee).kind} />
+                    </div>
+                    <p className='text-muted-foreground text-xs'>
+                      {previewEmployee.employeeCode || 'Chưa có mã NV'}
+                      {previewEmployee.position?.name ? ` · ${previewEmployee.position.name}` : ''}
+                      {previewEmployee.department?.name ? ` · ${previewEmployee.department.name}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Contact & Job Grid */}
+                <div className='grid grid-cols-2 gap-3 rounded-xl border bg-muted/20 p-3.5 text-xs'>
+                  <div>
+                    <span className='text-muted-foreground block'>Email</span>
+                    <span className='mt-0.5 block truncate font-medium'>
+                      {previewEmployee.email || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className='text-muted-foreground block'>Số điện thoại</span>
+                    <span className='mt-0.5 block font-medium'>
+                      {previewEmployee.phoneNumber || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className='text-muted-foreground block'>Phòng ban</span>
+                    <span className='mt-0.5 block font-medium'>
+                      {previewEmployee.department?.name || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className='text-muted-foreground block'>Ngày vào làm</span>
+                    <span className='mt-0.5 block font-medium'>
+                      {previewEmployee.startDate ? formatDate(previewEmployee.startDate) : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Current Contract Summary */}
+                <EmployeeContractCard employeeId={previewEmployee.id} />
+              </div>
+
+              {/* Footer Actions */}
+              <div className='flex items-center gap-2 border-t pt-4'>
+                {canEdit && (
+                  <Button variant='outline' size='sm' className='flex-1' asChild>
+                    <Link href={`/employees/${previewEmployee.id}?mode=edit`}>
+                      <Icons.edit className='mr-1.5 size-3.5' />
+                      {commonUiCopy.edit}
+                    </Link>
+                  </Button>
+                )}
+                <Button size='sm' className='flex-1' asChild>
+                  <Link href={`/employees/${previewEmployee.id}`}>
+                    <Icons.externalLink className='mr-1.5 size-3.5' />
+                    Mở hồ sơ đầy đủ
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Bulk Archive Confirmation Dialog */}
+      <AlertDialog open={bulkArchiveOpen} onOpenChange={setBulkArchiveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Lưu trữ hàng loạt hồ sơ nhân viên?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn lưu trữ <strong>{selectedIds.length}</strong> hồ sơ nhân viên đang chọn? Các hồ sơ này sẽ được chuyển sang danh sách Đã xoá / Lưu trữ.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkArchiveMut.isPending}>
+              {commonUiCopy.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              disabled={bulkArchiveMut.isPending}
+              onClick={() => {
+                if (selectedIds.length === 0) return;
+                bulkArchiveMut.mutate(selectedIds);
+              }}
+            >
+              {bulkArchiveMut.isPending ? 'Đang lưu trữ...' : `Lưu trữ (${selectedIds.length})`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Bulk Status Change Dialog */}
       <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>

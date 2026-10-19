@@ -60,6 +60,7 @@ import {
   bulkChangeEmployeeStatus,
   cancelEmployeeTransfer,
   cancelScheduledTermination,
+  evaluateEmployeeProbation,
   fetchEmployeeBoardingStatus,
   fetchEmployeeWorkflowInstances,
   getEmployeeStatusHistory,
@@ -72,6 +73,8 @@ import {
   type BulkOperationResponse,
   type EmployeeBoardingSummary,
   type EmployeeWorkflowInstanceItem,
+  type EvaluateProbationPayload,
+  type EvaluateProbationResponse,
   type RehireEmployeeRequest,
   type RehireEmployeeResponse,
   type RequestTransferPayload,
@@ -102,6 +105,11 @@ export interface UpdateEmployeePayload extends EmployeeAttachmentIntentPayload {
   identityNumber?: string;
   identityDate?: string;
   identityPlace?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  taxCode?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
 }
 
 export interface Department {
@@ -162,13 +170,14 @@ export function useMyEmployeeProfileQuery() {
   });
 }
 
-export function useDepartmentsQuery() {
+export function useDepartmentsQuery(enabled = true) {
   return useQuery({
     queryKey: departmentKeys.list(),
     queryFn: async ({ signal }) => {
       const res = await departmentsControllerFindAll(undefined, { signal });
       return extractList<Department>(res);
     },
+    enabled,
     select: (data) => data.toSorted((a, b) => a.name.localeCompare(b.name, 'vi')),
     ...queryPolicyPresets['static']
   });
@@ -449,6 +458,11 @@ export function buildEmployeeUpdateRequestBody(data: UpdateEmployeePayload) {
   setPayloadValue(payload, 'identityNumber', data.identityNumber);
   setPayloadValue(payload, 'identityDate', normalizeDateForApi(data.identityDate));
   setPayloadValue(payload, 'identityPlace', data.identityPlace);
+  setPayloadValue(payload, 'bankName', data.bankName);
+  setPayloadValue(payload, 'bankAccountNumber', data.bankAccountNumber);
+  setPayloadValue(payload, 'taxCode', data.taxCode);
+  setPayloadValue(payload, 'emergencyContactName', data.emergencyContactName);
+  setPayloadValue(payload, 'emergencyContactPhone', data.emergencyContactPhone);
 
   if (data.avatar !== undefined) {
     payload.avatar = data.avatar;
@@ -1004,6 +1018,29 @@ export function useCancelTransferMutation(
     ...options,
   });
 }
+
+export function useEvaluateProbationMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<
+    EvaluateProbationResponse,
+    Error,
+    { id: string; data: EvaluateProbationPayload }
+  >
+) {
+  return useMutation({
+    mutationFn: async ({ id, data }) => evaluateEmployeeProbation(id, data),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.statusHistory(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
 
 
 

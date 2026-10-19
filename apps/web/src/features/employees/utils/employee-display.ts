@@ -23,7 +23,7 @@ export function getFileName(value: string) {
 export function getEmployeeName(employee: EmployeeResponseDto | null) {
   if (!employee) return '';
 
-  const fullName = [employee.firstName, employee.lastName].filter(Boolean).join(' ').trim();
+  const fullName = [employee.lastName, employee.firstName].filter(Boolean).join(' ').trim();
   return fullName || employee.username;
 }
 

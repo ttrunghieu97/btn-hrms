@@ -30,7 +30,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  BoardingProcessControllerFindAllParams
+  BoardingProcessControllerFindAllParams,
+  CreateOnboardingProcessDto
 } from '../model';
 
 import { customFetch } from '../../../lib/fetcher';
@@ -55,7 +56,106 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type boardingProcessControllerFindAllResponse200 = {
+export type boardingProcessControllerCreateResponse201 = {
+  data: void
+  status: 201
+}
+
+export type boardingProcessControllerCreateResponseSuccess = (boardingProcessControllerCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type boardingProcessControllerCreateResponse = (boardingProcessControllerCreateResponseSuccess)
+
+export const getBoardingProcessControllerCreateUrl = () => {
+
+
+
+
+  return `/api/v1/onboarding/processes`
+}
+
+/**
+ * @summary Manually create an onboarding process for an employee
+ */
+export const boardingProcessControllerCreate = async (createOnboardingProcessDto: CreateOnboardingProcessDto, options?: Parameters<typeof customFetch>[1]): Promise<boardingProcessControllerCreateResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<boardingProcessControllerCreateResponse>(getBoardingProcessControllerCreateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createOnboardingProcessDto)
+  }
+);}
+
+
+
+
+
+export const getBoardingProcessControllerCreateMutationKey = () => ['boardingProcessControllerCreate'] as const;
+
+export const getBoardingProcessControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCreate>>, TError,BoardingProcessControllerCreateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCreate>>, TError,BoardingProcessControllerCreateMutationVariables, TContext> => {
+
+const mutationKey = getBoardingProcessControllerCreateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof boardingProcessControllerCreate>>, BoardingProcessControllerCreateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  boardingProcessControllerCreate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BoardingProcessControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof boardingProcessControllerCreate>>>
+    export type BoardingProcessControllerCreateMutationBody = CreateOnboardingProcessDto
+    export type BoardingProcessControllerCreateMutationError = unknown
+    export type BoardingProcessControllerCreateMutationVariables = {data: CreateOnboardingProcessDto}
+
+    /**
+ * @summary Manually create an onboarding process for an employee
+ */
+export const useBoardingProcessControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof boardingProcessControllerCreate>>, TError,BoardingProcessControllerCreateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof boardingProcessControllerCreate>>,
+        TError,
+        BoardingProcessControllerCreateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBoardingProcessControllerCreateMutationOptions(options), queryClient);
+    }
+    export type boardingProcessControllerFindAllResponse200 = {
   data: void
   status: 200
 }

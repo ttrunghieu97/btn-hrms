@@ -45,6 +45,9 @@ export interface PayrollPeriod {
   id: string;
   code: string;
   name: string;
+  year?: number;
+  month?: number;
+  attendancePeriodId?: string | null;
   startsOn: string;
   endsOn: string;
   payDate: string | null;
@@ -62,6 +65,9 @@ export interface PayrollPeriodListParams {
 export interface CreatePayrollPeriodPayload {
   code: string;
   name: string;
+  year?: number;
+  month?: number;
+  attendancePeriodId?: string | null;
   startsOn: string;
   endsOn: string;
   payDate?: string;
@@ -70,6 +76,9 @@ export interface CreatePayrollPeriodPayload {
 
 export interface UpdatePayrollPeriodPayload {
   name?: string;
+  year?: number;
+  month?: number;
+  attendancePeriodId?: string | null;
   startsOn?: string;
   endsOn?: string;
   status?: PayrollPeriodStatus;

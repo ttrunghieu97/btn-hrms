@@ -46,6 +46,11 @@ import { ResolveEmployeeAttachmentPlanService } from "./services/resolve-employe
 import { ApplyEmployeeAttachmentPlanService } from "./services/apply-employee-attachment-plan.service";
 import { EmployeeLifecycleService } from "./services/employee-lifecycle.service";
 import { PlatformWorkflowEngineDomainModule } from "../../platform-workflow-engine/platform-workflow-engine.module";
+import { UpdateMyProfileUseCase } from "./use-cases/update-my-profile.usecase";
+import { SubmitResignationRequestUseCase } from "./use-cases/submit-resignation-request.usecase";
+import { EvaluateProbationUseCase } from "./use-cases/evaluate-probation.usecase";
+import { ExecuteScheduledTransfersUseCase } from "./use-cases/execute-scheduled-transfers.usecase";
+import { TransferSchedulerJob } from "./jobs/transfer-scheduler.job";
 
 @Module({
   controllers: [EmployeesController, EmployeeAdminController, DepartmentEmployeesController, EmployeeEducationController],
@@ -64,11 +69,15 @@ import { PlatformWorkflowEngineDomainModule } from "../../platform-workflow-engi
     CheckUsernameUseCase,
     CheckEmployeeCodeUseCase,
     UpdateEmployeeUseCase,
+    UpdateMyProfileUseCase,
+    SubmitResignationRequestUseCase,
     DeleteEmployeeUseCase,
     ScheduleTerminationUseCase,
     CancelScheduledTerminationUseCase,
     ExecuteScheduledTerminationsUseCase,
     TerminationSchedulerJob,
+    ExecuteScheduledTransfersUseCase,
+    TransferSchedulerJob,
     RestoreArchivedEmployeeUseCase,
     RehireEmployeeUseCase,
     RequestTransferUseCase,
@@ -81,6 +90,7 @@ import { PlatformWorkflowEngineDomainModule } from "../../platform-workflow-engi
     PurgeEmployeeUseCase,
     ResetEmployeePasswordUseCase,
     ChangeEmployeeStatusUseCase,
+    EvaluateProbationUseCase,
     ListEmployeeStatusHistoryUseCase,
     TerminateEmployeeUseCase,
     EmployeeEducationRepository,

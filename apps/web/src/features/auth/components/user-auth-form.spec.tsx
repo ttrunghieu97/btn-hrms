@@ -6,10 +6,11 @@ import { feedbackCopy } from '@/lib/feedback-copy';
 
 const replace = jest.fn();
 const signIn = jest.fn();
+let currentSearchParams = new URLSearchParams();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => currentSearchParams,
 }));
 
 jest.mock('@/stores/auth-store', () => ({
@@ -24,6 +25,7 @@ describe('UserAuthForm', () => {
   beforeEach(() => {
     replace.mockReset();
     signIn.mockReset();
+    currentSearchParams = new URLSearchParams();
   });
 
   it('handles invalid credentials without unhandled rejection', async () => {
@@ -61,5 +63,51 @@ describe('UserAuthForm', () => {
     expect(replace).not.toHaveBeenCalled();
 
     window.removeEventListener('unhandledrejection', onUnhandledRejection);
+  });
+
+  it('blocks protocol-relative open redirect in ?next and falls back to preferred landing route', async () => {
+    currentSearchParams = new URLSearchParams('next=//evil.example.com/phish');
+    signIn.mockResolvedValue({
+      id: 'u1',
+      username: 'admin',
+      permissions: ['employee:view:all'],
+    });
+
+    render(<UserAuthForm />);
+
+    fireEvent.change(screen.getByLabelText(appCopy.auth.signIn.form.username), {
+      target: { value: 'admin' }
+    });
+    fireEvent.change(screen.getByLabelText(appCopy.auth.signIn.form.password), {
+      target: { value: 'password123' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: appCopy.auth.signIn.form.submit }));
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/employees');
+    });
+  });
+
+  it('preserves valid internal ?next redirect on login', async () => {
+    currentSearchParams = new URLSearchParams('next=/employees?page=2');
+    signIn.mockResolvedValue({
+      id: 'u1',
+      username: 'admin',
+      permissions: ['dashboard:view'],
+    });
+
+    render(<UserAuthForm />);
+
+    fireEvent.change(screen.getByLabelText(appCopy.auth.signIn.form.username), {
+      target: { value: 'admin' }
+    });
+    fireEvent.change(screen.getByLabelText(appCopy.auth.signIn.form.password), {
+      target: { value: 'password123' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: appCopy.auth.signIn.form.submit }));
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/employees?page=2');
+    });
   });
 });

@@ -1,18 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { parseAsString, useQueryStates } from 'nuqs';
+import { toast } from 'sonner';
 import type { TasksControllerListParams } from '@/api/generated/model';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
 import { useDataTable } from '@/hooks/use-data-table';
+import { feedbackCopy, feedbackEntity } from '@/lib/feedback-copy';
 import { errorUiCopy } from '@/locales/vi/system-ui';
-import { getSortingStateParser } from '@/lib/parsers';
-import { tasksQueryOptions, myTasksQueryOptions } from '../../queries/task-queries';
+import {
+  tasksQueryOptions,
+  myTasksQueryOptions,
+  useRemoveTaskMutation
+} from '../../queries/task-queries';
 import type { Task } from '../../utils/task-types';
 import { asTasks } from '../../utils/task-types';
+import { TaskFormSheet } from '../task-form-sheet';
 import { columns } from './columns';
 import { createTableSearchParams } from '@/lib/pagination';
 
@@ -24,6 +30,10 @@ interface TasksTableProps {
 }
 
 export function TasksTable({ scope, onRowClick }: TasksTableProps) {
+  const queryClient = useQueryClient();
+  const removeTaskMutation = useRemoveTaskMutation(queryClient);
+  const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+
   const [params] = useQueryStates({
     ...createTableSearchParams(tempColumnIds),
     search: parseAsString,
@@ -40,7 +50,7 @@ export function TasksTable({ scope, onRowClick }: TasksTableProps) {
     search: params.search || undefined,
     status: params.status ? (params.status as TasksControllerListParams['status']) : undefined,
     sortBy: sortBy || undefined,
-    sortOrder: sortOrder ? (sortOrder as any) : undefined
+    sortOrder: sortOrder ? (sortOrder as TasksControllerListParams['sortOrder']) : undefined
   };
 
   const queryAll = useQuery({
@@ -58,9 +68,30 @@ export function TasksTable({ scope, onRowClick }: TasksTableProps) {
   const result = scope === 'mine' ? queryMine : queryAll;
   const { data, error, isLoading, refetch } = result;
 
+  const handleEdit = React.useCallback((task: Task) => {
+    setEditingTask(task);
+  }, []);
+
+  const handleDelete = React.useCallback(
+    (task: Task) => {
+      removeTaskMutation.mutate(task.id, {
+        onSuccess: () => {
+          toast.success(feedbackCopy.success.deleted(feedbackEntity.task));
+        },
+        onError: () => {
+          toast.error(feedbackCopy.failure.delete(feedbackEntity.task));
+        }
+      });
+    },
+    [removeTaskMutation]
+  );
+
   const tasks: Task[] = React.useMemo(() => asTasks(data?.tasks ?? []), [data?.tasks]);
   const pageCount = Math.max(1, Math.ceil((data?.totalTasks ?? 0) / params.perPage));
-  const cols = React.useMemo(() => columns(onRowClick), [onRowClick]);
+  const cols = React.useMemo(
+    () => columns(onRowClick, handleEdit, handleDelete),
+    [onRowClick, handleEdit, handleDelete]
+  );
 
   const { table } = useDataTable({
     data: tasks,
@@ -89,6 +120,13 @@ export function TasksTable({ scope, onRowClick }: TasksTableProps) {
       <DataTable table={table}>
         <DataTableToolbar table={table} />
       </DataTable>
+      <TaskFormSheet
+        task={editingTask}
+        open={Boolean(editingTask)}
+        onOpenChange={(open) => {
+          if (!open) setEditingTask(null);
+        }}
+      />
     </div>
   );
 }

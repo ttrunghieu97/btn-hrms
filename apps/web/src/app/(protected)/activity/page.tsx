@@ -1,6 +1,5 @@
 import { ActivityCenter } from '@/components/platform/activity-center';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 
 export const metadata = {
   title: 'Activity Center',

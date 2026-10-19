@@ -119,6 +119,7 @@ export function LeaveApprovalInboxSection() {
                       onClick={() =>
                         setSelectedDetail({
                           id: item.leaveRequestId,
+                          approvalRequestId: item.approvalRequestId,
                           employeeName: reqName,
                           leaveTypeName: typeName,
                           startDate: item.startDate,
@@ -141,7 +142,7 @@ export function LeaveApprovalInboxSection() {
                         disabled={isMutating}
                         onClick={() =>
                           approveMutation.mutate({
-                            id: item.leaveRequestId,
+                            id: item.approvalRequestId || item.leaveRequestId,
                             data: { comment: 'Đã duyệt qua hộp thư nhanh' },
                           })
                         }
@@ -156,7 +157,7 @@ export function LeaveApprovalInboxSection() {
                         disabled={isMutating}
                         onClick={() =>
                           rejectMutation.mutate({
-                            id: item.leaveRequestId,
+                            id: item.approvalRequestId || item.leaveRequestId,
                             data: { comment: 'Từ chối qua hộp thư nhanh' },
                           })
                         }

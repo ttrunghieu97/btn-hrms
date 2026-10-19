@@ -85,6 +85,8 @@ export function useCaptureClockEventMutation() {
   });
 }
 
+import { customFetch } from '@/lib/fetcher';
+
 export function useResolveExceptionMutation() {
   const qc = useQueryClient();
   return useMutation({
@@ -95,3 +97,19 @@ export function useResolveExceptionMutation() {
     },
   });
 }
+
+export function useExplainExceptionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, explanation }: { id: string; explanation: string }) =>
+      customFetch(`/api/v1/timekeeping/exceptions/${id}/explain`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ explanation }),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: t.all() });
+    },
+  });
+}
+

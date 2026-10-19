@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAnyPermission } from '@project/permissions';
-import { canAccessRoute } from '@/features/authorization/utils/route-resolver';
-import { matchRoute } from '@/features/authorization/utils/route-matcher';
+import { canAccessRoute, matchRoute } from '@/features/authorization';
 import { routeRegistry } from '@/shared/authorization/route-registry/routes';
 import { decodePermissions } from '@/lib/server/permission-session-edge';
 import { isDisabledModulePath, isProtectedPath } from '@/config/module-rollout';
@@ -45,7 +44,7 @@ export default async function middleware(req: NextRequest) {
 
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'unsafe-eval' 'unsafe-inline' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
+    `script-src 'self' ${isDev ? "'unsafe-eval' " : ''}'unsafe-inline' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https: http:`,
     `font-src 'self' data:`,
@@ -63,6 +62,7 @@ export default async function middleware(req: NextRequest) {
   // inline scripts with an empty nonce -> CSP blocks them + hydration mismatch.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('x-forwarded-path', req.nextUrl.pathname);
   requestHeaders.set('Content-Security-Policy', cspValue);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
@@ -89,9 +89,13 @@ export default async function middleware(req: NextRequest) {
     const newPath = path.replace('/positions', '/organization/positions');
     return NextResponse.redirect(new URL(newPath, req.url));
   }
-  if (path === '/shifts' || path.startsWith('/shifts/')) {
-    const newPath = path.replace('/shifts', '/schedule/templates');
-    return NextResponse.redirect(new URL(newPath, req.url));
+  if (
+    path === '/shifts' ||
+    path.startsWith('/shifts/') ||
+    path === '/schedule/rosters' ||
+    path === '/schedule/templates'
+  ) {
+    return NextResponse.redirect(new URL('/schedule', req.url));
   }
   if (path === '/team' || path.startsWith('/team/')) {
     return NextResponse.redirect(new URL('/employees', req.url));
@@ -106,6 +110,10 @@ export default async function middleware(req: NextRequest) {
   }
   if (path === '/profile' || path.startsWith('/profile/')) {
     const newPath = path.replace('/profile', '/account/profile');
+    return NextResponse.redirect(new URL(newPath, req.url));
+  }
+  if (path === '/change-password' || path.startsWith('/change-password/')) {
+    const newPath = path.replace('/change-password', '/account/change-password');
     return NextResponse.redirect(new URL(newPath, req.url));
   }
   if (path === '/notifications' || path.startsWith('/notifications/')) {

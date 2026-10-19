@@ -2,7 +2,7 @@
 import { policiesFileSchema } from './policy.schema';
 import { RateLimitPolicyRegistry, PolicyNotFoundError } from './rate-limit-policy.registry';
 import { ZodError } from 'zod';
-import rateLimitConfig from '../../config/rate-limit.config';
+import rateLimitConfig from '../../shared/config/rate-limit.config';
 import * as fs from 'node:fs';
 
 jest.mock('node:fs', () => {

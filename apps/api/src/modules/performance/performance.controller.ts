@@ -27,6 +27,7 @@ import { PublishResultUseCase } from "./rating/use-cases";
 import {
   CreateCycleDto,
   CreateGoalDto,
+  AssignGoalDto,
   AssignReviewerDto,
   SubmitReviewDto,
   PublishResultDto,
@@ -150,9 +151,9 @@ export class PerformanceController {
   @CheckPolicy(PerformancePolicies.manage)
   async assignGoalEndpoint(
     @Param("goalId") goalId: string,
-    @Body("employeeId") employeeId: string,
+    @Body() dto: AssignGoalDto,
   ): Promise<void> {
-    return this.assignGoal.execute(goalId, employeeId);
+    return this.assignGoal.execute(goalId, dto.employeeId);
   }
 
   @Post("goals/:goalId/submit")

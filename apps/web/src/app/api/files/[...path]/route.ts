@@ -22,6 +22,12 @@ function copyFileResponseHeaders(target: Headers, source: Headers): void {
   if (cacheControl) target.set('cache-control', cacheControl);
 }
 
+function extractAccessTokenFromCookieHeader(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)access_token=([^;]+)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function buildFileHeaders(request: NextRequest): Headers {
   const headers = createForwardHeaders(request);
   const rangeHeader = request.headers.get('range');
@@ -29,6 +35,15 @@ function buildFileHeaders(request: NextRequest): Headers {
 
   if (rangeHeader) headers.set('range', rangeHeader);
   if (ifNoneMatch) headers.set('if-none-match', ifNoneMatch);
+
+  if (!headers.has('authorization')) {
+    const cookieToken =
+      request.cookies?.get?.('access_token')?.value ??
+      extractAccessTokenFromCookieHeader(request.headers.get('cookie'));
+    if (cookieToken) {
+      headers.set('authorization', `Bearer ${cookieToken}`);
+    }
+  }
 
   return headers;
 }
@@ -86,10 +101,6 @@ function canRefresh(cookieHeader: string | null, authorizationHeader: string | n
   return Boolean(cookieHeader && !authorizationHeader);
 }
 
-function shouldRetryAfterRefresh(response: Response, accessToken: string | null): boolean {
-  return response.status === 401 && !accessToken;
-}
-
 function hasAccessToken(accessToken: string | null): accessToken is string {
   return accessToken !== null;
 }
@@ -99,23 +110,16 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
-  const backendUrl = buildBackendUrl(`/files/${path.join('/')}`);
+  const search = request.nextUrl?.search ?? '';
+  const backendUrl = buildBackendUrl(`/files/${path.join('/')}${search}`);
   const headers = buildFileHeaders(request);
   const cookieHeader = request.headers.get('cookie');
   const authorizationHeader = request.headers.get('authorization');
 
   let refreshResponse: Response | undefined;
-  let accessTokenFromRefresh: string | null = null;
-
-  if (canRefresh(cookieHeader, authorizationHeader)) {
-    const refreshResult = await refreshFileAccess(cookieHeader, headers);
-    refreshResponse = refreshResult.refreshResponse;
-    accessTokenFromRefresh = refreshResult.accessToken;
-  }
-
   let response = await fetchFileResponse(backendUrl, headers);
 
-  if (shouldRetryAfterRefresh(response, accessTokenFromRefresh) && cookieHeader) {
+  if (response.status === 401 && canRefresh(cookieHeader, authorizationHeader)) {
     const refreshResult = await refreshFileAccess(cookieHeader, headers);
     refreshResponse = refreshResult.refreshResponse;
 

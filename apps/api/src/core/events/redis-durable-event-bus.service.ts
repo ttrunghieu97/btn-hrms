@@ -33,11 +33,17 @@ type EventBusHealth = {
 };
 
 type EventLike = {
+  eventId?: unknown;
   eventType?: unknown;
   eventVersion?: unknown;
   producerContext?: unknown;
   scopeId?: unknown;
+  aggregateId?: unknown;
+  correlationId?: unknown;
+  causationId?: unknown;
+  occurredAt?: unknown;
   payload?: unknown;
+  data?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,16 +64,39 @@ function errorMessage(error: unknown, fallback: string) {
 
 function payloadAggregateId(payload: unknown) {
   if (!isRecord(payload)) return null;
-  return typeof payload.id === "string" ? payload.id : null;
+  const nestedData = isRecord(payload.data) ? payload.data : {};
+  const id =
+    payload.aggregateId ??
+    payload.id ??
+    payload.employeeId ??
+    nestedData.aggregateId ??
+    nestedData.id ??
+    nestedData.employeeId;
+  return typeof id === "string" ? id : null;
 }
 
 function dispatchPayload(envelope: EventEnvelope): Record<string, unknown> {
+  const rawPayload = isRecord(envelope.payload)
+    ? envelope.payload
+    : { value: envelope.payload };
+  const nestedData = isRecord(rawPayload.data) ? rawPayload.data : null;
+  const resolvedScopeId =
+    envelope.scopeId ??
+    (typeof rawPayload.scopeId === "string"
+      ? rawPayload.scopeId
+      : nestedData && typeof nestedData.scopeId === "string"
+        ? nestedData.scopeId
+        : null);
   return {
-    ...(isRecord(envelope.payload)
-      ? envelope.payload
-      : { value: envelope.payload }),
-    scopeId: envelope.scopeId ?? null,
+    ...rawPayload,
+    ...(nestedData ?? {}),
+    data: nestedData ?? rawPayload,
+    payload: envelope.payload,
+    eventId: envelope.eventId,
+    scopeId: resolvedScopeId,
+    aggregateId: envelope.aggregateId ?? null,
     correlationId: envelope.correlationId ?? null,
+    causationId: envelope.causationId ?? null,
     eventType: envelope.eventType,
     eventVersion: envelope.eventVersion,
     producerContext: envelope.producerContext,
@@ -241,23 +270,49 @@ export class RedisDurableEventBus
     );
     const eventVersion = Number(source.eventVersion ?? 1);
     const producerContext = String(source.producerContext || "core");
-    const scopeId = source.scopeId ?? null;
 
     const payload: unknown = JSON.parse(
       JSON.stringify(source.payload ?? event),
     );
+    const nestedData =
+      isRecord(payload) && isRecord(payload.data) ? payload.data : null;
+    const scopeId =
+      source.scopeId ??
+      (isRecord(payload) && typeof payload.scopeId === "string"
+        ? payload.scopeId
+        : nestedData && typeof nestedData.scopeId === "string"
+          ? nestedData.scopeId
+          : null);
+    const eventId =
+      typeof source.eventId === "string" && source.eventId.trim()
+        ? source.eventId
+        : randomUUID();
+    const aggregateId =
+      typeof source.aggregateId === "string"
+        ? source.aggregateId
+        : payloadAggregateId(payload);
+    const correlationId =
+      typeof source.correlationId === "string"
+        ? source.correlationId
+        : (this.requestContext.get()?.requestId ?? null);
+    const causationId =
+      typeof source.causationId === "string" ? source.causationId : null;
+    const occurredAt =
+      typeof source.occurredAt === "string" && source.occurredAt
+        ? source.occurredAt
+        : new Date().toISOString();
 
     const envelope: EventEnvelope = {
-      eventId: randomUUID(),
+      eventId,
       eventType,
       eventVersion: Number.isInteger(eventVersion) ? eventVersion : 1,
       producerContext,
       scopeId: typeof scopeId === "string" ? scopeId : null,
-      aggregateId: payloadAggregateId(payload),
-      correlationId: this.requestContext.get()?.requestId ?? null,
-      causationId: null,
+      aggregateId,
+      correlationId,
+      causationId,
       payload,
-      occurredAt: new Date().toISOString(),
+      occurredAt,
     };
     assertCanonicalEventEnvelope(envelope, "redis_event_bus");
     return envelope;

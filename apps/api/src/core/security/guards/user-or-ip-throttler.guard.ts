@@ -20,7 +20,11 @@ export class UserOrIpThrottlerGuard extends ThrottlerGuard {
     if (userId) {
       return `user:${userId}`;
     }
-    const ip = req.ip ?? "unknown";
+    const cfIpHeader = req.headers?.["cf-connecting-ip"];
+    const cfIp = Array.isArray(cfIpHeader) ? cfIpHeader[0] : cfIpHeader;
+    const realIpHeader = req.headers?.["x-real-ip"];
+    const realIp = Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader;
+    const ip = (cfIp || realIp || req.ip || "unknown").trim();
     return `ip:${ip}`;
   }
 }

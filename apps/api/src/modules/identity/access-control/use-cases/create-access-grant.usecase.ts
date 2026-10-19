@@ -4,6 +4,7 @@ import { ERROR_REASONS } from '../../../../shared/constants/error-reasons';
 import { throwBadRequest, throwForbidden } from '../../../../shared/utils/http-error';
 import { AccessControlRepository } from '../repositories/access-control.repository';
 import { RequestContextService } from '../../../../shared/context/request-context.service';
+import { PermissionCacheService } from '../../permissions/permission-cache.service';
 
 interface CreateAccessGrantCommand {
   actorUserId: string;
@@ -18,6 +19,7 @@ export class CreateAccessGrantUseCase {
   constructor(
     private readonly repository: AccessControlRepository,
     @Optional() private readonly requestContext?: RequestContextService,
+    @Optional() private readonly permissionCache?: PermissionCacheService,
   ) {}
 
   async execute(command: CreateAccessGrantCommand) {
@@ -41,6 +43,21 @@ export class CreateAccessGrantUseCase {
       );
     }
 
+    if (
+      !actor?.isSuperAdmin &&
+      Array.isArray(actor?.permissions) &&
+      !actor.permissions.some(
+        (code) => code.toLowerCase() === 'sys:all' || code.toUpperCase() === 'ALL',
+      ) &&
+      !actor.permissions.includes(command.permissionCode)
+    ) {
+      throwForbidden(
+        'Cannot grant a permission that the actor does not possess.',
+        ERROR_CODES.PERMISSION_DENIED,
+        { reason: ERROR_REASONS.MISSING_PERMISSION },
+      );
+    }
+
     if (command.expiresAt.getTime() <= Date.now()) {
       throwBadRequest('Grant expiry must be in the future', ERROR_CODES.VALIDATION_ERROR);
     }
@@ -52,6 +69,8 @@ export class CreateAccessGrantUseCase {
       approvedByUserId: command.actorUserId,
       expiresAt: command.expiresAt,
     });
+
+    await this.permissionCache?.invalidate(command.targetUserId);
 
     await this.repository.writeAccessAuditLog({
       actorUserId: command.actorUserId,

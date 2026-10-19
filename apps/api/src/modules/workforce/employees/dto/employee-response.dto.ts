@@ -137,6 +137,9 @@ export class EmployeeResponseDto {
   @ApiProperty({ type: String, nullable: true })
   lastWorkingDate: string | null;
 
+  @ApiPropertyOptional({ type: String, nullable: true })
+  probationEndDate?: string | null;
+
   @ApiProperty({ type: String, nullable: true })
   status: string | null;
 

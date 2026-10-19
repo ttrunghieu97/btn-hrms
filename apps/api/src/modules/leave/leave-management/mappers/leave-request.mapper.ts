@@ -94,8 +94,10 @@ export class LeaveRequestMapper {
     if (!dto) return {};
 
     return {
-      ...(dto.employeeId !== undefined ? { employeeId: dto.employeeId } : {}),
-      ...(dto.leaveTypeId !== undefined
+      ...("employeeId" in dto && dto.employeeId !== undefined
+        ? { employeeId: dto.employeeId }
+        : {}),
+      ...("leaveTypeId" in dto && dto.leaveTypeId !== undefined
         ? { leaveTypeId: dto.leaveTypeId }
         : {}),
       ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),

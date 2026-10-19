@@ -117,37 +117,39 @@ if (!fsMissing.length) {
 section('Orphan Routes');
 
 let orphanCount = 0;
-for (const [rPath, rDef] of registryMap) {
+for (const [rPath] of registryMap) {
   if (rPath.includes(':') || rPath.includes('*')) continue;
-  // Check if page.tsx exists
   const pagePath = path.join(protectedDir, rPath.slice(1), 'page.tsx');
   if (!fs.existsSync(pagePath)) {
     orphanCount++;
-    log('WARN', `Route "${rPath}" has no page.tsx`);
+    log('FAIL', `Route "${rPath}" in routes.ts has no matching page.tsx`);
   }
 }
 if (!orphanCount) log('PASS', 'No orphan routes');
-else log('PASS', `${orphanCount} orphan routes (warnings, investigate separately)`);
 
 // 3. Nav metadata
 section('Nav Metadata');
 
+const routesFileContent = fs.readFileSync(
+  path.join(ROOT, 'src/shared/authorization/route-registry/routes.ts'),
+  'utf-8',
+);
+let navFailures = 0;
 for (const r of registry) {
   if (r.hasNav) {
     const route = registryMap.get(r.path);
     if (!route) continue;
-    // nav metadata is valid if block contains nav: { title
-    const content = fs.readFileSync(path.join(ROOT, 'src/shared/authorization/route-registry/routes.ts'), 'utf-8');
-    const idx = content.indexOf(`path: '${r.path}'`);
-    const blockStart = content.lastIndexOf('{', idx);
-    const blockEnd = content.indexOf('},', blockStart);
-    const block = blockEnd >= 0 ? content.slice(blockStart, blockEnd + 2) : '';
+    const idx = routesFileContent.indexOf(`path: '${r.path}'`);
+    const blockStart = routesFileContent.lastIndexOf('{', idx);
+    const blockEnd = routesFileContent.indexOf('},', blockStart);
+    const block = blockEnd >= 0 ? routesFileContent.slice(blockStart, blockEnd + 2) : '';
     if (!block.includes('title:') || !block.includes('icon:') || !block.includes('group:')) {
+      navFailures++;
       log('FAIL', `${r.path} → nav block missing required field (title/icon/group)`);
     }
   }
 }
-log('PASS', 'Nav metadata valid');
+if (!navFailures) log('PASS', 'Nav metadata valid');
 
 // 4. Duplicate paths
 section('Duplicate Detection');
@@ -161,24 +163,17 @@ for (const p of paths) {
 }
 if (!dupes) log('PASS', 'No duplicate paths');
 
-// 5. Middleware
+// 5. Middleware Enforcement Wiring
 section('Middleware');
 
 const middlewareContent = fs.readFileSync(MIDDLEWARE_FILE, 'utf-8');
-const middlewarePaths = new Set();
-const mwRe = /path:\s+'([^']+)'/g;
-let m;
-while ((m = mwRe.exec(middlewareContent)) !== null) {
-  middlewarePaths.add(m[1]);
+const requiredSymbols = ['routeRegistry', 'matchRoute', 'canAccessRoute', 'isProtectedPath'];
+const missingSymbols = requiredSymbols.filter(sym => !middlewareContent.includes(sym));
+if (missingSymbols.length > 0) {
+  log('FAIL', `Middleware missing required authorization wiring: ${missingSymbols.join(', ')}`);
+} else {
+  log('PASS', 'Middleware authorization enforcement wired');
 }
-// Check all top-level registry routes present in middleware
-let mwMissing = 0;
-for (const r of registry) {
-  if (!r.path.includes(':') && !middlewarePaths.has(r.path) && r.path !== '/') {
-    // Not all routes need to be in middleware inline — fine
-  }
-}
-log('PASS', 'Middleware inline registry loaded');
 
 // ── Summary ────────────────────────────────────────────────────────────
 

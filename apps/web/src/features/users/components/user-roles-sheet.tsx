@@ -212,10 +212,10 @@ export function UserRolesSheet({ user, open, onOpenChange }: UserRolesSheetProps
 
           {isSuperAdminVal ? (
             <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
-              <Icons.shield className="size-5 text-emerald-600 shrink-0 mt-0.5" />
+              <Icons.shield className="size-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-emerald-900">{userUiCopy.systemAdminTitle}</h3>
-                <p className="text-sm text-emerald-800/80">
+                <h3 className="font-semibold text-emerald-900 dark:text-emerald-200">{userUiCopy.systemAdminTitle}</h3>
+                <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80">
                   {userUiCopy.systemAdminDescription}
                 </p>
               </div>

@@ -30,6 +30,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BulkArchiveDto,
+  BulkStatusDto,
   ChangeEmployeeStatusDto,
   EmployeeAdminControllerCheckEmployeeCodeParams,
   EmployeeAdminControllerCheckUsernameAvailabilityParams,
@@ -39,6 +41,10 @@ import type {
   EmployeeAdminControllerRestore200,
   EmployeeStatusHistoryEnvelopeDto,
   EmployeeUsernameCheckEnvelopeDto,
+  EvaluateProbationDto,
+  RehireEmployeeDto,
+  RejectTransferDto,
+  RequestTransferDto,
   TerminateEmployeeDto
 } from '../model';
 
@@ -818,6 +824,106 @@ export const useEmployeeAdminControllerChangeStatus = <TError = unknown,
       > => {
       return useMutation(getEmployeeAdminControllerChangeStatusMutationOptions(options), queryClient);
     }
+    export type employeeAdminControllerEvaluateProbationResponse201 = {
+  data: void
+  status: 201
+}
+
+export type employeeAdminControllerEvaluateProbationResponseSuccess = (employeeAdminControllerEvaluateProbationResponse201) & {
+  headers: Headers;
+};
+;
+
+export type employeeAdminControllerEvaluateProbationResponse = (employeeAdminControllerEvaluateProbationResponseSuccess)
+
+export const getEmployeeAdminControllerEvaluateProbationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/employees/${id}/probation/evaluate`
+}
+
+/**
+ * @summary Evaluate probation outcome (confirm, extend, or fail)
+ */
+export const employeeAdminControllerEvaluateProbation = async (id: string,
+    evaluateProbationDto: EvaluateProbationDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerEvaluateProbationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerEvaluateProbationResponse>(getEmployeeAdminControllerEvaluateProbationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(evaluateProbationDto)
+  }
+);}
+
+
+
+
+
+export const getEmployeeAdminControllerEvaluateProbationMutationKey = () => ['employeeAdminControllerEvaluateProbation'] as const;
+
+export const getEmployeeAdminControllerEvaluateProbationMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>, TError,EmployeeAdminControllerEvaluateProbationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>, TError,EmployeeAdminControllerEvaluateProbationMutationVariables, TContext> => {
+
+const mutationKey = getEmployeeAdminControllerEvaluateProbationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>, EmployeeAdminControllerEvaluateProbationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  employeeAdminControllerEvaluateProbation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmployeeAdminControllerEvaluateProbationMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>>
+    export type EmployeeAdminControllerEvaluateProbationMutationBody = EvaluateProbationDto
+    export type EmployeeAdminControllerEvaluateProbationMutationError = unknown
+    export type EmployeeAdminControllerEvaluateProbationMutationVariables = {id: string;data: EvaluateProbationDto}
+
+    /**
+ * @summary Evaluate probation outcome (confirm, extend, or fail)
+ */
+export const useEmployeeAdminControllerEvaluateProbation = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>, TError,EmployeeAdminControllerEvaluateProbationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof employeeAdminControllerEvaluateProbation>>,
+        TError,
+        EmployeeAdminControllerEvaluateProbationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEmployeeAdminControllerEvaluateProbationMutationOptions(options), queryClient);
+    }
     export type employeeAdminControllerTerminateResponse200 = {
   data: void
   status: 200
@@ -1026,14 +1132,29 @@ export const getEmployeeAdminControllerRehireEmployeeUrl = (id: string,) => {
 /**
  * @summary Rehire a terminated employee (new employment cycle)
  */
-export const employeeAdminControllerRehireEmployee = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRehireEmployeeResponse> => {
+export const employeeAdminControllerRehireEmployee = async (id: string,
+    rehireEmployeeDto: RehireEmployeeDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRehireEmployeeResponse> => {
 
-  return customFetch<employeeAdminControllerRehireEmployeeResponse>(getEmployeeAdminControllerRehireEmployeeUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerRehireEmployeeResponse>(getEmployeeAdminControllerRehireEmployeeUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rehireEmployeeDto)
   }
 );}
 
@@ -1058,9 +1179,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerRehireEmployee>>, EmployeeAdminControllerRehireEmployeeMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  employeeAdminControllerRehireEmployee(id,requestOptions)
+          return  employeeAdminControllerRehireEmployee(id,data,requestOptions)
         }
 
 
@@ -1071,9 +1192,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerRehireEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerRehireEmployee>>>
-
+    export type EmployeeAdminControllerRehireEmployeeMutationBody = RehireEmployeeDto
     export type EmployeeAdminControllerRehireEmployeeMutationError = unknown
-    export type EmployeeAdminControllerRehireEmployeeMutationVariables = {id: string}
+    export type EmployeeAdminControllerRehireEmployeeMutationVariables = {id: string;data: RehireEmployeeDto}
 
     /**
  * @summary Rehire a terminated employee (new employment cycle)
@@ -1196,14 +1317,29 @@ export const getEmployeeAdminControllerScheduleTerminationUrl = (id: string,) =>
 /**
  * @summary Schedule employee termination (future effective date)
  */
-export const employeeAdminControllerScheduleTermination = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerScheduleTerminationResponse> => {
+export const employeeAdminControllerScheduleTermination = async (id: string,
+    terminateEmployeeDto: TerminateEmployeeDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerScheduleTerminationResponse> => {
 
-  return customFetch<employeeAdminControllerScheduleTerminationResponse>(getEmployeeAdminControllerScheduleTerminationUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerScheduleTerminationResponse>(getEmployeeAdminControllerScheduleTerminationUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(terminateEmployeeDto)
   }
 );}
 
@@ -1228,9 +1364,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerScheduleTermination>>, EmployeeAdminControllerScheduleTerminationMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  employeeAdminControllerScheduleTermination(id,requestOptions)
+          return  employeeAdminControllerScheduleTermination(id,data,requestOptions)
         }
 
 
@@ -1241,9 +1377,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerScheduleTerminationMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerScheduleTermination>>>
-
+    export type EmployeeAdminControllerScheduleTerminationMutationBody = TerminateEmployeeDto
     export type EmployeeAdminControllerScheduleTerminationMutationError = unknown
-    export type EmployeeAdminControllerScheduleTerminationMutationVariables = {id: string}
+    export type EmployeeAdminControllerScheduleTerminationMutationVariables = {id: string;data: TerminateEmployeeDto}
 
     /**
  * @summary Schedule employee termination (future effective date)
@@ -1366,14 +1502,29 @@ export const getEmployeeAdminControllerRequestEmployeeTransferUrl = (id: string,
 /**
  * @summary Request employee transfer (start approval workflow)
  */
-export const employeeAdminControllerRequestEmployeeTransfer = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRequestEmployeeTransferResponse> => {
+export const employeeAdminControllerRequestEmployeeTransfer = async (id: string,
+    requestTransferDto: RequestTransferDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRequestEmployeeTransferResponse> => {
 
-  return customFetch<employeeAdminControllerRequestEmployeeTransferResponse>(getEmployeeAdminControllerRequestEmployeeTransferUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerRequestEmployeeTransferResponse>(getEmployeeAdminControllerRequestEmployeeTransferUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestTransferDto)
   }
 );}
 
@@ -1398,9 +1549,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerRequestEmployeeTransfer>>, EmployeeAdminControllerRequestEmployeeTransferMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  employeeAdminControllerRequestEmployeeTransfer(id,requestOptions)
+          return  employeeAdminControllerRequestEmployeeTransfer(id,data,requestOptions)
         }
 
 
@@ -1411,9 +1562,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerRequestEmployeeTransferMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerRequestEmployeeTransfer>>>
-
+    export type EmployeeAdminControllerRequestEmployeeTransferMutationBody = RequestTransferDto
     export type EmployeeAdminControllerRequestEmployeeTransferMutationError = unknown
-    export type EmployeeAdminControllerRequestEmployeeTransferMutationVariables = {id: string}
+    export type EmployeeAdminControllerRequestEmployeeTransferMutationVariables = {id: string;data: RequestTransferDto}
 
     /**
  * @summary Request employee transfer (start approval workflow)
@@ -1627,14 +1778,29 @@ export const getEmployeeAdminControllerRejectTransferUrl = (id: string,
  * @summary Reject a pending transfer request
  */
 export const employeeAdminControllerRejectTransfer = async (id: string,
-    instanceId: string, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRejectTransferResponse> => {
+    instanceId: string,
+    rejectTransferDto: RejectTransferDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerRejectTransferResponse> => {
 
-  return customFetch<employeeAdminControllerRejectTransferResponse>(getEmployeeAdminControllerRejectTransferUrl(id,instanceId),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerRejectTransferResponse>(getEmployeeAdminControllerRejectTransferUrl(id,instanceId),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rejectTransferDto)
   }
 );}
 
@@ -1659,9 +1825,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerRejectTransfer>>, EmployeeAdminControllerRejectTransferMutationVariables> = (props) => {
-          const {id,instanceId} = props ?? {};
+          const {id,instanceId,data} = props ?? {};
 
-          return  employeeAdminControllerRejectTransfer(id,instanceId,requestOptions)
+          return  employeeAdminControllerRejectTransfer(id,instanceId,data,requestOptions)
         }
 
 
@@ -1672,9 +1838,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerRejectTransferMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerRejectTransfer>>>
-
+    export type EmployeeAdminControllerRejectTransferMutationBody = RejectTransferDto
     export type EmployeeAdminControllerRejectTransferMutationError = unknown
-    export type EmployeeAdminControllerRejectTransferMutationVariables = {id: string;instanceId: string}
+    export type EmployeeAdminControllerRejectTransferMutationVariables = {id: string;instanceId: string;data: RejectTransferDto}
 
     /**
  * @summary Reject a pending transfer request
@@ -1886,14 +2052,28 @@ export const getEmployeeAdminControllerBulkStatusUrl = () => {
 /**
  * @summary Bulk change employee status (partial failure supported)
  */
-export const employeeAdminControllerBulkStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerBulkStatusResponse> => {
+export const employeeAdminControllerBulkStatus = async (bulkStatusDto: BulkStatusDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerBulkStatusResponse> => {
 
-  return customFetch<employeeAdminControllerBulkStatusResponse>(getEmployeeAdminControllerBulkStatusUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerBulkStatusResponse>(getEmployeeAdminControllerBulkStatusUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bulkStatusDto)
   }
 );}
 
@@ -1904,8 +2084,8 @@ export const employeeAdminControllerBulkStatus = async ( options?: Parameters<ty
 export const getEmployeeAdminControllerBulkStatusMutationKey = () => ['employeeAdminControllerBulkStatus'] as const;
 
 export const getEmployeeAdminControllerBulkStatusMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,EmployeeAdminControllerBulkStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,EmployeeAdminControllerBulkStatusMutationVariables, TContext> => {
 
 const mutationKey = getEmployeeAdminControllerBulkStatusMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1917,10 +2097,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, EmployeeAdminControllerBulkStatusMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  employeeAdminControllerBulkStatus(requestOptions)
+          return  employeeAdminControllerBulkStatus(data,requestOptions)
         }
 
 
@@ -1931,19 +2111,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerBulkStatusMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>>
-
+    export type EmployeeAdminControllerBulkStatusMutationBody = BulkStatusDto
     export type EmployeeAdminControllerBulkStatusMutationError = unknown
-
+    export type EmployeeAdminControllerBulkStatusMutationVariables = {data: BulkStatusDto}
 
     /**
  * @summary Bulk change employee status (partial failure supported)
  */
 export const useEmployeeAdminControllerBulkStatus = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>, TError,EmployeeAdminControllerBulkStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof employeeAdminControllerBulkStatus>>,
         TError,
-        void,
+        EmployeeAdminControllerBulkStatusMutationVariables,
         TContext
       > => {
       return useMutation(getEmployeeAdminControllerBulkStatusMutationOptions(options), queryClient);
@@ -1971,14 +2151,28 @@ export const getEmployeeAdminControllerBulkArchiveOpUrl = () => {
 /**
  * @summary Bulk archive employees (only terminal status)
  */
-export const employeeAdminControllerBulkArchiveOp = async ( options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerBulkArchiveOpResponse> => {
+export const employeeAdminControllerBulkArchiveOp = async (bulkArchiveDto: BulkArchiveDto, options?: Parameters<typeof customFetch>[1]): Promise<employeeAdminControllerBulkArchiveOpResponse> => {
 
-  return customFetch<employeeAdminControllerBulkArchiveOpResponse>(getEmployeeAdminControllerBulkArchiveOpUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<employeeAdminControllerBulkArchiveOpResponse>(getEmployeeAdminControllerBulkArchiveOpUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bulkArchiveDto)
   }
 );}
 
@@ -1989,8 +2183,8 @@ export const employeeAdminControllerBulkArchiveOp = async ( options?: Parameters
 export const getEmployeeAdminControllerBulkArchiveOpMutationKey = () => ['employeeAdminControllerBulkArchiveOp'] as const;
 
 export const getEmployeeAdminControllerBulkArchiveOpMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,EmployeeAdminControllerBulkArchiveOpMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,EmployeeAdminControllerBulkArchiveOpMutationVariables, TContext> => {
 
 const mutationKey = getEmployeeAdminControllerBulkArchiveOpMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2002,10 +2196,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, EmployeeAdminControllerBulkArchiveOpMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  employeeAdminControllerBulkArchiveOp(requestOptions)
+          return  employeeAdminControllerBulkArchiveOp(data,requestOptions)
         }
 
 
@@ -2016,19 +2210,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type EmployeeAdminControllerBulkArchiveOpMutationResult = NonNullable<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>>
-
+    export type EmployeeAdminControllerBulkArchiveOpMutationBody = BulkArchiveDto
     export type EmployeeAdminControllerBulkArchiveOpMutationError = unknown
-
+    export type EmployeeAdminControllerBulkArchiveOpMutationVariables = {data: BulkArchiveDto}
 
     /**
  * @summary Bulk archive employees (only terminal status)
  */
 export const useEmployeeAdminControllerBulkArchiveOp = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>, TError,EmployeeAdminControllerBulkArchiveOpMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof employeeAdminControllerBulkArchiveOp>>,
         TError,
-        void,
+        EmployeeAdminControllerBulkArchiveOpMutationVariables,
         TContext
       > => {
       return useMutation(getEmployeeAdminControllerBulkArchiveOpMutationOptions(options), queryClient);

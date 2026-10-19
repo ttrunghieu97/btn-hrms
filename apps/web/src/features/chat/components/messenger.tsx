@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useChatStore } from '../utils/store';
@@ -26,6 +25,54 @@ function getInitials(name: string): string {
     .join('');
 }
 
+export function appendMessageToCache(old: unknown, message: Message): unknown {
+  const appendUnique = (list: Message[]): Message[] => {
+    if (list.some((m) => m.id === message.id)) return list;
+    return [...list, message];
+  };
+
+  if (!old) {
+    return [message];
+  }
+
+  if (Array.isArray(old)) {
+    return appendUnique(old as Message[]);
+  }
+
+  if (typeof old === 'object') {
+    const record = old as Record<string, unknown>;
+    if (Array.isArray(record.data)) {
+      return {
+        ...record,
+        data: appendUnique(record.data as Message[]),
+      };
+    }
+    if (record.data && typeof record.data === 'object') {
+      const inner = record.data as Record<string, unknown>;
+      if (Array.isArray(inner.data)) {
+        return {
+          ...record,
+          data: {
+            ...inner,
+            data: appendUnique(inner.data as Message[]),
+          },
+        };
+      }
+      if (Array.isArray(inner.items)) {
+        return {
+          ...record,
+          data: {
+            ...inner,
+            items: appendUnique(inner.items as Message[]),
+          },
+        };
+      }
+    }
+  }
+
+  return [message];
+}
+
 export function Messenger() {
   const currentUser = useAuthStore((s) => s.user);
   const currentUserId = currentUser?.id ?? '';
@@ -42,8 +89,8 @@ export function Messenger() {
   } = useChatStore();
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const shouldReduceMotion = useReducedMotion();
   const typingTimeoutRef = useRef<number | null>(null);
+  const lastMarkedReadRef = useRef<string | null>(null);
 
   const { data: conversations = [] } = useConversationsQuery();
   const { data: messages = [] } = useMessagesQuery(selectedConversationId);
@@ -70,29 +117,51 @@ export function Messenger() {
     (message: Message) => {
       queryClient.setQueryData(
         chatKeys.messages(message.conversationId),
-        (old: Message[] | undefined) => {
-          const existing = old ? [...old] : [];
-          if (existing.some((m) => m.id === message.id)) return existing;
-          return [...existing, message];
-        }
+        (old: unknown) => appendMessageToCache(old, message)
       );
-      queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
     },
     [queryClient]
   );
 
   const onTyping = useCallback(
-    (data: { userId: string; username: string; isTyping: boolean }) => {
-      if (!selectedConversationId) return;
-      setTyping(selectedConversationId, data.userId, data.username, data.isTyping);
+    (data: {
+      conversationId?: string;
+      userId: string;
+      username: string;
+      isTyping: boolean;
+    }) => {
+      const targetConvId = data.conversationId ?? selectedConversationId;
+      if (!targetConvId) return;
+      if (data.conversationId && selectedConversationId && data.conversationId !== selectedConversationId) {
+        return;
+      }
+      setTyping(targetConvId, data.userId, data.username, data.isTyping);
     },
     [selectedConversationId, setTyping]
   );
 
-  const { sendMessage: socketSendMessage, sendTyping, markRead } = useChatSocket({
+  const { sendMessage: socketSendMessage, sendTyping, joinRoom, markRead } = useChatSocket({
     onNewMessage,
     onTyping
   });
+
+  // Join active conversation socket room
+  useEffect(() => {
+    if (!selectedConversationId) return;
+    joinRoom(selectedConversationId);
+  }, [selectedConversationId, joinRoom]);
+
+  // Mark latest message in active conversation as read once per message
+  useEffect(() => {
+    if (!selectedConversationId || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg) return;
+    const readKey = `${selectedConversationId}:${lastMsg.id}`;
+    if (lastMarkedReadRef.current === readKey) return;
+    lastMarkedReadRef.current = readKey;
+    markRead(selectedConversationId, lastMsg.id);
+  }, [selectedConversationId, messages, markRead]);
 
   const handleAddAttachments = useCallback((files: FileList) => {
     const newAttachments: Attachment[] = Array.from(files).map((file) => ({
@@ -134,7 +203,17 @@ export function Messenger() {
       e.preventDefault();
       if ((!draft.trim() && attachments.length === 0) || !selectedConversationId) return;
 
-      socketSendMessage(selectedConversationId, draft.trim());
+      const outgoingAttachments =
+        attachments.length > 0
+          ? attachments.map((att) => ({
+              name: att.name,
+              size: att.size,
+              mimeType: att.mimeType ?? att.type,
+              url: att.url ?? '',
+            }))
+          : undefined;
+
+      socketSendMessage(selectedConversationId, draft.trim(), outgoingAttachments);
       setDraft('');
       setAttachments([]);
 
@@ -149,13 +228,8 @@ export function Messenger() {
   const handleSelectConversation = useCallback(
     (id: string) => {
       selectConversation(id);
-      const msgs = queryClient.getQueryData<Message[]>(chatKeys.messages(id));
-      if (msgs?.length) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg) markRead(id, lastMsg.id);
-      }
     },
-    [selectConversation, queryClient, markRead]
+    [selectConversation]
   );
 
   // Build display-friendly conversation list

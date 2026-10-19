@@ -20,7 +20,6 @@ describe("TaskEventPublisher", () => {
       eventStore as any,
       requestContext as any,
       metrics as any,
-      null,
     );
     return { publisher, eventStore, requestContext, metrics };
   }

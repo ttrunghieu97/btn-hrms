@@ -465,3 +465,39 @@ export async function bulkArchiveEmployees(
   );
   return unwrapData(response);
 }
+
+/* ------------------------------------------------------------------ */
+/* Probation Evaluation (PD-01)                                        */
+/* ------------------------------------------------------------------ */
+
+export interface EvaluateProbationPayload {
+  decision: 'confirm' | 'extend' | 'fail';
+  effectiveDate?: string;
+  extendedEndDate?: string;
+  lastWorkingDate?: string;
+  notes?: string;
+}
+
+export interface EvaluateProbationResponse {
+  success: boolean;
+  decision: 'confirm' | 'extend' | 'fail';
+  status: string;
+  probationEndDate?: string | null;
+}
+
+/** POST /api/v1/employees/:id/probation/evaluate */
+export async function evaluateEmployeeProbation(
+  id: string,
+  data: EvaluateProbationPayload,
+): Promise<EvaluateProbationResponse> {
+  const response = await customFetch<EvaluateProbationResponse>(
+    `/api/v1/employees/${id}/probation/evaluate`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+  return unwrapData(response);
+}
+

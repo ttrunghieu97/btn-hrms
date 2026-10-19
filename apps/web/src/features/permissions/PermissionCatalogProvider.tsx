@@ -234,13 +234,18 @@ export function PermissionCatalogProvider({ children }: { children: React.ReactN
     const permissionMetadataList: PermissionMetadata[] = [];
 
     dbPermissions.forEach((p) => {
+      // Never include the super-admin wildcard 'sys:all' in the UI permission matrix catalog
+      if (p.code === 'sys:all') {
+        return;
+      }
+
       const mapping = MAPPINGS.find((m) => m.code === p.code);
       if (mapping) {
         const exists = permissionMetadataList.some((metadata) => metadata.id === mapping.permissionId);
         if (!exists) {
           const parts = mapping.permissionId.split(':');
           const resourceId = parts[0];
-          const actionId = parts[1];
+          const actionId = parts.slice(1).join(':') || 'all';
 
           const dependsOn: string[] = [];
           if (actionId === 'create' || actionId === 'edit' || actionId === 'delete' || actionId === 'update' || actionId === 'report' || actionId === 'approve') {
@@ -260,7 +265,7 @@ export function PermissionCatalogProvider({ children }: { children: React.ReactN
       } else {
         const parts = p.code.split(':');
         const resourceId = parts[0] || 'sys';
-        const actionId = parts[1] || 'all';
+        const actionId = parts.slice(1).join(':') || 'all';
 
         const dependsOn: string[] = [];
         if (actionId === 'create' || actionId === 'edit' || actionId === 'delete' || actionId === 'update') {
@@ -277,6 +282,37 @@ export function PermissionCatalogProvider({ children }: { children: React.ReactN
           affectedScreens: [resourceId],
         });
       }
+    });
+
+    // Dynamically register any resource present in DB permissions that is not yet in RESOURCES_RAW
+    const existingResourceIds = new Set(resources.map((r) => r.id));
+    let dynamicOrder = resources.length + 1;
+    permissionMetadataList.forEach((perm) => {
+      if (perm.resourceId === 'sys' || existingResourceIds.has(perm.resourceId)) {
+        return;
+      }
+      existingResourceIds.add(perm.resourceId);
+      const inferredDomainId =
+        ['recruitment', 'onboarding', 'offboarding', 'performance', 'learning'].includes(perm.resourceId)
+          ? 'people'
+          : ['gps-logs', 'shifts', 'workforce', 'chat'].includes(perm.resourceId)
+            ? 'attendance'
+            : ['benefits', 'expenses', 'contracts', 'salary-structures', 'payslips'].includes(perm.resourceId)
+              ? 'payroll'
+              : 'settings';
+      const localizedName =
+        roleUiCopy.matrix.catalog.resources[
+          perm.resourceId as keyof typeof roleUiCopy.matrix.catalog.resources
+        ] || perm.resourceId;
+      resources.push({
+        id: perm.resourceId,
+        domainId: inferredDomainId,
+        order: dynamicOrder++,
+        supportsScope: MAPPINGS.some(
+          (m) => m.permissionId.startsWith(`${perm.resourceId}:`) && m.scopeId !== 'all'
+        ),
+        name: localizedName,
+      });
     });
 
     permissionMetadataList.sort((a, b) => a.id.localeCompare(b.id));

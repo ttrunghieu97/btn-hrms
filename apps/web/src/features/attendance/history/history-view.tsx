@@ -115,16 +115,22 @@ export function HistoryView({ canViewAll = false }: HistoryViewProps) {
   return (
     <Section className='h-full flex flex-col overflow-y-auto pr-1'>
       <div className='flex min-h-0 flex-1 flex-col gap-4'>
-        <div className='flex items-center gap-2 self-end'>
-          <Button variant='outline' size='icon' aria-label='Tháng trước' className='h-8 w-8' onClick={handlePrevMonth}>
-            <Icons.chevronLeft className='h-4 w-4' />
-          </Button>
-          <div className='min-w-[100px] text-center text-sm font-medium'>
-            {format(parseISO(`${activeMonth}-01`), 'MM/yyyy')}
+        <div className='flex flex-wrap items-center justify-between gap-2'>
+          <div>
+            <h2 className='text-sm font-semibold text-foreground'>Bảng chấm công cá nhân theo tháng</h2>
+            <p className='text-xs text-muted-foreground'>Theo dõi chi tiết giờ vào/ra các buổi và tổng giờ làm việc trong tháng</p>
           </div>
-          <Button variant='outline' size='icon' aria-label='Tháng sau' className='h-8 w-8' onClick={handleNextMonth}>
-            <Icons.chevronRight className='h-4 w-4' />
-          </Button>
+          <div className='flex items-center gap-2'>
+            <Button variant='outline' size='icon' aria-label='Tháng trước' className='h-8 w-8' onClick={handlePrevMonth}>
+              <Icons.chevronLeft className='h-4 w-4' />
+            </Button>
+            <div className='min-w-[100px] text-center text-sm font-medium tabular-nums'>
+              {format(parseISO(`${activeMonth}-01`), 'MM/yyyy')}
+            </div>
+            <Button variant='outline' size='icon' aria-label='Tháng sau' className='h-8 w-8' onClick={handleNextMonth}>
+              <Icons.chevronRight className='h-4 w-4' />
+            </Button>
+          </div>
         </div>
 
         <MyAttendanceTable data={attendances} isLoading={isLoading} onPunch={handlePunch} />

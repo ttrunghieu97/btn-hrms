@@ -209,8 +209,12 @@ export function useEmployeeForm({
   const formRef = React.useRef(form);
   formRef.current = form;
 
+  const hydratedSessionKeyRef = React.useRef<string | null>(null);
+
   React.useEffect(() => {
     if (!open) {
+      hydratedSessionKeyRef.current = null;
+      draftIdRef.current = getRequestId();
       avatarUploadRequestRef.current += 1;
       setIsAvatarUploading(false);
       setIsStagingForSave(false);
@@ -220,6 +224,11 @@ export function useEmployeeForm({
       setFieldUploadKeys(new Set());
       return;
     }
+    const sessionKey = resolvedEmployee?.id ?? resolvedEmployee?.username ?? "create";
+    if (hydratedSessionKeyRef.current === sessionKey) {
+      return;
+    }
+    hydratedSessionKeyRef.current = sessionKey;
     const nextForm = resolvedEmployee
       ? createEmployeeFormValues(resolvedEmployee)
       : {
@@ -566,6 +575,11 @@ export function useEmployeeForm({
       identityNumber: formValues.identityNumber.trim(),
       identityDate: formValues.identityDate,
       identityPlace: formValues.identityPlace.trim(),
+      bankName: formValues.bankName.trim(),
+      bankAccountNumber: formValues.bankAccountNumber.trim(),
+      taxCode: formValues.taxCode.trim(),
+      emergencyContactName: formValues.emergencyContactName.trim(),
+      emergencyContactPhone: formValues.emergencyContactPhone.trim(),
       certifications: formValues.certifications.map((cert) => ({
         name: cert.name.trim(),
         issuedBy: cert.issuedBy.trim(),
@@ -673,11 +687,14 @@ export function useEmployeeForm({
       });
       stagedValues = {
         ...stagedValues,
+        avatarFile: undefined,
         avatarTempFileToken: uploaded.tempFileToken,
       };
+      form.setFieldValue("avatarTempFileToken", uploaded.tempFileToken);
+      form.setFieldValue("avatarFile", undefined);
     }
 
-    const docsWithFiles = values.documents.filter((d) => d.checked && d.file);
+    const docsWithFiles = values.documents.filter((d) => d.checked && d.file && !d.tempFileToken);
     for (const doc of docsWithFiles) {
       validateEmployeeUpload(doc.file!, "document");
       const uploaded = await uploadTempFile({
@@ -685,17 +702,21 @@ export function useEmployeeForm({
         purpose: "document",
         draftId: draftIdRef.current,
       });
+      const nextDocuments = stagedValues.documents.map((item) =>
+        item.id === doc.id
+          ? { ...item, file: undefined, tempFileToken: uploaded.tempFileToken }
+          : item,
+      );
       stagedValues = {
         ...stagedValues,
-        documents: stagedValues.documents.map((item) =>
-          item.id === doc.id
-            ? { ...item, tempFileToken: uploaded.tempFileToken }
-            : item,
-        ),
+        documents: nextDocuments,
       };
+      form.setFieldValue("documents", nextDocuments);
     }
 
-    const certsWithFiles = values.certifications.filter((c) => c.evidenceFile);
+    const certsWithFiles = values.certifications.filter(
+      (c) => c.evidenceFile && !c.evidenceTempFileToken,
+    );
     for (const cert of certsWithFiles) {
       validateEmployeeUpload(cert.evidenceFile!, "certification");
       const uploaded = await uploadTempFile({
@@ -703,14 +724,16 @@ export function useEmployeeForm({
         purpose: "certification",
         draftId: draftIdRef.current,
       });
+      const nextCertifications = stagedValues.certifications.map((item) =>
+        item.id === cert.id
+          ? { ...item, evidenceFile: undefined, evidenceTempFileToken: uploaded.tempFileToken }
+          : item,
+      );
       stagedValues = {
         ...stagedValues,
-        certifications: stagedValues.certifications.map((item) =>
-          item.id === cert.id
-            ? { ...item, evidenceTempFileToken: uploaded.tempFileToken }
-            : item,
-        ),
+        certifications: nextCertifications,
       };
+      form.setFieldValue("certifications", nextCertifications);
     }
 
     return stagedValues;

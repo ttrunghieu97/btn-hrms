@@ -1,9 +1,14 @@
-import { Injectable, OnApplicationBootstrap, OnModuleDestroy } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  OnApplicationBootstrap,
+  OnModuleDestroy,
+} from "@nestjs/common";
 import {
   EventOutboxRepository,
   type ClaimedOutboxRow,
 } from "./event-outbox.repository";
-import { RedisDurableEventBus } from "./redis-durable-event-bus.service";
+import { EVENT_BUS_TOKEN, type IEventBus } from "./event-bus.interface";
 import { ContextLogger } from "../../shared/logging/context-logger";
 import { RequestContextService } from "../../shared/context/request-context.service";
 import { MetricsService } from "../../shared/metrics/metrics.service";
@@ -16,12 +21,30 @@ function errorMessage(error: unknown, fallback: string) {
 function outboxEnvelope(
   row: ClaimedOutboxRow,
 ): CanonicalEventEnvelope<unknown> {
+  const payloadObj =
+    typeof row.payload === "object" && row.payload !== null
+      ? (row.payload as Record<string, unknown>)
+      : {};
+  const nestedData =
+    typeof payloadObj.data === "object" && payloadObj.data !== null
+      ? (payloadObj.data as Record<string, unknown>)
+      : {};
+  const rowRecord = row as unknown as Record<string, unknown>;
+  const scopeId =
+    typeof rowRecord.scopeId === "string"
+      ? rowRecord.scopeId
+      : typeof payloadObj.scopeId === "string"
+        ? payloadObj.scopeId
+        : typeof nestedData.scopeId === "string"
+          ? nestedData.scopeId
+          : null;
+
   return {
     eventId: row.id,
     eventType: row.eventType,
     eventVersion: row.eventVersion,
     producerContext: row.producerContext,
-    scopeId: null,
+    scopeId,
     aggregateId: row.aggregateId,
     correlationId: row.correlationId,
     causationId: row.causationId,
@@ -81,7 +104,7 @@ function wasFinalAttempt(
 }
 
 async function publishStagedRow(
-  eventBus: RedisDurableEventBus,
+  eventBus: IEventBus,
   outboxRepo: EventOutboxRepository,
   row: ClaimedOutboxRow,
   metrics: MetricsService,
@@ -144,7 +167,7 @@ function logDispatchFailure(
 
 async function dispatchRow(
   row: ClaimedOutboxRow,
-  eventBus: RedisDurableEventBus,
+  eventBus: IEventBus,
   outboxRepo: EventOutboxRepository,
   logger: ContextLogger,
   metrics: MetricsService,
@@ -167,12 +190,14 @@ function scheduleNext(
   }, 1000);
 }
 
-const MAX_CONCURRENT_PER_TYPE = Number(process.env.OUTBOX_MAX_CONCURRENT_PER_TYPE ?? "25");
-const POISON_EVENT_LIMIT = 20;
+function getMaxConcurrentPerType(): number {
+  const configured = Number(process.env.OUTBOX_MAX_CONCURRENT_PER_TYPE ?? "25");
+  return Number.isFinite(configured) && configured > 0 ? configured : 25;
+}
 
 async function dispatchBatch(
   outboxRepo: EventOutboxRepository,
-  eventBus: RedisDurableEventBus,
+  eventBus: IEventBus,
   logger: ContextLogger,
   metrics: MetricsService,
   limit: number,
@@ -189,13 +214,14 @@ async function dispatchBatch(
   }
 
   const rows = await outboxRepo.claimUnpublished(limit);
+  const maxConcurrentPerType = getMaxConcurrentPerType();
 
   // Per-event-type concurrency throttle
   const typeCount = new Map<string, number>();
   const throttle = (row: ClaimedOutboxRow): boolean => {
     const count = (typeCount.get(row.eventType) ?? 0) + 1;
     typeCount.set(row.eventType, count);
-    if (count > MAX_CONCURRENT_PER_TYPE) {
+    if (count > maxConcurrentPerType) {
       logger.warn({
         msg: "event_outbox_type_throttled",
         eventType: row.eventType,
@@ -208,7 +234,11 @@ async function dispatchBatch(
 
   for (const row of rows) {
     if (throttle(row)) {
-      // Skip this row; it will be re-claimed next cycle
+      // Release the lease so the row can be re-claimed next cycle without
+      // expiring and having recoverExpiredLeases() increment attemptCount.
+      if (typeof outboxRepo.releaseLease === "function") {
+        await outboxRepo.releaseLease(row.id);
+      }
       continue;
     }
     // Poison event quarantine: events that have exceeded max attempts
@@ -291,7 +321,7 @@ async function dispatchFromService(service: EventOutboxDispatcherService, limit:
     getDispatcherBus(service),
     getDispatcherLogger(service),
     getDispatcherMetrics(service),
-        limit,
+    limit,
   );
 }
 
@@ -320,6 +350,7 @@ function destroyDispatcher(service: EventOutboxDispatcherService) {
 function dispatcherDispatchOnce(service: EventOutboxDispatcherService, limit: number) {
   return dispatchFromService(service, limit);
 }
+
 @Injectable()
 export class EventOutboxDispatcherService
   implements OnApplicationBootstrap, OnModuleDestroy
@@ -330,7 +361,8 @@ export class EventOutboxDispatcherService
 
   constructor(
     private readonly outboxRepo: EventOutboxRepository,
-    private readonly eventBus: RedisDurableEventBus,
+    @Inject(EVENT_BUS_TOKEN)
+    private readonly eventBus: IEventBus,
     private readonly metrics: MetricsService,
     requestContext: RequestContextService,
   ) {
@@ -338,8 +370,17 @@ export class EventOutboxDispatcherService
   }
 
   onApplicationBootstrap(): void {
-    if (!this.eventBus.isAvailable()) {
-      this.logger.warn({ msg: "event_outbox_dispatcher_skipped", reason: "redis_durable_event_bus_unavailable" });
+    const maybeStatefulBus = this.eventBus as IEventBus & {
+      isAvailable?: () => boolean;
+    };
+    if (
+      typeof maybeStatefulBus?.isAvailable === "function" &&
+      !maybeStatefulBus.isAvailable()
+    ) {
+      this.logger.warn({
+        msg: "event_outbox_dispatcher_skipped",
+        reason: "redis_durable_event_bus_unavailable",
+      });
       return;
     }
     this.logger.log({ msg: "event_outbox_dispatcher_started" });

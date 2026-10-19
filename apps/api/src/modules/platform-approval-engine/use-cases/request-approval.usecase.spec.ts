@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException } from "@nestjs/common";
+import { NotFoundException, ForbiddenException } from "@nestjs/common";
 import { RequestApprovalUseCase } from "./request-approval.usecase";
 
 describe("RequestApprovalUseCase", () => {
@@ -14,11 +14,19 @@ describe("RequestApprovalUseCase", () => {
   });
   const makeOutbox = () => ({ stage: jest.fn() });
 
+  it("throws ForbiddenException when authenticated user identity is missing", async () => {
+    const repo = makeRepo();
+    const uc = new RequestApprovalUseCase(repo as any, makeOutbox() as any);
+    await expect(
+      uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "s" }, ""),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
   it("throws when policy not found", async () => {
     const repo = makeRepo();
     repo.findPolicyById.mockResolvedValue(null);
     const uc = new RequestApprovalUseCase(repo as any, makeOutbox() as any);
-    await expect(uc.execute({ policyId: "x", subjectType: "leave", subjectId: "s" } as any))
+    await expect(uc.execute({ policyId: "x", subjectType: "leave", subjectId: "s" }, "user-1"))
       .rejects.toThrow(NotFoundException);
   });
 
@@ -30,11 +38,14 @@ describe("RequestApprovalUseCase", () => {
       return cb({});
     });
     const uc = new RequestApprovalUseCase(repo as any, makeOutbox() as any);
-    const result = await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "dup" });
+    const result = await uc.execute(
+      { policyId: "policy-1", subjectType: "leave", subjectId: "dup" },
+      "user-1",
+    );
     expect(result).toEqual({ id: "existing" });
   });
 
-  it("creates request + steps + stages event on success", async () => {
+  it("creates request + steps + stages event on success using authenticated principal", async () => {
     const repo = makeRepo();
     const outbox = makeOutbox();
     repo.findPolicyById.mockResolvedValue(mockPolicy);
@@ -44,7 +55,14 @@ describe("RequestApprovalUseCase", () => {
       return cb({});
     });
     const uc = new RequestApprovalUseCase(repo as any, outbox as any);
-    await uc.execute({ policyId: "policy-1", subjectType: "leave", subjectId: "s-1", requestedByUserId: "user-1" });
+    await uc.execute(
+      { policyId: "policy-1", subjectType: "leave", subjectId: "s-1" },
+      "user-1",
+    );
+    expect(repo.insertRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ requestedByUserId: "user-1" }),
+      expect.anything(),
+    );
     expect(repo.insertSteps).toHaveBeenCalled();
     expect(outbox.stage).toHaveBeenCalled();
   });

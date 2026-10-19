@@ -5,6 +5,7 @@ export type LeaveCancellationRequestedPayload = {
   idempotencyKey: string;
   leaveRequestId: string;
   cancelledByUserId: string;
+  cancelledAt?: string;
 };
 
 export class LeaveCancellationRequestedEvent extends DomainEvent<LeaveCancellationRequestedPayload> {

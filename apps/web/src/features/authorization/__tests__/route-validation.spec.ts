@@ -1,4 +1,11 @@
+import { PermissionRegistry, hasPermission } from '@project/permissions';
 import { routeRegistry } from '@/shared/authorization';
+
+const canonicalPermissions = new Set<string>(
+  Object.values(PermissionRegistry).flatMap((domain: Record<string, string>) =>
+    Object.values(domain)
+  )
+);
 
 describe('route registry validation', () => {
   it('all routes have a path starting with /', () => {
@@ -14,7 +21,7 @@ describe('route registry validation', () => {
     expect(duplicates).toEqual([]);
   });
 
-  it('permission rules have valid structure', () => {
+  it('permission rules have valid structure and reference canonical permissions', () => {
     for (const route of routeRegistry) {
       const { permission } = route;
       if (permission.anyOf) {
@@ -23,8 +30,12 @@ describe('route registry validation', () => {
         for (const p of permission.anyOf) {
           expect(typeof p).toBe('string');
           expect(p).toMatch(/^[a-z][a-z0-9_-]*:/);
+          expect(
+            canonicalPermissions.has(p) || hasPermission(Array.from(canonicalPermissions), p)
+          ).toBe(true);
         }
       }
     }
   });
 });
+

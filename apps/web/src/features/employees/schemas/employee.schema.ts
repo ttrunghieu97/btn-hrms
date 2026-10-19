@@ -50,6 +50,14 @@ const baseEmployeeShape = {
   identityNumber: z.string().max(32).optional(),
   identityDate: isoDateString.optional(),
   identityPlace: z.string().max(255).optional(),
+  bankName: z.string().max(128).optional(),
+  bankAccountNumber: z.string().max(64).optional(),
+  taxCode: z.string().max(64).optional(),
+  emergencyContactName: z.string().max(128).optional(),
+  emergencyContactPhone: z
+    .string()
+    .regex(/^[0-9+\-() ]{6,20}$/, validationCopy.employee.phoneInvalid)
+    .optional(),
   avatar: z.string().url().optional()
 };
 
@@ -121,6 +129,16 @@ export const createEmployeeFormSchema = z.object({
   identityNumber: z.string().max(32).optional().or(z.literal('')),
   identityDate: z.union([z.literal(''), isoDateString]).optional(),
   identityPlace: z.string().max(255).optional().or(z.literal('')),
+  bankName: z.string().max(128).optional().or(z.literal('')),
+  bankAccountNumber: z.string().max(64).optional().or(z.literal('')),
+  taxCode: z.string().max(64).optional().or(z.literal('')),
+  emergencyContactName: z.string().max(128).optional().or(z.literal('')),
+  emergencyContactPhone: z
+    .union([
+      z.literal(''),
+      z.string().regex(/^[0-9+\-() ]{6,20}$/, validationCopy.employee.phoneInvalid),
+    ])
+    .optional(),
   certifications: z.array(createEmployeeCertificationFormSchema),
 });
 export const updateEmployeeFormSchema = createEmployeeFormSchema.omit({ username: true });

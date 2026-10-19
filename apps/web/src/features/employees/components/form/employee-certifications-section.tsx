@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { EmployeeAttachmentUploadControl } from './employee-attachment-upload-control';
 
-const CERTIFICATION_UPLOAD_HINT = ['PNG', 'JPG', 'WEBP', 'PDF'].join(', ') + ' &bull; Toi da 5MB';
+const CERTIFICATION_UPLOAD_HINT = ['PNG', 'JPG', 'WEBP', 'PDF'].join(', ') + ' • Tối đa 5MB';
 
 export interface CertificationField {
   id: string;

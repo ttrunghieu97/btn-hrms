@@ -9,7 +9,9 @@ const appRoot = path.resolve(
 const srcRoot = path.join(appRoot, "src");
 const modulesRoot = path.join(srcRoot, "modules");
 const allowlistPath = path.join(appRoot, "governance/arch-baseline.json");
-const mode = String(process.env.ARCH_BOUNDARY_POLICY_MODE || "enforce-new")
+const mode = String(
+  process.env.ARCH_MODE || process.env.ARCH_BOUNDARY_POLICY_MODE || "enforce-new",
+)
   .trim()
   .toLowerCase();
 

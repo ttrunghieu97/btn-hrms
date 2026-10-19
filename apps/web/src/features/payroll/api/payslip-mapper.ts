@@ -2,17 +2,22 @@ import type { Payslip } from '../types';
 
 export function toPayslip(dto: Record<string, unknown>): Payslip {
   const metadata = (dto.metadata as Record<string, unknown>) ?? null;
-  const calculationStatus =
-    dto.calculationStatus === 'CONFIRMED' ||
-    dto.calculationStatus === 'PROVISIONAL_POLICY_UNCONFIRMED'
+  const rawCalcStatus =
+    typeof dto.calculationStatus === 'string'
       ? dto.calculationStatus
-      : metadata?.calculationStatus === 'CONFIRMED'
-        ? 'CONFIRMED'
-        : 'PROVISIONAL_POLICY_UNCONFIRMED';
+      : typeof metadata?.calculationStatus === 'string'
+        ? metadata.calculationStatus
+        : undefined;
+  const calculationStatus =
+    rawCalcStatus === 'CONFIRMED' || rawCalcStatus === 'PROVISIONAL_POLICY_UNCONFIRMED'
+      ? rawCalcStatus
+      : undefined;
   const isProvisional =
     typeof dto.isProvisional === 'boolean'
       ? dto.isProvisional
-      : calculationStatus !== 'CONFIRMED' || metadata?.isProvisional === true;
+      : typeof metadata?.isProvisional === 'boolean'
+        ? metadata.isProvisional
+        : calculationStatus === 'PROVISIONAL_POLICY_UNCONFIRMED';
 
   return {
     id: dto.id as string,

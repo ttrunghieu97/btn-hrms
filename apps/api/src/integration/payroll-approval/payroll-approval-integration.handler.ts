@@ -1,10 +1,13 @@
-import { Injectable, OnModuleInit, Inject } from "@nestjs/common";
+import { Injectable, OnModuleInit, Inject, Optional } from "@nestjs/common";
 import { EVENT_BUS_TOKEN, IEventBus } from "@/core/events/event-bus.interface";
 import { PayrollProcessedEvent } from "@/core/events/events/payroll-processed.event";
 import { PayrollApprovalPolicyResolver } from "./payroll-approval-policy.resolver";
 import { PayrollApprovalGateway } from "./payroll-approval.gateway";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
+import { EventIdempotencyRepository } from "@/infrastructure/repositories/event-idempotency.repository";
+
+const CONSUMER_ID = "payroll-approval-integration";
 
 @Injectable()
 export class PayrollApprovalIntegrationHandler implements OnModuleInit {
@@ -15,6 +18,7 @@ export class PayrollApprovalIntegrationHandler implements OnModuleInit {
     private readonly policyResolver: PayrollApprovalPolicyResolver,
     private readonly gateway: PayrollApprovalGateway,
     private readonly requestContext: RequestContextService,
+    @Optional() private readonly idempotency?: EventIdempotencyRepository,
   ) {
     this.logger = new ContextLogger(
       this.requestContext,
@@ -32,6 +36,15 @@ export class PayrollApprovalIntegrationHandler implements OnModuleInit {
   private async handlePayrollProcessed(
     event: PayrollProcessedEvent,
   ): Promise<void> {
+    const idempotentEventId = event.eventId || event.data?.payrollRunId;
+    if (
+      this.idempotency &&
+      idempotentEventId &&
+      (await this.idempotency.isProcessed(CONSUMER_ID, idempotentEventId))
+    ) {
+      return;
+    }
+
     try {
       const { payrollRunId, processedByUserId } = event.data;
 
@@ -47,6 +60,10 @@ export class PayrollApprovalIntegrationHandler implements OnModuleInit {
         requestedByUserId: processedByUserId ?? null,
       });
 
+      if (this.idempotency && idempotentEventId) {
+        await this.idempotency.markProcessed(CONSUMER_ID, idempotentEventId);
+      }
+
       this.logger.log(`Approval requested for payroll run ${payrollRunId}`);
     } catch (error) {
       this.logger.error(
@@ -54,6 +71,7 @@ export class PayrollApprovalIntegrationHandler implements OnModuleInit {
           error instanceof Error ? error.message : String(error)
         }`,
       );
+      throw error;
     }
   }
 }

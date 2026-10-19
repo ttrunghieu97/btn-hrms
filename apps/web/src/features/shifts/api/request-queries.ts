@@ -29,6 +29,8 @@ const BASE = '/api/v1/workforce/schedules';
 
 export const requestKeys = createKeyFactory('schedule-requests');
 
+import { notifyMutationError } from '@/lib/mutation-feedback';
+
 export function allRequestsQueryOptions(
   params?: { status?: string; employeeId?: string },
   requestInit?: RequestInit,
@@ -37,8 +39,9 @@ export function allRequestsQueryOptions(
   if (params?.status) search.set('status', params.status);
   if (params?.employeeId) search.set('employeeId', params.employeeId);
   const qs = search.toString();
+  const hasFilterParams = Boolean(params?.status || params?.employeeId);
   return queryOptions({
-    queryKey: requestKeys.all(),
+    queryKey: hasFilterParams ? [...requestKeys.all(), params] : requestKeys.all(),
     queryFn: async () => {
       const res = await customFetch(`${BASE}/schedule-requests${qs ? `?${qs}` : ''}`, requestInit);
       const data = extractList<ScheduleRequestDto>(res);
@@ -67,6 +70,9 @@ export function useCreateRequest() {
       qc.invalidateQueries({ queryKey: requestKeys.all() });
       toast.success(scheduleUiCopy.requests.success);
     },
+    onError: (err) => {
+      notifyMutationError(err, 'Không thể gửi yêu cầu đổi lịch');
+    },
   });
 }
 
@@ -80,6 +86,9 @@ export function useApproveRequest() {
       qc.invalidateQueries({ queryKey: requestKeys.all() });
       toast.success(scheduleUiCopy.requests.acceptAction);
     },
+    onError: (err) => {
+      notifyMutationError(err, 'Không thể phê duyệt yêu cầu đổi lịch');
+    },
   });
 }
 
@@ -92,6 +101,9 @@ export function useDenyRequest() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: requestKeys.all() });
       toast.success(scheduleUiCopy.requests.denyAction);
+    },
+    onError: (err) => {
+      notifyMutationError(err, 'Không thể từ chối yêu cầu đổi lịch');
     },
   });
 }

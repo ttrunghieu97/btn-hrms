@@ -46,6 +46,7 @@ interface EmployeeRow {
   startDate?: string | null;
   endDate?: string | null;
   lastWorkingDate?: string | null;
+  probationEndDate?: string | null;
   dob?: string | null;
   gender?: string | null;
   address?: string | null;
@@ -209,6 +210,9 @@ export class EmployeeMapper {
       startDate: row.startDate ?? null,
       endDate: row.endDate ?? null,
       lastWorkingDate: row.lastWorkingDate ?? null,
+      ...(row.probationEndDate !== undefined
+        ? { probationEndDate: row.probationEndDate }
+        : {}),
       status: row.status ?? null,
       contractType: currentContract?.contractType ?? null,
       contractStatus: currentContract?.status ?? null,
@@ -322,6 +326,9 @@ export class EmployeeMapper {
   static toEntity(dto: CreateEmployeeDto | UpdateEmployeeDto) {
     if (!dto) return {};
 
+    const isMasked = (val?: string | null) =>
+      typeof val === "string" && val.startsWith("••••••••");
+
     return {
       ...(dto.firstName !== undefined ? { firstName: dto.firstName } : {}),
       ...(dto.lastName !== undefined ? { lastName: dto.lastName } : {}),
@@ -334,7 +341,7 @@ export class EmployeeMapper {
       ...(dto.phoneNumber !== undefined
         ? { phoneNumber: dto.phoneNumber }
         : {}),
-      ...(dto.identityNumber !== undefined
+      ...(dto.identityNumber !== undefined && !isMasked(dto.identityNumber)
         ? { identityNumber: dto.identityNumber }
         : {}),
       ...(dto.identityDate !== undefined
@@ -349,13 +356,13 @@ export class EmployeeMapper {
       ...(dto.emergencyContactPhone !== undefined
         ? { emergencyContactPhone: dto.emergencyContactPhone }
         : {}),
-      ...(dto.bankAccountNumber !== undefined
+      ...(dto.bankAccountNumber !== undefined && !isMasked(dto.bankAccountNumber)
         ? { bankAccountNumber: dto.bankAccountNumber }
         : {}),
       ...(dto.bankName !== undefined
         ? { bankName: dto.bankName }
         : {}),
-      ...(dto.taxCode !== undefined
+      ...(dto.taxCode !== undefined && !isMasked(dto.taxCode)
         ? { taxCode: dto.taxCode }
         : {}),
     };

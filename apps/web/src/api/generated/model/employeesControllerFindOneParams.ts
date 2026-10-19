@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { EmployeesControllerFindOneExpiryStatus } from './employeesControllerFindOneExpiryStatus';
+import type { EmployeesControllerFindOneStatus } from './employeesControllerFindOneStatus';
 import type { EmployeesControllerFindOneTab } from './employeesControllerFindOneTab';
 import type { Object } from './object';
 
@@ -19,6 +20,7 @@ fields?: string;
 departmentId?: string;
 departmentIds?: string[];
 tab?: "active" | "official" | "probation" | "terminated" | "deleted";
+status?: "working" | "probation" | "terminated" | "leave" | "suspended" | "retired";
 includeDeleted?: boolean;
 expiringSoon?: boolean;
 expiryStatus?: "expiring" | "overdue";

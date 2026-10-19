@@ -1,15 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import { appLogger } from '@/lib/logger';
 import { buildBackendUrl, createForwardHeaders, proxyJsonResponse } from '@/lib/server/backend-proxy';
 
 const MAX_ATTEMPTS = 1;
 
 function getNextPath(request: NextRequest): string {
-  const next = request.nextUrl.searchParams.get('next');
-  if (!next || !next.startsWith('/')) {
-    return '/overview';
-  }
-  return next;
+  return sanitizeInternalRedirectPath(
+    request.nextUrl.searchParams.get('next'),
+    '/overview'
+  );
 }
 
 function getAttempt(request: NextRequest): number {

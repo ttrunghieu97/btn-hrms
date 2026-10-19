@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { DepartmentEmployeesControllerListByDepartmentExpiryStatus } from './departmentEmployeesControllerListByDepartmentExpiryStatus';
+import type { DepartmentEmployeesControllerListByDepartmentStatus } from './departmentEmployeesControllerListByDepartmentStatus';
 import type { DepartmentEmployeesControllerListByDepartmentTab } from './departmentEmployeesControllerListByDepartmentTab';
 import type { Object } from './object';
 
@@ -19,6 +20,7 @@ fields?: string;
 departmentId?: string;
 departmentIds?: string[];
 tab?: "active" | "official" | "probation" | "terminated" | "deleted";
+status?: "working" | "probation" | "terminated" | "leave" | "suspended" | "retired";
 includeDeleted?: boolean;
 expiringSoon?: boolean;
 expiryStatus?: "expiring" | "overdue";

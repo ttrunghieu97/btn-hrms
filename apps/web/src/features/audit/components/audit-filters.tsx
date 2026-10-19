@@ -14,15 +14,16 @@ export interface AuditFilterValues {
 }
 
 interface AuditFiltersProps {
+  initialValues?: AuditFilterValues;
   onFilter: (filters: AuditFilterValues) => void;
 }
 
-export function AuditFilters({ onFilter }: AuditFiltersProps) {
-  const [search, setSearch] = useState('');
-  const [action, setAction] = useState('all');
-  const [entity, setEntity] = useState('all');
-  const [severity, setSeverity] = useState('all');
-  const [period, setPeriod] = useState('7d');
+export function AuditFilters({ initialValues, onFilter }: AuditFiltersProps) {
+  const [search, setSearch] = useState(initialValues?.search ?? '');
+  const [action, setAction] = useState(initialValues?.action ?? 'all');
+  const [entity, setEntity] = useState(initialValues?.entity ?? 'all');
+  const [severity, setSeverity] = useState(initialValues?.severity ?? 'all');
+  const [period, setPeriod] = useState(initialValues?.period ?? '7d');
 
   const handleApply = () => {
     onFilter({
