@@ -6,6 +6,8 @@ import { NotificationCard } from '@/components/ui/notification-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { notificationActionRoutes, notificationUiCopy } from '@/locales/vi/notifications';
 import { getQueryClient } from '@/lib/query-client';
+import { hasPermission } from '@/lib/rbac';
+import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'next/navigation';
 import {
   useMarkAllNotificationsReadMutation,
@@ -18,6 +20,8 @@ import { NotificationTemplatesPanel } from './notification-templates-panel';
 
 export default function NotificationsPage() {
   const queryClient = getQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const canManageTemplates = hasPermission(user, 'notifications:manage:all');
   const { data: notifications = [] } = useNotificationsQuery();
   const markAsReadMutation = useMarkNotificationReadMutation(queryClient);
   const markAllAsReadMutation = useMarkAllNotificationsReadMutation(queryClient);
@@ -85,7 +89,9 @@ export default function NotificationsPage() {
           </TabsTrigger>
           <TabsTrigger value='read'>{notificationUiCopy.tabs.read(readNotifications.length)}</TabsTrigger>
           <TabsTrigger value='preferences'>Tùy chọn nhận thông báo</TabsTrigger>
-          <TabsTrigger value='templates'>Mẫu thông báo</TabsTrigger>
+          {canManageTemplates && (
+            <TabsTrigger value='templates'>Mẫu thông báo</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value='all' className='mt-4 flex-1 min-h-0'>
           {renderList(notifications)}
@@ -99,9 +105,11 @@ export default function NotificationsPage() {
         <TabsContent value='preferences' className='mt-4 flex-1 min-h-0'>
           <NotificationPreferencesPanel />
         </TabsContent>
-        <TabsContent value='templates' className='mt-4 flex-1 min-h-0'>
-          <NotificationTemplatesPanel />
-        </TabsContent>
+        {canManageTemplates && (
+          <TabsContent value='templates' className='mt-4 flex-1 min-h-0'>
+            <NotificationTemplatesPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

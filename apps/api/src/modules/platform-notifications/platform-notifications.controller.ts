@@ -17,6 +17,7 @@ import { UpdateNotificationPreferencesDto } from "./dto/notification-preferences
 import { SendNotificationDto } from "./dto/send-notification.dto";
 import { AuthorizationGuard } from "../../core/security/guards/authorization.guard";
 import { RequirePermission } from "../../core/security/decorators/require-permission.decorator";
+import { Permissions } from "../../core/security/permissions/permissions.registry";
 import { AuthUser } from "../../core/security/types/auth-user.interface";
 import { CreateNotificationTemplateUseCase } from "./use-cases/create-notification-template.usecase";
 import { UpdateNotificationTemplateUseCase } from "./use-cases/update-notification-template.usecase";
@@ -50,28 +51,28 @@ export class PlatformNotificationsController {
   // --- Templates (Admin Only) ---
 
   @Post("templates")
-  @RequirePermission("manage:platform")
+  @RequirePermission(Permissions.NOTIFICATIONS_MANAGE_PLATFORM)
   @ApiOperation({ summary: "Create a notification template (admin)" })
   createTemplate(@Body() dto: CreateNotificationTemplateDto) {
     return this.createTemplateUseCase.execute(dto);
   }
 
   @Get("templates")
-  @RequirePermission("manage:platform")
+  @RequirePermission(Permissions.NOTIFICATIONS_MANAGE_PLATFORM)
   @ApiOperation({ summary: "List notification templates (admin)" })
   listTemplates() {
     return this.listTemplatesUseCase.execute();
   }
 
   @Get("templates/:id")
-  @RequirePermission("manage:platform")
+  @RequirePermission(Permissions.NOTIFICATIONS_MANAGE_PLATFORM)
   @ApiOperation({ summary: "Get notification template (admin)" })
   getTemplate(@Param("id") id: string) {
     return this.getTemplateUseCase.execute(id);
   }
 
   @Patch("templates/:id")
-  @RequirePermission("manage:platform")
+  @RequirePermission(Permissions.NOTIFICATIONS_MANAGE_PLATFORM)
   @ApiOperation({ summary: "Update notification template (admin)" })
   updateTemplate(
     @Param("id") id: string,
@@ -83,7 +84,7 @@ export class PlatformNotificationsController {
   // --- User Preferences ---
 
   @Get("preferences")
-  @RequirePermission("notifications:preferences:view:self")
+  @RequirePermission(Permissions.NOTIFICATIONS_VIEW_SELF)
   @ApiOperation({ summary: "Get current user's notification preferences" })
   getPreferences(@Req() req: { user: AuthUser }) {
     const userId = req.user.id;
@@ -91,7 +92,7 @@ export class PlatformNotificationsController {
   }
 
   @Patch("preferences")
-  @RequirePermission("notifications:preferences:edit:self")
+  @RequirePermission(Permissions.NOTIFICATIONS_VIEW_SELF)
   @ApiOperation({ summary: "Update current user's notification preferences" })
   updatePreferences(
     @Req() req: { user: AuthUser },
@@ -104,7 +105,7 @@ export class PlatformNotificationsController {
   // --- User Notifications ---
 
   @Get("my-notifications")
-  @RequirePermission("notifications:view:self")
+  @RequirePermission(Permissions.NOTIFICATIONS_VIEW_SELF)
   @ApiOperation({ summary: "List current user's notifications" })
   getMyNotifications(@Req() req: { user: AuthUser }) {
     const userId = req.user.id;
@@ -112,7 +113,7 @@ export class PlatformNotificationsController {
   }
 
   @Patch("my-notifications/read-all")
-  @RequirePermission("notifications:view:self")
+  @RequirePermission(Permissions.NOTIFICATIONS_VIEW_SELF)
   @ApiOperation({ summary: "Mark all current user's notifications as read" })
   markAllNotificationsRead(@Req() req: { user: AuthUser }) {
     const userId = req.user.id;
@@ -120,7 +121,7 @@ export class PlatformNotificationsController {
   }
 
   @Patch("my-notifications/:id/read")
-  @RequirePermission("notifications:view:self")
+  @RequirePermission(Permissions.NOTIFICATIONS_VIEW_SELF)
   @ApiOperation({ summary: "Mark a notification as read" })
   markNotificationRead(
     @Req() req: { user: AuthUser },
@@ -133,7 +134,7 @@ export class PlatformNotificationsController {
   // --- Internal / System endpoints ---
 
   @Post("send")
-  @RequirePermission("manage:platform")
+  @RequirePermission(Permissions.NOTIFICATIONS_MANAGE_PLATFORM)
   @ApiOperation({ summary: "Send a notification (admin/system)" })
   sendNotification(@Body() dto: SendNotificationDto) {
     return this.sendNotificationUseCase.execute(dto);
