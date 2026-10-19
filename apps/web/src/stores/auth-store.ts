@@ -22,8 +22,11 @@ import { usersControllerGetMe } from "@/api/generated/users-management/users-man
 import type { UserMeResponseDto, AccessTokenDto } from "@/api/generated/model";
 import { setSentryUser } from "@/lib/observability/init";
 import { unwrapData } from "@/lib/api-extract";
+import { getQueryClient } from "@/lib/query-client";
 
-type User = UserMeResponseDto;
+export type User = UserMeResponseDto & {
+  employeeId?: string | null;
+};
 
 interface AuthState {
   user: User | null;
@@ -111,6 +114,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
       void setSentryUser(null);
       set({ user: null, loading: false, initialized: false });
       tokenStore.clear();
+      try {
+        getQueryClient().clear();
+      } catch {
+        // Ignore if QueryClient is not initialized in test context
+      }
     },
 
     signIn: async (username, password) => {

@@ -3,6 +3,8 @@ import { computeAvailableActions } from "../services/period-lock.service";
 import { AttendancePeriodLockRepository } from "../repositories/attendance-period-lock.repository";
 import { AttendancePeriodLockService } from "../services/attendance-period-lock.service";
 import { AttendanceTimekeepingRepository } from "../repositories/attendance-timekeeping.repository";
+import { QueryScopeService } from "../../../../core/security/query-scope.service";
+import { AuthUser } from "../../../../core/security/types/auth-user.interface";
 import {
   TimesheetWorkspaceQueryDto,
   TimesheetWorkspaceResponseDto,
@@ -12,6 +14,18 @@ import {
 } from "../dto/timesheet-workspace.dto";
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+
+const SALARY_VIEW_PERMISSIONS = new Set([
+  "sys:all",
+  "ALL",
+  "payroll:view:all",
+  "payroll:manage",
+  "employee:view:sensitive",
+  "employees:view:sensitive",
+  "employee:manage:sensitive",
+  "employees:manage:sensitive",
+  "attendance:timesheet:manage",
+]);
 
 function daysInMonth(year: number, month: number): number {
   if (month === 2 && ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0)) return 29;
@@ -24,9 +38,17 @@ export class QueryTimesheetWorkspaceUseCase {
     private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly periodLockService: AttendancePeriodLockService,
     private readonly timekeepingRepo: AttendanceTimekeepingRepository,
+    private readonly queryScope?: QueryScopeService,
   ) {}
 
-  async execute(query: TimesheetWorkspaceQueryDto, permissions: string[] = []): Promise<TimesheetWorkspaceResponseDto> {
+  async execute(
+    query: TimesheetWorkspaceQueryDto,
+    actorOrPermissions: AuthUser | string[] = [],
+  ): Promise<TimesheetWorkspaceResponseDto> {
+    const isArray = Array.isArray(actorOrPermissions);
+    const user = isArray ? undefined : actorOrPermissions;
+    const permissions = isArray ? actorOrPermissions : (user?.permissions ?? []);
+
     const period = query.period;
     const [year, month] = period.split("-").map(Number);
     const lastDay = daysInMonth(year!, month!);
@@ -34,14 +56,44 @@ export class QueryTimesheetWorkspaceUseCase {
     const to = `${period}-${String(lastDay).padStart(2, "0")}`;
 
     const periodLock = await this.periodLockRepo.ensurePeriod(period);
-    const availableActions = computeAvailableActions(periodLock.status, permissions);
+    const EffectivePerms = user?.isSuperAdmin ? [...permissions, "sys:all"] : permissions;
+    const availableActions = computeAvailableActions(periodLock.status, EffectivePerms);
+
+    let effectiveDepartmentId = query.departmentId;
+    let effectiveEmployeeId: string | undefined;
+
+    if (user) {
+      const scope = this.queryScope
+        ? this.queryScope.resolveScope(user, "attendance")
+        : user.isSuperAdmin ||
+            permissions.includes("sys:all") ||
+            permissions.includes("attendance:view:all") ||
+            permissions.includes("attendance:report") ||
+            permissions.includes("attendance:timesheet:manage") ||
+            permissions.includes("attendance:timesheet:view")
+          ? { tier: "all" as const }
+          : permissions.includes("attendance:view:department") && user.departmentId
+            ? { tier: "department" as const, departmentId: user.departmentId }
+            : { tier: "self" as const, employeeId: user.employeeId ?? "" };
+
+      if (scope.tier === "department") {
+        effectiveDepartmentId = scope.departmentId;
+      } else if (scope.tier === "self") {
+        effectiveEmployeeId = scope.employeeId;
+      }
+    }
+
+    const canViewSalary =
+      Boolean(user?.isSuperAdmin) ||
+      permissions.some((p) => SALARY_VIEW_PERMISSIONS.has(p));
 
     const verificationRows = await this.periodLockRepo.listEmployeeVerification(period);
     const verificationMap = new Map(verificationRows.map((v) => [v.employeeId, v.status]));
 
     const { employees: employeeRows, summaries: summaryRows, events: eventRows, allowances: allowanceRows } =
       await this.timekeepingRepo.findWorkspaceData({
-        departmentId: query.departmentId,
+        departmentId: effectiveDepartmentId,
+        employeeId: effectiveEmployeeId,
         from,
         to,
       });
@@ -163,18 +215,18 @@ export class QueryTimesheetWorkspaceUseCase {
       const s = empStats.get(r.id) ?? { workingDays: 0, totalDays: lastDay, lateCount: 0, leaveCount: 0, absentCount: 0, otMinutes: 0, workedMinutes: 0 };
       const empAllowances = allowanceMap.get(r.id) ?? [];
       const positionAllowances = empAllowances.filter((a) => a.type === "position");
-      const responsibilityAllowance = positionAllowances.length > 0
+      const rawResponsibilityAllowance = positionAllowances.length > 0
         ? Number(positionAllowances.reduce((acc, a) => acc + (Number(a.amount) || 0), 0).toFixed(2))
         : null;
-      const baseSalary = r.baseSalary ? Number(r.baseSalary) : null;
+      const rawBaseSalary = r.baseSalary ? Number(r.baseSalary) : null;
 
       return {
         id: r.id, employeeCode: r.employeeCode,
         fullName: r.lastName ? `${r.firstName} ${r.lastName}` : r.firstName,
         departmentName: r.departmentName ?? null,
         jobTitle: r.jobTitle ?? null,
-        baseSalary,
-        responsibilityAllowance,
+        baseSalary: canViewSalary ? rawBaseSalary : 0,
+        responsibilityAllowance: canViewSalary ? rawResponsibilityAllowance : 0,
         workingDays: s.workingDays, totalDays: s.totalDays,
         completionRate: s.totalDays > 0 ? Math.round((s.workingDays / s.totalDays) * 100) : 0,
         lateCount: s.lateCount, leaveCount: s.leaveCount, absentCount: s.absentCount,

@@ -4,6 +4,16 @@ import { PermissionRegistry } from '../registry/registry';
 /** Permission codes treated as the system-wide root — grants everything. */
 const ROOT_PERMISSIONS = ['sys:all', 'ALL']; // ALL is legacy, kept for backward compat
 
+function toEmployeeAliases(code: string): string[] {
+  if (code.startsWith('employees:')) {
+    return [code, `employee:${code.slice('employees:'.length)}`];
+  }
+  if (code.startsWith('employee:')) {
+    return [code, `employees:${code.slice('employee:'.length)}`];
+  }
+  return [code];
+}
+
 /**
  * Check if user has a specific permission.
  * Hierarchy-aware: user with `attendance:view:all` automatically has `attendance:view:self`.
@@ -15,20 +25,28 @@ export function hasPermission(
 ): boolean {
   if (!userPermissions?.length) return false;
 
+  const normalizedUserPerms = new Set<string>();
+  for (const perm of userPermissions) {
+    for (const alias of toEmployeeAliases(perm)) {
+      normalizedUserPerms.add(alias);
+    }
+  }
+
+  const requiredAliases = toEmployeeAliases(required);
+
   // Direct match
-  if (userPermissions.includes(required)) return true;
+  if (requiredAliases.some((r) => normalizedUserPerms.has(r))) return true;
 
   // Root permission — grants everything
-  if (ROOT_PERMISSIONS.some((r) => userPermissions.includes(r))) return true;
+  if (ROOT_PERMISSIONS.some((r) => normalizedUserPerms.has(r))) return true;
 
   // Hierarchy resolution: does user own any ancestor of required?
-  const chain = hierarchyMap[required];
-  if (chain) {
-    // chain is sorted most-specific → least-specific
-    // required is at index 0; parents are beyond it
-    // user's permission may be a broader scope in the same chain
-    for (const userPerm of userPermissions) {
-      if (chain.includes(userPerm)) return true;
+  for (const reqCode of requiredAliases) {
+    const chain = hierarchyMap[reqCode];
+    if (chain) {
+      for (const ancestor of chain) {
+        if (normalizedUserPerms.has(ancestor)) return true;
+      }
     }
   }
 
@@ -79,14 +97,21 @@ export function resolvePermissions(
     return Array.from(new Set([...ROOT_PERMISSIONS, ...allRegistered]));
   }
 
-  const result = new Set(userPermissions);
+  const result = new Set<string>();
+  for (const perm of userPermissions) {
+    for (const alias of toEmployeeAliases(perm)) {
+      result.add(alias);
+    }
+  }
 
-  for (const userPerm of userPermissions) {
+  for (const userPerm of Array.from(result)) {
     // A broader user permission implies all child/narrower permissions
     // whose hierarchy chains include userPerm as an ancestor
     for (const [targetPerm, chain] of Object.entries(hierarchyMap)) {
       if (chain.includes(userPerm)) {
-        result.add(targetPerm);
+        for (const alias of toEmployeeAliases(targetPerm)) {
+          result.add(alias);
+        }
       }
     }
   }

@@ -2,11 +2,8 @@
 
 import * as React from "react";
 import type { EmployeeResponseDto } from "@/api/generated/model";
-import { Icons } from "@/components/icons";
-import { commonUiCopy, employeeUiCopy } from "@/lib/app-copy";
 import { ApiError } from "@/lib/api-error";
 import { getVietnameseApiErrorMessage } from "@/lib/api-error-message";
-import { getBackendErrorContract } from "@/lib/error-contract-registry";
 import { toProtectedAssetUrl } from "@/lib/asset-url";
 import { feedbackCopy, feedbackEntity } from "@/lib/feedback-copy";
 import { extractApiFieldErrors } from "@/lib/form-errors";
@@ -22,15 +19,14 @@ import {
   useCreateEmployeeMutation,
   useEmployeeQuery,
   useUpdateEmployeeMutation,
-  buildEmployeeUpdateRequestBody,
   type UpdateEmployeePayload,
 } from "../queries/employee-queries";
 import { createEmployeeFormSchema } from "../schemas/employee.schema";
 import {
   buildEmployeeTextPayload,
+  buildUsernameFromName,
   createEmployeeFormValues,
   createEmptyEmployeeFormValues,
-  COMPANY_DOCUMENT_OPTIONS,
   type EmployeeFormValues,
   type EmployeeDocumentFormField,
   type EmployeeCertificationFormField,
@@ -48,52 +44,15 @@ import {
 
 interface CreateFormValues extends EmployeeFormValues {}
 
-function getFileName(value: string) {
-  if (!value.trim()) return "";
-  const source = value.split("?")[0];
-  const parts = source.split("/");
-  return decodeURIComponent(parts[parts.length - 1] ?? "");
-}
-
 function createEmptyForm(): CreateFormValues {
-  return {
-    ...createEmptyEmployeeFormValues(),
-    documents: COMPANY_DOCUMENT_OPTIONS.map((opt) => ({
-      id: opt.id,
-      documentType: opt.id,
-      label: opt.label,
-      checked: false,
-      fileName: "",
-    })),
-  };
-}
-
-function sanitizeVietnameseString(value: string) {
-  if (!value) return "";
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .trim();
-}
-
-function buildUsernameFromName(firstName: string, lastName: string) {
-  const first = sanitizeVietnameseString(firstName).replace(/\s+/g, "");
-  const initials = sanitizeVietnameseString(lastName)
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("");
-  return `${first}${initials}`;
+  return createEmptyEmployeeFormValues();
 }
 
 export interface UseEmployeeFormOptions {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: EmployeeResponseDto | null;
+  initialValues?: Partial<CreateFormValues>;
   onCreated?: (employee: EmployeeResponseDto) => void;
 }
 
@@ -136,6 +95,7 @@ export function useEmployeeForm({
   open,
   onOpenChange,
   employee: employeeProp = null,
+  initialValues,
   onCreated,
 }: UseEmployeeFormOptions): UseEmployeeFormReturn {
 
@@ -143,9 +103,14 @@ export function useEmployeeForm({
   const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
   const lastPickerTriggerRef = React.useRef<HTMLElement | null>(null);
   const draftIdRef = React.useRef(getRequestId());
+  const initialValuesRef = React.useRef(initialValues);
+  initialValuesRef.current = initialValues;
 
   const form = useAppForm({
-    defaultValues: createEmptyForm() as CreateFormValues,
+    defaultValues: {
+      ...(createEmptyForm() as CreateFormValues),
+      ...(initialValues ?? {}),
+    },
   });
   const formValues = useStore(form.store, (state) => state.values) as CreateFormValues;
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -241,6 +206,9 @@ export function useEmployeeForm({
     },
   });
 
+  const formRef = React.useRef(form);
+  formRef.current = form;
+
   React.useEffect(() => {
     if (!open) {
       avatarUploadRequestRef.current += 1;
@@ -254,13 +222,16 @@ export function useEmployeeForm({
     }
     const nextForm = resolvedEmployee
       ? createEmployeeFormValues(resolvedEmployee)
-      : createEmptyForm();
-    form.reset(nextForm as CreateFormValues);
+      : {
+          ...createEmptyForm(),
+          ...(initialValuesRef.current ?? {}),
+        };
+    formRef.current.reset(nextForm as CreateFormValues);
     setErrors({});
     setAvatarPreview(null);
     setUsernameStatus({ checking: false, exists: false, checkedValue: "" });
     setEmployeeCodeStatus({ checking: false, exists: false, checkedValue: "" });
-  }, [open, resolvedEmployee, form]);
+  }, [open, resolvedEmployee]);
 
   React.useEffect(() => {
     return () => {

@@ -4,10 +4,12 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Request,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { AttendancePolicies } from "../../../core/security/policies/attendance.policy";
+import { AuthUser } from "../../../core/security/types/auth-user.interface";
 import { AttendanceSummaryQueryDto } from "./dto/attendance-summary-query.dto";
 import {
   GetAttendanceSummaryUseCase,
@@ -24,15 +26,18 @@ export class AttendanceSummariesController {
   ) {}
 
   @Get()
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "List attendance daily summaries" })
   @ApiOkResponse({ description: "List of daily summaries" })
-  list(@Query() query: AttendanceSummaryQueryDto) {
-    return this.listSummaries.execute(query);
+  list(
+    @Query() query: AttendanceSummaryQueryDto,
+    @Request() req?: { user?: AuthUser },
+  ) {
+    return this.listSummaries.execute(query, req?.user);
   }
 
   @Get(":id")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "Get attendance daily summary" })
   @ApiOkResponse({ description: "Daily summary details" })
   get(@Param("id", new ParseUUIDPipe()) id: string) {

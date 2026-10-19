@@ -156,6 +156,11 @@ export function OverviewTab({ dateRange }: { dateRange: DateRange }) {
               </TableRow>
             )}
             {rows.map((row: TimesheetRow, idx: number) => {
+              const dateVal = row.date || row.workDate || '';
+              const empName = row.employee
+                ? `${row.employee.lastName} ${row.employee.firstName}`.trim()
+                : row.employeeName || '--';
+              const empCode = row.employee?.employeeCode ?? row.employeeCode;
               const checkin = row.clockIn ?? row.morningCheckin ?? row.checkIn;
               const checkout = row.clockOut ?? row.afternoonCheckout ?? row.checkOut;
               const late = row.lateMinutes ?? 0;
@@ -168,10 +173,10 @@ export function OverviewTab({ dateRange }: { dateRange: DateRange }) {
 
               return (
                 <TableRow key={idx}>
-                  <TableCell className='font-medium'>{formatDateVN(row.date)}</TableCell>
+                  <TableCell className='font-medium'>{formatDateVN(dateVal)}</TableCell>
                   <TableCell className='font-medium'>
-                    {row.employee ? `${row.employee.lastName} ${row.employee.firstName}` : '--'}
-                    <div className='text-xs text-muted-foreground font-normal'>{row.employee?.employeeCode}</div>
+                    {empName}
+                    <div className='text-xs text-muted-foreground font-normal'>{empCode}</div>
                   </TableCell>
                   <TableCell>{row.shiftName || row.shiftCode || '--'}</TableCell>
                   <TableCell>{formatTime(checkin) || '--:--'}</TableCell>

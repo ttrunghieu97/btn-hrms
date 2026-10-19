@@ -15,11 +15,24 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CreateLeaveRequestDialog } from './create-leave-request-dialog';
+import { useAuthStore } from '@/stores/auth-store';
 
 export function LeaveRequestsPageClient() {
+  const user = useAuthStore((s) => s.user);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const { data: employeesData } = useQuery(employeesQueryOptions({ page: 1, limit: 100 }));
-  const employees = extractList<{ id: string; firstName?: string; lastName?: string }>(employeesData);
+  const employees =
+    employeesData?.employees ??
+    extractList<{
+      id: string;
+      fullName?: string;
+      employeeCode?: string;
+      firstName?: string;
+      lastName?: string;
+    }>(employeesData);
+
+  const effectiveEmployeeId =
+    selectedEmployeeId || user?.employeeId || employees[0]?.id || '';
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-5'>
@@ -29,24 +42,28 @@ export function LeaveRequestsPageClient() {
       {/* Top Filter and Actions */}
       <div className='flex flex-wrap items-center justify-between gap-4'>
         <div className='flex items-center gap-2'>
-          <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+          <Select value={effectiveEmployeeId} onValueChange={setSelectedEmployeeId}>
             <SelectTrigger className='w-[260px] text-xs'>
               <SelectValue placeholder='Chọn nhân viên xem số dư ngày phép' />
             </SelectTrigger>
             <SelectContent>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id} className='text-xs'>
-                  {[e.firstName, e.lastName].filter(Boolean).join(' ') || e.id.slice(0, 8)}
-                </SelectItem>
-              ))}
+              {employees.map((e) => {
+                const label =
+                  [e.lastName, e.firstName].filter(Boolean).join(' ') || e.id.slice(0, 8);
+                return (
+                  <SelectItem key={e.id} value={e.id} className='text-xs'>
+                    {e.employeeCode ? `${label} (${e.employeeCode})` : label}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
-        <CreateLeaveRequestDialog employeeId={selectedEmployeeId} />
+        <CreateLeaveRequestDialog employeeId={effectiveEmployeeId} />
       </div>
 
       {/* Balance Summary */}
-      <LeaveBalanceView employeeId={selectedEmployeeId} />
+      <LeaveBalanceView employeeId={effectiveEmployeeId} />
 
       {/* Requests Table with Workflow Detail Actions */}
       <LeaveRequestsTable hideHeader />

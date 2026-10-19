@@ -44,10 +44,14 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
   const [rejectReason, setRejectReason] = React.useState('');
 
   const status: PayrollRunStatus = run.status || 'draft';
+  const isProvisionalRun =
+    run.isProvisional !== false &&
+    run.calculationStatus !== 'CONFIRMED' &&
+    status !== 'posted';
 
   let activeIndex = 0;
   if (status === 'draft') activeIndex = 0;
-  else if (status === 'processing') activeIndex = 1;
+  else if (status === 'generated' || status === 'processing' || status === 'pending_approval') activeIndex = 1;
   else if (status === 'approved') activeIndex = 2;
   else if (status === 'posted') activeIndex = 3;
 
@@ -65,10 +69,14 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
           actor: 'Chuyên viên tiền lương',
           action: 'Kiểm tra thông số cấu hình và nhấn Tính toán phiếu lương để hệ thống tổng hợp công, phụ cấp và bảo hiểm.',
         };
+      case 'generated':
       case 'processing':
+      case 'pending_approval':
         return {
           actor: 'Kế toán trưởng / Giám đốc Nhân sự',
-          action: 'Kiểm tra đối soát các phiếu lương cá nhân. Nếu số liệu chính xác, nhấn Phê duyệt hoặc Từ chối để tính lại.',
+          action: isProvisionalRun
+            ? 'Bảng lương đang ở trạng thái Tạm tính (PROVISIONAL_POLICY_UNCONFIRMED — PD-04). Chức năng Phê duyệt và Chốt lương bị khóa cho đến khi chính sách BHXH/BHYT/BHTN và Thuế TNCN được xác nhận chính thức.'
+            : 'Kiểm tra đối soát các phiếu lương cá nhân. Nếu số liệu chính xác, nhấn Phê duyệt hoặc Từ chối để tính lại.',
         };
       case 'approved':
         return {
@@ -91,7 +99,7 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
           action: 'Theo dõi tiến độ xử lý bảng lương.',
         };
     }
-  }, [status]);
+  }, [status, isProvisionalRun]);
 
   const handleRejectConfirm = () => {
     if (!rejectReason.trim()) return;
@@ -113,11 +121,19 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
           {/* Header Row */}
           <div className='flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
             <div>
-              <div className='flex items-center gap-2.5'>
+              <div className='flex flex-wrap items-center gap-2.5'>
                 <h2 className='text-xl font-bold tracking-tight text-foreground'>
                   Bảng lương {run.payrollPeriod?.name || run.payrollPeriod?.code || run.id.slice(0, 8)}
                 </h2>
                 <PayrollRunStatusBadge status={status} />
+                {isProvisionalRun && (
+                  <span
+                    data-testid='payroll-provisional-badge'
+                    className='rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300'
+                  >
+                    Tạm tính (PD-04 • PROVISIONAL_POLICY_UNCONFIRMED)
+                  </span>
+                )}
               </div>
               <p className='text-xs text-muted-foreground mt-1'>
                 Mã kỳ lương: <span className='font-medium text-foreground'>{run.payrollPeriod?.code || '—'}</span>
@@ -153,13 +169,29 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
                 </>
               )}
 
-              {status === 'processing' && (
+              {(status === 'generated' || status === 'processing' || status === 'pending_approval') && (
                 <>
+                  {(status === 'generated' || status === 'processing') && (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='h-8 text-xs font-medium gap-1.5'
+                      disabled={isPending}
+                      onClick={() => requestApprovalMutation.mutate(run.id)}
+                    >
+                      Trình duyệt bảng lương
+                    </Button>
+                  )}
                   <Button
                     size='sm'
                     variant='default'
                     className='h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium gap-1.5'
-                    disabled={isPending}
+                    disabled={isPending || isProvisionalRun}
+                    title={
+                      isProvisionalRun
+                        ? 'Không thể phê duyệt bảng lương tạm tính (PD-04)'
+                        : undefined
+                    }
                     onClick={() => approveMutation.mutate(run.id)}
                   >
                     {isPending && <Icons.spinner className='size-3.5 animate-spin' />}
@@ -184,7 +216,12 @@ export function PayrollRunWorkflowHero({ run }: PayrollRunWorkflowHeroProps) {
                   size='sm'
                   variant='default'
                   className='h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium gap-1.5'
-                  disabled={isPending}
+                  disabled={isPending || isProvisionalRun}
+                  title={
+                    isProvisionalRun
+                      ? 'Không thể chốt bảng lương tạm tính (PD-04)'
+                      : undefined
+                  }
                   onClick={() => postMutation.mutate(run.id)}
                 >
                   {isPending && <Icons.spinner className='size-3.5 animate-spin' />}

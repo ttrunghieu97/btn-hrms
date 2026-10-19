@@ -64,6 +64,18 @@ export class EmployeeContractsRepository {
       .orderBy(desc(employeeContracts.effectiveFrom));
   }
 
+  private async getNextVersion(employeeId: string, tx: AppDatabase): Promise<number> {
+    if (typeof tx?.select !== "function") return 1;
+    const rows = await tx
+      .select({ version: employeeContracts.version })
+      .from(employeeContracts)
+      .where(eq(employeeContracts.employeeId, employeeId))
+      .orderBy(desc(employeeContracts.version))
+      .limit(1);
+    const maxVersion = rows?.[0]?.version ?? 0;
+    return maxVersion + 1;
+  }
+
   async create(
     data: typeof employeeContracts.$inferInsert,
     tx: AppDatabase,
@@ -78,9 +90,15 @@ export class EmployeeContractsRepository {
         ),
       );
 
+    const nextVersion = await this.getNextVersion(data.employeeId, tx);
+
     const [row] = await tx
       .insert(employeeContracts)
-      .values({ ...data, isCurrent: true })
+      .values({
+        ...data,
+        version: Math.max(data.version ?? 1, nextVersion),
+        isCurrent: true,
+      })
       .returning();
     return row ?? null;
   }
@@ -114,7 +132,8 @@ export class EmployeeContractsRepository {
       )
       .limit(1);
 
-    const prevVersion = current[0]?.version ?? 0;
+    const nextVersion = await this.getNextVersion(employeeId, tx);
+    const prevVersion = Math.max(current[0]?.version ?? 0, nextVersion - 1);
 
     if (current[0]) {
       await tx
@@ -127,18 +146,36 @@ export class EmployeeContractsRepository {
       .insert(employeeContracts)
       .values({
         employeeId,
-        contractNumber: data.contractNumber,
+        contractNumber:
+          data.contractNumber !== undefined
+            ? data.contractNumber
+            : (current[0]?.contractNumber ?? null),
         contractType: data.contractType ?? current[0]?.contractType ?? "permanent",
         status: "active",
         version: prevVersion + 1,
         previousContractId: current[0]?.id ?? null,
         isCurrent: true,
         effectiveFrom: data.effectiveFrom ?? current[0]?.effectiveFrom ?? todayDateString(),
-        effectiveTo: data.effectiveTo,
-        signedAt: data.signedAt,
-        fileUrl: data.fileUrl,
-        note: data.note,
-        employmentRecordId: data.employmentRecordId,
+        effectiveTo:
+          data.effectiveTo !== undefined
+            ? data.effectiveTo
+            : (current[0]?.effectiveTo ?? null),
+        signedAt:
+          data.signedAt !== undefined
+            ? data.signedAt
+            : (current[0]?.signedAt ?? null),
+        fileUrl:
+          data.fileUrl !== undefined
+            ? data.fileUrl
+            : (current[0]?.fileUrl ?? null),
+        note:
+          data.note !== undefined
+            ? data.note
+            : (current[0]?.note ?? null),
+        employmentRecordId:
+          data.employmentRecordId !== undefined
+            ? data.employmentRecordId
+            : (current[0]?.employmentRecordId ?? null),
       })
       .returning();
     return row ?? null;

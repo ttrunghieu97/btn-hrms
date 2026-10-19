@@ -25,6 +25,10 @@ import {
 } from '../api/mutations';
 import { addExpenseClaimItem, type AddItemPayload } from '../api/expenses';
 import { expenseClaimKeys } from '../queries/expense-queries';
+import { unwrapData } from '@/lib/api-extract';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission } from '@project/permissions';
+import { permissions } from '@/lib/permissions';
 import { toast } from 'sonner';
 
 const EXPENSE_STEPS: WorkflowStep[] = [
@@ -46,6 +50,15 @@ export function ExpenseClaimDetailDialog({
   onOpenChange,
 }: ExpenseClaimDetailDialogProps) {
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const userPermissions = user?.permissions ?? [];
+  const canManageExpenses = Boolean(
+    user?.isSuperAdmin ||
+      userPermissions.includes('ALL') ||
+      userPermissions.includes('sys:all') ||
+      hasAnyPermission(userPermissions, [permissions.expenses.manage]),
+  );
+
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const [rejectReason, setRejectReason] = React.useState('');
   const [addItemOpen, setAddItemOpen] = React.useState(false);
@@ -59,8 +72,13 @@ export function ExpenseClaimDetailDialog({
     expenseClaimDetailQueryOptions(claim?.id ?? '')
   );
 
-  const detail = (detailQuery.data ?? claim) as ExpenseClaimDetailRow | null;
+  const unwrappedDetail = unwrapData<ExpenseClaimDetailRow>(detailQuery.data);
+  const detail = (unwrappedDetail ?? detailQuery.data ?? claim) as ExpenseClaimDetailRow | null;
   const status = detail?.status || claim?.status || 'draft';
+  const claimEmployeeId = detail?.employeeId ?? claim?.employeeId;
+  const isSelfClaim = Boolean(
+    user?.employeeId && claimEmployeeId && String(user.employeeId) === String(claimEmployeeId),
+  );
 
   const submitMutation = useSubmitExpenseClaim();
   const approveMutation = useApproveExpenseClaim();
@@ -184,7 +202,7 @@ export function ExpenseClaimDetailDialog({
         </Button>
       )}
 
-      {status === 'submitted' && (
+      {status === 'submitted' && canManageExpenses && !isSelfClaim && (
         <>
           <Button
             size='sm'
@@ -214,7 +232,7 @@ export function ExpenseClaimDetailDialog({
         </>
       )}
 
-      {status === 'approved' && (
+      {status === 'approved' && canManageExpenses && (
         <Button
           size='sm'
           className='h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium gap-1.5'

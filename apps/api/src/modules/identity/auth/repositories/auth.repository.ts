@@ -111,7 +111,7 @@ export class AuthRepository extends BaseRepository<
     const db = tx ?? this.db;
     const [row] = await db
       .update(schema.users)
-      .set({ passwordHash })
+      .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
       .where(eq(schema.users.id, userId))
       .returning();
     return row ?? null;

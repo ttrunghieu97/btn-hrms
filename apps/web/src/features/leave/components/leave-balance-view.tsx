@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { myLeaveBalancesQueryOptions } from '../api/queries';
+import { extractList } from '@/lib/api-extract';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,7 +31,7 @@ interface LeaveBalanceRow {
 export function LeaveBalanceView({ employeeId }: { employeeId?: string }) {
   const { data, error, isLoading, refetch } = useQuery(myLeaveBalancesQueryOptions(employeeId));
 
-  const balances = (data as unknown as { data?: LeaveBalanceRow[] })?.data ?? [];
+  const balances = extractList<LeaveBalanceRow>(data);
 
   if (!employeeId) {
     return (

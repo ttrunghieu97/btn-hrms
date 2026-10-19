@@ -9,6 +9,24 @@ export class GetClaimUseCase {
   async execute(id: string): Promise<ClaimResponseDto> {
     const r = await this.repo.findById(id);
     if (!r) throwNotFound("Claim not found", ERROR_CODES.NOT_FOUND);
-    return { id: r.id, employeeId: r.employeeId, title: r.title, status: r.status, totalAmount: r.totalAmount, currency: r.currency };
+    const items = (await this.repo.findItems(id)) ?? [];
+    return {
+      id: r.id,
+      employeeId: r.employeeId,
+      title: r.title,
+      description: r.description ?? null,
+      status: r.status,
+      totalAmount: r.totalAmount,
+      currency: r.currency,
+      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : (r.createdAt as string | undefined),
+      items: items.map((item) => ({
+        id: item.id,
+        claimId: item.claimId,
+        description: item.description,
+        amount: item.amount,
+        expenseDate: item.expenseDate,
+        categoryId: item.categoryId ?? null,
+      })),
+    };
   }
 }

@@ -57,7 +57,15 @@ export class PresignedUploadUseCase {
         const canManage =
           actor.isSuperAdmin ||
           actor.permissions?.some((p) =>
-            ["employees:manage:sensitive", "employees:edit", "sys:all"].includes(p),
+            [
+              "employee:manage:sensitive",
+              "employee:edit",
+              "employee:manage",
+              "employees:manage:sensitive",
+              "employees:edit",
+              "employees:manage",
+              "sys:all",
+            ].includes(p),
           );
         if (!isSelf && !canManage) {
           throwForbidden(

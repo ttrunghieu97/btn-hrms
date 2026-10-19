@@ -119,6 +119,23 @@ export class EmployeeDocumentRepository {
       .returning({ id: employeeDocuments.id });
     return row ?? null;
   }
+
+  async updateDocumentById(
+    documentId: string,
+    data: { documentType?: string; fileId?: string },
+  ) {
+    const updateValues: Partial<typeof employeeDocuments.$inferInsert> = {
+      updatedAt: new Date(),
+      ...(data.documentType !== undefined ? { documentType: data.documentType } : {}),
+      ...(data.fileId !== undefined ? { fileId: data.fileId } : {}),
+    };
+    const [row] = await this.db
+      .update(employeeDocuments)
+      .set(updateValues)
+      .where(eq(employeeDocuments.id, documentId))
+      .returning();
+    return row ?? null;
+  }
 }
 
 

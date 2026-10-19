@@ -19,12 +19,20 @@ export class GetPayslipUseCase {
 
   async execute(id: string, scope?: DataScope) {
     const row = await this.payslipsRepo.findById(id);
-    if (!row || (scope?.tier === "self" && row.status !== "published")) {
+    if (!row) {
       throwNotFound("Payslip not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
         payslipId: id,
       });
     }
-    return PayslipMapper.toResponseDto(row as Parameters<typeof PayslipMapper.toResponseDto>[0]);
+    const dto = PayslipMapper.toResponseDto(
+      row as Parameters<typeof PayslipMapper.toResponseDto>[0],
+    );
+    if (scope?.tier === "self" && (row.status !== "published" || dto.isProvisional)) {
+      throwNotFound("Payslip not found", ERROR_CODES.PAYROLL_NOT_FOUND, {
+        payslipId: id,
+      });
+    }
+    return dto;
   }
 }
 

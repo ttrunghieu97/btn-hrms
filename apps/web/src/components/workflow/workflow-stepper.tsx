@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import type { WorkflowState } from '@/workflows/types';
+import type { WorkflowState } from './types';
 
 export interface WorkflowStepperStep {
   key: string;

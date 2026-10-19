@@ -52,7 +52,12 @@ describe(PurgeEmployeeUseCase.name, () => {
 
     const { useCase, employeesRepo, identityAdmin, storage } = buildUseCase({
       employeesRepo: {
-        findEmployeeById: jest.fn().mockResolvedValue({ id: employeeId, userId }),
+        findEmployeeById: jest.fn().mockResolvedValue(null),
+        findDeletedEmployeeById: jest.fn().mockResolvedValue({
+          id: employeeId,
+          userId,
+          deletedAt: new Date(),
+        }),
         transaction: jest.fn().mockImplementation(async (fn) => fn(tx)),
       },
     });
@@ -77,7 +82,7 @@ describe(PurgeEmployeeUseCase.name, () => {
         findEmployeeById: jest.fn().mockResolvedValue(null),
         findDeletedEmployeeById: jest
           .fn()
-          .mockResolvedValue({ id: employeeId, userId }),
+          .mockResolvedValue({ id: employeeId, userId, deletedAt: new Date() }),
       },
     });
 
@@ -89,7 +94,7 @@ describe(PurgeEmployeeUseCase.name, () => {
   it("resolves by username via users → employees → userId", async () => {
     const username = "alice";
     const userFound = { id: "u-1" };
-    const employee = { id: "e-1", userId: "u-1" };
+    const employee = { id: "e-1", userId: "u-1", deletedAt: new Date() };
 
     const { useCase, employeesRepo, identityAdmin } = buildUseCase({
       employeesRepo: {
@@ -108,7 +113,7 @@ describe(PurgeEmployeeUseCase.name, () => {
   it("falls back to deleted-employee lookup when active row is gone", async () => {
     const username = "bob";
     const userFound = { id: "u-2" };
-    const deletedEmployee = { id: "e-2", userId: "u-2" };
+    const deletedEmployee = { id: "e-2", userId: "u-2", deletedAt: new Date() };
 
     const { useCase, identityAdmin } = buildUseCase({
       employeesRepo: {
@@ -121,6 +126,48 @@ describe(PurgeEmployeeUseCase.name, () => {
     await useCase.execute(username);
 
     expect(identityAdmin.deleteUser).toHaveBeenCalledWith("u-2", expect.anything());
+  });
+
+  it("rejects purging a non-archived employee with 409 Conflict", async () => {
+    const employeeId = "77777777-7777-7777-7777-777777777777";
+    const { useCase, identityAdmin } = buildUseCase({
+      employeesRepo: {
+        findEmployeeById: jest.fn().mockResolvedValue({
+          id: employeeId,
+          userId: "u-active",
+          deletedAt: null,
+        }),
+      },
+    });
+
+    const err = await useCase.execute(employeeId).catch((e) => e);
+    expect(err).toBeDefined();
+    expect(err.getStatus()).toBe(409);
+    expect(err.getResponse()).toMatchObject({
+      error: ERROR_CODES.INVALID_STATUS_TRANSITION,
+    });
+    expect(identityAdmin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("purges an archived employee without userId by calling hardDeleteEmployee", async () => {
+    const employeeId = "88888888-8888-8888-8888-888888888888";
+    const tx = { marker: true };
+    const { useCase, employeesRepo, identityAdmin, storage } = buildUseCase({
+      employeesRepo: {
+        findDeletedEmployeeById: jest.fn().mockResolvedValue({
+          id: employeeId,
+          userId: null,
+          deletedAt: new Date(),
+        }),
+        transaction: jest.fn().mockImplementation(async (fn) => fn(tx)),
+      },
+    });
+
+    const result = await useCase.execute(employeeId);
+    expect(result).toEqual({ success: true });
+    expect(employeesRepo.hardDeleteEmployee).toHaveBeenCalledWith(employeeId, tx);
+    expect(identityAdmin.deleteUser).not.toHaveBeenCalled();
+    expect(storage.purgeOwnerFiles).toHaveBeenCalledWith("employee", employeeId);
   });
 
   it("throws 404 when identifier resolves to no employee", async () => {
@@ -139,7 +186,11 @@ describe(PurgeEmployeeUseCase.name, () => {
 
     const { useCase, storage } = buildUseCase({
       employeesRepo: {
-        findEmployeeById: jest.fn().mockResolvedValue({ id: employeeId, userId }),
+        findDeletedEmployeeById: jest.fn().mockResolvedValue({
+          id: employeeId,
+          userId,
+          deletedAt: new Date(),
+        }),
       },
     });
 

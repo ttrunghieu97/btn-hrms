@@ -15,7 +15,7 @@ import { InjectKafka } from "../kafka/kafka.decorators";
 import { TASK_EVENTS_TOPIC, type TaskDomainEvent } from "../task-domain-events";
 import { IdempotentConsumer } from "./idempotent-consumer";
 import { MetricsService } from "../../../../shared/metrics/metrics.service";
-import { ConsumerIdempotencyRepository } from "../repositories/consumer-idempotency.repository";
+import { EventIdempotencyRepository } from "../../../../infrastructure/repositories/event-idempotency.repository";
 
 @Injectable()
 export class NotificationConsumer
@@ -27,7 +27,7 @@ export class NotificationConsumer
   private consumer: Consumer | null = null;
 
   constructor(
-    protected readonly idempotencyRepo: ConsumerIdempotencyRepository,
+    protected readonly idempotencyRepo: EventIdempotencyRepository,
     protected readonly metrics: MetricsService,
     @Optional() @InjectKafka() private readonly kafka: Kafka | null,
   ) {

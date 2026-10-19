@@ -23,7 +23,6 @@ import { EmployeePolicies } from "../../../core/security/policies/employee.polic
 import { Employee } from "../../../core/security/types/resource-entities";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
 import { DeleteEmployeeUseCase } from "./use-cases/delete-employee.usecase";
-import { RestoreEmployeeUseCase } from "./use-cases/restore-employee.usecase";
 import { ListEmployeeStatusHistoryUseCase } from "./use-cases/list-employee-status-history.usecase";
 import { PurgeEmployeeUseCase } from "./use-cases/purge-employee.usecase";
 import { ResetEmployeePasswordUseCase } from "./use-cases/reset-employee-password.usecase";
@@ -41,10 +40,15 @@ import { RequestTransferUseCase } from "./use-cases/request-transfer.usecase";
 import { ApproveTransferUseCase } from "./use-cases/approve-transfer.usecase";
 import { RejectTransferUseCase } from "./use-cases/reject-transfer.usecase";
 import { CancelTransferUseCase } from "./use-cases/cancel-transfer.usecase";
-import { ApplyTransferUseCase } from "./use-cases/apply-transfer.usecase";import { ChangeEmployeeStatusUseCase } from "./use-cases/change-employee-status.usecase";
+import { ApplyTransferUseCase } from "./use-cases/apply-transfer.usecase";
+import { ChangeEmployeeStatusUseCase } from "./use-cases/change-employee-status.usecase";
 import { ChangeEmployeeStatusDto } from "./dto/change-employee-status.dto";
 import { TerminateEmployeeUseCase } from "../application/use-cases/terminate-employee.usecase";
 import { TerminateEmployeeDto } from "./dto/terminate-employee.dto";
+import { RehireEmployeeDto } from "./dto/rehire-employee.dto";
+import { RequestTransferDto, RejectTransferDto } from "./dto/request-transfer.dto";
+import { BulkStatusDto } from "./dto/bulk-status.dto";
+import { BulkArchiveDto } from "./dto/bulk-archive.dto";
 import { EmployeeUsernameCheckEnvelopeDto } from "./dto/employee-response.dto";
 import { EmployeeStatusHistoryEnvelopeDto } from "./dto/employee-status-history.dto";
 
@@ -56,7 +60,6 @@ export class EmployeeAdminController {
     private readonly checkUsername: CheckUsernameUseCase,
     private readonly checkEmployeeCodeUseCase: CheckEmployeeCodeUseCase,
     private readonly deleteEmployee: DeleteEmployeeUseCase,
-    private readonly restoreEmployee: RestoreEmployeeUseCase,
     private readonly purgeEmployee: PurgeEmployeeUseCase,
     private readonly resetEmployeePassword: ResetEmployeePasswordUseCase,
     private readonly scheduleTerminationUseCase: ScheduleTerminationUseCase,
@@ -76,7 +79,7 @@ export class EmployeeAdminController {
   ) {}
 
   @Get("check-code")
-  @CheckPolicy(EmployeePolicies.view)
+  @CheckPolicy(EmployeePolicies.viewAll)
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @ApiOperation({ summary: "Check if employee code exists" })
   @ApiQuery({ name: "employeeCode", required: true, type: String })
@@ -89,7 +92,7 @@ export class EmployeeAdminController {
 
   @Get("check-username")
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
-  @CheckPolicy(EmployeePolicies.view)
+  @CheckPolicy(EmployeePolicies.viewAll)
   @ApiOperation({ summary: "Check username availability" })
   @ApiQuery({ name: "username", required: true, type: String })
   @ApiOkResponse({ type: EmployeeUsernameCheckEnvelopeDto })
@@ -181,7 +184,7 @@ export class EmployeeAdminController {
   @ApiOperation({ summary: "Rehire a terminated employee (new employment cycle)" })
   rehireEmployee(
     @Param("id") id: string,
-    @Body() dto: any,
+    @Body() dto: RehireEmployeeDto,
   ) {
     return this.rehire.execute(id, dto);
   }
@@ -212,7 +215,7 @@ export class EmployeeAdminController {
   @ApiOperation({ summary: "Schedule employee termination (future effective date)" })
   scheduleTermination(
     @Param("id") id: string,
-    @Body() dto: any,
+    @Body() dto: TerminateEmployeeDto,
   ) {
     return this.scheduleTerminationUseCase.execute(id, dto);
   }
@@ -235,14 +238,15 @@ export class EmployeeAdminController {
   @ApiOperation({ summary: "Request employee transfer (start approval workflow)" })
   requestEmployeeTransfer(
     @Param("id") id: string,
-    @Body() dto: any,
+    @Body() dto: RequestTransferDto,
   ) {
     return this.requestTransferUseCase.execute(id, dto);
   }
 
   @Post(":id/transfers/:instanceId/manager-approve")
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
-  @CheckPolicy(EmployeePolicies.view)
+  @Resource(Employee, "id")
+  @CheckPolicy(EmployeePolicies.approveTransfer)
   @AuditLog({ action: "employee_transfer_manager_approve", entity: "employee" })
   @ApiOperation({ summary: "Manager approves transfer request" })
   managerApproveTransfer(
@@ -254,6 +258,7 @@ export class EmployeeAdminController {
 
   @Post(":id/transfers/:instanceId/hr-approve")
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @Resource(Employee, "id")
   @CheckPolicy(EmployeePolicies.manage)
   @AuditLog({ action: "employee_transfer_hr_approve", entity: "employee" })
   @ApiOperation({ summary: "HR approves transfer request (auto-apply if effective)" })
@@ -266,19 +271,21 @@ export class EmployeeAdminController {
 
   @Post(":id/transfers/:instanceId/reject")
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
-  @CheckPolicy(EmployeePolicies.manage)
+  @Resource(Employee, "id")
+  @CheckPolicy(EmployeePolicies.approveTransfer)
   @AuditLog({ action: "employee_transfer_reject", entity: "employee" })
   @ApiOperation({ summary: "Reject a pending transfer request" })
   rejectTransfer(
     @Param("id") id: string,
     @Param("instanceId") instanceId: string,
-    @Body() dto: any,
+    @Body() dto: RejectTransferDto,
   ) {
-    return this.rejectTransferUseCase.execute(id, instanceId, dto?.note);
+    return this.rejectTransferUseCase.execute(id, instanceId, dto?.note ?? dto?.reason);
   }
 
   @Post(":id/transfers/:instanceId/apply")
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @Resource(Employee, "id")
   @CheckPolicy(EmployeePolicies.manage)
   @AuditLog({ action: "employee_transfer_apply", entity: "employee" })
   @ApiOperation({ summary: "Manually apply an approved transfer (effective-dated)" })
@@ -286,11 +293,12 @@ export class EmployeeAdminController {
     @Param("id") id: string,
     @Param("instanceId") instanceId: string,
   ) {
-    return this.applyTransferUseCase.execute(instanceId);
+    return this.applyTransferUseCase.execute(instanceId, false, id);
   }
 
   @Post(":id/transfers/:instanceId/cancel")
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @Resource(Employee, "id")
   @CheckPolicy(EmployeePolicies.manage)
   @AuditLog({ action: "employee_transfer_cancel", entity: "employee" })
   @ApiOperation({ summary: "Cancel a pending transfer request" })
@@ -306,7 +314,7 @@ export class EmployeeAdminController {
   @CheckPolicy(EmployeePolicies.manage)
   @AuditLog({ action: "employee_bulk_status", entity: "employee" })
   @ApiOperation({ summary: "Bulk change employee status (partial failure supported)" })
-  bulkStatus(@Body() dto: any) {
+  bulkStatus(@Body() dto: BulkStatusDto) {
     return this.bulkChangeStatus.execute(dto);
   }
 
@@ -315,7 +323,7 @@ export class EmployeeAdminController {
   @CheckPolicy(EmployeePolicies.manage)
   @AuditLog({ action: "employee_bulk_archive", entity: "employee" })
   @ApiOperation({ summary: "Bulk archive employees (only terminal status)" })
-  bulkArchiveOp(@Body() dto: any) {
+  bulkArchiveOp(@Body() dto: BulkArchiveDto) {
     return this.bulkArchiveUseCase.execute(dto);
   }
 

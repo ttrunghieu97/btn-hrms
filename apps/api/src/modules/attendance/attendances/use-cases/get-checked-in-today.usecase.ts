@@ -5,6 +5,7 @@ import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 
 import { CLOCK_PORT, type ClockPort } from "../ports/clock.port";
+import { DataScope } from "../../../../core/security/types/data-scope.interface";
 
 @Injectable()
 export class GetCheckedInTodayUseCase {
@@ -17,11 +18,11 @@ export class GetCheckedInTodayUseCase {
     this.logger = new ContextLogger(this.requestContext, GetCheckedInTodayUseCase.name);
   }
 
-  async execute(date?: string) {
+  async execute(date?: string, scope?: DataScope) {
     const targetDate = date ?? this.clock.today();
 
     const events =
-      await this.attendancesRepo.findByDateWithEmployee(targetDate);
+      await this.attendancesRepo.findByDateWithEmployee(targetDate, scope);
 
     const byEmployee = new Map<string, any>();
     for (const e of events as any  []) {

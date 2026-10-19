@@ -11,14 +11,47 @@ import type { Payslip } from '../types';
 export const onViewPayslipRef = { current: (_id: string) => {} };
 export const onPublishRef = { current: (_id: string) => {} };
 
+function isProvisionalPayslip(row: Payslip): boolean {
+  const meta = row.metadata ?? {};
+  if (
+    row.isProvisional === true ||
+    row.calculationStatus === 'PROVISIONAL_POLICY_UNCONFIRMED' ||
+    meta.isProvisional === true ||
+    meta.calculationStatus === 'PROVISIONAL_POLICY_UNCONFIRMED'
+  ) {
+    return true;
+  }
+  if (row.calculationStatus === 'CONFIRMED' || meta.calculationStatus === 'CONFIRMED') {
+    return false;
+  }
+  return row.status !== 'published';
+}
+
 function ActionsCell({ row }: { row: Row<Payslip> }) {
+  const provisional = isProvisionalPayslip(row.original);
   return (
     <div className='flex items-center gap-1'>
-      <Button variant='ghost' size='icon' onClick={() => onViewPayslipRef.current(row.original.id)}>
+      <Button
+        variant='ghost'
+        size='icon'
+        aria-label='Xem chi tiết phiếu lương'
+        onClick={() => onViewPayslipRef.current(row.original.id)}
+      >
         <Icons.search className='h-4 w-4' />
       </Button>
       {row.original.status === 'draft' && (
-        <Button variant='ghost' size='icon' onClick={() => onPublishRef.current(row.original.id)}>
+        <Button
+          variant='ghost'
+          size='icon'
+          aria-label='Công bố phiếu lương'
+          disabled={provisional}
+          title={
+            provisional
+              ? 'Phiếu lương tạm tính (PD-04) — Chưa thể công bố'
+              : 'Công bố phiếu lương'
+          }
+          onClick={() => onPublishRef.current(row.original.id)}
+        >
           <Icons.circleCheck className='h-4 w-4' />
         </Button>
       )}
@@ -42,7 +75,16 @@ export const payslipColumns: ColumnDef<Payslip>[] = [
   {
     accessorKey: 'status',
     header: 'Trạng thái',
-    cell: ({ row }) => <PayslipStatusBadge status={row.original.status} />,
+    cell: ({ row }) => (
+      <div className='flex items-center gap-1.5'>
+        <PayslipStatusBadge status={row.original.status} />
+        {isProvisionalPayslip(row.original) && (
+          <span className='rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300'>
+            Tạm tính (PD-04)
+          </span>
+        )}
+      </div>
+    ),
   },
   {
     accessorKey: 'grossPay',

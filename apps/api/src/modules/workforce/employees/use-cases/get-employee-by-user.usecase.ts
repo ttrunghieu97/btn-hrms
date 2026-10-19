@@ -18,9 +18,25 @@ export class GetEmployeeByUserUseCase {
     this.logger = new ContextLogger(this.requestContext, GetEmployeeByUserUseCase.name);
   }
 
-  async execute(userId: string, sensitiveFieldsAllowed = false) {
+  async execute(
+    userId: string,
+    sensitiveFieldsAllowed?: boolean,
+  ): Promise<Awaited<ReturnType<GetEmployeeUseCase["execute"]>>>;
+  async execute(
+    userId: string,
+    sensitiveFieldsAllowed: boolean,
+    allowMissing: true,
+  ): Promise<Awaited<ReturnType<GetEmployeeUseCase["execute"]>> | null>;
+  async execute(
+    userId: string,
+    sensitiveFieldsAllowed = false,
+    allowMissing = false,
+  ) {
     const employee = await this.employeesRepo.findEmployeeByUserId(userId);
     if (!employee) {
+      if (allowMissing) {
+        return null;
+      }
       throwNotFound(
         `Profile for user id ${userId} not found`,
         ERROR_CODES.EMPLOYEE_NOT_FOUND,

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { throwBadRequest, throwNotFound } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { EmployeesRepository } from "../../employees/repositories/employees.repository";
@@ -6,8 +6,8 @@ import { EmployeeContractsRepository } from "../../employee-contracts/repositori
 import { EmployeeTerminatedEvent } from "../../../../core/events/events/employee-terminated.event";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
-
-import { employeeStatusHistory } from "../../../../infrastructure/database/schema/workforce/tables";
+import { CONTRACTS_TOKENS } from "../../../../contracts/contracts.tokens";
+import { type IdentityAdminPort } from "../../../../contracts/ports/identity-admin.port";
 import { EmployeeLifecycleService } from "../../employees/services/employee-lifecycle.service";
 
 export interface TerminateEmployeeDto {
@@ -24,6 +24,9 @@ export class TerminateEmployeeUseCase {
     private readonly lifecycle: EmployeeLifecycleService,
     private readonly eventOutbox: EventOutboxService,
     private readonly requestContext: RequestContextService,
+    @Optional()
+    @Inject(CONTRACTS_TOKENS.IDENTITY_ADMIN_PORT)
+    private readonly identityAdmin?: IdentityAdminPort,
   ) {}
 
   async execute(employeeId: string, dto: TerminateEmployeeDto) {
@@ -33,9 +36,17 @@ export class TerminateEmployeeUseCase {
         employeeId,
       });
 
-    if (emp.deletedAt) {
+    if (typeof this.lifecycle.assertCanImmediateTerminate === "function") {
+      this.lifecycle.assertCanImmediateTerminate(emp);
+    } else if (emp.deletedAt) {
       throwBadRequest(
         "Cannot terminate deleted employee",
+        ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED,
+        { employeeId },
+      );
+    } else if (emp.status === "terminated" || emp.status === "retired") {
+      throwBadRequest(
+        "Employee already terminated",
         ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED,
         { employeeId },
       );
@@ -43,25 +54,27 @@ export class TerminateEmployeeUseCase {
 
     const termDateStr = dto.effectiveDate;
     const endDateStr = (emp.endDate as string | null | undefined) ?? null;
-    const isAlreadyTerminated =
-      (endDateStr !== null && endDateStr < termDateStr) ||
-      emp.status === "terminated";
-    if (isAlreadyTerminated)
+    if (endDateStr !== null && endDateStr < termDateStr) {
       throwBadRequest(
         "Employee already terminated",
         ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED,
         { employeeId },
       );
+    }
 
-    const userId = emp.userId as string | undefined;
-    if (!userId) {
-      throwNotFound(
-        "Employee has no linked user account",
-        ERROR_CODES.EMPLOYEE_NOT_FOUND,
-        { employeeId },
+    if (dto.lastWorkingDate && dto.lastWorkingDate > dto.effectiveDate) {
+      throwBadRequest(
+        "Last working date cannot be after effective date",
+        ERROR_CODES.VALIDATION_ERROR,
+        {
+          employeeId,
+          lastWorkingDate: dto.lastWorkingDate,
+          effectiveDate: dto.effectiveDate,
+        },
       );
     }
 
+    const userId = emp.userId as string | null | undefined;
     const currentUser = this.requestContext.get();
 
     await this.employeeRepo.transaction(async (tx) => {
@@ -88,6 +101,14 @@ export class TerminateEmployeeUseCase {
           },
           tx,
         );
+      }
+
+      if (userId && this.identityAdmin) {
+        if (typeof (this.identityAdmin as any).deactivateUserAndRevokeSessions === "function") {
+          await (this.identityAdmin as any).deactivateUserAndRevokeSessions(userId, tx);
+        } else {
+          await this.identityAdmin.deactivateUser(userId, tx);
+        }
       }
 
       // Stage termination event (identity module handles deactivation via event)

@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { EmployeeResponseDto } from '@/api/generated/model';
-import { cn } from '@/lib/utils';
 import { employeeUiCopy } from '@/lib/app-copy';
 import { EmployeeSummaryHeader } from './employee-summary-header';
 
@@ -29,7 +28,6 @@ const DEFAULT_TABS = [
   { value: 'overview', label: employeeUiCopy.tabs.detailOverview },
   { value: 'documents', label: employeeUiCopy.tabs.detailDocuments },
   { value: 'employment', label: employeeUiCopy.tabs.detailEmployment },
-  { value: 'assets', label: employeeUiCopy.tabs.detailAssets },
   { value: 'timeline', label: employeeUiCopy.tabs.detailTimeline },
 ];
 

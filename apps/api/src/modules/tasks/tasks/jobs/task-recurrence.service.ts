@@ -223,10 +223,11 @@ export class TaskRecurrenceService {
       90,
       () => this.logger.debug("Skipping recurring tasks because another instance holds the lease"),
       async () => {
-        this.logger.debug("Checking for recurring tasks to process...");
-
         const now = new Date();
         const pending = (await this.repo.findPendingRecurrences(now)) as TaskRecurrence[];
+        if (pending.length === 0) return;
+
+        this.logger.log(`Processing ${pending.length} recurring task(s)...`);
         await processPendingRecurrences(
           pending,
           now,

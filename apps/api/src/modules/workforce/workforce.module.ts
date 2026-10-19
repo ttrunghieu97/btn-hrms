@@ -7,7 +7,6 @@ import { EmployeeTimelineModule } from "./employee-timeline/employee-timeline.mo
 import { EmployeeAllowancesModule } from "./employee-allowances/employee-allowances.module";
 import { EmployeeSocialInsuranceModule } from "./employee-social-insurance/employee-social-insurance.module";
 import { LaborReportModule } from "./labor-report/labor-report.module";
-import { HireEmployeeUseCase } from "./application/use-cases/hire-employee.usecase";
 import { GPSLogsModule } from "./gps-logs/gps-logs.module";
 import { ContractsModule } from "./contracts/contracts.module";
 import { DocumentsModule } from "./documents/documents.module";
@@ -25,7 +24,6 @@ import { DocumentsModule } from "./documents/documents.module";
   ],
   providers: [
     EmployeesRepository,
-    HireEmployeeUseCase,
     {
       provide: CONTRACTS_TOKENS.WORKFORCE_FACADE_PORT,
       useClass: WorkforceFacade,

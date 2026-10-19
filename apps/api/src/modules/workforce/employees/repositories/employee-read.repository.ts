@@ -106,6 +106,10 @@ export class EmployeeReadRepository {
       }
     }
 
+    if (query.status) {
+      where.push(eq(employees.status, query.status as typeof employees.status._.data));
+    }
+
     if (tabFilter) {
       if (tabFilter.contractStatus) {
         where.push(eq(employeeContracts.status, tabFilter.contractStatus as typeof employeeContracts.status._.data));
@@ -394,6 +398,8 @@ export class EmployeeReadRepository {
         employeeId: employees.id,
         userId: employees.userId,
         username: users.username,
+        status: employees.status,
+        deletedAt: employees.deletedAt,
       })
       .from(employees)
       .innerJoin(users, eq(employees.userId, users.id))
@@ -498,8 +504,13 @@ export class EmployeeReadRepository {
         notes: employeeStatusHistory.notes,
         changedAt: employeeStatusHistory.changedAt,
         changedBy: employeeStatusHistory.changedBy,
+        changedByUsername: users.username,
+        changedByFirstName: employees.firstName,
+        changedByLastName: employees.lastName,
       })
       .from(employeeStatusHistory)
+      .leftJoin(users, eq(employeeStatusHistory.changedBy, users.id))
+      .leftJoin(employees, eq(employeeStatusHistory.changedBy, employees.userId))
       .where(eq(employeeStatusHistory.employeeId, employeeId))
       .orderBy(desc(employeeStatusHistory.changedAt))
       .limit(limit);

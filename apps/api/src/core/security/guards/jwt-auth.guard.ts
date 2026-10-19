@@ -66,7 +66,12 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const session = await this.authSessionReader.loadAuthSession(payload.sub);
-    if (!session?.user || !(await this.authSessionReader.isAuthUserActive(payload.sub))) {
+    const sessionUser = session?.user as { isActive?: boolean } | undefined;
+    const isActive =
+      typeof sessionUser?.isActive === "boolean"
+        ? sessionUser.isActive
+        : await this.authSessionReader.isAuthUserActive(payload.sub);
+    if (!session?.user || !isActive) {
       throwUnauthorized("User not authenticated", ERROR_CODES.USER_NOT_AUTHENTICATED, {
         userId: payload.sub ?? null,
         reason: ERROR_REASONS.MISSING_USER_ID,
@@ -161,8 +166,10 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       const configuredOrigins = [
+        this.configService?.get<string>("APP_URL"),
         this.configService?.get<string>("CORS_ORIGIN"),
         this.configService?.get<string>("FRONTEND_URL"),
+        process.env.APP_URL,
         process.env.CORS_ORIGIN,
         process.env.FRONTEND_URL,
       ];

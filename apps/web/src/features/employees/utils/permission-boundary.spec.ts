@@ -64,4 +64,73 @@ describe('employee permission boundary', () => {
       expect(hasPermission(user, permissions.employees.view)).toBe(true);
     });
   });
+
+  describe('singular/plural alias parity & lifecycle action boundaries', () => {
+    it('resolves singular employee:* and plural employees:* aliases identically', () => {
+      const singularUser = makeUser({
+        permissions: ['employee:view:department', 'employee:update:all', 'employee:manage:sensitive'],
+      });
+      const pluralUser = makeUser({
+        permissions: ['employees:view:department', 'employees:edit', 'employees:manage:sensitive'],
+      });
+
+      expect(hasPermission(singularUser, permissions.employees.viewDepartment)).toBe(true);
+      expect(hasPermission(pluralUser, permissions.employees.viewDepartment)).toBe(true);
+      expect(hasPermission(singularUser, permissions.employees.edit)).toBe(true);
+      expect(hasPermission(pluralUser, permissions.employees.edit)).toBe(true);
+      expect(hasPermission(singularUser, permissions.employees.manageSensitive)).toBe(true);
+      expect(hasPermission(pluralUser, permissions.employees.manageSensitive)).toBe(true);
+    });
+
+    it('restricts rehire and transfer initiation/cancellation to employee:manage', () => {
+      const hrEditor = makeUser({ permissions: ['employee:edit'] });
+      const hrManager = makeUser({ permissions: ['employee:manage'] });
+
+      expect(hasPermission(hrEditor, permissions.employees.edit)).toBe(true);
+      expect(hasPermission(hrEditor, permissions.employees.manage)).toBe(false);
+      expect(hasPermission(hrManager, permissions.employees.manage)).toBe(true);
+    });
+
+    it('restricts scheduled termination to employee:manage or employee:manage:sensitive', () => {
+      const hrEditor = makeUser({ permissions: ['employee:edit'] });
+      const sensitiveAdmin = makeUser({ permissions: ['employee:manage:sensitive'] });
+
+      expect(
+        hasPermission(hrEditor, permissions.employees.manage) ||
+          hasPermission(hrEditor, permissions.employees.manageSensitive),
+      ).toBe(false);
+      expect(
+        hasPermission(sensitiveAdmin, permissions.employees.manage) ||
+          hasPermission(sensitiveAdmin, permissions.employees.manageSensitive),
+      ).toBe(true);
+    });
+
+    it('ensures employee:edit implies employee:update:self but NEVER implies employee:update:all or employee:view:all', () => {
+      const deptEditor = makeUser({
+        permissions: ['employee:view:department', 'employee:edit'],
+      });
+      const selfEditor = makeUser({
+        permissions: ['employee:view:self', 'employee:edit'],
+      });
+      const globalEditor = makeUser({
+        permissions: ['employee:update:all'],
+      });
+
+      expect(hasPermission(deptEditor, permissions.employees.edit)).toBe(true);
+      expect(hasPermission(deptEditor, permissions.employees.updateSelf)).toBe(true);
+      expect(hasPermission(deptEditor, permissions.employees.viewDepartment)).toBe(true);
+      expect(hasPermission(deptEditor, permissions.employees.updateAll)).toBe(false);
+      expect(hasPermission(deptEditor, permissions.employees.viewAll)).toBe(false);
+      expect(hasPermission(deptEditor, permissions.employees.manage)).toBe(false);
+
+      expect(hasPermission(selfEditor, permissions.employees.viewSelf)).toBe(true);
+      expect(hasPermission(selfEditor, permissions.employees.viewDepartment)).toBe(false);
+      expect(hasPermission(selfEditor, permissions.employees.viewAll)).toBe(false);
+      expect(hasPermission(selfEditor, permissions.employees.updateAll)).toBe(false);
+
+      expect(hasPermission(globalEditor, permissions.employees.updateAll)).toBe(true);
+      expect(hasPermission(globalEditor, permissions.employees.edit)).toBe(true);
+      expect(hasPermission(globalEditor, permissions.employees.updateSelf)).toBe(true);
+    });
+  });
 });

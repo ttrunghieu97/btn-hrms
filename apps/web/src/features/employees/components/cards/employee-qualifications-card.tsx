@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { hasAnyPermission } from '@project/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,19 +12,29 @@ import { useQuery } from '@tanstack/react-query';
 import { positionsControllerFindAll } from '@/api/generated/positions/positions';
 import { extractList } from '@/lib/api-extract';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
+import { permissions } from '@/lib/permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Props {
   employeeId: string;
 }
 
 export function EmployeeQualificationsCard({ employeeId }: Props) {
+  const user = useAuthStore((state) => state.user);
+  const canEdit =
+    Boolean(user?.isSuperAdmin) ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+    ]);
   const { data: qualifications, isLoading } = useQualifications(employeeId);
+  const [editing, setEditing] = useState(false);
   const positionsQuery = useQuery({
     queryKey: ['positions-all'],
     queryFn: () => positionsControllerFindAll().then(r => extractList<{ id: string; name: string; isActive: boolean }>(r)),
+    enabled: editing,
   });
   const replaceMut = useReplaceQualifications();
-  const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
   if (isLoading) return <Skeleton className='h-24 w-full' />;
@@ -52,7 +63,7 @@ export function EmployeeQualificationsCard({ employeeId }: Props) {
     <Card>
       <CardHeader className='flex flex-row items-center justify-between'>
         <CardTitle className='text-sm font-medium'>{employeeUiCopy.qualificationsTitle}</CardTitle>
-        {!editing && quals.length > 0 && (
+        {canEdit && !editing && quals.length > 0 && (
           <Button size='sm' variant='outline' onClick={handleEdit}>
             <Icons.edit className='h-3 w-3' />
           </Button>
@@ -62,9 +73,11 @@ export function EmployeeQualificationsCard({ employeeId }: Props) {
         {!editing && quals.length === 0 && (
           <div className='flex items-center justify-between'>
             <p className='text-sm text-muted-foreground'>{employeeUiCopy.noQualifications}</p>
-            <Button size='sm' variant='outline' onClick={handleEdit}>
-              <Icons.add className='mr-1 h-3 w-3' /> {commonUiCopy.add}
-            </Button>
+            {canEdit && (
+              <Button size='sm' variant='outline' onClick={handleEdit}>
+                <Icons.add className='mr-1 h-3 w-3' /> {commonUiCopy.add}
+              </Button>
+            )}
           </div>
         )}
         {!editing && quals.length > 0 && (

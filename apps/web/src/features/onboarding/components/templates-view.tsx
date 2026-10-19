@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingTemplatesQueryOptions } from '../api/queries';
+import { getOnboardingTemplate } from '../api/onboarding';
 import {
   useCreateOnboardingTemplate,
   useUpdateOnboardingTemplate,
   useDeleteOnboardingTemplate,
 } from '../api/mutations';
-import { extractList } from '@/lib/api-extract';
+import { extractList, unwrapData } from '@/lib/api-extract';
 import type { OnboardingTemplateRow } from './status-maps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,12 +79,33 @@ export function OnboardingTemplatesView() {
     setOpen(true);
   }
 
-  function openEditDialog(row: OnboardingTemplateRow) {
+  async function openEditDialog(row: OnboardingTemplateRow) {
     setEditingId(row.id);
     setName(row.name ?? '');
     setType((row.type as 'onboarding' | 'offboarding') ?? 'onboarding');
     setItems([{ ...DEFAULT_CHECKLIST_ITEM }]);
     setOpen(true);
+    try {
+      const detailRes = await getOnboardingTemplate(row.id);
+      const detail = unwrapData<{
+        items?: Array<{
+          title?: string;
+          assigneeType?: string;
+          dueDaysOffset?: number;
+        }>;
+      }>(detailRes);
+      if (Array.isArray(detail?.items) && detail.items.length > 0) {
+        setItems(
+          detail.items.map((item) => ({
+            title: item.title ?? '',
+            assigneeType: item.assigneeType ?? 'hr',
+            dueDaysOffset: Number(item.dueDaysOffset) || 0,
+          })),
+        );
+      }
+    } catch {
+      // Keep default fallback items if detail fetch fails
+    }
   }
 
   function addChecklistItem() {

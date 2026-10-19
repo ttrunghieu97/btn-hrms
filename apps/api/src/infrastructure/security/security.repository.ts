@@ -34,12 +34,25 @@ export class SecurityRepository {
       .select({
         id: schema.employees.id,
         departmentId: schema.employees.departmentId,
+        orgDepartmentId: schema.orgAssignments.departmentId,
       })
       .from(schema.employees)
+      .leftJoin(
+        schema.orgAssignments,
+        and(
+          eq(schema.orgAssignments.employeeId, schema.employees.id),
+          eq(schema.orgAssignments.isCurrent, true),
+          eq(schema.orgAssignments.assignmentType, "primary"),
+        ),
+      )
       .where(eq(schema.employees.userId, userId))
       .limit(1);
 
-    return row ?? null;
+    if (!row) return null;
+    return {
+      id: row.id,
+      departmentId: row.departmentId ?? row.orgDepartmentId ?? null,
+    };
   }
 
   async loadAuthSession(userId: string) {
@@ -52,11 +65,20 @@ export class SecurityRepository {
         authorizationVersion: schema.users.authorizationVersion,
         employeeId: schema.employees.id,
         departmentId: schema.employees.departmentId,
+        orgDepartmentId: schema.orgAssignments.departmentId,
       })
       .from(schema.users)
       .leftJoin(
         schema.employees,
         and(eq(schema.employees.userId, schema.users.id), isNull(schema.employees.deletedAt)),
+      )
+      .leftJoin(
+        schema.orgAssignments,
+        and(
+          eq(schema.orgAssignments.employeeId, schema.employees.id),
+          eq(schema.orgAssignments.isCurrent, true),
+          eq(schema.orgAssignments.assignmentType, "primary"),
+        ),
       )
       .where(eq(schema.users.id, userId))
       .limit(1);
@@ -72,7 +94,10 @@ export class SecurityRepository {
         authorizationVersion: row.authorizationVersion,
       },
       employee: row.employeeId
-        ? { id: row.employeeId, departmentId: row.departmentId }
+        ? {
+            id: row.employeeId,
+            departmentId: row.departmentId ?? row.orgDepartmentId ?? null,
+          }
         : null,
     };
   }

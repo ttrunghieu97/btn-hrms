@@ -157,9 +157,12 @@ export function LeaveRequestsTable({ hideHeader = false }: LeaveRequestsTablePro
         id: 'actions',
         header: 'Thao tác quy trình',
         cell: ({ row }) => {
-          const { id, status } = row.original;
+          const { id, status, employeeId } = row.original;
           const isPendingStatus = status === 'pending';
           const canCancel = status === 'draft' || status === 'pending';
+          const isSelfRequest = Boolean(
+            user?.employeeId && employeeId && String(user.employeeId) === String(employeeId),
+          );
 
           return (
             <div className='flex items-center gap-1.5'>
@@ -173,7 +176,7 @@ export function LeaveRequestsTable({ hideHeader = false }: LeaveRequestsTablePro
                 Chi tiết luồng
               </Button>
 
-              {isPendingStatus && canApprove && (
+              {isPendingStatus && canApprove && !isSelfRequest && (
                 <>
                   <Button
                     variant='ghost'
@@ -223,7 +226,7 @@ export function LeaveRequestsTable({ hideHeader = false }: LeaveRequestsTablePro
         },
       }),
     ],
-    [cancelLeave, approveLeave, rejectLeave, canApprove]
+    [cancelLeave, approveLeave, rejectLeave, canApprove, user?.employeeId]
   );
 
   const { table } = useDataTable({

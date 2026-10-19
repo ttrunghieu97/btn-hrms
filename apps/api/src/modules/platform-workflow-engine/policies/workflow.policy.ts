@@ -3,7 +3,23 @@ import type { PolicyHandler } from "../../../core/security/policies/policy-handl
 import { Permissions } from "../../../core/security/permissions/permissions.registry";
 
 function hasGlobalAccess(user: AuthUser): boolean {
-  return user.isSuperAdmin === true || user.permissions.includes(Permissions.SYS_ALL);
+  return Boolean(user?.isSuperAdmin === true || user?.permissions?.includes(Permissions.SYS_ALL));
+}
+
+function hasPerm(user: AuthUser, perm: string): boolean {
+  const perms = user?.permissions;
+  if (!perms) return false;
+  if (perms.includes(perm)) return true;
+  if (perm.startsWith("employee:")) {
+    return perms.includes(`employees:${perm.slice("employee:".length)}`);
+  }
+  return false;
+}
+
+export const EMPLOYEE_WORKFLOW_SUBJECT_TYPES = ["employee", "employee_transfer"] as const;
+
+export function hasGlobalWorkflowViewAccess(user: AuthUser): boolean {
+  return hasGlobalAccess(user) || Boolean(user?.permissions?.includes(Permissions.WORKFLOW_INSTANCES_VIEW));
 }
 
 class ViewWorkflowDefinitionsPolicyHandler implements PolicyHandler {
@@ -11,16 +27,26 @@ class ViewWorkflowDefinitionsPolicyHandler implements PolicyHandler {
   readonly requiredAnyOfPermissions = [Permissions.WORKFLOW_DEFINITIONS_VIEW];
 
   handle(user: AuthUser): boolean {
-    return hasGlobalAccess(user) || user.permissions.includes(Permissions.WORKFLOW_DEFINITIONS_VIEW);
+    return hasGlobalAccess(user) || Boolean(user?.permissions?.includes(Permissions.WORKFLOW_DEFINITIONS_VIEW));
   }
 }
 
 class ViewWorkflowInstancesPolicyHandler implements PolicyHandler {
   readonly policyName = "ViewWorkflowInstances";
-  readonly requiredAnyOfPermissions = [Permissions.WORKFLOW_INSTANCES_VIEW];
+  readonly requiredAnyOfPermissions = [
+    Permissions.WORKFLOW_INSTANCES_VIEW,
+    Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_UPDATE_ALL,
+    Permissions.EMPLOYEES_MANAGE,
+    Permissions.EMPLOYEES_MANAGE_SENSITIVE,
+    Permissions.APPROVAL_REQUESTS_DECIDE,
+  ];
 
   handle(user: AuthUser): boolean {
-    return hasGlobalAccess(user) || user.permissions.includes(Permissions.WORKFLOW_INSTANCES_VIEW);
+    return (
+      hasGlobalWorkflowViewAccess(user) ||
+      this.requiredAnyOfPermissions.some((perm) => hasPerm(user, perm))
+    );
   }
 }
 

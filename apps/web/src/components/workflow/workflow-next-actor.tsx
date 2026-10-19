@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import type { WorkflowActor } from '@/workflows/types';
+import type { WorkflowActor } from './types';
 
 export interface WorkflowNextActorProps {
   actor: string | WorkflowActor;

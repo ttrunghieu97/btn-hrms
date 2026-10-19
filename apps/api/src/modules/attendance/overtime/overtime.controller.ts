@@ -66,7 +66,11 @@ export class OvertimeController {
     @Param("id") id: string,
     @Body() dto: ApproveOvertimeDto,
   ) {
-    return this.approveOvertimeRequest.execute(id, req.user.id, dto);
+    const scope = this.queryScopeService.resolveScope(req.user, "attendance");
+    return this.approveOvertimeRequest.execute(id, req.user.id, dto, {
+      actorEmployeeId: req.user.employeeId,
+      scope,
+    });
   }
 
   @Post(":id/reject")
@@ -82,7 +86,11 @@ export class OvertimeController {
     @Param("id") id: string,
     @Body() dto: RejectOvertimeDto,
   ) {
-    return this.rejectOvertimeRequest.execute(id, req.user.id, dto);
+    const scope = this.queryScopeService.resolveScope(req.user, "attendance");
+    return this.rejectOvertimeRequest.execute(id, req.user.id, dto, {
+      actorEmployeeId: req.user.employeeId,
+      scope,
+    });
   }
 
   @Get()

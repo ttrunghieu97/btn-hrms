@@ -16,13 +16,15 @@ import { commonUiCopy } from '@/lib/app-copy';
 import { feedbackCopy, feedbackEntity } from '@/lib/feedback-copy';
 import type { EmployeeResponseDto } from '@/api/generated/model';
 import { useAuthStore } from '@/stores/auth-store';
-import { permissions } from '@/lib/permissions';
+import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { getQueryClient } from '@/lib/query-client';
 import { toast } from 'sonner';
 import { getVietnameseApiErrorMessage } from '@/lib/api-error-message';
 import {
+  usePurgeEmployeeMutation,
   useRemoveEmployeeMutation,
   useResetEmployeePasswordMutation,
+  useRestoreEmployeeMutation,
 } from '../../queries/employee-queries';
 import { EmployeeDeleteDialog } from '../dialogs/employee-delete-dialog';
 import { ResetPasswordDialog } from '../dialogs/reset-password-dialog';
@@ -32,7 +34,6 @@ import {
   type LifecycleStatus,
 } from '../dialogs/lifecycle/change-employee-status-dialog';
 import { RehireEmployeeDialog } from '../dialogs/lifecycle/rehire-employee-dialog';
-import { hasAnyPermission } from '@/lib/permissions';
 
 interface CellActionProps {
   data: EmployeeResponseDto;
@@ -56,23 +57,39 @@ export function CellAction({ data }: CellActionProps) {
   );
   const [rehireOpen, setRehireOpen] = React.useState(false);
 
+  const isSuperAdmin = Boolean(
+    currentUser?.isSuperAdmin ||
+      currentUser?.permissions?.includes('ALL') ||
+      currentUser?.permissions?.includes('sys:all'),
+  );
+  const canManage =
+    isSuperAdmin ||
+    hasAnyPermission(currentUser?.permissions ?? [], [
+      permissions.employees.manage,
+    ]);
   const canEdit =
-    currentUser?.isSuperAdmin ||
-    currentUser?.permissions?.includes('ALL') ||
-    currentUser?.permissions?.includes(permissions.employees.edit);
+    isSuperAdmin ||
+    hasAnyPermission(currentUser?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+    ]);
   const canDelete =
-    currentUser?.isSuperAdmin ||
-    currentUser?.permissions?.includes('ALL') ||
-    currentUser?.permissions?.includes(permissions.employees.edit);
+    isSuperAdmin ||
+    hasAnyPermission(currentUser?.permissions ?? [], [
+      permissions.employees.delete,
+      permissions.employees.manage,
+    ]);
   const canResetPassword =
-    currentUser?.isSuperAdmin ||
-    currentUser?.permissions?.includes('ALL') ||
-    currentUser?.permissions?.includes(permissions.employees.resetPassword);
+    isSuperAdmin ||
+    hasAnyPermission(currentUser?.permissions ?? [], [
+      permissions.employees.resetPassword,
+      permissions.employees.manage,
+    ]);
 
   const isDeleted = !!data.deletedAt;
   const canTerminate =
-    hasAnyPermission(currentUser?.permissions ?? [], ['employees:edit', 'employees:manage']) &&
-    data.allowedTransitions?.includes('terminated');
+    canEdit &&
+    Boolean(data.allowedTransitions?.includes('terminated'));
 
   const removeMutation = useRemoveEmployeeMutation(queryClient, {
     onSuccess: () => {
@@ -82,6 +99,28 @@ export function CellAction({ data }: CellActionProps) {
     onError: (error) => {
       toast.error(
         getVietnameseApiErrorMessage(error, feedbackCopy.failure.delete(feedbackEntity.employee)),
+      );
+    },
+  });
+
+  const restoreMutation = useRestoreEmployeeMutation(queryClient, {
+    onSuccess: () => {
+      toast.success('Đã khôi phục hồ sơ nhân viên thành công.');
+    },
+    onError: (error) => {
+      toast.error(
+        getVietnameseApiErrorMessage(error, 'Khôi phục hồ sơ nhân viên thất bại'),
+      );
+    },
+  });
+
+  const purgeMutation = usePurgeEmployeeMutation(queryClient, {
+    onSuccess: () => {
+      toast.success('Đã xoá vĩnh viễn hồ sơ nhân viên.');
+    },
+    onError: (error) => {
+      toast.error(
+        getVietnameseApiErrorMessage(error, 'Xoá vĩnh viễn hồ sơ nhân viên thất bại'),
       );
     },
   });
@@ -194,7 +233,7 @@ export function CellAction({ data }: CellActionProps) {
             </DropdownMenuItem>
           )}
 
-          {canEdit && data.status === 'terminated' && (
+          {canManage && data.status === 'terminated' && (
             <DropdownMenuItem
               onClick={() => setRehireOpen(true)}
               className='text-emerald-600 focus:text-emerald-700 font-semibold'
@@ -205,7 +244,7 @@ export function CellAction({ data }: CellActionProps) {
           )}
 
           {canEdit && !isDeleted && (
-            <DropdownMenuItem onClick={() => router.push(`/employees/${data.id}`)}>
+            <DropdownMenuItem onClick={() => router.push(`/employees/${data.id}?mode=edit`)}>
               <Icons.edit className='mr-2 h-4 w-4' /> {commonUiCopy.edit}
             </DropdownMenuItem>
           )}
@@ -233,6 +272,35 @@ export function CellAction({ data }: CellActionProps) {
                 className='text-destructive focus:text-destructive'
               >
                 <Icons.trash className='mr-2 h-4 w-4' /> {commonUiCopy.delete}
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {canManage && isDeleted && data.status !== 'terminated' && (
+            <DropdownMenuItem
+              disabled={restoreMutation.isPending}
+              onClick={() => {
+                if (!data.id) return;
+                restoreMutation.mutate(data.id);
+              }}
+              className='text-emerald-600 focus:text-emerald-700 font-semibold'
+            >
+              <Icons.refresh className='mr-2 h-4 w-4' /> Khôi phục hồ sơ
+            </DropdownMenuItem>
+          )}
+
+          {isSuperAdmin && isDeleted && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={purgeMutation.isPending}
+                onClick={() => {
+                  if (!data.id) return;
+                  purgeMutation.mutate(data.id);
+                }}
+                className='text-destructive focus:text-destructive'
+              >
+                <Icons.trash className='mr-2 h-4 w-4' /> Xoá vĩnh viễn
               </DropdownMenuItem>
             </>
           )}

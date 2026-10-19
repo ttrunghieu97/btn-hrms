@@ -153,6 +153,7 @@ export class AttendanceSummaryReadService {
     status?: string;
     page?: number;
     limit?: number;
+    scope?: { tier: string; departmentId?: string; employeeId?: string };
   }): Promise<{
     rows: AttendanceSummaryWithOverride[];
     total: number;
@@ -164,6 +165,15 @@ export class AttendanceSummaryReadService {
     const offset = (page - 1) * limit;
 
     const conditions: SQL[] = [];
+    if (params.scope?.tier === "self" && params.scope.employeeId) {
+      conditions.push(eq(schema.attendanceDailySummaries.employeeId, params.scope.employeeId));
+    } else if (params.scope?.tier === "department" && params.scope.departmentId) {
+      const deptEmpSubquery = this.db
+        .select({ id: schema.employees.id })
+        .from(schema.employees)
+        .where(eq(schema.employees.departmentId, params.scope.departmentId));
+      conditions.push(inArray(schema.attendanceDailySummaries.employeeId, deptEmpSubquery));
+    }
     if (params.employeeId) {
       conditions.push(eq(schema.attendanceDailySummaries.employeeId, params.employeeId));
     }

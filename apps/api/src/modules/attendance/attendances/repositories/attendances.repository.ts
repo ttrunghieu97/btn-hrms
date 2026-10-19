@@ -278,9 +278,24 @@ export class AttendancesRepository extends BaseRepository<
     return { rows, total: Number(totalResult?.count ?? 0), page, limit };
   }
 
-  findByDateWithEmployee(date: string) {
+  findByDateWithEmployee(date: string, scope?: DataScope) {
+    const conditions: SQL[] = [eq(attendances.date, date)];
+
+    if (scope) {
+      if (scope.tier === "self" && scope.employeeId) {
+        conditions.push(eq(attendances.employeeId, scope.employeeId));
+      } else if (scope.tier === "department" && scope.departmentId) {
+        conditions.push(sql`EXISTS (
+          SELECT 1 FROM ${schema.orgAssignments}
+          WHERE ${schema.orgAssignments.employeeId} = ${attendances.employeeId}
+          AND ${schema.orgAssignments.departmentId} = ${scope.departmentId}
+          AND ${schema.orgAssignments.isCurrent} = true
+        )`);
+      }
+    }
+
     return this.db.query.attendances.findMany({
-      where: eq(attendances.date, date),
+      where: conditions.length === 1 ? conditions[0] : and(...conditions),
       with: {
         employee: { with: { department: true, orgAssignments: true } },
       },

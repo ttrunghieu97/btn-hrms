@@ -17,7 +17,7 @@ export function mapScheduleRequestToDto(
     date: typeof row.date === "string" ? row.date : String(row.date),
     requestType: row.requestType,
     reason: row.reason ?? undefined,
-    status: row.status,
+    status: row.status ? row.status.toLowerCase() : "pending",
     reviewedBy: row.reviewedBy ?? undefined,
     reviewedAt: row.reviewedAt?.toISOString?.() ?? undefined,
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),

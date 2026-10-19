@@ -29,6 +29,12 @@ export class PayslipResponseDto {
   publishedAt?: Date | null;
 
   @ApiPropertyOptional()
+  isProvisional?: boolean;
+
+  @ApiPropertyOptional()
+  calculationStatus?: string | null;
+
+  @ApiPropertyOptional()
   metadata?: Record<string, unknown>   | null;
 
   @ApiProperty()

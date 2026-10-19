@@ -1,6 +1,7 @@
 import { appCopy } from '@/lib/app-copy';
 import type { NavGroup } from '@/types';
 import { permissions } from '@/lib/permissions';
+import { isModuleNavVisible } from '@/config/module-rollout';
 
 export const navGroups: NavGroup[] = [
   {
@@ -11,6 +12,7 @@ export const navGroups: NavGroup[] = [
         url: '/overview',
         icon: 'dashboard',
         isActive: false,
+        visible: isModuleNavVisible('overview'),
         shortcut: ['d', 'd'],
         items: [],
         access: { permissions: ['dashboard:view'] }
@@ -26,6 +28,7 @@ export const navGroups: NavGroup[] = [
         icon: 'employee',
         shortcut: ['e', 'm'],
         isActive: false,
+        visible: isModuleNavVisible('employees'),
         items: [],
         access: { permissions: ['employees:view:department', 'employees:view:all', 'employees:view', 'employees:view:self'] }
       }
@@ -39,6 +42,7 @@ export const navGroups: NavGroup[] = [
         url: '/organization',
         icon: 'department',
         isActive: false,
+        visible: isModuleNavVisible('organization'),
         items: [],
         access: {
           permissions: ['organization:view']
@@ -54,6 +58,7 @@ export const navGroups: NavGroup[] = [
         url: '/attendance',
         icon: 'calendar',
         isActive: false,
+        visible: isModuleNavVisible('attendance'),
         items: [],
         access: {
           permissions: [
@@ -73,6 +78,7 @@ export const navGroups: NavGroup[] = [
         url: '/leave',
         icon: 'page',
         isActive: false,
+        visible: isModuleNavVisible('leave'),
         items: [],
         access: {
           permissions: [
@@ -92,6 +98,7 @@ export const navGroups: NavGroup[] = [
         url: '/recruitment/requisitions',
         icon: 'people',
         isActive: false,
+        visible: isModuleNavVisible('recruitment'),
         items: [],
         access: { permissions: ['recruitment:view'] }
       }
@@ -105,6 +112,7 @@ export const navGroups: NavGroup[] = [
         url: '/asset-management/catalog',
         icon: 'product',
         isActive: false,
+        visible: isModuleNavVisible('asset-management'),
         items: [],
         access: { permissions: ['asset:view'] }
       }
@@ -118,6 +126,7 @@ export const navGroups: NavGroup[] = [
         url: '/benefits/plans',
         icon: 'shieldCheck',
         isActive: false,
+        visible: isModuleNavVisible('benefits'),
         items: [],
         access: { permissions: ['benefits:view'] }
       }
@@ -131,6 +140,7 @@ export const navGroups: NavGroup[] = [
         url: '/expenses',
         icon: 'page',
         isActive: false,
+        visible: isModuleNavVisible('expenses'),
         items: [],
         access: { permissions: ['expenses:view'] }
       }
@@ -144,6 +154,7 @@ export const navGroups: NavGroup[] = [
         url: '/performance/cycles',
         icon: 'trophy',
         isActive: false,
+        visible: isModuleNavVisible('performance'),
         items: [],
         access: { permissions: ['performance:view'] }
       }
@@ -157,6 +168,7 @@ export const navGroups: NavGroup[] = [
         url: '/learning/courses',
         icon: 'school',
         isActive: false,
+        visible: isModuleNavVisible('learning'),
         items: [],
         access: { permissions: ['learning:view'] }
       }
@@ -170,6 +182,7 @@ export const navGroups: NavGroup[] = [
         url: '/onboarding',
         icon: 'exclusive',
         isActive: false,
+        visible: isModuleNavVisible('onboarding'),
         items: [],
         access: { permissions: ['onboarding:view'] }
       }
@@ -183,6 +196,7 @@ export const navGroups: NavGroup[] = [
         url: '/schedule',
         icon: 'calendar',
         isActive: false,
+        visible: isModuleNavVisible('schedule'),
         items: [],
         access: { permissions: ['schedule:view'] }
       }
@@ -197,6 +211,7 @@ export const navGroups: NavGroup[] = [
         icon: 'task',
         shortcut: ['t', 'k'],
         isActive: false,
+        visible: isModuleNavVisible('tasks'),
         items: [],
         access: { permissions: ['tasks:view'] }
       },
@@ -207,7 +222,7 @@ export const navGroups: NavGroup[] = [
         shortcut: ['c', 'c'],
         isActive: false,
         disabled: false,
-        visible: true,
+        visible: isModuleNavVisible('tasks'),
         items: [],
         access: { permissions: ['chat:view'] }
       }
@@ -221,6 +236,7 @@ export const navGroups: NavGroup[] = [
         url: '/monitoring',
         icon: 'activity',
         isActive: false,
+        visible: isModuleNavVisible('monitoring'),
         items: [],
         access: { permissions: ['monitoring:view'] }
       }
@@ -234,6 +250,7 @@ export const navGroups: NavGroup[] = [
         url: '/payroll',
         icon: 'page',
         isActive: false,
+        visible: isModuleNavVisible('payroll'),
         items: [],
         access: {
           permissions: ['payroll:view']
@@ -249,6 +266,7 @@ export const navGroups: NavGroup[] = [
         url: '/administration',
         icon: 'settings',
         isActive: false,
+        visible: isModuleNavVisible('administration'),
         items: [],
         access: {
           permissions: [
@@ -270,6 +288,7 @@ export const navGroups: NavGroup[] = [
         icon: 'profile',
         shortcut: ['m', 'm'],
         isActive: false,
+        visible: isModuleNavVisible('account'),
         items: [],
         access: { permissions: ['profile:view', 'employees:view:self'] }
       },
@@ -280,7 +299,7 @@ export const navGroups: NavGroup[] = [
         shortcut: ['n', 'n'],
         isActive: false,
         disabled: false,
-        visible: true,
+        visible: isModuleNavVisible('account'),
         items: [],
         access: { permissions: ['notifications:view'] }
       },
@@ -289,6 +308,7 @@ export const navGroups: NavGroup[] = [
         url: '/account/change-password',
         icon: 'lock',
         isActive: false,
+        visible: isModuleNavVisible('account'),
         items: [],
         access: { permissions: [permissions.auth.changePassword] }
       }
@@ -302,6 +322,7 @@ export const navGroups: NavGroup[] = [
         url: '/offboarding',
         icon: 'logout',
         isActive: false,
+        visible: isModuleNavVisible('offboarding'),
         items: [],
         access: {
           permissions: ['offboarding:view']

@@ -1,12 +1,12 @@
 import { type Logger } from "@nestjs/common";
 import { type MetricsService } from "../../../../shared/metrics/metrics.service";
-import { type ConsumerIdempotencyRepository } from "../repositories/consumer-idempotency.repository";
+import { type EventIdempotencyRepository } from "../../../../infrastructure/repositories/event-idempotency.repository";
 import { TASK_EVENTS_TOPIC, type TaskDomainEvent } from "../task-domain-events";
 
 export abstract class IdempotentConsumer {
   protected abstract logger: Logger;
   protected abstract consumerId: string;
-  protected abstract idempotencyRepo: ConsumerIdempotencyRepository;
+  protected abstract idempotencyRepo: EventIdempotencyRepository;
   protected abstract metrics: MetricsService;
 
   protected async processIdempotently(
@@ -15,7 +15,7 @@ export abstract class IdempotentConsumer {
   ): Promise<void> {
     try {
       await this.idempotencyRepo.transaction(async (tx) => {
-        await this.idempotencyRepo.insert(this.consumerId, event.eventId, tx);
+        await this.idempotencyRepo.markProcessed(this.consumerId, event.eventId, tx);
         await handler(tx);
       });
 

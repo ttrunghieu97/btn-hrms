@@ -67,10 +67,6 @@ function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (reason === 'other' && !note.trim()) {
-      showToast.error('Vui lòng nhập ghi chú chi tiết khi chọn lý do "Khác"');
-      return;
-    }
     setSubmitting(true);
     try {
       await onConfirm({
@@ -140,7 +136,6 @@ function AdjustmentModal({ employeeName, workDate, isNewEntry, currentRecord, on
                 <SelectItem value="policy_exception">Ngoại lệ chính sách / Công tác</SelectItem>
                 <SelectItem value="data_fix">Sửa lỗi thiết bị chấm công</SelectItem>
                 <SelectItem value="reconciliation">Đối soát dữ liệu kỳ công</SelectItem>
-                <SelectItem value="other">Khác</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -262,7 +257,7 @@ export function TimesheetEditorPage({ defaultPeriod }: { defaultPeriod?: string 
   const [showClose, setShowClose] = React.useState(false);
   const [showReopen, setShowReopen] = React.useState(false);
 
-  const canEdit = ts.periodStatus === 'open';
+  const canEdit = ts.periodStatus === 'open' || ts.periodStatus === 'in_review';
   const days = daysInMonth(ts.period);
 
   // Count of employees not yet individually verified (chưa chốt cá nhân)

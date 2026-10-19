@@ -93,11 +93,12 @@ export function PermissionWorkspace({ id, variant = 'full' }: PermissionWorkspac
     setActiveResourceId(null);
   }, [role]);
 
-  // Check if form has unsaved changes
-  const isDirty = useMemo(() => {
-    if (name !== initialState.name) return true;
-    if (description !== initialState.description) return true;
+  const selectedCount = useMemo(() => {
+    return Object.values(assignments).filter(a => a.selected).length;
+  }, [assignments]);
 
+  const changedCount = useMemo(() => {
+    let count = 0;
     const allKeys = new Set([
       ...Object.keys(assignments),
       ...Object.keys(initialState.assignments),
@@ -107,12 +108,20 @@ export function PermissionWorkspace({ id, variant = 'full' }: PermissionWorkspac
       const current = assignments[key];
       const initial = initialState.assignments[key];
       if (current?.selected !== initial?.selected || current?.scopeId !== initial?.scopeId) {
-        return true;
+        count++;
       }
     }
+    return count;
+  }, [assignments, initialState.assignments]);
 
-    return false;
-  }, [name, description, assignments, initialState]);
+  // Check if form has unsaved changes
+  const isDirty = useMemo(() => {
+    return (
+      name !== initialState.name ||
+      description !== initialState.description ||
+      changedCount > 0
+    );
+  }, [name, description, initialState.name, initialState.description, changedCount]);
 
   const handleBack = () => {
     if (isDirty) {
@@ -149,27 +158,6 @@ export function PermissionWorkspace({ id, variant = 'full' }: PermissionWorkspac
       // Handled by query client
     }
   };
-
-  const selectedCount = useMemo(() => {
-    return Object.values(assignments).filter(a => a.selected).length;
-  }, [assignments]);
-
-  const changedCount = useMemo(() => {
-    let count = 0;
-    const allKeys = new Set([
-      ...Object.keys(assignments),
-      ...Object.keys(initialState.assignments),
-    ]);
-
-    for (const key of allKeys) {
-      const current = assignments[key];
-      const initial = initialState.assignments[key];
-      if (current?.selected !== initial?.selected || current?.scopeId !== initial?.scopeId) {
-        count++;
-      }
-    }
-    return count;
-  }, [assignments, initialState.assignments]);
 
   if (isLoadingRole || isLoadingCatalog) {
     return (

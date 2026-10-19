@@ -52,7 +52,9 @@ export type IntentResult =
 function inferAction(from: TaskState, to: TaskState): TaskAction | null {
   switch (`${from}->${to}`) {
     case 'created->assigned': return 'assign';
+    case 'declined->assigned': return 'assign';
     case 'assigned->in_progress': return 'accept';
+    case 'assigned->declined': return 'reject';
     case 'assigned->created': return 'unassign';
     case 'in_progress->submitted': return 'submit';
     case 'in_progress->assigned': return 'assign';

@@ -32,6 +32,7 @@ import { OverviewFormTab } from '../tabs/overview-form-tab';
 import { DocumentsFormTab } from '../tabs/documents-form-tab';
 import { EmploymentFormTab } from '../tabs/employment-form-tab';
 import {
+  checkEmployeeCodeAvailability,
   useEmployeeQuery,
   useRemoveEmployeeMutation,
   useUpdateEmployeeMutation,
@@ -40,7 +41,6 @@ import {
   usePositionsQuery,
 } from '../../queries/employee-queries';
 import { ApiError } from '@/lib/api-error';
-import { getQueryClient } from '@/lib/query-client';
 import { extractApiFieldErrors } from '@/lib/form-errors';
 import { uploadTempFile } from '@/features/uploads';
 import { GENDER_OPTIONS } from '../../utils/employee-form-model';
@@ -54,9 +54,7 @@ import {
   toAssetUrl,
   createLocalId,
 } from '../../utils/employee-display';
-import { createEmployeeFormSchema, updateEmployeeFormSchema } from '../../schemas/employee.schema';
-import {
-} from '../../utils/employee-form-model';
+import { updateEmployeeFormSchema } from '../../schemas/employee.schema';
 import {
   createFormValues,
   buildEmployeePayload,
@@ -82,7 +80,6 @@ const VIEW_TABS = [
   { value: 'overview', label: employeeUiCopy.tabs.detailOverview },
   { value: 'documents', label: employeeUiCopy.tabs.detailDocuments },
   { value: 'employment', label: employeeUiCopy.tabs.detailEmployment },
-  { value: 'assets', label: employeeUiCopy.tabs.detailAssets },
   { value: 'timeline', label: employeeUiCopy.tabs.detailTimeline },
 ];
 
@@ -90,7 +87,6 @@ const EDIT_TABS = [
   { value: 'overview', label: employeeUiCopy.tabs.detailOverview },
   { value: 'documents', label: employeeUiCopy.tabs.detailDocuments },
   { value: 'employment', label: employeeUiCopy.tabs.detailEmployment },
-  { value: 'assets', label: employeeUiCopy.tabs.detailAssets },
 ];
 
 interface EmployeeDetailPageProps {
@@ -121,27 +117,64 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
   const [confirmDiscardOpen, setConfirmDiscardOpen] = React.useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const canEdit = hasAnyPermission(user?.permissions ?? [], ['employees:edit', 'employees:manage']);
-  const canDelete = hasAnyPermission(user?.permissions ?? [], ['employees:delete', 'employees:manage']);
-  const canResetPassword = hasAnyPermission(user?.permissions ?? [], [permissions.employees.resetPassword, 'employees:manage']);
+  const isSuperAdmin = Boolean(
+    user?.isSuperAdmin ||
+      user?.permissions?.includes('ALL') ||
+      user?.permissions?.includes('sys:all'),
+  );
+  const canEdit =
+    isSuperAdmin ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+    ]);
+  const canDelete =
+    isSuperAdmin ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.delete,
+      permissions.employees.manage,
+    ]);
+  const canResetPassword =
+    isSuperAdmin ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.resetPassword,
+      permissions.employees.manage,
+    ]);
   const showTerminate =
-    hasAnyPermission(user?.permissions ?? [], ['employees:edit', 'employees:manage']) &&
-    currentEmployee?.allowedTransitions?.includes('terminated');
+    canEdit &&
+    Boolean(currentEmployee?.allowedTransitions?.includes('terminated'));
+
+  const urlMode = searchParams.get('mode');
+  React.useEffect(() => {
+    if (urlMode === 'edit' && canEdit) {
+      setMode('edit');
+    }
+  }, [urlMode, canEdit]);
+
+  React.useEffect(() => {
+    if (mode === 'edit' && !EDIT_TABS.some((t) => t.value === activeTab)) {
+      setActiveTab('overview');
+    }
+  }, [mode, activeTab]);
 
   const avatarUrl = extractAssetUrl(currentEmployee?.avatar);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-  const [avatarUploadError, setAvatarUploadError] = React.useState<string | undefined>();
   const lastAvatarFileRef = React.useRef<File | null>(null);
   const avatarUploadRequestRef = React.useRef(0);
   const [isAvatarUploading, setIsAvatarUploading] = React.useState(false);
   const fieldUploadRequestRef = React.useRef(new Map<string, number>());
   const [fieldUploadKeys, setFieldUploadKeys] = React.useState<Set<string>>(() => new Set());
-  const [isAvatarRemoving, setIsAvatarRemoving] = React.useState(false);
 
   const [formValues, setFormValues] = React.useState<EditFormValues>(() =>
     createFormValues(currentEmployee),
   );
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [employeeCodeStatus, setEmployeeCodeStatus] = React.useState({
+    checking: false,
+    exists: false,
+    checkedValue: '',
+  });
+  const employeeCodeCheckRequestRef = React.useRef(0);
   const initialSnapshotRef = React.useRef('');
 
   /* Reset form when employee changes */
@@ -151,6 +184,60 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
     setFormValues(fresh);
     initialSnapshotRef.current = JSON.stringify(fresh);
   }, [currentEmployee, mode]);
+
+  React.useEffect(() => {
+    if (mode !== 'edit') {
+      setEmployeeCodeStatus({ checking: false, exists: false, checkedValue: '' });
+      return;
+    }
+
+    const code = formValues.employeeCode.trim();
+    const originalCode = (currentEmployee?.employeeCode ?? '').trim();
+    if (!code || code === originalCode) {
+      setEmployeeCodeStatus({ checking: false, exists: false, checkedValue: '' });
+      return;
+    }
+
+    const requestId = employeeCodeCheckRequestRef.current + 1;
+    employeeCodeCheckRequestRef.current = requestId;
+    setEmployeeCodeStatus((cur) => ({
+      checking: true,
+      exists: cur.checkedValue === code ? cur.exists : false,
+      checkedValue: cur.checkedValue,
+    }));
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await checkEmployeeCodeAvailability(code);
+        if (employeeCodeCheckRequestRef.current !== requestId) return;
+
+        setEmployeeCodeStatus({
+          checking: false,
+          exists: result.exists,
+          checkedValue: code,
+        });
+
+        if (result.exists) {
+          setErrors((cur) => ({
+            ...cur,
+            employeeCode: feedbackCopy.warning.employeeCodeExists,
+          }));
+        } else {
+          setErrors((cur) => {
+            if (cur.employeeCode !== feedbackCopy.warning.employeeCodeExists) return cur;
+            const next = { ...cur };
+            delete next.employeeCode;
+            return next;
+          });
+        }
+      } catch {
+        if (employeeCodeCheckRequestRef.current !== requestId) return;
+        setEmployeeCodeStatus({ checking: false, exists: false, checkedValue: '' });
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [formValues.employeeCode, currentEmployee?.employeeCode, mode]);
 
   /* Sync employee name to global breadcrumb-store */
   const displayName = React.useMemo(() => {
@@ -275,7 +362,6 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       validateEmployeeUpload(file, 'avatar');
       const previewUrl = URL.createObjectURL(file);
       lastAvatarFileRef.current = file;
-      setAvatarUploadError(undefined);
       setAvatarPreview((current) => {
         if (current) URL.revokeObjectURL(current);
         return previewUrl;
@@ -303,7 +389,6 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
         }));
       } catch {
         if (avatarUploadRequestRef.current !== requestId) return;
-        setAvatarUploadError(employeeUiCopy.uploadAvatarFailed);
         toast.error(employeeUiCopy.uploadAvatarFailed);
       } finally {
         if (avatarUploadRequestRef.current === requestId) setIsAvatarUploading(false);
@@ -318,7 +403,6 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
     const currentAvatar = formValues.avatar;
     if (avatarPreview) URL.revokeObjectURL(avatarPreview);
     setAvatarPreview(null);
-    setAvatarUploadError(undefined);
     setErrors({});
     lastAvatarFileRef.current = null;
     if (currentAvatar.status === 'existing' && currentAvatar.attachmentId) {
@@ -429,9 +513,7 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       if (current) URL.revokeObjectURL(current);
       return null;
     });
-    setAvatarUploadError(undefined);
     lastAvatarFileRef.current = null;
-    setIsAvatarRemoving(false);
     const fresh = createFormValues(currentEmployee);
     setFormValues(fresh);
     setErrors({});
@@ -474,7 +556,6 @@ export function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
       }
       setErrors(nextErrors);
 
-      const firstErrorField = Object.keys(nextErrors)[0];
       const errorTab = findFirstErrorTab(nextErrors);
       if (errorTab && errorTab !== activeTab) {
         setActiveTab(errorTab);
@@ -484,6 +565,27 @@ Kiểm tra tab "${label}"`);
       } else {
         toast.error(validation.error.issues[0]?.message ?? feedbackCopy.warning.reviewForm);
       }
+      return;
+    }
+
+    if (employeeCodeStatus.checking) {
+      toast.error(feedbackCopy.warning.employeeCodeChecking);
+      return;
+    }
+
+    const trimmedCode = formValues.employeeCode.trim();
+    const originalCode = (currentEmployee?.employeeCode ?? '').trim();
+    if (
+      trimmedCode &&
+      trimmedCode !== originalCode &&
+      employeeCodeStatus.checkedValue === trimmedCode &&
+      employeeCodeStatus.exists
+    ) {
+      setErrors((cur) => ({
+        ...cur,
+        employeeCode: feedbackCopy.warning.employeeCodeExists,
+      }));
+      toast.error(feedbackCopy.warning.employeeCodeExists);
       return;
     }
 
@@ -686,7 +788,7 @@ Kiểm tra tab "${label}"`);
               isPending={isPending}
               isEditMode
               usernameStatus={{ checking: false, exists: false, checkedValue: '' }}
-              employeeCodeStatus={{ checking: false, exists: false, checkedValue: '' }}
+              employeeCodeStatus={employeeCodeStatus}
               departmentOptions={departmentOptions}
               positionOptions={positionOptions}
               portalContainer={null}

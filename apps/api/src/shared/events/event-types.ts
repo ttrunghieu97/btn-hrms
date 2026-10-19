@@ -90,7 +90,7 @@ export function registerWorkforceEvents(): void {
     type: "employee.hired",
     version: 1,
     description: "Emitted when a new employee is created/hired",
-    producer: "CreateEmployeeUseCase / HireEmployeeUseCase",
+    producer: "CreateEmployeeUseCase / RehireEmployeeUseCase",
     requiredFields: ["scopeId", "employeeId", "userId", "hiredByUserId"],
     strict: true,
   });

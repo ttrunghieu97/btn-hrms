@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { hasAnyPermission } from '@project/permissions';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { useContractQuery } from '../../../api/contract-queries';
@@ -9,6 +10,8 @@ import { AmendContractDialog } from '../../dialogs/contract/amend-contract-dialo
 import { ContractHistoryDialog } from '../../dialogs/contract/contract-history-dialog';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
 import { formatDateVN } from '@/lib/date';
+import { permissions } from '@/lib/permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface EmployeeContractCardProps {
   employeeId: string;
@@ -52,6 +55,13 @@ function contractStatusColor(status: string): string {
 export function EmployeeContractCard({ employeeId }: EmployeeContractCardProps) {
   const [amendOpen, setAmendOpen] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const user = useAuthStore((state) => state.user);
+  const canEdit =
+    Boolean(user?.isSuperAdmin) ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+    ]);
 
   const contractQuery = useContractQuery(employeeId);
   const { data: salary } = useEmployeeSalaryQuery(employeeId);
@@ -115,16 +125,18 @@ export function EmployeeContractCard({ employeeId }: EmployeeContractCardProps) 
 
             <div className='border-t border-border/40 px-4 py-3'>
               <div className='flex gap-2'>
-                <Button
-                  type='button'
-                  variant='default'
-                  size='sm'
-                  className='flex-1'
-                  onClick={() => setAmendOpen(true)}
-                >
-                  <Icons.edit className='mr-1.5 size-3.5' />
-                  {commonUiCopy.edit}
-                </Button>
+                {canEdit && (
+                  <Button
+                    type='button'
+                    variant='default'
+                    size='sm'
+                    className='flex-1'
+                    onClick={() => setAmendOpen(true)}
+                  >
+                    <Icons.edit className='mr-1.5 size-3.5' />
+                    {commonUiCopy.edit}
+                  </Button>
+                )}
                 <Button
                   type='button'
                   variant='outline'
@@ -145,12 +157,14 @@ export function EmployeeContractCard({ employeeId }: EmployeeContractCardProps) 
         )}
       </div>
 
-      <AmendContractDialog
-        employeeId={employeeId}
-        contract={contract}
-        open={amendOpen}
-        onOpenChange={setAmendOpen}
-      />
+      {canEdit && (
+        <AmendContractDialog
+          employeeId={employeeId}
+          contract={contract}
+          open={amendOpen}
+          onOpenChange={setAmendOpen}
+        />
+      )}
 
       <ContractHistoryDialog
         employeeId={employeeId}

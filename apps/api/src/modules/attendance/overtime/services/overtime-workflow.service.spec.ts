@@ -156,5 +156,29 @@ describe("OvertimeWorkflowService", () => {
         { tx: true },
       );
     });
+
+    it("should reject self-approval and cross-department approval", async () => {
+      repo.isEmployeeInDepartment = jest.fn().mockResolvedValue(false);
+      repo.findById.mockResolvedValue({
+        id: "ot-1",
+        employeeId: "emp-1",
+        status: OvertimeStatus.PENDING,
+        workDate: "2026-04-14",
+        requestedMinutes: 60,
+      });
+
+      await expect(
+        service.approveRequest("ot-1", "user-1", undefined, {
+          actorEmployeeId: "emp-1",
+        }),
+      ).rejects.toThrow("Cannot approve or reject your own overtime request");
+
+      await expect(
+        service.approveRequest("ot-1", "user-2", undefined, {
+          actorEmployeeId: "emp-2",
+          scope: { tier: "department", departmentId: "dept-other" },
+        }),
+      ).rejects.toThrow("Cannot approve or reject overtime request outside your department");
+    });
   });
 });

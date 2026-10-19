@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { listSocialInsurances, createSocialInsurance, deleteSocialInsurance, type SocialInsuranceRecord } from '../../api/social-insurance';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { hasAnyPermission } from '@project/permissions';
+import {
+  listSocialInsurances,
+  createSocialInsurance,
+  deleteSocialInsurance,
+  type CreateSocialInsuranceDto,
+  type SocialInsuranceRecord,
+} from '../../api/social-insurance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +29,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
 import { formatDateVN } from '@/lib/date';
-import { useMutation } from '@tanstack/react-query';
+import { permissions } from '@/lib/permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
 const SOCIAL_STATUS_MAP: StatusMap = {
   pending: { label: 'Chờ duyệt', variant: 'outline' },
@@ -37,6 +45,14 @@ interface Props {
 
 export function SocialInsuranceCard({ employeeId }: Props) {
   const qc = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const canEdit =
+    Boolean(user?.isSuperAdmin) ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+      permissions.employees.manageSensitive,
+    ]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ insuranceNumber: '', startDate: '', endDate: '', reason: '' });
   const queryKey = ['social-insurance', employeeId];
@@ -47,7 +63,7 @@ export function SocialInsuranceCard({ employeeId }: Props) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (dto: { insuranceNumber: string; startDate: string }) =>
+    mutationFn: (dto: CreateSocialInsuranceDto) =>
       createSocialInsurance(employeeId, dto),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
@@ -73,36 +89,52 @@ export function SocialInsuranceCard({ employeeId }: Props) {
     <Card>
       <CardHeader className='flex flex-row items-center justify-between'>
         <CardTitle className='text-base'>Bảo hiểm xã hội</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size='sm' variant='outline'>
-              <Icons.add className='mr-1 size-3' /> Thêm
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Thêm BHXH</DialogTitle></DialogHeader>
-            <div className='grid gap-4 py-4'>
-              <div className='grid gap-2'>
-                <Label>Số BHXH</Label>
-                <Input value={form.insuranceNumber} onChange={(e) => setForm({ ...form, insuranceNumber: e.target.value })} placeholder='Nhập số BHXH...' />
-              </div>
-              <div className='grid gap-2'>
-                <Label>Ngày bắt đầu</Label>
-                <Input type='date' value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-              </div>
-              <div className='grid gap-2'>
-                <Label>Ngày kết thúc (không bắt buộc)</Label>
-                <Input type='date' value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant='outline' onClick={() => setOpen(false)}>Hủy</Button>
-              <Button onClick={() => createMutation.mutate({ insuranceNumber: form.insuranceNumber, startDate: form.startDate })} disabled={createMutation.isPending || !form.insuranceNumber || !form.startDate}>
-                {createMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+        {canEdit && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size='sm' variant='outline'>
+                <Icons.add className='mr-1 size-3' /> Thêm
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Thêm BHXH</DialogTitle></DialogHeader>
+              <div className='grid gap-4 py-4'>
+                <div className='grid gap-2'>
+                  <Label>Số BHXH</Label>
+                  <Input value={form.insuranceNumber} onChange={(e) => setForm({ ...form, insuranceNumber: e.target.value })} placeholder='Nhập số BHXH...' />
+                </div>
+                <div className='grid gap-2'>
+                  <Label>Ngày bắt đầu</Label>
+                  <Input type='date' value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                </div>
+                <div className='grid gap-2'>
+                  <Label>Ngày kết thúc (không bắt buộc)</Label>
+                  <Input type='date' value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+                </div>
+                <div className='grid gap-2'>
+                  <Label>Ghi chú / Lý do (không bắt buộc)</Label>
+                  <Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder='Nhập lý do...' />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant='outline' onClick={() => setOpen(false)}>Hủy</Button>
+                <Button
+                  onClick={() =>
+                    createMutation.mutate({
+                      insuranceNumber: form.insuranceNumber.trim(),
+                      startDate: form.startDate,
+                      ...(form.endDate ? { endDate: form.endDate } : {}),
+                      ...(form.reason.trim() ? { reason: form.reason.trim() } : {}),
+                    })
+                  }
+                  disabled={createMutation.isPending || !form.insuranceNumber.trim() || !form.startDate}
+                >
+                  {createMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -124,9 +156,11 @@ export function SocialInsuranceCard({ employeeId }: Props) {
                 </div>
                 <div className='flex items-center gap-2'>
                   <StatusBadge status={r.status} mapping={SOCIAL_STATUS_MAP} />
-                  <Button variant='ghost' size='icon' className='size-8' onClick={() => deleteMutation.mutate(r.id)} disabled={deleteMutation.isPending}>
-                    <Icons.trash className='size-4 text-destructive' />
-                  </Button>
+                  {canEdit && (
+                    <Button variant='ghost' size='icon' className='size-8' onClick={() => deleteMutation.mutate(r.id)} disabled={deleteMutation.isPending}>
+                      <Icons.trash className='size-4 text-destructive' />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

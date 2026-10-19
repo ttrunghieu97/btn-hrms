@@ -51,17 +51,13 @@ export class TimesheetSnapshotService {
     const from = `${period}-01`;
     const to = `${period}-${String(daysInMonth).padStart(2, "0")}`;
 
-    // Only HR-verified (done) employees enter the snapshot. Close is blocked
-    // while drafts remain, so this normally equals all employees with data —
-    // but guards periods closed before this feature or drafts that slipped in.
-    const verified = await this.periodLockRepo.listEmployeeVerification(period, tx);
+    // Include all employees with attendance summaries in range so no employee
+    // is silently omitted from the snapshot if only a subset of employees had
+    // explicit verification rows created. Close validation separately blocks
+    // closing while any tracked verification row remains in draft.
+    await this.periodLockRepo.listEmployeeVerification(period, tx);
     const allIdsInRange = await this.timekeepingRepo.findEmployeeIdsWithSummariesInRange(from, to);
-    const doneIds = new Set(
-      verified.filter((v) => v.status === "done").map((v) => v.employeeId),
-    );
-    const employeeIds = verified.length > 0
-      ? allIdsInRange.filter((id) => doneIds.has(id))
-      : allIdsInRange;
+    const employeeIds = allIdsInRange;
 
     if (employeeIds.length === 0) return 0;
 

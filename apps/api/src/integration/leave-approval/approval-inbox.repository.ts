@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
 import type { AppDatabase } from "@/infrastructure/database/database-client.type";
 import * as schema from "@/infrastructure/database/schema";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull, inArray } from "drizzle-orm";
 
 export interface ApprovalInboxItem {
   approvalRequestId: string;
@@ -98,6 +98,7 @@ export class ApprovalInboxRepository {
       )
       .where(
         and(
+          inArray(schema.approvalRequests.id, approvalRequestIds),
           eq(schema.approvalRequests.status, "pending"),
           // Only leave-type subjects
           eq(schema.approvalRequests.subjectType, "leave"),

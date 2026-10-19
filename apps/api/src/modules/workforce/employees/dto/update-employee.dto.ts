@@ -11,9 +11,9 @@ import {
   AttachmentIntentDto,
   EmployeeCertificationIntentDto,
   EmployeeDocumentIntentDto,
-  EMPLOYEE_COMMAND_STATUSES,
+  EMPLOYEE_STATUS_VALUES,
   EMPLOYEE_GENDERS,
-  type EmployeeCommandStatus,
+  type EmployeeStatusValue,
   type EmployeeGender,
 } from "./create-employee.dto";
 import { IsOptionalDateString } from "../../../../shared/decorators/optional-date-string.decorator";
@@ -84,8 +84,8 @@ export class UpdateEmployeeDto {
 
   @IsString()
   @IsOptional()
-  @IsIn(EMPLOYEE_COMMAND_STATUSES)
-  status?: EmployeeCommandStatus;
+  @IsIn(EMPLOYEE_STATUS_VALUES)
+  status?: EmployeeStatusValue;
 
   @IsString()
   @IsOptional()

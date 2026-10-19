@@ -13,8 +13,11 @@ jest.mock('@/lib/query-client', () => ({
   getQueryClient: () => ({})
 }));
 
+let mockSearchParams = new URLSearchParams();
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('../queries/employee-queries', () => ({
@@ -62,8 +65,28 @@ describe('EmployeeCreatePage', () => {
     mutate.mockReset();
     (uploadTempFile as jest.Mock).mockClear();
     uploadPending = false;
+    mockSearchParams = new URLSearchParams();
     URL.createObjectURL = jest.fn(() => 'blob:preview');
     URL.revokeObjectURL = jest.fn();
+  });
+
+  it('pre-fills candidate details and shows offer banner when navigated with fromOfferId', async () => {
+    mockSearchParams = new URLSearchParams({
+      fromOfferId: 'offer-123',
+      fullName: 'Nguyễn Văn An',
+      email: 'an.nguyen@company.vn',
+      phone: '0901234567',
+      startDate: '2026-11-01',
+    });
+
+    render(<EmployeeCreatePage />);
+
+    expect(
+      screen.getByText(/Thư mời nhận việc đã chấp thuận/i),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Nguyễn Văn')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('An')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('an.nguyen@company.vn')).toBeInTheDocument();
   });
 
   it('shows a local preview and starts staging immediately after pick', async () => {

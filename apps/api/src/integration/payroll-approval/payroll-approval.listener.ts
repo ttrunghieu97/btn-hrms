@@ -5,8 +5,6 @@ import { PayrollDecisionHandler } from "./payroll-decision.handler.service";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
 
-const CONSUMER_ID = "payroll-approval-listener";
-
 @Injectable()
 export class PayrollApprovalListener implements OnModuleInit {
   private readonly logger: ContextLogger;

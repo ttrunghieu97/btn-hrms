@@ -287,7 +287,7 @@ function ApplicationDetailDialog({
 
             <section className='flex flex-col gap-2'>
               <h3 className='text-sm font-semibold'>{copy.sections.offers}</h3>
-              <OffersPanel applicationId={applicationId} />
+              <OffersPanel applicationId={applicationId} candidate={app.candidate} />
             </section>
           </div>
         ) : (

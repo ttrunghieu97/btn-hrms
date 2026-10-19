@@ -30,4 +30,12 @@ describe("ListOnboardingProcessesUseCase", () => {
     const result = await useCase.execute(1, 20);
     expect(result).toEqual({ rows: [], total: 0 });
   });
+
+  it("should pass employeeId and status filters to repository when provided", async () => {
+    await useCase.execute(1, 10, { employeeId: "emp-1", status: "in_progress" });
+    expect(repo.findByType).toHaveBeenCalledWith("onboarding", 1, 10, {
+      employeeId: "emp-1",
+      status: "in_progress",
+    });
+  });
 });

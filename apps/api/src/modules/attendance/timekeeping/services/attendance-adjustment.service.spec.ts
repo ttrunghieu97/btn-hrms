@@ -90,11 +90,11 @@ describe("AttendanceAdjustmentService", () => {
     ).rejects.toThrow("Adjustments can only be created for closed periods");
   });
 
-  it("approves adjustment and stages event within transaction", async () => {
+  it("approves adjustment from under_review or requested status and stages event within transaction", async () => {
     mockTimekeepingRepo.findAdjustmentById.mockResolvedValue({
       id: "adj-1",
       period: "2026-08",
-      status: "under_review",
+      status: "requested",
     });
 
     const result = await service.approve("adj-1", "user-approver");
@@ -107,6 +107,27 @@ describe("AttendanceAdjustmentService", () => {
     );
     expect(mockEventOutbox.stage).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "attendance.adjustment.approved.v1" }),
+      { tx: true },
+    );
+  });
+
+  it("rejects adjustment directly from requested status and stages event within transaction", async () => {
+    mockTimekeepingRepo.findAdjustmentById.mockResolvedValue({
+      id: "adj-1",
+      period: "2026-08",
+      status: "requested",
+    });
+
+    const result = await service.reject("adj-1", "user-approver", "invalid hours");
+
+    expect(result.status).toBe("rejected");
+    expect(mockTimekeepingRepo.updateAdjustment).toHaveBeenCalledWith(
+      "adj-1",
+      expect.objectContaining({ status: "rejected", rejectionReason: "invalid hours" }),
+      { tx: true },
+    );
+    expect(mockEventOutbox.stage).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "attendance.adjustment.rejected.v1" }),
       { tx: true },
     );
   });

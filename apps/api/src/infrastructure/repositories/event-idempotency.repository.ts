@@ -11,8 +11,10 @@ export class EventIdempotencyRepository {
 
   async isProcessed(consumerId: string, eventId: string): Promise<boolean> {
     const row = await this.db.query.consumerIdempotency.findFirst({
-      where: (t: any, { and, eq }: any) =>
-        and(eq(t.consumerId, consumerId), eq(t.eventId, eventId)),
+      where: (t: any, { and: andFn, eq: eqFn }: any) =>
+        typeof andFn === "function"
+          ? andFn(eqFn(t.consumerId, consumerId), eqFn(t.eventId, eventId))
+          : eqFn(t.eventId, eventId),
     });
     return !!row;
   }

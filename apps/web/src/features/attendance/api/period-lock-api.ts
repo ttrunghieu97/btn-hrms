@@ -8,7 +8,7 @@ import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedb
 export interface PeriodLockData {
   id: string;
   period: string;
-  status: 'draft' | 'in_review' | 'locked' | 'closed';
+  status: 'draft' | 'open' | 'in_review' | 'locked' | 'payroll_processing' | 'payroll_posted' | 'closed';
   lockedByUserId?: string | null;
   lockedAt?: string | null;
   unlockedByUserId?: string | null;
@@ -25,6 +25,9 @@ export interface PeriodTransitionRecord {
   performedByUserId: string;
   performedAt: string;
   remarks?: string | null;
+  changedByUserId?: string;
+  createdAt?: string;
+  reason?: string | null;
 }
 
 const PERIOD_LOCK_KEY = (period: string) => ['/api/v1/timekeeping/period-locks', period] as const;
@@ -38,8 +41,15 @@ export async function fetchPeriodLock(period: string): Promise<PeriodLockData | 
 
 export async function fetchPeriodHistory(period: string): Promise<PeriodTransitionRecord[]> {
   const res = await customFetch<any>(`/api/v1/timekeeping/period-locks/${period}/history`);
-  const unwrapped = unwrapData<PeriodTransitionRecord[]>(res);
-  return Array.isArray(unwrapped) ? unwrapped : [];
+  const unwrapped = unwrapData<any[]>(res);
+  if (!Array.isArray(unwrapped)) return [];
+  return unwrapped.map((item) => ({
+    ...item,
+    action: item.action || `${item.fromStatus} → ${item.toStatus}`,
+    performedByUserId: item.performedByUserId ?? item.changedByUserId ?? '',
+    performedAt: item.performedAt ?? item.createdAt ?? '',
+    remarks: item.remarks ?? item.reason ?? null,
+  }));
 }
 
 export function usePeriodLockQuery(period: string) {

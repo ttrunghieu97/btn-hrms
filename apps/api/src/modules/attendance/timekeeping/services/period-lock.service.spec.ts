@@ -1,4 +1,4 @@
-import { computeAvailableActions } from "./period-lock.service";
+import { computeAvailableActions, PeriodLockService } from "./period-lock.service";
 import { Permissions } from "../../../../core/security/permissions/permissions.registry";
 
 describe("computeAvailableActions", () => {
@@ -55,5 +55,107 @@ describe("computeAvailableActions", () => {
 
   it("unknown status: no actions", () => {
     expect(computeAvailableActions("bogus", ["sys:all"])).toEqual([]);
+  });
+});
+
+describe("PeriodLockService transactional outbox staging", () => {
+  it("passes transaction handle tx when staging period transition events", async () => {
+    const txHandle = { tx: "period-lock-tx" };
+    const periodLockRepo = {
+      ensurePeriod: jest.fn().mockResolvedValue({ period: "2026-08", status: "open" }),
+      transaction: jest.fn().mockImplementation(async (cb: any) => cb(txHandle)),
+      upsert: jest.fn().mockResolvedValue({ period: "2026-08", status: "in_review" }),
+      recordTransition: jest.fn().mockResolvedValue(undefined),
+    };
+    const eventOutbox = {
+      stage: jest.fn().mockResolvedValue(undefined),
+    };
+    const snapshotService = {
+      createSnapshotForPeriod: jest.fn().mockResolvedValue(5),
+    };
+    const reconciliationService = {
+      runReconciliation: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const service = new PeriodLockService(
+      periodLockRepo as any,
+      eventOutbox as any,
+      snapshotService as any,
+      reconciliationService as any,
+    );
+
+    await service.review("user-1", "2026-08");
+    expect(eventOutbox.stage).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "timesheet.period.reviewed.v1" }),
+      txHandle,
+    );
+  });
+
+  it("creates a locked snapshot inside the transaction on approve", async () => {
+    const txHandle = { tx: "approve-tx" };
+    const periodLockRepo = {
+      ensurePeriod: jest.fn().mockResolvedValue({ period: "2026-08", status: "in_review" }),
+      transaction: jest.fn().mockImplementation(async (cb: any) => cb(txHandle)),
+      upsert: jest.fn().mockResolvedValue({ period: "2026-08", status: "locked" }),
+      recordTransition: jest.fn().mockResolvedValue(undefined),
+    };
+    const eventOutbox = { stage: jest.fn().mockResolvedValue(undefined) };
+    const snapshotService = { createSnapshotForPeriod: jest.fn().mockResolvedValue(12) };
+    const reconciliationService = { runReconciliation: jest.fn().mockResolvedValue(undefined) };
+
+    const service = new PeriodLockService(
+      periodLockRepo as any,
+      eventOutbox as any,
+      snapshotService as any,
+      reconciliationService as any,
+    );
+
+    await service.approve("user-1", "2026-08");
+    expect(snapshotService.createSnapshotForPeriod).toHaveBeenCalledWith(
+      "2026-08",
+      "locked",
+      txHandle,
+    );
+    expect(periodLockRepo.recordTransition).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { snapshotCount: 12 },
+      }),
+      txHandle,
+    );
+  });
+
+  it("allows closing a locked period with default remarks and blocks verify/unverify when locked", async () => {
+    const txHandle = { tx: "close-tx" };
+    const periodLockRepo = {
+      ensurePeriod: jest.fn().mockResolvedValue({ period: "2026-08", status: "locked" }),
+      transaction: jest.fn().mockImplementation(async (cb: any) => cb(txHandle)),
+      upsert: jest.fn().mockResolvedValue({ period: "2026-08", status: "closed" }),
+      recordTransition: jest.fn().mockResolvedValue(undefined),
+      verifyEmployee: jest.fn(),
+      unverifyEmployee: jest.fn(),
+    };
+    const eventOutbox = { stage: jest.fn().mockResolvedValue(undefined) };
+    const snapshotService = { createSnapshotForPeriod: jest.fn().mockResolvedValue(8) };
+    const reconciliationService = { runReconciliation: jest.fn().mockResolvedValue(undefined) };
+
+    const service = new PeriodLockService(
+      periodLockRepo as any,
+      eventOutbox as any,
+      snapshotService as any,
+      reconciliationService as any,
+    );
+
+    await expect(service.verifyEmployee("user-1", "2026-08", "emp-1")).rejects.toThrow();
+    await expect(service.unverifyEmployee("2026-08", "emp-1")).rejects.toThrow();
+
+    await service.close("user-1", "2026-08");
+    expect(periodLockRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        period: "2026-08",
+        status: "closed",
+        remarks: "Closed period",
+      }),
+      txHandle,
+    );
   });
 });

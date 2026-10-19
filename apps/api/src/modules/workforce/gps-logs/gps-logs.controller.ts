@@ -12,8 +12,8 @@ import { GPSLogQueryDto } from "./dto/gps-log-query.dto";
 import { ListGPSLogsUseCase } from "./use-cases/list-gps-logs.usecase";
 import { CreateGPSLogForCurrentUserUseCase } from "./use-cases/create-gps-log-for-current-user.usecase";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { RequirePermission } from "../../../core/security/decorators/require-permission.decorator";
-import { Permissions } from "../../../core/security/permissions/permissions.registry";
+import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
+import { AttendancePolicies } from "../../../core/security/policies/attendance.policy";
 import { AuthUser } from "../../../core/security/types/auth-user.interface";
 
 @ApiTags("GPS Logs")
@@ -26,14 +26,14 @@ export class GPSLogsController {
   ) {}
 
   @Get()
-  @RequirePermission(Permissions.GPS_LOGS_VIEW)
-  @ApiOperation({ summary: "Get GPS history (for managers)" })
-  findAll(@Query() query: GPSLogQueryDto) {
-    return this.listGPSLogs.execute(query);
+  @CheckPolicy(AttendancePolicies.view)
+  @ApiOperation({ summary: "Get GPS history (scoped by user permissions)" })
+  findAll(@Request() req: { user?: AuthUser }, @Query() query: GPSLogQueryDto) {
+    return this.listGPSLogs.execute(query, req?.user);
   }
 
   @Post()
-  @RequirePermission(Permissions.GPS_LOGS_SUBMIT)
+  @CheckPolicy(AttendancePolicies.check)
   @AuditLog({ action: "gps_log_submit", entity: "gps_log" })
   @ApiOperation({ summary: "Submit GPS coordinates (for field workers)" })
   async create(@Request() req: { user: AuthUser }, @Body() dto: CreateGPSLogDto) {

@@ -6,6 +6,14 @@ export class ListEnrollmentsUseCase {
   constructor(private readonly repo: BenefitEnrollmentRepository) {}
   async execute(employeeId?: string): Promise<EnrollmentResponseDto[]> {
     const rows = employeeId?.trim() ? await this.repo.findByEmployee(employeeId.trim()) : await this.repo.findAll();
-    return rows.map((r) => ({ id: r.id, planId: r.planId, employeeId: r.employeeId, status: r.status, coverageType: r.coverageType }));
+    return rows.map((r) => ({
+      id: r.id,
+      planId: r.planId,
+      employeeId: r.employeeId,
+      status: r.status,
+      coverageType: r.coverageType,
+      effectiveFrom: r.effectiveFrom ?? null,
+      enrolledAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : (r.createdAt as string | undefined),
+    }));
   }
 }

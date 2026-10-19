@@ -83,8 +83,9 @@ export class CancelLeaveRequestUseCase {
         );
       }
 
-      // 2. Restore Balance if previously approved
-      if (wasApproved) {
+      // 2. Restore Balance if previously approved and leave type is paid
+      const isPaid = (existing as { leaveType?: { isPaid?: boolean } }).leaveType?.isPaid ?? true;
+      if (wasApproved && isPaid) {
         const balanceYear = new Date(existing.startDate).getFullYear();
         const balance = await this.leaveRequestsRepo.findBalanceForYear(
           existing.employeeId,

@@ -31,6 +31,8 @@ describe('valid transitions', () => {
     ['submitted -> completed (by creator)', snap('submitted', 'a1'), 'approve' as const, creator],
     ['submitted -> revision (by manager)', snap('submitted', 'a1'), 'request_revision' as const, manager],
     ['revision -> submitted (by assignee)', snap('revision', 'a1'), 'resubmit' as const, assignee],
+    ['declined -> assigned (by manager)', snap('declined', 'a1'), 'assign' as const, manager],
+    ['declined -> cancelled (by creator)', snap('declined', 'a1'), 'cancel' as const, creator],
   ])('allows %s', (_label, snapshot, action, actor) => {
     const result = transition(snapshot, action, actor);
     expect(result.ok).toBe(true);

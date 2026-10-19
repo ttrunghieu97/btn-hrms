@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import { Type } from "class-transformer";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { Transform } from "class-transformer";
 import { PagedQueryDto } from "../../../../shared/dto/pagination.dto";
 
 export class ListDocumentsQueryDto extends PagedQueryDto {
@@ -26,8 +26,14 @@ export class ListDocumentsQueryDto extends PagedQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) =>
+    value === "true" || value === true
+      ? true
+      : value === "false" || value === false
+        ? false
+        : undefined,
+  )
   @IsBoolean()
-  @Type(() => Boolean)
   isActive?: boolean;
 
   @ApiPropertyOptional({ example: "createdAt:desc" })

@@ -19,6 +19,8 @@ export class CancelTransferUseCase {
     if (!instance) throwNotFound("Transfer request not found", ERROR_CODES.INVALID_REQUEST, { instanceId });
     if (instance.subjectId !== employeeId)
       throwBadRequest("Transfer request does not belong to this employee", ERROR_CODES.INVALID_REQUEST, { instanceId });
+    if (instance.status !== "active")
+      throwBadRequest("Transfer request is not active", ERROR_CODES.INVALID_REQUEST, { instanceId, status: instance.status });
 
     const currentUser = this.requestContext.get();
 
@@ -36,6 +38,15 @@ export class CancelTransferUseCase {
       status: "completed",
       completedAt: new Date(),
     });
+
+    await this.eventOutbox.stage(
+      new EmployeeTransferCancelledEvent({
+        employeeId,
+        cancelledByUserId: currentUser?.userId ?? null,
+        workflowInstanceId: instanceId,
+        reason: reason ?? "Cancelled",
+      }),
+    );
 
     return { success: true, status: "cancelled" };
   }

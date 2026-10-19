@@ -22,7 +22,7 @@ function makeUseCase(overrides?: Record<string, any>) {
     ...overrides?.eventOutbox,
   };
   const workflowEngine = {
-    startWorkflow: jest.fn().mockResolvedValue({ id: "wf-1" }),
+    startWorkflow: jest.fn().mockResolvedValue({ id: "wf-1", currentState: "initiated" }),
     transition: jest.fn().mockResolvedValue(undefined),
     ...overrides?.workflowEngine,
   };
@@ -95,6 +95,15 @@ describe("RequestTransferUseCase", () => {
       findByIdentifier: jest.fn().mockResolvedValue(null),
     };
     const { useCase } = makeUseCase({ employeesRepo });
+    await expect(useCase.execute("e1", dto)).rejects.toThrow();
+  });
+
+  it("rejects when employee already has an active transfer workflow", async () => {
+    const workflowEngine = {
+      startWorkflow: jest.fn().mockResolvedValue({ id: "wf-existing", currentState: "manager_approval" }),
+      transition: jest.fn().mockResolvedValue(undefined),
+    };
+    const { useCase } = makeUseCase({ workflowEngine });
     await expect(useCase.execute("e1", dto)).rejects.toThrow();
   });
 });

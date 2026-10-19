@@ -39,6 +39,18 @@ export class IdentityAdminAdapter implements IdentityAdminPort {
   }
 
   async deleteUser(userId: string, tx: IdentityDb): Promise<void> {
+    const empRows = await tx
+      .select({ id: schema.employees.id })
+      .from(schema.employees)
+      .where(eq(schema.employees.userId, userId));
+    for (const emp of empRows) {
+      await tx
+        .delete(schema.employeeContracts)
+        .where(eq(schema.employeeContracts.employeeId, emp.id));
+      await tx
+        .delete(schema.employees)
+        .where(eq(schema.employees.id, emp.id));
+    }
     await tx.delete(schema.users).where(eq(schema.users.id, userId));
   }
 

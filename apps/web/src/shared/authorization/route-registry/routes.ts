@@ -75,7 +75,15 @@ export const routeRegistry: readonly RouteDef[] = [
   // ── Attendance ────────────────────────────────────────────────────────
   {
     path: '/attendance',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:check',
+        'attendance:view:self',
+        'attendance:view:department',
+        'attendance:view:all',
+        'gps-logs:view',
+      ],
+    },
     nav: { title: 'Chấm công', icon: 'calendar', group: 'Nhân sự' },
   },
 
@@ -234,27 +242,95 @@ export const routeRegistry: readonly RouteDef[] = [
   },
   {
     path: '/attendance/history',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:check',
+        'attendance:view:self',
+        'attendance:view:department',
+        'attendance:view:all',
+        'gps-logs:view',
+      ],
+    },
   },
   {
     path: '/attendance/summary',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:timesheet:view',
+        'attendance:timesheet:manage',
+        'attendance:timesheet:approve',
+        'attendance:period:view',
+        'attendance:period:review',
+        'attendance:period:approve',
+        'attendance:period:lock',
+        'attendance:period:unlock',
+        'attendance:period:close',
+        'attendance:report',
+        'attendance:view:department',
+        'attendance:view:all',
+      ],
+    },
   },
   {
     path: '/attendance/analytics',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'dashboard:view',
+        'attendance:report',
+        'attendance:view:department',
+        'attendance:view:all',
+      ],
+    },
   },
   {
     path: '/attendance/management',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:timesheet:view',
+        'attendance:timesheet:manage',
+        'attendance:timesheet:approve',
+        'attendance:period:view',
+        'attendance:period:review',
+        'attendance:period:approve',
+        'attendance:period:lock',
+        'attendance:period:unlock',
+        'attendance:period:close',
+        'attendance:report',
+        'attendance:view:department',
+        'attendance:view:all',
+      ],
+    },
   },
   {
     path: '/attendance/management/periods/:period',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:timesheet:view',
+        'attendance:timesheet:manage',
+        'attendance:timesheet:approve',
+        'attendance:period:view',
+        'attendance:period:review',
+        'attendance:period:approve',
+        'attendance:period:lock',
+        'attendance:period:unlock',
+        'attendance:period:close',
+        'attendance:report',
+        'attendance:view:department',
+        'attendance:view:all',
+      ],
+    },
   },
   {
     path: '/attendance/gps-logs',
-    permission: { anyOf: ['attendance:view:self', 'attendance:view:department', 'attendance:view:all'] },
+    permission: {
+      anyOf: [
+        'attendance:check',
+        'attendance:view:self',
+        'attendance:view:department',
+        'attendance:view:all',
+        'gps-logs:view',
+      ],
+    },
   },
   {
     path: '/leave/requests',

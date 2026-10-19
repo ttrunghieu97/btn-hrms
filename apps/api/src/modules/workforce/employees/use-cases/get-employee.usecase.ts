@@ -53,11 +53,15 @@ export class GetEmployeeUseCase {
 
   private hasSensitiveAccess(): boolean {
     const context = this.requestContext?.get?.();
+    if (!context) return false;
+    const perms = context.permissions ?? [];
     return (
-      context?.isSuperAdmin === true ||
-      context?.permissions?.includes(Permissions.SYS_ALL) === true ||
-      context?.permissions?.includes(Permissions.EMPLOYEES_VIEW_SENSITIVE) === true ||
-      context?.permissions?.includes(Permissions.EMPLOYEES_MANAGE_SENSITIVE) === true
+      context.isSuperAdmin === true ||
+      perms.includes(Permissions.SYS_ALL) ||
+      perms.includes(Permissions.EMPLOYEES_VIEW_SENSITIVE) ||
+      perms.includes("employees:view:sensitive") ||
+      perms.includes(Permissions.EMPLOYEES_MANAGE_SENSITIVE) ||
+      perms.includes("employees:manage:sensitive")
     );
   }
 }

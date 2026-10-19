@@ -19,4 +19,16 @@ describe(ListOffboardingsUseCase.name, () => {
     expect(result.rows[0]!.status).toBe("in_progress");
     expect(result.total).toBe(1);
   });
+
+  it("passes employeeId and status filters to processReader when provided", async () => {
+    const processReader = {
+      findByType: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
+    };
+    const useCase = new ListOffboardingsUseCase(processReader as any);
+    await useCase.execute(1, 10, { employeeId: "emp-1", status: "in_progress" });
+    expect(processReader.findByType).toHaveBeenCalledWith("offboarding", 1, 10, {
+      employeeId: "emp-1",
+      status: "in_progress",
+    });
+  });
 });

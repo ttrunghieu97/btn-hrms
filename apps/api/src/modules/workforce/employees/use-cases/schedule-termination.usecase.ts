@@ -34,10 +34,20 @@ export class ScheduleTerminationUseCase {
       throwBadRequest("Cannot schedule termination for deleted employee", ERROR_CODES.INVALID_REQUEST, { employeeId });
     }
 
+    if (!input.effectiveDate || !input.reason?.trim()) {
+      throwBadRequest("Effective date and reason are required", ERROR_CODES.INVALID_REQUEST, { employeeId });
+    }
+
     // Lifecycle service validates employee is in a terminable state
     this.lifecycle.assertCanScheduleTermination(emp);
 
     const currentUser = this.requestContext.get();
+    const metadata = {
+      effectiveDate: input.effectiveDate,
+      reason: input.reason,
+      lastWorkingDate: input.lastWorkingDate ?? null,
+      scheduledByUserId: currentUser?.userId ?? null,
+    };
 
     // Start workflow instance
     const instance = await this.workflowEngine.startWorkflow({
@@ -45,13 +55,14 @@ export class ScheduleTerminationUseCase {
       subjectType: "employee",
       subjectId: employeeId,
       actorUserId: currentUser?.userId ?? null,
-      metadata: {
-        effectiveDate: input.effectiveDate,
-        reason: input.reason,
-        lastWorkingDate: input.lastWorkingDate ?? null,
-        scheduledByUserId: currentUser?.userId ?? null,
-      },
+      metadata,
     });
+
+    if (typeof (this.workflowEngine as any).updateInstance === "function") {
+      await (this.workflowEngine as any).updateInstance(instance.id, {
+        metadata,
+      });
+    }
 
     await this.employeesRepo.transaction(async (tx) => {
       await this.eventOutbox.stage(

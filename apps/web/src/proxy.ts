@@ -2,44 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hasAnyPermission } from '@project/permissions';
 import { canAccessRoute } from '@/features/authorization/utils/route-resolver';
 import { matchRoute } from '@/features/authorization/utils/route-matcher';
-import { routeRegistry } from '@/shared/authorization';
+import { routeRegistry } from '@/shared/authorization/route-registry/routes';
 import { decodePermissions } from '@/lib/server/permission-session-edge';
+import { isDisabledModulePath, isProtectedPath } from '@/config/module-rollout';
 
 const ACCESS_COOKIE_NAME = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token';
 const REFRESH_COOKIE_NAME = process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token';
 const REFRESH_ATTEMPT_PARAM = 'refreshAttempt';
-
-const PROTECTED_PATHS = [
-  '/account',
-  '/activity',
-  '/admin',
-  '/administration',
-  '/asset-management',
-  '/attendance',
-  '/benefits',
-  '/change-password',
-  '/chat',
-  '/employees',
-  '/expenses',
-  '/learning',
-  '/leave',
-  '/monitoring',
-  '/notifications',
-  '/offboarding',
-  '/onboarding',
-  '/organization',
-  '/overview',
-  '/payroll',
-  '/performance',
-  '/recruitment',
-  '/schedule',
-  '/tasks',
-  '/workspace',
-];
-
-function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
-}
 
 function requestOrigin(req: NextRequest): string {
   const host = req.headers.get('host') || 'localhost:8080';
@@ -102,7 +71,7 @@ export default async function middleware(req: NextRequest) {
 
   // Compatibility: /dashboard/* → /*
   if (req.nextUrl.pathname === '/dashboard') {
-    return NextResponse.redirect(new URL('/overview', req.url));
+    return NextResponse.redirect(new URL('/employees', req.url));
   }
   if (req.nextUrl.pathname.startsWith('/dashboard/')) {
     const newPath = '/' + req.nextUrl.pathname.slice('/dashboard/'.length);
@@ -156,6 +125,10 @@ export default async function middleware(req: NextRequest) {
 
     if (!refreshToken) {
       return NextResponse.redirect(buildSignInUrl(req));
+    }
+
+    if (isDisabledModulePath(req.nextUrl.pathname)) {
+      return NextResponse.redirect(new URL('/', requestOrigin(req)));
     }
 
     if (accessToken) {

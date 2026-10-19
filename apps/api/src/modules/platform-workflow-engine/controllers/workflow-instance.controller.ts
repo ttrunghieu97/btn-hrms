@@ -41,15 +41,15 @@ export class WorkflowInstanceController {
   @Get()
   @CheckPolicy(WorkflowPolicies.viewInstances)
   @ApiOperation({ summary: "List workflow instances" })
-  async list(@Query() query: WorkflowInstanceQueryDto) {
-    return this.listInstances.execute(query);
+  async list(@Query() query: WorkflowInstanceQueryDto, @Req() req?: AuthRequest) {
+    return this.listInstances.execute(query, req?.user);
   }
 
   @Get(":id")
   @CheckPolicy(WorkflowPolicies.viewInstances)
   @ApiOperation({ summary: "Get workflow instance details" })
-  async get(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.getInstance.execute(id);
+  async get(@Param("id", new ParseUUIDPipe()) id: string, @Req() req?: AuthRequest) {
+    return this.getInstance.execute(id, req?.user);
   }
 
   @Post(":id/transition")

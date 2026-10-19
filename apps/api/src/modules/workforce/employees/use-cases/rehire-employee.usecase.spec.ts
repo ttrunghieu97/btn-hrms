@@ -95,11 +95,52 @@ describe("RehireEmployeeUseCase", () => {
   });
 
   it("rejects when employee not found", async () => {
-  const employeesRepo = {
-    findCurrentOrgAssignment: jest.fn().mockResolvedValue(null),
+    const employeesRepo = {
+      findCurrentOrgAssignment: jest.fn().mockResolvedValue(null),
       findByIdentifier: jest.fn().mockResolvedValue(null),
     };
     const { useCase } = makeUseCase({ employeesRepo });
     await expect(useCase.execute("e1", validDto)).rejects.toThrow();
+  });
+
+  it("rehires an archived terminated employee via findDeletedEmployeeById and resolves jobTitle from positionId", async () => {
+    const employeesRepo = {
+      findCurrentOrgAssignment: jest.fn().mockResolvedValue(null),
+      findEmployeeById: jest.fn().mockResolvedValue(null),
+      findDeletedEmployeeById: jest.fn().mockResolvedValue({
+        id: "e1",
+        userId: "u1",
+        status: "terminated",
+        deletedAt: new Date(),
+      }),
+      findByIdentifier: jest.fn().mockResolvedValue(null),
+      transaction: jest.fn().mockImplementation(async (cb: any) => cb({})),
+    };
+    const positionsReader = {
+      findById: jest.fn().mockResolvedValue({ id: "pos-1", name: "Principal Engineer" }),
+    };
+    const { lifecycle, eventOutbox, identityAdmin } = makeUseCase();
+    const useCase = new RehireEmployeeUseCase(
+      employeesRepo as any,
+      lifecycle as any,
+      { get: () => ({ userId: "actor-1" }) } as any,
+      eventOutbox as any,
+      identityAdmin as any,
+      undefined,
+      positionsReader as any,
+    );
+
+    const { jobTitle: _omitted, ...dtoWithoutJobTitle } = validDto;
+    const result = await useCase.execute("e1", dtoWithoutJobTitle);
+    expect(result.success).toBe(true);
+    expect(lifecycle.rehire).toHaveBeenCalledWith(
+      "e1",
+      expect.objectContaining({
+        positionId: "pos-1",
+        jobTitle: "Principal Engineer",
+      }),
+      "actor-1",
+      expect.anything(),
+    );
   });
 });

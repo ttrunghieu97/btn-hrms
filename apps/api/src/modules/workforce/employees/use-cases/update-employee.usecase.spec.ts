@@ -14,6 +14,8 @@ const buildUseCase = (overrides: {
       employeeId: "e1",
       userId: "u1",
       username: "alice",
+      status: "working",
+      deletedAt: null,
     }),
     updateEmployeeById: jest.fn().mockResolvedValue({ id: "e1" }),
     upsertCurrentEmploymentRecord: jest.fn().mockResolvedValue({ id: "er1" }),
@@ -148,5 +150,19 @@ describe(UpdateEmployeeUseCase.name, () => {
     });
   });
 
+  it("rejects invalid status transition via UpdateEmployeeUseCase (e.g., terminated -> working)", async () => {
+    const { useCase } = buildUseCase({
+      employeesRepo: {
+        findEmployeeUserContextByIdentifier: jest.fn().mockResolvedValue({
+          employeeId: "e1",
+          userId: "u1",
+          username: "alice",
+          status: "terminated",
+          deletedAt: null,
+        }),
+      },
+    });
 
+    await expect(useCase.execute("alice", { status: "working" })).rejects.toThrow();
+  });
 });

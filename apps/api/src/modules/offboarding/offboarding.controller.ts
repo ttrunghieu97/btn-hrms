@@ -41,16 +41,26 @@ export class OffboardingController {
   @Get()
   @CheckPolicy(OffboardingPolicies.view)
   @ApiOperation({ summary: "List offboarding processes" })
-  async findAll(@Query("page") page?: number, @Query("limit") limit?: number) {
-    const result = await this.list.execute(page ?? 1, limit ?? 20);
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("employeeId") employeeId?: string,
+    @Query("status") status?: string,
+  ) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+    const result = await this.list.execute(pageNum, limitNum, {
+      employeeId,
+      status,
+    });
     return {
       data: result.rows,
       meta: {
         pagination: {
           total: result.total,
-          page: page ?? 1,
-          limit: limit ?? 20,
-          hasNext: (page ?? 1) * (limit ?? 20) < result.total,
+          page: pageNum,
+          limit: limitNum,
+          hasNext: pageNum * limitNum < result.total,
         },
         requestId: "",
         timestamp: new Date().toISOString(),

@@ -44,14 +44,15 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
   ];
 
   let activeIndex = 0;
-  if (status === 'draft') activeIndex = 0;
+  if (status === 'draft' || status === 'open') activeIndex = 0;
   else if (status === 'in_review') activeIndex = 1;
-  else if (status === 'locked') activeIndex = 2;
+  else if (status === 'locked' || status === 'payroll_processing' || status === 'payroll_posted') activeIndex = 2;
   else if (status === 'closed') activeIndex = 3;
 
   const nextActorInfo = React.useMemo(() => {
     switch (status) {
       case 'draft':
+      case 'open':
         return {
           actor: 'Chuyên viên chấm công / Trưởng nhóm',
           action: 'Kiểm tra giải quyết ngoại lệ (đi muộn/về sớm/thiếu chấm công), sau đó chuyển kỳ công sang trạng thái Xét duyệt.',
@@ -62,6 +63,8 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
           action: 'Rà soát tổng công, giải trình nhân viên và thực hiện Phê duyệt & Khóa bảng công để chuẩn bị tính lương.',
         };
       case 'locked':
+      case 'payroll_processing':
+      case 'payroll_posted':
         return {
           actor: 'Kế toán tiền lương / Giám đốc nhân sự',
           action: 'Bảng công đã khóa chỉnh sửa. Tiến hành đối soát với lương hoặc Chốt kỳ công để hoàn tất chu kỳ.',
@@ -96,9 +99,13 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
     switch (status) {
       case 'draft':
         return <Badge variant='outline' className='bg-muted/40 text-muted-foreground'>Bản nháp</Badge>;
+      case 'open':
+        return <Badge variant='outline' className='bg-muted/40 text-muted-foreground'>Đang mở kỳ công</Badge>;
       case 'in_review':
         return <Badge variant='secondary' className='bg-amber-500/10 text-amber-700 dark:text-amber-400'>Đang xét duyệt</Badge>;
       case 'locked':
+      case 'payroll_processing':
+      case 'payroll_posted':
         return <Badge variant='default' className='bg-emerald-600 text-white'>Đã khóa bảng công</Badge>;
       case 'closed':
         return <Badge variant='outline' className='border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'>Đã chốt kỳ</Badge>;
@@ -140,7 +147,7 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 Lịch sử kỳ ({history.length})
               </Button>
 
-              {status === 'draft' && (
+              {(status === 'draft' || status === 'open') && (
                 <Button
                   size='sm'
                   variant='default'
@@ -166,7 +173,7 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 </Button>
               )}
 
-              {status === 'locked' && (
+              {(status === 'locked' || status === 'payroll_posted') && (
                 <>
                   <Button
                     size='sm'
@@ -178,15 +185,17 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                     <Icons.check className='size-3.5' />
                     Chốt kỳ công (Close)
                   </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    className='h-8 text-xs text-muted-foreground hover:text-foreground'
-                    disabled={actionMutation.isPending}
-                    onClick={() => setPromptAction('unlock')}
-                  >
-                    Mở khóa
-                  </Button>
+                  {status === 'locked' && (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='h-8 text-xs text-muted-foreground hover:text-foreground'
+                      disabled={actionMutation.isPending}
+                      onClick={() => setPromptAction('unlock')}
+                    >
+                      Mở khóa
+                    </Button>
+                  )}
                 </>
               )}
 
@@ -278,8 +287,13 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 <Button
                   variant='default'
                   size='sm'
-                  disabled={actionMutation.isPending}
-                  onClick={() => handleAction(promptAction, remarkInput || undefined)}
+                  disabled={actionMutation.isPending || (promptAction === 'unlock' && !remarkInput.trim())}
+                  onClick={() =>
+                    handleAction(
+                      promptAction,
+                      promptAction === 'close' ? remarkInput.trim() || 'Chốt kỳ công' : remarkInput.trim(),
+                    )
+                  }
                 >
                   Xác nhận
                 </Button>
@@ -303,29 +317,34 @@ export function AttendancePeriodLifecycleHero({ period }: AttendancePeriodLifecy
                 Chưa có nhật ký chuyển trạng thái cho kỳ công này.
               </p>
             ) : (
-              history.map((record) => (
-                <div key={record.id} className='rounded-lg border border-border/70 p-3 text-xs space-y-1 bg-card'>
-                  <div className='flex items-center justify-between'>
-                    <span className='font-semibold text-foreground uppercase text-[11px]'>
-                      Hành động: {record.action}
-                    </span>
-                    <span className='text-[10px] text-muted-foreground'>
-                      {record.performedAt ? formatDateVN(record.performedAt) : '—'}
-                    </span>
+              history.map((record) => {
+                const actionLabel = record.action || `${record.fromStatus} → ${record.toStatus}`;
+                const timestamp = record.performedAt || record.createdAt;
+                const remarkText = record.remarks ?? record.reason;
+                return (
+                  <div key={record.id} className='rounded-lg border border-border/70 p-3 text-xs space-y-1 bg-card'>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-semibold text-foreground uppercase text-[11px]'>
+                        Hành động: {actionLabel}
+                      </span>
+                      <span className='text-[10px] text-muted-foreground'>
+                        {timestamp ? formatDateVN(timestamp) : '—'}
+                      </span>
+                    </div>
+                    <div className='text-muted-foreground text-[11px] flex items-center gap-1.5'>
+                      <span>Chuyển từ:</span>
+                      <Badge variant='outline' className='text-[10px] h-4'>{record.fromStatus}</Badge>
+                      <span>→</span>
+                      <Badge variant='outline' className='text-[10px] h-4 font-semibold text-primary'>{record.toStatus}</Badge>
+                    </div>
+                    {remarkText && (
+                      <p className='text-muted-foreground text-[11px] italic bg-muted/40 p-1.5 rounded'>
+                        &ldquo;{remarkText}&rdquo;
+                      </p>
+                    )}
                   </div>
-                  <div className='text-muted-foreground text-[11px] flex items-center gap-1.5'>
-                    <span>Chuyển từ:</span>
-                    <Badge variant='outline' className='text-[10px] h-4'>{record.fromStatus}</Badge>
-                    <span>→</span>
-                    <Badge variant='outline' className='text-[10px] h-4 font-semibold text-primary'>{record.toStatus}</Badge>
-                  </div>
-                  {record.remarks && (
-                    <p className='text-muted-foreground text-[11px] italic bg-muted/40 p-1.5 rounded'>
-                      &ldquo;{record.remarks}&rdquo;
-                    </p>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </DialogContent>

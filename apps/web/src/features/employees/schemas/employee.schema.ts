@@ -66,7 +66,9 @@ export const createEmployeeCertificationFormSchema = z
   .superRefine((value, ctx) => {
     const hasAnyValue = Boolean(
       value.name.trim() ||
-        value.issuedBy.trim()
+        value.issuedBy.trim() ||
+        value.issuedDate?.trim() ||
+        value.expiredDate?.trim()
     );
 
     if (!hasAnyValue) return;
@@ -84,6 +86,14 @@ export const createEmployeeCertificationFormSchema = z
         code: z.ZodIssueCode.custom,
         path: ['issuedBy'],
         message: validationCopy.employee.certificationIssuerRequired,
+      });
+    }
+
+    if (!value.issuedDate?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['issuedDate'],
+        message: validationCopy.employee.certificationIssuedDateRequired,
       });
     }
   });

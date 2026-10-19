@@ -75,7 +75,9 @@ export function AmendContractDialog({
     if (startDate) {
       payload.startDate = startDate;
     }
-    if (endDate) {
+    if (contractType === 'permanent' || (!endDate && contract?.endDate)) {
+      payload.endDate = null as unknown as UpdateEmployeeContractDto['endDate'];
+    } else if (endDate) {
       payload.endDate = endDate as unknown as UpdateEmployeeContractDto['endDate'];
     }
 
@@ -97,7 +99,15 @@ export function AmendContractDialog({
         <div className='space-y-4'>
           <div className='space-y-2'>
             <Label htmlFor='contractType'>{employeeUiCopy.contract.typeLabel}</Label>
-            <Select value={contractType} onValueChange={setContractType}>
+            <Select
+              value={contractType}
+              onValueChange={(value) => {
+                setContractType(value);
+                if (value === 'permanent') {
+                  setEndDate('');
+                }
+              }}
+            >
               <SelectTrigger id='contractType'>
                 <SelectValue placeholder={employeeUiCopy.contract.typePlaceholder} />
               </SelectTrigger>
@@ -121,15 +131,17 @@ export function AmendContractDialog({
             />
           </div>
 
-          <div className='space-y-2'>
-            <Label htmlFor='endDate'>{employeeUiCopy.contract.endDateLabel}</Label>
-            <Input
-              id='endDate'
-              type='date'
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
+          {contractType !== 'permanent' && (
+            <div className='space-y-2'>
+              <Label htmlFor='endDate'>{employeeUiCopy.contract.endDateLabel}</Label>
+              <Input
+                id='endDate'
+                type='date'
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         <div className='flex justify-end gap-2'>

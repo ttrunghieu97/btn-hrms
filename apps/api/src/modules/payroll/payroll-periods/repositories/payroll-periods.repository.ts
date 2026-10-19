@@ -105,6 +105,18 @@ export class PayrollPeriodsRepository extends BaseRepository<
       .delete(schema.payrollPeriods)
       .where(eq(schema.payrollPeriods.id, id));
   }
+
+  async findRunsWithPayslipsByPeriodId(payrollPeriodId: string) {
+    if (!this.db.query?.payrollRuns?.findMany) {
+      return [];
+    }
+    return this.db.query.payrollRuns.findMany({
+      where: eq(schema.payrollRuns.payrollPeriodId, payrollPeriodId),
+      with: {
+        payslips: true,
+      },
+    });
+  }
 }
 
 

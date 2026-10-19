@@ -306,4 +306,198 @@ describe("ApprovePayrollRunUseCase (Segregation of Duties)", () => {
     );
     expect(repo.transaction).not.toHaveBeenCalled();
   });
+
+  it("cannot bypass provisional guards by clearing mutable notes or setting payslip metadata to {} or null", async () => {
+    const stateMachine = new PayrollRunStateMachine();
+    const eventOutbox = { stage: jest.fn() };
+    const {
+      ApprovePayrollRunUseCase,
+      PostPayrollRunUseCase,
+      assertPayrollRunReadyForExportOrPayment,
+    } = require("./payroll-runs.usecases");
+
+    for (const tamperedMetadata of [{}, null, undefined, { notes: "" }]) {
+      const repo = {
+        findById: jest.fn().mockResolvedValue({
+          id: "run-tampered-1",
+          status: "pending_approval",
+          notes: null, // mutable notes cleared!
+          calculationVersionId: "v1",
+          calculationHash: "abc12345",
+        }),
+        getApprovalHistory: jest.fn().mockResolvedValue([
+          { action: "REQUESTED", performedByUserId: "user-alice" },
+        ]),
+        findPayslipsByRunId: jest.fn().mockResolvedValue([
+          {
+            id: "ps-tampered-1",
+            employeeId: "emp-1",
+            status: "draft",
+            metadata: tamperedMetadata,
+          },
+        ]),
+        transaction: jest.fn(),
+      };
+
+      const approveUseCase = new ApprovePayrollRunUseCase(repo as any, stateMachine, eventOutbox as any);
+      await expect(approveUseCase.execute("run-tampered-1", "user-bob")).rejects.toThrow(
+        "Provisional payroll run cannot be approved while HR/Finance payroll policies remain unconfirmed",
+      );
+
+      repo.findById.mockResolvedValue({
+        id: "run-tampered-1",
+        status: "approved",
+        notes: "Manually marked confirmed in notes",
+        calculationVersionId: "v1",
+        calculationHash: "abc12345",
+      });
+      const postUseCase = new PostPayrollRunUseCase(repo as any, stateMachine, eventOutbox as any);
+      await expect(postUseCase.execute("run-tampered-1", "user-bob")).rejects.toThrow(
+        "Provisional payroll run cannot be posted while HR/Finance payroll policies remain unconfirmed",
+      );
+
+      await expect(
+        assertPayrollRunReadyForExportOrPayment(
+          "run-tampered-1",
+          {
+            id: "run-tampered-1",
+            status: "posted",
+            notes: null,
+            calculationVersionId: "v1",
+            calculationHash: "abc12345",
+          },
+          repo as any,
+        ),
+      ).rejects.toThrow(
+        "Provisional payroll run cannot be exported or submitted for payment while HR/Finance payroll policies remain unconfirmed",
+      );
+    }
+  });
+
+  it("blocks payroll period finalization (closing), export/payment submission, and financial publication event staging while payroll is provisional", async () => {
+    const {
+      assertPayrollRunReadyForExportOrPayment,
+    } = require("./payroll-runs.usecases");
+    const {
+      UpdatePayrollPeriodUseCase,
+    } = require("../../payroll-periods/use-cases/update-payroll-period.usecase");
+    const {
+      EventOutboxService,
+    } = require("../../../../core/events/event-outbox.service");
+
+    // 1. Export / payment integration readiness blocks unposted or provisional runs
+    const repo = {
+      findPayslipsByRunId: jest.fn().mockResolvedValue([
+        {
+          id: "ps-prov-1",
+          employeeId: "emp-1",
+          status: "draft",
+          metadata: {
+            calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+            isProvisional: true,
+          },
+        },
+      ]),
+    };
+
+    await expect(
+      assertPayrollRunReadyForExportOrPayment(
+        "run-1",
+        {
+          id: "run-1",
+          status: "approved",
+          calculationVersionId: "v1",
+          calculationHash: "hash-1",
+        },
+        repo as any,
+      ),
+    ).rejects.toThrow(
+      "Payroll run in 'approved' status cannot be exported as final or submitted to payment integration; run must be 'posted'",
+    );
+
+    await expect(
+      assertPayrollRunReadyForExportOrPayment(
+        "run-1",
+        {
+          id: "run-1",
+          status: "posted",
+          calculationVersionId: "v1",
+          calculationHash: "hash-1",
+        },
+        repo as any,
+      ),
+    ).rejects.toThrow(
+      "Provisional payroll run cannot be exported or submitted for payment while HR/Finance payroll policies remain unconfirmed",
+    );
+
+    // 2. Period finalization (status -> 'closed') is blocked when period has provisional or unposted runs
+    const periodRepo = {
+      findById: jest.fn().mockResolvedValue({
+        id: "period-1",
+        startsOn: "2026-04-01",
+        endsOn: "2026-04-30",
+        status: "open",
+      }),
+      findRunsWithPayslipsByPeriodId: jest.fn().mockResolvedValue([
+        {
+          id: "run-prov-1",
+          status: "pending_approval",
+          payslips: [
+            {
+              id: "ps-prov-1",
+              metadata: {
+                calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+                isProvisional: true,
+              },
+            },
+          ],
+        },
+      ]),
+      update: jest.fn(),
+    };
+    const updatePeriodUseCase = new UpdatePayrollPeriodUseCase(
+      periodRepo as any,
+      { get: jest.fn().mockReturnValue({}) } as any,
+    );
+    await expect(
+      updatePeriodUseCase.execute("period-1", { status: "closed" }),
+    ).rejects.toThrow(
+      "Cannot close or finalize payroll period while it contains provisional payroll runs or unconfirmed payslips",
+    );
+    expect(periodRepo.update).not.toHaveBeenCalled();
+
+    // 3. EventOutboxService blocks staging financial publication events with provisional payload
+    const outboxInsert = jest.fn();
+    const outboxService = new EventOutboxService(
+      { get: jest.fn().mockReturnValue({ requestId: "req-1" }) } as any,
+      { insert: outboxInsert } as any,
+      { incrementOutboxEventsCreated: jest.fn() } as any,
+      {
+        current: jest.fn().mockReturnValue({
+          traceId: "t1",
+          spanId: "s1",
+          parentSpanId: null,
+          correlationId: "c1",
+        }),
+      } as any,
+    );
+
+    await expect(
+      outboxService.stage({
+        eventType: "payroll.financial-publication.completed.v1",
+        eventVersion: 1,
+        producerContext: "payroll",
+        payload: {
+          payrollRunId: "run-prov-1",
+          publicationReference: "BANK-BATCH-001",
+          scopeId: "company:default",
+          isProvisional: true,
+          calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+        },
+      }),
+    ).rejects.toThrow(
+      "Cannot stage payroll release or financial publication event 'payroll.financial-publication.completed.v1' while calculation remains provisional",
+    );
+    expect(outboxInsert).not.toHaveBeenCalled();
+  });
 });

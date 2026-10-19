@@ -194,7 +194,10 @@ export function useDecideOffer() {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: DecideOfferDto }) =>
       offersControllerDecide(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: offerKeys.all() }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: offerKeys.all() });
+      void qc.invalidateQueries({ queryKey: applicationKeys.all() });
+    },
   });
 }
 

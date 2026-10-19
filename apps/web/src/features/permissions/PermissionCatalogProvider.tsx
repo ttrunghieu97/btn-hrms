@@ -83,6 +83,18 @@ const MAPPINGS: DBMapping[] = [
   { code: 'employees:manage:sensitive', permissionId: 'employees:manage:sensitive', scopeId: 'all' },
   { code: 'employees:reset-password', permissionId: 'employees:reset-password', scopeId: 'all' },
   { code: 'employees:delete', permissionId: 'employees:delete', scopeId: 'all' },
+  { code: 'employee:view', permissionId: 'employees:view', scopeId: 'all' },
+  { code: 'employee:view:self', permissionId: 'employees:view', scopeId: 'self' },
+  { code: 'employee:view:department', permissionId: 'employees:view', scopeId: 'department' },
+  { code: 'employee:view:all', permissionId: 'employees:view', scopeId: 'all' },
+  { code: 'employee:create', permissionId: 'employees:create', scopeId: 'all' },
+  { code: 'employee:edit', permissionId: 'employees:edit', scopeId: 'all' },
+  { code: 'employee:update:self', permissionId: 'employees:update', scopeId: 'self' },
+  { code: 'employee:update:all', permissionId: 'employees:update', scopeId: 'all' },
+  { code: 'employee:manage:sensitive', permissionId: 'employees:manage:sensitive', scopeId: 'all' },
+  { code: 'employee:reset-password', permissionId: 'employees:reset-password', scopeId: 'all' },
+  { code: 'employee:delete', permissionId: 'employees:delete', scopeId: 'all' },
+  { code: 'employee:manage', permissionId: 'employees:edit', scopeId: 'all' },
   { code: 'schedule:view:self', permissionId: 'schedule:view', scopeId: 'self' },
   { code: 'schedule:view:department', permissionId: 'schedule:view', scopeId: 'department' },
   { code: 'schedule:view:all', permissionId: 'schedule:view', scopeId: 'all' },
@@ -307,17 +319,26 @@ export function PermissionCatalogProvider({ children }: { children: React.ReactN
 
   const assignmentsToPermissionCodes = (assignments: RoleAssignmentMap): string[] => {
     const codesSet = new Set<string>();
+    const dbCodes = new Set((dbPermissionsRaw || []).map((p) => p.code));
 
     Object.entries(assignments).forEach(([permissionId, assignment]) => {
       if (!assignment.selected) return;
 
       const matches = MAPPINGS.filter((m) => m.permissionId === permissionId);
       if (matches.length > 0) {
-        const exactMatch = matches.find((m) => m.scopeId === assignment.scopeId);
+        const scopeMatches = matches.filter((m) => m.scopeId === assignment.scopeId);
+        const exactMatch =
+          scopeMatches.find((m) => dbCodes.has(m.code)) ||
+          scopeMatches[0];
         if (exactMatch) {
           codesSet.add(exactMatch.code);
         } else {
-          const fallback = matches.find((m) => m.scopeId === 'all') || matches[0];
+          const allScopeMatches = matches.filter((m) => m.scopeId === 'all');
+          const fallback =
+            allScopeMatches.find((m) => dbCodes.has(m.code)) ||
+            allScopeMatches[0] ||
+            matches.find((m) => dbCodes.has(m.code)) ||
+            matches[0];
           codesSet.add(fallback.code);
         }
       } else {

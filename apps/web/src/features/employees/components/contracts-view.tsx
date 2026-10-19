@@ -2,14 +2,13 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/table/data-table';
 import { DataTableToolbar } from '@/components/ui/table/data-table-toolbar';
 import { useDataTable } from '@/hooks/use-data-table';
@@ -48,7 +47,7 @@ interface PaginatedResponse<T> {
 /* ------------------------------------------------------------------ */
 
 const CONTRACT_TYPES = [
-  { value: '', label: 'Tất cả loại HĐ' },
+  { value: 'all', label: 'Tất cả loại HĐ' },
   { value: 'permanent', label: 'Chính thức' },
   { value: 'fixed_term', label: 'Có thời hạn' },
   { value: 'probationary', label: 'Thử việc' },
@@ -58,7 +57,7 @@ const CONTRACT_TYPES = [
 ] as const;
 
 const CONTRACT_STATUSES = [
-  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'active', label: 'Đang hiệu lực' },
   { value: 'terminated', label: 'Đã kết thúc' },
   { value: 'superseded', label: 'Đã thay thế' },
@@ -66,7 +65,7 @@ const CONTRACT_STATUSES = [
 ] as const;
 
 const EXPIRES_OPTIONS = [
-  { value: '', label: 'Tất cả' },
+  { value: 'all', label: 'Tất cả' },
   { value: '7', label: '7 ngày tới' },
   { value: '14', label: '14 ngày tới' },
   { value: '30', label: '30 ngày tới' },
@@ -92,82 +91,84 @@ function formatDate(v: string | null | undefined) { return v ? formatDateVN(v) :
 /* Columns                                                             */
 /* ------------------------------------------------------------------ */
 
-const columns: ColumnDef<ContractRow>[] = [
-  {
-    id: 'employeeName',
-    accessorFn: (r) => r.employeeName,
-    header: 'Nhân viên',
-    cell: ({ row }) => (
-      <div className='flex flex-col'>
-        <span className='font-medium'>{row.original.employeeName}</span>
-        <span className='text-muted-foreground text-xs'>{row.original.employeeCode || '—'}</span>
-      </div>
-    ),
-    meta: { label: 'Nhân viên', variant: 'text' as const },
-    enableColumnFilter: true,
-  },
-  {
-    id: 'departmentName', accessorFn: (r) => r.departmentName ?? '',
-    header: 'Phòng ban',
-    cell: ({ row }) => <span className='text-sm'>{row.original.departmentName || '—'}</span>,
-    meta: { label: 'Phòng ban' },
-  },
-  {
-    id: 'contractNumber', accessorFn: (r) => r.contractNumber ?? '',
-    header: 'Số HĐ',
-    cell: ({ row }) => <span className='text-sm'>{row.original.contractNumber || '—'}</span>,
-    meta: { label: 'Số HĐ' },
-  },
-  {
-    id: 'contractType', accessorFn: (r) => contractTypeLabel[r.contractType] ?? r.contractType,
-    header: 'Loại HĐ',
-    cell: ({ row }) => <span className='text-sm'>{contractTypeLabel[row.original.contractType] ?? row.original.contractType}</span>,
-    meta: { label: 'Loại HĐ' },
-  },
-  {
-    id: 'status', accessorFn: (r) => r.status,
-    header: 'Trạng thái',
-    cell: ({ row }) => {
-      const s = row.original.status;
-      const labels: Record<string, string> = { active: 'Đang hiệu lực', terminated: 'Đã kết thúc', superseded: 'Đã thay thế', draft: 'Bản nháp' };
-      return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${contractStatusColor[s] ?? 'bg-muted text-muted-foreground'}`}>{labels[s] ?? s}</span>;
+function getColumns(onViewDetail: (row: Row<ContractRow>) => void): ColumnDef<ContractRow>[] {
+  return [
+    {
+      id: 'employeeName',
+      accessorFn: (r) => r.employeeName,
+      header: 'Nhân viên',
+      cell: ({ row }) => (
+        <div className='flex flex-col'>
+          <span className='font-medium'>{row.original.employeeName}</span>
+          <span className='text-muted-foreground text-xs'>{row.original.employeeCode || '—'}</span>
+        </div>
+      ),
+      meta: { label: 'Nhân viên', variant: 'text' as const },
+      enableColumnFilter: true,
     },
-    meta: { label: 'Trạng thái', toolbarHidden: true },
-  },
-  {
-    id: 'version', accessorFn: (r) => r.version,
-    header: 'V', cell: ({ row }) => <span className='text-sm'>V{row.original.version}</span>,
-    meta: { label: 'Phiên bản' },
-  },
-  {
-    id: 'effectiveFrom', accessorFn: (r) => r.effectiveFrom,
-    header: 'Hiệu lực từ', cell: ({ row }) => <span className='text-sm'>{formatDate(row.original.effectiveFrom)}</span>,
-    meta: { label: 'Hiệu lực từ' },
-  },
-  {
-    id: 'effectiveTo', accessorFn: (r) => r.effectiveTo ?? '',
-    header: 'Hiệu lực đến', cell: ({ row }) => <span className='text-sm'>{formatDate(row.original.effectiveTo)}</span>,
-    meta: { label: 'Hiệu lực đến' },
-  },
-  {
-    id: 'actions',
-    header: 'Thao tác',
-    cell: ({ row }) => (
-      <Button
-        variant='ghost'
-        size='sm'
-        className='h-7 px-2 text-xs text-muted-foreground hover:text-foreground'
-        onClick={(e) => {
-          e.stopPropagation();
-          // Handled via row click
-        }}
-      >
-        <Icons.eye className='mr-1 size-3' />
-        Xem chi tiết
-      </Button>
-    ),
-  },
-];
+    {
+      id: 'departmentName', accessorFn: (r) => r.departmentName ?? '',
+      header: 'Phòng ban',
+      cell: ({ row }) => <span className='text-sm'>{row.original.departmentName || '—'}</span>,
+      meta: { label: 'Phòng ban' },
+    },
+    {
+      id: 'contractNumber', accessorFn: (r) => r.contractNumber ?? '',
+      header: 'Số HĐ',
+      cell: ({ row }) => <span className='text-sm'>{row.original.contractNumber || '—'}</span>,
+      meta: { label: 'Số HĐ' },
+    },
+    {
+      id: 'contractType', accessorFn: (r) => contractTypeLabel[r.contractType] ?? r.contractType,
+      header: 'Loại HĐ',
+      cell: ({ row }) => <span className='text-sm'>{contractTypeLabel[row.original.contractType] ?? row.original.contractType}</span>,
+      meta: { label: 'Loại HĐ' },
+    },
+    {
+      id: 'status', accessorFn: (r) => r.status,
+      header: 'Trạng thái',
+      cell: ({ row }) => {
+        const s = row.original.status;
+        const labels: Record<string, string> = { active: 'Đang hiệu lực', terminated: 'Đã kết thúc', superseded: 'Đã thay thế', draft: 'Bản nháp' };
+        return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${contractStatusColor[s] ?? 'bg-muted text-muted-foreground'}`}>{labels[s] ?? s}</span>;
+      },
+      meta: { label: 'Trạng thái', toolbarHidden: true },
+    },
+    {
+      id: 'version', accessorFn: (r) => r.version,
+      header: 'V', cell: ({ row }) => <span className='text-sm'>V{row.original.version}</span>,
+      meta: { label: 'Phiên bản' },
+    },
+    {
+      id: 'effectiveFrom', accessorFn: (r) => r.effectiveFrom,
+      header: 'Hiệu lực từ', cell: ({ row }) => <span className='text-sm'>{formatDate(row.original.effectiveFrom)}</span>,
+      meta: { label: 'Hiệu lực từ' },
+    },
+    {
+      id: 'effectiveTo', accessorFn: (r) => r.effectiveTo ?? '',
+      header: 'Hiệu lực đến', cell: ({ row }) => <span className='text-sm'>{formatDate(row.original.effectiveTo)}</span>,
+      meta: { label: 'Hiệu lực đến' },
+    },
+    {
+      id: 'actions',
+      header: 'Thao tác',
+      cell: ({ row }) => (
+        <Button
+          variant='ghost'
+          size='sm'
+          className='h-7 px-2 text-xs text-muted-foreground hover:text-foreground'
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetail(row);
+          }}
+        >
+          <Icons.eye className='mr-1 size-3' />
+          Xem chi tiết
+        </Button>
+      ),
+    },
+  ];
+}
 
 /* ------------------------------------------------------------------ */
 /* Query keys                                                          */
@@ -208,6 +209,7 @@ export function ContractsView() {
   const [params, setParams] = useQueryStates({
     page: pageParser,
     perPage: perPageParser,
+    employeeName: parseAsString,
     search: parseAsString,
     departmentId: parseAsString,
     contractType: parseAsString,
@@ -219,7 +221,8 @@ export function ContractsView() {
 
   const q = React.useMemo(() => {
     const p: Record<string, unknown> = { page: params.page, limit: params.perPage };
-    if (params.search) p.search = params.search;
+    const searchTerm = params.employeeName || params.search;
+    if (searchTerm) p.search = searchTerm;
     if (params.departmentId) p.departmentId = params.departmentId;
     if (params.contractType) p.contractType = params.contractType;
     if (params.status) p.status = params.status;
@@ -243,27 +246,30 @@ export function ContractsView() {
   const total = paginated?.meta?.pagination?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / params.perPage));
 
+  const handleRowClick = React.useCallback((row: Row<ContractRow>) => {
+    setSelectedEmployeeId(row.original.employeeId);
+    setSheetOpen(true);
+  }, []);
+
+  const tableColumns = React.useMemo(() => getColumns(handleRowClick), [handleRowClick]);
+
   const { table } = useDataTable({
     data: contracts,
-    columns,
+    columns: tableColumns,
     pageCount,
     shallow: true,
     debounceMs: 500,
     tableId: 'contracts',
   });
 
-  const handleRowClick = React.useCallback((row: Row<ContractRow>) => {
-    setSelectedEmployeeId(row.original.employeeId);
-    setSheetOpen(true);
-  }, []);
-
   const setParam = (key: string, value: string) => {
-    setParams({ ...params, page: 1, [key]: value || null }, { shallow: true }).catch(() => {});
+    const resolved = value === 'all' ? '' : value;
+    setParams({ ...params, page: 1, [key]: resolved || null }, { shallow: true }).catch(() => {});
   };
 
-  const hasFilters = Boolean(params.search || params.departmentId || params.contractType || params.status || params.expiresWithin);
+  const hasFilters = Boolean(params.employeeName || params.search || params.departmentId || params.contractType || params.status || params.expiresWithin);
   const clearFilters = () => setParams({
-    page: 1, search: null, departmentId: null, contractType: null, status: null, expiresWithin: null,
+    page: 1, employeeName: null, search: null, departmentId: null, contractType: null, status: null, expiresWithin: null,
   }, { shallow: true }).catch(() => {});
 
   return (
@@ -289,11 +295,11 @@ export function ContractsView() {
       <DataTable table={table} isLoading={isLoading} onRowClick={handleRowClick}>
         <DataTableToolbar table={table}>
           <div className='flex items-center gap-2 flex-wrap'>
-            <FilterSelect value={params.contractType ?? ''} onValueChange={(v) => setParam('contractType', v)}
+            <FilterSelect value={params.contractType || 'all'} onValueChange={(v) => setParam('contractType', v)}
               options={CONTRACT_TYPES} placeholder='Loại hợp đồng' />
-            <FilterSelect value={params.status ?? ''} onValueChange={(v) => setParam('status', v)}
+            <FilterSelect value={params.status || 'all'} onValueChange={(v) => setParam('status', v)}
               options={CONTRACT_STATUSES} placeholder='Trạng thái' />
-            <FilterSelect value={params.expiresWithin ?? ''} onValueChange={(v) => setParam('expiresWithin', v)}
+            <FilterSelect value={params.expiresWithin || 'all'} onValueChange={(v) => setParam('expiresWithin', v)}
               options={EXPIRES_OPTIONS} placeholder='Sắp hết hạn' />
             {hasFilters && (
               <Button variant='ghost' size='sm' onClick={clearFilters} className='h-9'>

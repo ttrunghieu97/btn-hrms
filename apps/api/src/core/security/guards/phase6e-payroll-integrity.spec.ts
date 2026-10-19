@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import * as dotenv from "dotenv";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { plainToInstance } from "class-transformer";
@@ -762,6 +762,7 @@ describe("Phase 6E — Payroll Integrity, SoD, Audit Privacy & Readiness Remedia
       try {
         await expect(
           db.transaction(async (txDb) => {
+            await txDb.execute(sql`SELECT pg_advisory_xact_lock(20260601)`);
             // Seed user, employee, salary structure, active calc version, period, and draft run
             const [makerUser] = await txDb
               .insert(schema.users)

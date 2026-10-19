@@ -49,7 +49,7 @@ export type AdjustmentItem = {
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ["requested"],
-  requested: ["under_review", "cancelled"],
+  requested: ["under_review", "approved", "rejected"],
   under_review: ["approved", "rejected"],
   approved: ["applied"],
   rejected: [],

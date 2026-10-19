@@ -42,6 +42,24 @@ describe("validateEnv", () => {
     ).toThrow(/AUTH_DEFAULT_PASSWORD must be at least 12 characters/);
   });
 
+  it("rejects a 12+ character password containing an insecure placeholder", () => {
+    expect(() =>
+      validateEnv({
+        ...baseEnv,
+        AUTH_DEFAULT_PASSWORD: "Password123!LongEnough",
+      }),
+    ).toThrow(/AUTH_DEFAULT_PASSWORD contains insecure placeholder "123"/);
+  });
+
+  it("accepts comma-separated APP_URL values", () => {
+    expect(() =>
+      validateEnv({
+        ...baseEnv,
+        APP_URL: "http://localhost:3000, https://hrms.company.local",
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects invalid TRUST_PROXY", () => {
     expect(() =>
       validateEnv({

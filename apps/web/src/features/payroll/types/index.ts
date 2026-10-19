@@ -76,7 +76,14 @@ export interface UpdatePayrollPeriodPayload {
 }
 
 // ── Payroll Runs ────────────────────────────────────
-export type PayrollRunStatus = 'draft' | 'processing' | 'approved' | 'posted' | 'cancelled';
+export type PayrollRunStatus =
+  | 'draft'
+  | 'generated'
+  | 'processing'
+  | 'pending_approval'
+  | 'approved'
+  | 'posted'
+  | 'cancelled';
 
 export interface PayrollRun {
   id: string;
@@ -87,6 +94,8 @@ export interface PayrollRun {
   approvedAt: string | null;
   processedAt: string | null;
   notes: string | null;
+  isProvisional?: boolean;
+  calculationStatus?: string | null;
   createdAt: string;
   updatedAt: string;
   payrollPeriod?: {
@@ -129,6 +138,8 @@ export interface Payslip {
   currency: string;
   status: PayslipStatus;
   publishedAt: string | null;
+  isProvisional?: boolean;
+  calculationStatus?: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;

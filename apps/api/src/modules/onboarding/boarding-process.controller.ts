@@ -6,6 +6,8 @@ import { AuditLog } from "../../shared/decorators/audit-log.decorator";
 import { ListOnboardingProcessesUseCase } from "./use-cases/list-onboarding-processes.usecase";
 import { GetOnboardingProcessUseCase } from "./use-cases/get-onboarding-process.usecase";
 import { CompleteOnboardingTaskUseCase } from "./use-cases/complete-onboarding-task.usecase";
+import { CreateOnboardingProcessUseCase } from "./use-cases/create-onboarding-process.usecase";
+import { CreateOnboardingProcessDto } from "./dto/create-onboarding-process.dto";
 
 @ApiTags("Onboarding Processes")
 @ApiBearerAuth()
@@ -15,21 +17,45 @@ export class BoardingProcessController {
     private readonly list: ListOnboardingProcessesUseCase,
     private readonly get: GetOnboardingProcessUseCase,
     private readonly completeTask: CompleteOnboardingTaskUseCase,
+    private readonly createProcess: CreateOnboardingProcessUseCase,
   ) {}
+
+  @Post()
+  @CheckPolicy(EmployeePolicies.edit)
+  @AuditLog({ action: "onboarding_process_create", entity: "onboarding" })
+  @ApiOperation({ summary: "Manually create an onboarding process for an employee" })
+  async create(@Body() dto: CreateOnboardingProcessDto) {
+    const result = await this.createProcess.execute(dto);
+    return {
+      data: result,
+      meta: { requestId: "", timestamp: new Date().toISOString() },
+      error: null,
+    };
+  }
 
   @Get()
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "List onboarding processes" })
-  async findAll(@Query("page") page?: number, @Query("limit") limit?: number) {
-    const result = await this.list.execute(page ?? 1, limit ?? 20);
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("employeeId") employeeId?: string,
+    @Query("status") status?: string,
+  ) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+    const result = await this.list.execute(pageNum, limitNum, {
+      employeeId,
+      status,
+    });
     return {
       data: result.rows,
       meta: {
         pagination: {
           total: result.total,
-          page: page ?? 1,
-          limit: limit ?? 20,
-          hasNext: (page ?? 1) * (limit ?? 20) < result.total,
+          page: pageNum,
+          limit: limitNum,
+          hasNext: pageNum * limitNum < result.total,
         },
         requestId: "",
         timestamp: new Date().toISOString(),

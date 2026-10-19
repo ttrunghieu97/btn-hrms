@@ -8,6 +8,7 @@
 import type { PermissionedUser } from '@project/permissions';
 import { can, type PermissionRule } from '@/lib/permission-resolver';
 import { routeRegistry, type NavIcon } from '@/shared/authorization';
+import { isRouteInVisibleModule } from '@/config/module-rollout';
 
 export interface NavItem {
   title: string;
@@ -22,20 +23,36 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+export interface GenerateNavOptions {
+  /** Filter out routes belonging to modules that are not currently enabled in rollout */
+  onlyEnabledModules?: boolean;
+  /** Optional rollout env override for testing */
+  rolloutEnvOverride?: string;
+}
+
 /**
  * Generate sidebar navigation for a given user.
  * Filters nav items based on user permissions (hierarchy-aware).
  * Groups items by their `group` field.
  */
-export function generateNav(user: PermissionedUser | null | undefined): NavGroup[] {
+export function generateNav(
+  user: PermissionedUser | null | undefined,
+  options?: GenerateNavOptions,
+): NavGroup[] {
   const navRoutes = routeRegistry.filter((r) => r.nav);
   if (!navRoutes.length) return [];
 
-  // Build items, filtering by permission
+  // Build items, filtering by permission (and optionally module rollout)
   const items: NavItem[] = [];
 
   for (const route of navRoutes) {
     if (!route.nav) continue;
+    if (
+      options?.onlyEnabledModules &&
+      !isRouteInVisibleModule(route.path, options.rolloutEnvOverride)
+    ) {
+      continue;
+    }
     const allowed = can(user, route.permission);
     if (allowed) {
       items.push({

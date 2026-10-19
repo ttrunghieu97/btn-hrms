@@ -157,3 +157,50 @@ describe('useResetEmployeePasswordMutation', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });
+
+describe('Optimistic detail cache envelope preservation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('patches inside previousDetail.data without overwriting HTTP status in useUpdateEmployeeMutation', async () => {
+    let resolveUpdate!: (val: unknown) => void;
+    (employeesControllerUpdate as jest.Mock).mockImplementation(
+      () => new Promise((resolve) => { resolveUpdate = resolve; }),
+    );
+
+    const { useUpdateEmployeeMutation, employeeKeys } = await import('../../employees/queries/employee-queries');
+    const { qc, Wrapper } = createWrapper();
+    qc.setQueryData(employeeKeys.detail('emp-1'), {
+      data: { ...employee, id: 'emp-1', firstName: 'Original', status: 'working' },
+      status: 200,
+    });
+
+    const { result } = renderHook(
+      () => useUpdateEmployeeMutation(qc),
+      { wrapper: Wrapper },
+    );
+
+    result.current.mutate({
+      id: 'emp-1',
+      data: { firstName: 'OptimisticName', status: 'probation' },
+    });
+
+    await waitFor(() => {
+      const cached = qc.getQueryData<{ data: { firstName: string; status: string }; status: number }>(
+        employeeKeys.detail('emp-1'),
+      );
+      expect(cached?.status).toBe(200);
+      expect(cached?.data.firstName).toBe('OptimisticName');
+      expect(cached?.data.status).toBe('probation');
+    });
+
+    resolveUpdate({
+      data: { data: { ...employee, id: 'emp-1', firstName: 'OptimisticName', status: 'probation' }, error: null },
+      status: 200,
+      headers: new Headers(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+});
+

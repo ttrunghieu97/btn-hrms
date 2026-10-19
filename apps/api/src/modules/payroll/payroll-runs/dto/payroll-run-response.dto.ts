@@ -45,6 +45,12 @@ export class PayrollRunResponseDto {
 
   @ApiPropertyOptional({ type: PayrollPeriodSummaryDto })
   payrollPeriod?: PayrollPeriodSummaryDto;
+
+  @ApiPropertyOptional({ type: Boolean, default: true })
+  isProvisional?: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  calculationStatus?: string | null;
 }
 
 export class PayrollRunEnvelopeDto {

@@ -1,12 +1,10 @@
-import { formatDateISO } from "@/shared/utils/date-format";
 import { Inject, Injectable } from "@nestjs/common";
 import { todayDateString } from "../../../../shared/utils/date-format";
-import { and, asc, desc, count, eq, gte, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, count, eq, gte, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import {
   employeeContracts,
   employees,
-  employmentRecords,
   orgAssignments,
   departments,
 } from "../../../../infrastructure/database/schema";
@@ -15,6 +13,7 @@ import { safeLimit, safePage } from "../../../../shared/dto/pagination.dto";
 import { searchAny, combineWhere } from "../../../../shared/utils/where.util";
 import { resolveSortOrder } from "../../../../shared/utils/sort.util";
 import type { ListContractsQueryDto } from "../dto/contracts.dto";
+import type { DataScope } from "../../../../core/security/query-scope.service";
 
 /**
  * Returns YYYY-MM-DD for a given Date in APP_TIMEZONE.
@@ -49,6 +48,7 @@ export interface ContractListRow {
   employeeId: string;
   employeeName: string;
   employeeCode: string | null;
+  departmentId?: string | null;
   departmentName: string | null;
   contractNumber: string | null;
   contractType: string;
@@ -78,13 +78,26 @@ export class ContractQueryRepository {
     private readonly db: AppDatabase,
   ) {}
 
-  async findPaginated(query: ListContractsQueryDto): Promise<PaginatedContracts> {
+  async findPaginated(query: ListContractsQueryDto, scope?: DataScope): Promise<PaginatedContracts> {
     const page = safePage(query.page);
     const limit = safeLimit(query.limit);
     const search = query.search?.trim() || undefined;
     const offset = (page - 1) * limit;
 
     const where: SQL[] = [isNull(employees.deletedAt)];
+
+    if (scope?.tier === "self") {
+      if (!scope.employeeId) {
+        return { rows: [], total: 0, page, limit };
+      }
+      where.push(eq(employeeContracts.employeeId, scope.employeeId));
+    } else if (scope?.tier === "department") {
+      if (!scope.departmentId) {
+        return { rows: [], total: 0, page, limit };
+      }
+      where.push(eq(orgAssignments.departmentId, scope.departmentId));
+      where.push(eq(orgAssignments.isCurrent, true));
+    }
 
     // employeeId filter
     if (query.employeeId) {
@@ -161,6 +174,7 @@ export class ContractQueryRepository {
         employeeId: employeeContracts.employeeId,
         employeeName: sql<string>`concat(${employees.lastName}, ' ', ${employees.firstName})`,
         employeeCode: employees.employeeCode,
+        departmentId: orgAssignments.departmentId,
         departmentName: departments.name,
         contractNumber: employeeContracts.contractNumber,
         contractType: employeeContracts.contractType,
@@ -200,6 +214,7 @@ export class ContractQueryRepository {
         employeeId: employeeContracts.employeeId,
         employeeName: sql<string>`concat(${employees.lastName}, ' ', ${employees.firstName})`,
         employeeCode: employees.employeeCode,
+        departmentId: orgAssignments.departmentId,
         departmentName: departments.name,
         contractNumber: employeeContracts.contractNumber,
         contractType: employeeContracts.contractType,
@@ -254,5 +269,24 @@ export class ContractQueryRepository {
       .from(employeeContracts)
       .where(eq(employeeContracts.employeeId, contract.employeeId))
       .orderBy(desc(employeeContracts.version));
+  }
+
+  async findEmployeeDepartmentId(employeeId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({
+        departmentId: sql<string | null>`coalesce(${orgAssignments.departmentId}, ${employees.departmentId})`,
+      })
+      .from(employees)
+      .leftJoin(
+        orgAssignments,
+        and(
+          eq(orgAssignments.employeeId, employees.id),
+          eq(orgAssignments.isCurrent, true),
+        ),
+      )
+      .where(eq(employees.id, employeeId))
+      .limit(1);
+
+    return row?.departmentId ?? null;
   }
 }

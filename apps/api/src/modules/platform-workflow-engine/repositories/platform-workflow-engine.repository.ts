@@ -1,8 +1,10 @@
-import {  Inject , Injectable } from "@nestjs/common";
-import { and, desc, eq, asc, count } from "drizzle-orm";
+import { Inject, Injectable } from "@nestjs/common";
+import { and, desc, eq, asc, count, inArray, isNull } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../infrastructure/database/database.provider";
 import { AppDatabase } from "../../../infrastructure/database/database-client.type";
 import {
+  employees,
+  orgAssignments,
   workflowDefinitions,
   workflowInstances,
   workflowInstanceTransitions,
@@ -166,6 +168,7 @@ export class PlatformWorkflowEngineRepository {
     status?: string;
     definitionId?: string;
     subjectType?: string;
+    subjectTypes?: string[];
     subjectId?: string;
     limit?: number;
     offset?: number;
@@ -174,6 +177,7 @@ export class PlatformWorkflowEngineRepository {
     if (opts.status) conditions.push(eq(workflowInstances.status, opts.status as any));
     if (opts.definitionId) conditions.push(eq(workflowInstances.definitionId, opts.definitionId));
     if (opts.subjectType) conditions.push(eq(workflowInstances.subjectType, opts.subjectType));
+    if (opts.subjectTypes?.length) conditions.push(inArray(workflowInstances.subjectType, opts.subjectTypes));
     if (opts.subjectId) conditions.push(eq(workflowInstances.subjectId, opts.subjectId));
 
     return this.db.query.workflowInstances.findMany({
@@ -188,16 +192,49 @@ export class PlatformWorkflowEngineRepository {
     status?: string;
     definitionId?: string;
     subjectType?: string;
+    subjectTypes?: string[];
     subjectId?: string;
   }) {
     const conditions: any[] = [];
     if (opts.status) conditions.push(eq(workflowInstances.status, opts.status as any));
     if (opts.definitionId) conditions.push(eq(workflowInstances.definitionId, opts.definitionId));
     if (opts.subjectType) conditions.push(eq(workflowInstances.subjectType, opts.subjectType));
+    if (opts.subjectTypes?.length) conditions.push(inArray(workflowInstances.subjectType, opts.subjectTypes));
     if (opts.subjectId) conditions.push(eq(workflowInstances.subjectId, opts.subjectId));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     return this.db.$count(workflowInstances, where);
+  }
+
+  async getEmployeeScopeContext(employeeId: string): Promise<{
+    id: string;
+    userId: string;
+    departmentId: string | null;
+  } | null> {
+    const [row] = await this.db
+      .select({
+        id: employees.id,
+        userId: employees.userId,
+        departmentId: employees.departmentId,
+        orgDepartmentId: orgAssignments.departmentId,
+      })
+      .from(employees)
+      .leftJoin(
+        orgAssignments,
+        and(
+          eq(orgAssignments.employeeId, employees.id),
+          eq(orgAssignments.isCurrent, true),
+        ),
+      )
+      .where(and(eq(employees.id, employeeId), isNull(employees.deletedAt)))
+      .limit(1);
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      userId: row.userId,
+      departmentId: row.departmentId ?? row.orgDepartmentId ?? null,
+    };
   }
 
   listTransitionsByInstanceId(instanceId: string) {

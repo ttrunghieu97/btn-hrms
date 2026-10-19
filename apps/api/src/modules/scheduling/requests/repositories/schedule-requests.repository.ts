@@ -35,7 +35,14 @@ export class ScheduleRequestsRepository implements IScheduleRequestsRepository {
   ): Promise<ScheduleRequestWithEmployee[]> {
     const conditions: any[] = [];
     if (filters?.status) {
-      conditions.push(eq(schema.scheduleRequests.status, filters.status as any));
+      const normalizedStatus = filters.status.trim().toUpperCase();
+      if (
+        normalizedStatus === "PENDING" ||
+        normalizedStatus === "APPROVED" ||
+        normalizedStatus === "DENIED"
+      ) {
+        conditions.push(eq(schema.scheduleRequests.status, normalizedStatus));
+      }
     }
     if (filters?.employeeId) {
       conditions.push(eq(schema.scheduleRequests.employeeId, filters.employeeId));

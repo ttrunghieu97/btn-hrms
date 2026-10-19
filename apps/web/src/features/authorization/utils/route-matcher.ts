@@ -1,4 +1,4 @@
-import type { RouteDef } from '@/shared/authorization';
+import type { RouteDef } from '@/shared/authorization/route-registry/routes';
 
 /**
  * Convert route path with `:param` segments to a RegExp.

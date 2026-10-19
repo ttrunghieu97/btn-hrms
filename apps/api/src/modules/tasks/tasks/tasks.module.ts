@@ -71,14 +71,10 @@ import { WorkflowSideEffectsService } from "../workflow/engine/workflow-side-eff
 // ── Event system ───────────────────────────────────────────────────────────
 import { TaskEventPublisher } from "../events/task-event-publisher";
 import { TaskEventStoreRepository } from "../events/task-event-store.repository";
-import { ConsumerIdempotencyRepository } from "../events/repositories/consumer-idempotency.repository";
 import { TaskAuditLogRepository } from "../events/repositories/task-audit-log.repository";
-import { TaskEventsMetricsRepository } from "../events/repositories/task-events-metrics.repository";
 import { NotificationConsumer } from "../events/consumers/notification.consumer";
 import { ActivityLogConsumer } from "../events/consumers/activity-log.consumer";
 import { AnalyticsConsumer } from "../events/consumers/analytics.consumer";
-import { OutboxDispatcherConsumer } from "../events/consumers/outbox-dispatcher.consumer";
-import { OutboxMetricsService } from "../events/outbox-metrics.service";
 
 import { FindTaskByIdUseCase } from "./use-cases/find-task-by-id.usecase";
 import { ListSubtasksUseCase } from "./use-cases/list-subtasks.usecase";
@@ -100,9 +96,7 @@ import { ListSubtasksUseCase } from "./use-cases/list-subtasks.usecase";
     TaskAssigneePerformanceReportRepository,
     TaskEmployeeHiredSubscriber,
     TaskEventStoreRepository,
-    ConsumerIdempotencyRepository,
     TaskAuditLogRepository,
-    TaskEventsMetricsRepository,
     // ── Services ────────────────────────────────────────────────────────────
     TaskNotificationsService,
     TaskEventsService,
@@ -121,8 +115,6 @@ import { ListSubtasksUseCase } from "./use-cases/list-subtasks.usecase";
     NotificationConsumer,
     ActivityLogConsumer,
     AnalyticsConsumer,
-    OutboxDispatcherConsumer,
-    OutboxMetricsService,
     // ── Use cases ────────────────────────────────────────────────────────────
     ListTasksUseCase,
     ListMyTasksUseCase,

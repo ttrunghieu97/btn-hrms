@@ -7,6 +7,9 @@ export interface DateRange {
 
 export interface TimesheetRow {
   date: string;
+  workDate?: string;
+  employeeName?: string;
+  employeeCode?: string;
   employee?: { lastName: string; firstName: string; employeeCode?: string };
   shiftName?: string;
   shiftCode?: string;

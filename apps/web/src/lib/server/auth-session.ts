@@ -6,7 +6,7 @@ import type { UserMeResponseDto } from '@/api/generated/model';
 import { unwrapData } from '@/lib/api-extract';
 import { appLogger } from '@/lib/logger';
 import { getErrorObservabilityContext, resolveAppError } from '@/lib/error-taxonomy';
-import { cacheGet, cacheSet } from './redis';
+import { cacheDel, cacheGet, cacheSet } from './redis';
 
 type ServerSessionResult =
   | { status: 'authenticated'; user: UserMeResponseDto }
@@ -34,6 +34,12 @@ async function getCachedSession(token: string): Promise<UserMeResponseDto | null
 async function setCachedSession(token: string, user: UserMeResponseDto): Promise<void> {
   memorySessionCache.set(token, { user, expires: Date.now() + SESSION_CACHE_TTL_MS });
   await cacheSet(sessionCacheKey(token), user, SESSION_CACHE_TTL_MS);
+}
+
+export async function evictServerSessionCache(token?: string | null): Promise<void> {
+  if (!token) return;
+  memorySessionCache.delete(token);
+  await cacheDel(sessionCacheKey(token));
 }
 
 // --- Retry ---

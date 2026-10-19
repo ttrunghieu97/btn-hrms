@@ -125,4 +125,43 @@ describe("JwtAuthGuard — Authorization Version & Revocation", () => {
     const ctx = createMockContext();
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
   });
+
+  it("rejects WebSocket connection in WsJwtGuard when token.azv is older than dbUser.authorizationVersion", async () => {
+    const { WsJwtGuard } = await import("./ws-jwt.guard");
+    const disconnect = jest.fn();
+    const wsGuard = new WsJwtGuard(
+      { verifyAsync: jest.fn().mockResolvedValue({ sub: "u-1", email: "u1@test.com", azv: 1 }) } as any,
+      permissionReader,
+      configService,
+      {
+        loadAuthSession: jest.fn().mockResolvedValue({
+          user: {
+            id: "u-1",
+            username: "user1",
+            isSuperAdmin: false,
+            isActive: true,
+            authorizationVersion: 2,
+          },
+          employee: null,
+        }),
+        isAuthUserActive: jest.fn(),
+      } as any,
+      rolesRepo as any,
+      hierarchyResolver as any,
+    );
+
+    const wsCtx = {
+      switchToWs: () => ({
+        getClient: () => ({
+          handshake: { auth: { token: "ws-jwt" }, headers: {} },
+          disconnect,
+          data: {},
+        }),
+      }),
+    } as any;
+
+    const allowed = await wsGuard.canActivate(wsCtx);
+    expect(allowed).toBe(false);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
 });

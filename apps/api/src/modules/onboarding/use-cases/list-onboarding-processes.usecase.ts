@@ -7,7 +7,13 @@ export class ListOnboardingProcessesUseCase {
     private readonly processRepo: OnboardingProcessRepository,
   ) {}
 
-  async execute(page = 1, limit = 20) {
-    return this.processRepo.findByType("onboarding", page, limit);
+  async execute(
+    page = 1,
+    limit = 20,
+    filters?: { employeeId?: string; status?: string },
+  ) {
+    return filters
+      ? this.processRepo.findByType("onboarding", page, limit, filters)
+      : this.processRepo.findByType("onboarding", page, limit);
   }
 }

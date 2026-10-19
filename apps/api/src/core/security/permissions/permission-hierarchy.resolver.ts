@@ -30,15 +30,35 @@ export class PermissionHierarchyResolver {
     }
   }
 
+  private addEmployeeAliases(result: Set<string>, queue: string[], code: string) {
+    if (code.startsWith("employees:")) {
+      const singular = `employee:${code.slice("employees:".length)}`;
+      if (!result.has(singular)) {
+        result.add(singular);
+        queue.push(singular);
+      }
+    } else if (code.startsWith("employee:")) {
+      const plural = `employees:${code.slice("employee:".length)}`;
+      if (!result.has(plural)) {
+        result.add(plural);
+        queue.push(plural);
+      }
+    }
+  }
+
   /**
    * Expand a flat set of permission codes into the full transitive closure.
    *
    * @param permissions - raw codes (from DB or role)
-   * @returns expanded set including all implied children, deduped
+   * @returns expanded set including all implied children and singular/plural employee aliases, deduped
    */
   expand(permissions: string[]): string[] {
     const result = new Set<string>(permissions);
     const queue = [...permissions];
+
+    for (const perm of permissions) {
+      this.addEmployeeAliases(result, queue, perm);
+    }
 
     while (queue.length > 0) {
       const perm = queue.shift()!;
@@ -47,6 +67,7 @@ export class PermissionHierarchyResolver {
         if (!result.has(child)) {
           result.add(child);
           queue.push(child);
+          this.addEmployeeAliases(result, queue, child);
         }
       }
     }
@@ -67,7 +88,7 @@ export class PermissionHierarchyResolver {
     // Direct match
     if (userPermissions.includes(requiredCode)) return true;
 
-    // Check if any user permission is an ancestor of requiredCode
+    // Check if any user permission is an ancestor or alias of requiredCode
     const expanded = this.expand(userPermissions);
     return expanded.includes(requiredCode);
   }

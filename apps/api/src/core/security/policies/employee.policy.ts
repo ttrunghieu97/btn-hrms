@@ -2,6 +2,16 @@ import { type AuthUser } from "../types/auth-user.interface";
 import { type PolicyHandler } from "./policy-handler.interface";
 import { Permissions } from "../permissions/permissions.registry";
 
+function hasPerm(user: AuthUser, perm: string): boolean {
+  const perms = user.permissions;
+  if (!perms) return false;
+  if (perms.includes(perm)) return true;
+  if (perm.startsWith("employee:")) {
+    return perms.includes(`employees:${perm.slice("employee:".length)}`);
+  }
+  return false;
+}
+
 // ─── View Employee ───────────────────────────────────────────────────────────
 // Allows: explicit permission OR self-access OR same-department access
 class ViewEmployeePolicyHandler implements PolicyHandler {
@@ -12,52 +22,159 @@ class ViewEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_VIEW_DEPARTMENT,
     Permissions.EMPLOYEES_VIEW_ALL,
     Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_UPDATE_ALL,
     Permissions.EMPLOYEES_MANAGE,
   ];
 
   handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
     if (
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_EDIT) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE)
     )
       return true;
-    if (!resource) {
-      return (
-        user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) ||
-        user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SELF)
-      ) ?? false;
+
+    const isDeptScoped = hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT);
+    if (isDeptScoped) {
+      if (!resource) return true;
+      if (
+        resource.departmentId &&
+        user.departmentId &&
+        String(user.departmentId) === String(resource.departmentId)
+      )
+        return true;
+      if (
+        resource.id &&
+        user.employeeId &&
+        String(resource.id) === String(user.employeeId)
+      )
+        return true;
+      if (
+        resource.userId &&
+        user.id &&
+        String(resource.userId) === String(user.id)
+      )
+        return true;
+      return false;
     }
+
+    const isSelfScoped = hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF);
+    if (isSelfScoped) {
+      if (!resource) return true;
+      if (
+        resource.id &&
+        user.employeeId &&
+        String(resource.id) === String(user.employeeId)
+      )
+        return true;
+      if (
+        resource.userId &&
+        user.id &&
+        String(resource.userId) === String(user.id)
+      )
+        return true;
+      if (
+        resource.username &&
+        user.username === resource.username
+      )
+        return true;
+      return false;
+    }
+
     if (
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) &&
-      resource.departmentId &&
-      user.departmentId &&
-      String(user.departmentId) === String(resource.departmentId)
+      hasPerm(user, Permissions.EMPLOYEES_VIEW) ||
+      hasPerm(user, Permissions.EMPLOYEES_EDIT)
     )
       return true;
-    if (
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SELF) &&
-      resource.id &&
-      user.employeeId &&
-      String(resource.id) === String(user.employeeId)
-    )
-      return true;
-    if (
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SELF) &&
-      resource.userId &&
-      user.id &&
-      String(resource.userId) === String(user.id)
-    )
-      return true;
-    if (
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SELF) &&
-      resource.username &&
-      user.username === resource.username
-    )
-      return true;
+
     return false;
+  }
+}
+
+class ViewAllEmployeePolicyHandler implements PolicyHandler {
+  readonly policyName = "ViewAllEmployee";
+  readonly requiredAnyOfPermissions = [
+    Permissions.EMPLOYEES_VIEW,
+    Permissions.EMPLOYEES_VIEW_ALL,
+    Permissions.EMPLOYEES_CREATE,
+    Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_UPDATE_ALL,
+    Permissions.EMPLOYEES_MANAGE,
+  ];
+
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE)
+    )
+      return true;
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)
+    ) {
+      return false;
+    }
+    return (
+      hasPerm(user, Permissions.EMPLOYEES_VIEW) ||
+      hasPerm(user, Permissions.EMPLOYEES_EDIT) ||
+      hasPerm(user, Permissions.EMPLOYEES_CREATE)
+    );
+  }
+}
+
+class ApproveTransferEmployeePolicyHandler implements PolicyHandler {
+  readonly policyName = "ApproveTransferEmployee";
+  readonly requiredAnyOfPermissions = [
+    Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_UPDATE_ALL,
+    Permissions.EMPLOYEES_MANAGE,
+    Permissions.APPROVAL_REQUESTS_DECIDE,
+  ];
+
+  handle(user: AuthUser, resource?: any): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes(Permissions.SYS_ALL)) return true;
+
+    const hasDecisionPermission =
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_EDIT) ||
+      hasPerm(user, Permissions.APPROVAL_REQUESTS_DECIDE);
+    if (!hasDecisionPermission) return false;
+
+    if (
+      resource?.id &&
+      user.employeeId &&
+      String(resource.id) === String(user.employeeId) &&
+      !hasPerm(user, Permissions.EMPLOYEES_MANAGE)
+    ) {
+      return false;
+    }
+
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL)
+    )
+      return true;
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT)) {
+      if (!resource) return false;
+      return Boolean(
+        resource.departmentId &&
+        user.departmentId &&
+        String(user.departmentId) === String(resource.departmentId) &&
+        (!user.employeeId || String(resource.id) !== String(user.employeeId)),
+      );
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)) {
+      return false;
+    }
+
+    return true;
   }
 }
 
@@ -80,8 +197,8 @@ class ViewSensitiveEmployeePolicyHandler implements PolicyHandler {
     return (
       user.isSuperAdmin === true ||
       user.permissions?.includes(Permissions.SYS_ALL) === true ||
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_SENSITIVE) === true ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE_SENSITIVE) === true
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_SENSITIVE) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE_SENSITIVE)
     );
   }
 }
@@ -96,8 +213,8 @@ class CreateEmployeePolicyHandler implements PolicyHandler {
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
     return (
-      user.permissions?.includes(Permissions.EMPLOYEES_CREATE) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+      hasPerm(user, Permissions.EMPLOYEES_CREATE) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE)
     );
   }
 }
@@ -106,26 +223,39 @@ class EditEmployeePolicyHandler implements PolicyHandler {
   readonly policyName = "EditEmployee";
   readonly requiredAnyOfPermissions = [
     Permissions.EMPLOYEES_EDIT,
+    Permissions.EMPLOYEES_UPDATE_ALL,
     Permissions.EMPLOYEES_MANAGE,
   ];
   handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    const hasEditPermission = Boolean(
-      user.permissions?.includes(Permissions.EMPLOYEES_EDIT) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE),
-    );
+    const hasEditPermission =
+      hasPerm(user, Permissions.EMPLOYEES_EDIT) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE);
     if (!hasEditPermission) return false;
 
     if (
-      resource &&
-      user.permissions?.includes(Permissions.EMPLOYEES_VIEW_DEPARTMENT) &&
-      !user.permissions?.includes(Permissions.EMPLOYEES_VIEW_ALL) &&
-      !user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE)
     ) {
+      return true;
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT)) {
+      if (!resource) return true;
       return Boolean(
         user.departmentId &&
         resource.departmentId &&
         String(user.departmentId) === String(resource.departmentId),
+      );
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)) {
+      if (!resource) return true;
+      return Boolean(
+        (resource.id && user.employeeId && String(resource.id) === String(user.employeeId)) ||
+        (resource.userId && user.id && String(resource.userId) === String(user.id)),
       );
     }
 
@@ -139,12 +269,39 @@ class DeleteEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_DELETE,
     Permissions.EMPLOYEES_MANAGE,
   ];
-  handle(user: AuthUser): boolean {
+  handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return (
-      user.permissions?.includes(Permissions.EMPLOYEES_DELETE) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
-    ) ?? false;
+    const hasDeletePermission =
+      hasPerm(user, Permissions.EMPLOYEES_DELETE) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE);
+    if (!hasDeletePermission) return false;
+
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL)
+    ) {
+      return true;
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT)) {
+      if (!resource) return true;
+      return Boolean(
+        user.departmentId &&
+        resource.departmentId &&
+        String(user.departmentId) === String(resource.departmentId),
+      );
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)) {
+      if (!resource) return true;
+      return Boolean(
+        (resource.id && user.employeeId && String(resource.id) === String(user.employeeId)) ||
+        (resource.userId && user.id && String(resource.userId) === String(user.id)),
+      );
+    }
+
+    return true;
   }
 }
 
@@ -154,12 +311,39 @@ class ResetEmployeePasswordPolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_RESET_PASSWORD,
     Permissions.EMPLOYEES_MANAGE,
   ];
-  handle(user: AuthUser): boolean {
+  handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return (
-      user.permissions?.includes(Permissions.EMPLOYEES_RESET_PASSWORD) ||
-      user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)
-    );
+    const hasResetPermission =
+      hasPerm(user, Permissions.EMPLOYEES_RESET_PASSWORD) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE);
+    if (!hasResetPermission) return false;
+
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL)
+    ) {
+      return true;
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT)) {
+      if (!resource) return true;
+      return Boolean(
+        user.departmentId &&
+        resource.departmentId &&
+        String(user.departmentId) === String(resource.departmentId),
+      );
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)) {
+      if (!resource) return true;
+      return Boolean(
+        (resource.id && user.employeeId && String(resource.id) === String(user.employeeId)) ||
+        (resource.userId && user.id && String(resource.userId) === String(user.id)),
+      );
+    }
+
+    return true;
   }
 }
 
@@ -168,7 +352,7 @@ class ManageEmployeePolicyHandler implements PolicyHandler {
   readonly requiredAnyOfPermissions = [Permissions.EMPLOYEES_MANAGE];
   handle(user: AuthUser): boolean {
     if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
-    return user.permissions?.includes(Permissions.EMPLOYEES_MANAGE) ?? false;
+    return hasPerm(user, Permissions.EMPLOYEES_MANAGE);
   }
 }
 
@@ -179,12 +363,40 @@ class TerminateEmployeePolicyHandler implements PolicyHandler {
     Permissions.EMPLOYEES_MANAGE_SENSITIVE,
   ];
 
-  handle(user: AuthUser): boolean {
+  handle(user: AuthUser, resource?: any): boolean {
     if (user.isSuperAdmin) return true;
     if (user.permissions?.includes(Permissions.SYS_ALL)) return true;
-    if (user.permissions?.includes(Permissions.EMPLOYEES_MANAGE)) return true;
-    if (user.permissions?.includes(Permissions.EMPLOYEES_MANAGE_SENSITIVE)) return true;
-    return false;
+    const hasTerminatePermission =
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE_SENSITIVE);
+    if (!hasTerminatePermission) return false;
+
+    if (
+      hasPerm(user, Permissions.EMPLOYEES_MANAGE) ||
+      hasPerm(user, Permissions.EMPLOYEES_UPDATE_ALL) ||
+      hasPerm(user, Permissions.EMPLOYEES_VIEW_ALL)
+    ) {
+      return true;
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_DEPARTMENT)) {
+      if (!resource) return true;
+      return Boolean(
+        user.departmentId &&
+        resource.departmentId &&
+        String(user.departmentId) === String(resource.departmentId),
+      );
+    }
+
+    if (hasPerm(user, Permissions.EMPLOYEES_VIEW_SELF)) {
+      if (!resource) return true;
+      return Boolean(
+        (resource.id && user.employeeId && String(resource.id) === String(user.employeeId)) ||
+        (resource.userId && user.id && String(resource.userId) === String(user.id)),
+      );
+    }
+
+    return true;
   }
 }
 
@@ -198,6 +410,8 @@ class PurgeEmployeePolicyHandler implements PolicyHandler {
 
 export const EmployeePolicies = {
   view: new ViewEmployeePolicyHandler(),
+  viewAll: new ViewAllEmployeePolicyHandler(),
+  approveTransfer: new ApproveTransferEmployeePolicyHandler(),
   viewSelf: new ViewOwnEmployeePolicyHandler(),
   viewSensitive: new ViewSensitiveEmployeePolicyHandler(),
   terminate: new TerminateEmployeePolicyHandler(),

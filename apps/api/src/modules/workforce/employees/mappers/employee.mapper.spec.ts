@@ -144,4 +144,62 @@ describe("EmployeeMapper", () => {
       deletedAt: null,
     });
   });
+
+  it.each([
+    ["probation", ["working", "terminated"]],
+    ["working", ["leave", "suspended", "retired", "terminated"]],
+    ["leave", ["working", "terminated"]],
+    ["suspended", ["working", "terminated"]],
+    ["retired", []],
+    ["terminated", []],
+  ] as const)("maps status '%s' to canonical allowedTransitions %j", (status, expectedTransitions) => {
+    const dto = EmployeeMapper.toResponseDto({
+      id: "emp-status",
+      firstName: "Test",
+      lastName: "User",
+      employeeCode: "EMP-S",
+      status,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+
+    expect(dto?.status).toBe(status);
+    expect(dto?.allowedTransitions).toEqual(expectedTransitions);
+  });
+
+  it("redacts sensitive fields when sensitiveFieldsAllowed is false and exposes them when true", () => {
+    const rawRow = {
+      id: "emp-sens",
+      firstName: "Sens",
+      lastName: "User",
+      employeeCode: "EMP-SENS",
+      status: "working",
+      identityNumber: "012345678901",
+      identityDate: "2020-01-01",
+      identityPlace: "Hanoi",
+      bankAccountNumber: "999888777",
+      bankName: "VCB",
+      taxCode: "TAX-123",
+      emergencyContactName: "Contact",
+      emergencyContactPhone: "0909000111",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any;
+
+    const redacted = EmployeeMapper.toResponseDtoWithPosition(rawRow, null, false);
+    expect(redacted.identityNumber).toBe("••••••••8901");
+    expect(redacted.identityDate).toBeNull();
+    expect(redacted.identityPlace).toBeNull();
+    expect(redacted.bankAccountNumber).toBe("••••••••8777");
+    expect(redacted.bankName).toBeNull();
+    expect(redacted.taxCode).toBe("••••••••-123");
+    expect(redacted.emergencyContactName).toBeNull();
+    expect(redacted.emergencyContactPhone).toBeNull();
+
+    const exposed = EmployeeMapper.toResponseDtoWithPosition(rawRow, null, true);
+    expect(exposed.identityNumber).toBe("012345678901");
+    expect(exposed.bankAccountNumber).toBe("999888777");
+    expect(exposed.taxCode).toBe("TAX-123");
+    expect(exposed.emergencyContactPhone).toBe("0909000111");
+  });
 });

@@ -30,6 +30,9 @@ type LegacyPayrollRow = {
   updatedAt: Date;
   payslipId: string;
   payrollRunId: string;
+  isProvisional?: boolean;
+  calculationStatus?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 @Injectable()
@@ -502,6 +505,21 @@ export class PayrollRepository extends BaseRepository<
     const taxAmount = itemAmount("tax");
     const insuranceAmount = itemAmount("insurance");
 
+    const meta =
+      row.metadata && typeof row.metadata === "object"
+        ? (row.metadata as Record<string, unknown>)
+        : null;
+    const calculationStatus =
+      typeof meta?.calculationStatus === "string"
+        ? meta.calculationStatus
+        : "PROVISIONAL_POLICY_UNCONFIRMED";
+    const isProvisional =
+      meta?.isProvisional === false
+        ? false
+        : meta?.isProvisional === true ||
+          calculationStatus === "PROVISIONAL_POLICY_UNCONFIRMED" ||
+          typeof meta?.policyBlockerCode === "string";
+
     return {
       id: row.id,
       payslipId: row.id,
@@ -518,6 +536,9 @@ export class PayrollRepository extends BaseRepository<
       currency: row.currency ?? "VND",
       effectiveFrom: row.payrollRun?.payrollPeriod?.startsOn ?? null,
       effectiveTo: row.payrollRun?.payrollPeriod?.endsOn ?? null,
+      isProvisional,
+      calculationStatus,
+      metadata: meta,
       employee: row.employee,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

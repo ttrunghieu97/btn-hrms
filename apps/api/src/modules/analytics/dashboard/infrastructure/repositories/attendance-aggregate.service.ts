@@ -134,4 +134,71 @@ export class AttendanceAggregateService {
       .groupBy(schema.attendanceDailySummaries.workDate)
       .orderBy(schema.attendanceDailySummaries.workDate);
   }
+
+  async getPeriodMetrics(
+    from: string,
+    to: string,
+  ): Promise<{
+    presentRecords: number;
+    totalRecords: number;
+    avgWorkedMinutes: number;
+  }> {
+    const [row] = await this.db
+      .select({
+        presentRecords:
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
+        totalRecords:
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day', 'absent', 'unpaid_leave') THEN 1 END)::int`,
+        avgWorkedMinutes:
+          sql<number>`coalesce(avg(CASE WHEN ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN ${schema.attendanceDailySummaries.workedMinutes} END), 0)::float`,
+      })
+      .from(schema.attendanceDailySummaries)
+      .where(
+        and(
+          gte(schema.attendanceDailySummaries.workDate, from),
+          lte(schema.attendanceDailySummaries.workDate, to),
+        ),
+      );
+
+    return {
+      presentRecords: row?.presentRecords ?? 0,
+      totalRecords: row?.totalRecords ?? 0,
+      avgWorkedMinutes: Number(row?.avgWorkedMinutes ?? 0),
+    };
+  }
+
+  async getDepartmentAttendanceMetrics(
+    from: string,
+    to: string,
+  ): Promise<
+    Array<{
+      departmentId: string | null;
+      presentRecords: number;
+      totalRecords: number;
+    }>
+  > {
+    return this.db
+      .select({
+        departmentId: schema.employees.departmentId,
+        presentRecords:
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day') OR ${schema.attendanceDailySummaries.workedMinutes} > 0 THEN 1 END)::int`,
+        totalRecords:
+          sql<number>`count(CASE WHEN ${schema.attendanceDailySummaries.status} IN ('present', 'half_day', 'absent', 'unpaid_leave') THEN 1 END)::int`,
+      })
+      .from(schema.attendanceDailySummaries)
+      .innerJoin(
+        schema.employees,
+        and(
+          eq(schema.attendanceDailySummaries.employeeId, schema.employees.id),
+          isNull(schema.employees.deletedAt),
+        ),
+      )
+      .where(
+        and(
+          gte(schema.attendanceDailySummaries.workDate, from),
+          lte(schema.attendanceDailySummaries.workDate, to),
+        ),
+      )
+      .groupBy(schema.employees.departmentId);
+  }
 }

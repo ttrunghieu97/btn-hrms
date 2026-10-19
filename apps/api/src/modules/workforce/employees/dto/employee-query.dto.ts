@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString, IsUUID } from "class-validator";
 import { FieldSelectableQueryDto } from "../../../../shared/dto/pagination.dto";
+import { EMPLOYEE_STATUS_VALUES, type EmployeeStatusValue } from "./create-employee.dto";
 
 const EMPLOYEE_TABS = ["active", "official", "probation", "terminated", "deleted"] as const;
 
@@ -42,6 +43,12 @@ export class EmployeeQueryDto extends FieldSelectableQueryDto {
   @IsString()
   @IsIn(EMPLOYEE_TABS)
   tab?: string;
+
+  @ApiPropertyOptional({ description: "Filter by canonical employee status", enum: EMPLOYEE_STATUS_VALUES })
+  @IsOptional()
+  @IsString()
+  @IsIn(EMPLOYEE_STATUS_VALUES)
+  status?: EmployeeStatusValue;
 
   getNormalizedDepartmentIds(): string[] | undefined {
     if (this.departmentIds?.length) return this.departmentIds;

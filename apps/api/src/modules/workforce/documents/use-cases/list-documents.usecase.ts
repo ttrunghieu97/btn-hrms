@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { DocumentQueryRepository } from "../repositories/document-query.repository";
 import type { ListDocumentsQueryDto } from "../dto/documents.dto";
 import type { PaginatedDocuments } from "../repositories/document-query.repository";
+import type { DataScope } from "../../../../core/security/query-scope.service";
 
 @Injectable()
 export class ListDocumentsUseCase {
@@ -9,7 +10,8 @@ export class ListDocumentsUseCase {
     private readonly queryRepo: DocumentQueryRepository,
   ) {}
 
-  async execute(query: ListDocumentsQueryDto): Promise<PaginatedDocuments> {
-    return this.queryRepo.findPaginated(query);
+  async execute(query: ListDocumentsQueryDto, scope?: DataScope): Promise<PaginatedDocuments> {
+    return this.queryRepo.findPaginated(query, scope);
   }
 }
+

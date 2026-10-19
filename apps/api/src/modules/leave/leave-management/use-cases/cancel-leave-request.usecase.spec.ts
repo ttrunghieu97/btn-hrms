@@ -224,5 +224,25 @@ describe("CancelLeaveRequestUseCase", () => {
     expect(repo.decrementUsedBalance).not.toHaveBeenCalled();
     expect(reconciliation.reconcileCanceledLeave).not.toHaveBeenCalled();
   });
+
+  it("should not decrement balance when canceling an approved unpaid leave request", async () => {
+    const request = {
+      id: "req-unpaid",
+      status: "approved",
+      startDate: "2026-05-01",
+      totalUnits: "3",
+      employeeId: "emp-1",
+      leaveTypeId: "type-unpaid",
+      leaveType: { id: "type-unpaid", isPaid: false },
+    };
+    repo.findById.mockResolvedValue(request as any);
+    repo.update.mockResolvedValue({ ...request, status: "cancelled" } as any);
+
+    await useCase.execute("req-unpaid", { id: "user-1", employeeId: "emp-1", permissions: [], roles: [], departmentId: null, username: "user1" });
+
+    expect(repo.findBalanceForYear).not.toHaveBeenCalled();
+    expect(repo.decrementUsedBalance).not.toHaveBeenCalled();
+    expect(reconciliation.reconcileCanceledLeave).toHaveBeenCalled();
+  });
 });
 

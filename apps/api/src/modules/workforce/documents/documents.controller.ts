@@ -1,7 +1,7 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
+  Body, Controller, Delete, Get, Optional, Param, Patch, Post, Query, Req,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { EmployeePolicies } from "../../../core/security/policies/employee.policy";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
@@ -11,6 +11,8 @@ import { CreateDocumentUseCase } from "./use-cases/create-document.usecase";
 import { UpdateDocumentUseCase } from "./use-cases/update-document.usecase";
 import { DeleteDocumentUseCase } from "./use-cases/delete-document.usecase";
 import { ListDocumentsQueryDto, CreateDocumentDto, UpdateDocumentDto } from "./dto/documents.dto";
+import { QueryScopeService } from "../../../core/security/query-scope.service";
+import type { AuthUser } from "../../../core/security/types/auth-user.interface";
 
 @ApiTags("Documents")
 @ApiBearerAuth()
@@ -22,13 +24,21 @@ export class DocumentsController {
     private readonly createDocument: CreateDocumentUseCase,
     private readonly updateDocument: UpdateDocumentUseCase,
     private readonly deleteDocument: DeleteDocumentUseCase,
+    @Optional() private readonly queryScopeService?: QueryScopeService,
   ) {}
 
   @Get()
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "List documents with pagination, filter, and sort" })
-  async findAll(@Query() query: ListDocumentsQueryDto) {
-    const result = await this.listDocuments.execute(query);
+  async findAll(
+    @Query() query: ListDocumentsQueryDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const result = await this.listDocuments.execute(query, scope);
     return {
       data: result.rows,
       meta: {
@@ -48,8 +58,15 @@ export class DocumentsController {
   @Get(":id")
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "Get document by ID" })
-  async findOne(@Param("id") id: string) {
-    const doc = await this.getDocument.execute(id);
+  async findOne(
+    @Param("id") id: string,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const doc = await this.getDocument.execute(id, scope);
     return {
       data: doc,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -61,8 +78,15 @@ export class DocumentsController {
   @CheckPolicy(EmployeePolicies.edit)
   @AuditLog({ action: "document_create", entity: "employee" })
   @ApiOperation({ summary: "Create a new document" })
-  async create(@Body() dto: CreateDocumentDto) {
-    const doc = await this.createDocument.execute(dto);
+  async create(
+    @Body() dto: CreateDocumentDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const doc = await this.createDocument.execute(dto, scope);
     return {
       data: doc,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -74,8 +98,16 @@ export class DocumentsController {
   @CheckPolicy(EmployeePolicies.edit)
   @AuditLog({ action: "document_update", entity: "employee" })
   @ApiOperation({ summary: "Update a document" })
-  async update(@Param("id") id: string, @Body() dto: UpdateDocumentDto) {
-    const doc = await this.updateDocument.execute(id, dto);
+  async update(
+    @Param("id") id: string,
+    @Body() dto: UpdateDocumentDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const doc = await this.updateDocument.execute(id, dto, scope);
     return {
       data: doc,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -87,8 +119,15 @@ export class DocumentsController {
   @CheckPolicy(EmployeePolicies.edit)
   @AuditLog({ action: "document_delete", entity: "employee" })
   @ApiOperation({ summary: "Delete a document" })
-  async delete(@Param("id") id: string) {
-    await this.deleteDocument.execute(id);
+  async delete(
+    @Param("id") id: string,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    await this.deleteDocument.execute(id, scope);
     return {
       data: { success: true },
       meta: { requestId: "", timestamp: new Date().toISOString() },

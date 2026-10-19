@@ -13,7 +13,6 @@ import { GetEmployeeByUserUseCase } from "./use-cases/get-employee-by-user.useca
 import { CreateEmployeeUseCase } from "./use-cases/create-employee.usecase";
 import { UpdateEmployeeUseCase } from "./use-cases/update-employee.usecase";
 import { DeleteEmployeeUseCase } from "./use-cases/delete-employee.usecase";
-import { RestoreEmployeeUseCase } from "./use-cases/restore-employee.usecase";
 import { PurgeEmployeeUseCase } from "./use-cases/purge-employee.usecase";
 import { CheckUsernameUseCase } from "./use-cases/check-username.usecase";
 import { CheckEmployeeCodeUseCase } from "./use-cases/check-employee-code.usecase";
@@ -32,7 +31,8 @@ import { RejectTransferUseCase } from "./use-cases/reject-transfer.usecase";
 import { ApplyTransferUseCase } from "./use-cases/apply-transfer.usecase";
 import { CancelTransferUseCase } from "./use-cases/cancel-transfer.usecase";
 import { BulkChangeStatusUseCase } from "./use-cases/bulk-change-status.usecase";
-import { BulkArchiveUseCase } from "./use-cases/bulk-archive.usecase";import { TerminateEmployeeUseCase } from "../application/use-cases/terminate-employee.usecase";
+import { BulkArchiveUseCase } from "./use-cases/bulk-archive.usecase";
+import { TerminateEmployeeUseCase } from "../application/use-cases/terminate-employee.usecase";
 import { EmployeeEducationController } from "./employee-education.controller";
 import { EmployeeEducationRepository } from "./repositories/employee-education.repository";
 import { EducationAggregationService } from "./services/education-aggregation.service";
@@ -67,7 +67,8 @@ import { PlatformWorkflowEngineDomainModule } from "../../platform-workflow-engi
     DeleteEmployeeUseCase,
     ScheduleTerminationUseCase,
     CancelScheduledTerminationUseCase,
-    ExecuteScheduledTerminationsUseCase,    TerminationSchedulerJob,
+    ExecuteScheduledTerminationsUseCase,
+    TerminationSchedulerJob,
     RestoreArchivedEmployeeUseCase,
     RehireEmployeeUseCase,
     RequestTransferUseCase,
@@ -77,7 +78,6 @@ import { PlatformWorkflowEngineDomainModule } from "../../platform-workflow-engi
     CancelTransferUseCase,
     BulkChangeStatusUseCase,
     BulkArchiveUseCase,
-    RestoreEmployeeUseCase,
     PurgeEmployeeUseCase,
     ResetEmployeePasswordUseCase,
     ChangeEmployeeStatusUseCase,

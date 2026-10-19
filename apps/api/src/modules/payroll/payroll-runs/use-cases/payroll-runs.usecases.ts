@@ -403,6 +403,8 @@ export class GeneratePayrollRunUseCase {
             adjustmentRegularDelta,
             adjustmentOvertimeDelta,
             calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+            isProvisional: true,
+            requiresManualReviewBeforePublish: true,
             policyBlockerCode: "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
             unconfirmedPolicyComponents: [
               "tax_amount",
@@ -880,20 +882,33 @@ function assertValidApprovalCycleForPost(
   return cycle;
 }
 
+export const PAYROLL_CALCULATION_STATUS = {
+  PROVISIONAL_POLICY_UNCONFIRMED: "PROVISIONAL_POLICY_UNCONFIRMED",
+  CONFIRMED: "CONFIRMED",
+} as const;
+
+export type PayrollCalculationStatus =
+  (typeof PAYROLL_CALCULATION_STATUS)[keyof typeof PAYROLL_CALCULATION_STATUS];
+
 export function isProvisionalPayslipMetadata(metadata: unknown): {
   isProvisional: boolean;
-  calculationStatus?: string;
+  calculationStatus: string;
   policyBlockerCode?: string;
   unconfirmedComponents?: unknown[];
 } {
   if (!metadata || typeof metadata !== "object") {
-    return { isProvisional: false };
-  }
-  const meta = metadata as Record<string, unknown>;
-  if (meta.calculationStatus === "PROVISIONAL_POLICY_UNCONFIRMED") {
     return {
       isProvisional: true,
-      calculationStatus: "PROVISIONAL_POLICY_UNCONFIRMED",
+      calculationStatus: PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED,
+      policyBlockerCode: "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+      unconfirmedComponents: [],
+    };
+  }
+  const meta = metadata as Record<string, unknown>;
+  if (meta.calculationStatus === PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED) {
+    return {
+      isProvisional: true,
+      calculationStatus: PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED,
       policyBlockerCode:
         typeof meta.policyBlockerCode === "string"
           ? meta.policyBlockerCode
@@ -913,7 +928,7 @@ export function isProvisionalPayslipMetadata(metadata: unknown): {
       calculationStatus:
         typeof meta.calculationStatus === "string"
           ? meta.calculationStatus
-          : "PROVISIONAL_POLICY_UNCONFIRMED",
+          : PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED,
       policyBlockerCode:
         typeof meta.policyBlockerCode === "string"
           ? meta.policyBlockerCode
@@ -925,21 +940,86 @@ export function isProvisionalPayslipMetadata(metadata: unknown): {
           : [],
     };
   }
+  if (meta.calculationStatus !== PAYROLL_CALCULATION_STATUS.CONFIRMED) {
+    return {
+      isProvisional: true,
+      calculationStatus:
+        typeof meta.calculationStatus === "string"
+          ? meta.calculationStatus
+          : PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED,
+      policyBlockerCode:
+        typeof meta.policyBlockerCode === "string"
+          ? meta.policyBlockerCode
+          : "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+      unconfirmedComponents: Array.isArray(meta.unconfirmedPolicyComponents)
+        ? meta.unconfirmedPolicyComponents
+        : [],
+    };
+  }
+  return {
+    isProvisional: false,
+    calculationStatus: PAYROLL_CALCULATION_STATUS.CONFIRMED,
+  };
+}
+
+export function isProvisionalPayrollRunRecord(run: unknown): {
+  isProvisional: boolean;
+  calculationStatus?: string;
+  policyBlockerCode?: string;
+  unconfirmedComponents?: unknown[];
+} {
+  if (!run || typeof run !== "object") {
+    return { isProvisional: false };
+  }
+  const runRecord = run as Record<string, unknown>;
+  if (runRecord.metadata && typeof runRecord.metadata === "object") {
+    return isProvisionalPayslipMetadata(runRecord.metadata);
+  }
+  if (
+    runRecord.calculationStatus === PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED ||
+    runRecord.isProvisional === true ||
+    runRecord.publicationStatus === PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED
+  ) {
+    return {
+      isProvisional: true,
+      calculationStatus: PAYROLL_CALCULATION_STATUS.PROVISIONAL_POLICY_UNCONFIRMED,
+      policyBlockerCode:
+        typeof runRecord.policyBlockerCode === "string"
+          ? runRecord.policyBlockerCode
+          : "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
+      unconfirmedComponents: [],
+    };
+  }
   return { isProvisional: false };
 }
 
-async function assertPayrollRunNotProvisional(
+function formatPayrollOperationLabel(
+  operation: "approve" | "post" | "export" | "finalize",
+): string {
+  switch (operation) {
+    case "approve":
+      return "approved";
+    case "post":
+      return "posted";
+    case "export":
+      return "exported or submitted for payment";
+    case "finalize":
+      return "finalized";
+  }
+}
+
+export async function assertPayrollRunNotProvisional(
   id: string,
   run: unknown,
   repo: PayrollRunsRepository,
-  operation: "approve" | "post",
+  operation: "approve" | "post" | "export" | "finalize",
   tx?: PayrollRunTransaction,
 ): Promise<void> {
-  const runRecord = (run ?? {}) as Record<string, unknown>;
-  const runMetaCheck = isProvisionalPayslipMetadata(runRecord.metadata ?? runRecord);
+  const opLabel = formatPayrollOperationLabel(operation);
+  const runMetaCheck = isProvisionalPayrollRunRecord(run);
   if (runMetaCheck.isProvisional) {
     throwConflict(
-      `Provisional payroll run cannot be ${operation === "approve" ? "approved" : "posted"} while HR/Finance payroll policies remain unconfirmed`,
+      `Provisional payroll run cannot be ${opLabel} while HR/Finance payroll policies remain unconfirmed`,
       ERROR_CODES.INVALID_STATUS_TRANSITION,
       {
         payrollRunId: id,
@@ -950,33 +1030,63 @@ async function assertPayrollRunNotProvisional(
     );
   }
 
-  if (typeof repo.findPayslipsByRunId === "function") {
-    const runPayslips = await repo.findPayslipsByRunId(id, tx);
-    if (runPayslips.length === 0) {
+  if (typeof repo.findPayslipsByRunId !== "function") {
+    throwConflict(
+      `Payroll run payslips cannot be verified; refusing to allow run to be ${opLabel} without confirmed payslip calculations`,
+      ERROR_CODES.INVALID_STATUS_TRANSITION,
+      { payrollRunId: id },
+    );
+  }
+
+  const runPayslips = await repo.findPayslipsByRunId(id, tx);
+  if (runPayslips.length === 0) {
+    throwConflict(
+      `Payroll run has no generated payslips and cannot be ${opLabel}`,
+      ERROR_CODES.INVALID_STATUS_TRANSITION,
+      { payrollRunId: id },
+    );
+  }
+
+  for (const payslip of runPayslips) {
+    const check = isProvisionalPayslipMetadata(payslip.metadata);
+    if (check.isProvisional) {
       throwConflict(
-        `Payroll run has no generated payslips and cannot be ${operation === "approve" ? "approved" : "posted"}`,
+        `Provisional payroll run cannot be ${opLabel} while HR/Finance payroll policies remain unconfirmed`,
         ERROR_CODES.INVALID_STATUS_TRANSITION,
-        { payrollRunId: id },
+        {
+          payrollRunId: id,
+          payslipId: payslip.id,
+          calculationStatus: check.calculationStatus,
+          policyBlockerCode: check.policyBlockerCode,
+          unconfirmedPolicyComponents: check.unconfirmedComponents ?? [],
+        },
       );
     }
-
-    for (const payslip of runPayslips) {
-      const check = isProvisionalPayslipMetadata(payslip.metadata);
-      if (check.isProvisional) {
-        throwConflict(
-          `Provisional payroll run cannot be ${operation === "approve" ? "approved" : "posted"} while HR/Finance payroll policies remain unconfirmed`,
-          ERROR_CODES.INVALID_STATUS_TRANSITION,
-          {
-            payrollRunId: id,
-            payslipId: payslip.id,
-            calculationStatus: check.calculationStatus,
-            policyBlockerCode: check.policyBlockerCode,
-            unconfirmedPolicyComponents: check.unconfirmedComponents ?? [],
-          },
-        );
-      }
-    }
   }
+}
+
+export async function assertPayrollRunReadyForExportOrPayment(
+  id: string,
+  run: unknown,
+  repo: PayrollRunsRepository,
+  tx?: PayrollRunTransaction,
+): Promise<void> {
+  const runRecord = (run ?? {}) as Record<string, unknown>;
+  if (runRecord.status !== "posted") {
+    throwConflict(
+      `Payroll run in '${String(runRecord.status ?? "unposted")}' status cannot be exported as final or submitted to payment integration; run must be 'posted'`,
+      ERROR_CODES.INVALID_STATUS_TRANSITION,
+      { payrollRunId: id, status: runRecord.status ?? null },
+    );
+  }
+  if (!runRecord.calculationVersionId || !runRecord.calculationHash) {
+    throwConflict(
+      "Payroll run is missing immutable calculation provenance and cannot be exported as final or submitted to payment integration",
+      ERROR_CODES.INVALID_STATUS_TRANSITION,
+      { payrollRunId: id },
+    );
+  }
+  await assertPayrollRunNotProvisional(id, run, repo, "export", tx);
 }
 
 @Injectable()

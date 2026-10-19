@@ -52,6 +52,15 @@ export class PayrollResponseDto {
     departmentName?: string | null;
   };
 
+  @ApiPropertyOptional()
+  isProvisional?: boolean;
+
+  @ApiPropertyOptional()
+  calculationStatus?: string | null;
+
+  @ApiPropertyOptional()
+  metadata?: Record<string, unknown> | null;
+
   @ApiProperty()
   createdAt!: Date;
 

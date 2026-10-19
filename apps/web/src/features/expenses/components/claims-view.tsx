@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useQueryStates, parseAsInteger, parseAsString } from 'nuqs';
+import { useQueryStates, parseAsString } from 'nuqs';
 import { expenseClaimsQueryOptions } from '../api/queries';
-import { formatDateVN } from "@/lib/date";
+import { formatDateVN } from '@/lib/date';
 import {
   useCreateExpenseClaim,
   useSubmitExpenseClaim,
   useApproveExpenseClaim,
-  useRejectExpenseClaim,
   useReimburseExpenseClaim,
 } from '../api/mutations';
 import type { ExpenseClaimListFilters } from '../queries/expense-queries';
@@ -30,6 +29,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,12 +51,24 @@ import { Icons } from '@/components/icons';
 import { PageHeader } from '@/components/layout/page-header';
 import { commonUiCopy, expensesUiCopy } from '@/locales/vi/app-copy';
 import { createExpenseClaimSchema, type CreateExpenseClaimFormValues } from '../schemas/expense.schema';
-import { pageParser, perPageParser, limitParser } from '@/lib/pagination';
+import { pageParser } from '@/lib/pagination';
 import { ExpenseClaimDetailDialog } from './expense-claim-detail-dialog';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission } from '@project/permissions';
+import { permissions } from '@/lib/permissions';
 
 const copy = expensesUiCopy.claims;
 
 export function ExpenseClaimsView() {
+  const user = useAuthStore((s) => s.user);
+  const userPermissions = user?.permissions ?? [];
+  const canManageExpenses = Boolean(
+    user?.isSuperAdmin ||
+      userPermissions.includes('ALL') ||
+      userPermissions.includes('sys:all') ||
+      hasAnyPermission(userPermissions, [permissions.expenses.manage]),
+  );
+
   const [params, setParams] = useQueryStates({
     page: pageParser,
     status: parseAsString,
@@ -66,13 +84,19 @@ export function ExpenseClaimsView() {
   };
 
   const { data, error, isLoading, refetch } = useQuery(expenseClaimsQueryOptions(filters));
-  const rows = extractList<ExpenseClaimRow>(data);
+  const allRows = extractList<ExpenseClaimRow>(data);
+  const rows = useMemo(
+    () =>
+      params.status
+        ? allRows.filter((r) => r.status === params.status)
+        : allRows,
+    [allRows, params.status],
+  );
   const pagination = extractPagination(data);
 
   const createClaim = useCreateExpenseClaim();
   const submitClaim = useSubmitExpenseClaim();
   const approveClaim = useApproveExpenseClaim();
-  const rejectClaim = useRejectExpenseClaim();
   const reimburseClaim = useReimburseExpenseClaim();
 
   async function handleCreate() {
@@ -103,40 +127,64 @@ export function ExpenseClaimsView() {
         title={copy.title}
         description={expensesUiCopy.description}
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size='sm'>
-                <Icons.add className='mr-2 size-4' />
-                {copy.create}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{copy.create}</DialogTitle>
-                <DialogDescription>{expensesUiCopy.description}</DialogDescription>
-              </DialogHeader>
-              <div className='grid gap-4 py-4'>
-                <div className='grid gap-2'>
-                  <Label>{copy.columns.title}</Label>
-                  <Input
-                    value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  />
+          <div className='flex items-center gap-2'>
+            <Select
+              value={params.status ?? 'all'}
+              onValueChange={(val) =>
+                void setParams({ status: val === 'all' ? null : val, page: 1 })
+              }
+            >
+              <SelectTrigger className='h-9 w-[170px]'>
+                <SelectValue placeholder='Tất cả trạng thái' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+                <SelectItem value='draft'>{expensesUiCopy.claimStatus.draft}</SelectItem>
+                <SelectItem value='submitted'>{expensesUiCopy.claimStatus.submitted}</SelectItem>
+                <SelectItem value='approved'>{expensesUiCopy.claimStatus.approved}</SelectItem>
+                <SelectItem value='rejected'>{expensesUiCopy.claimStatus.rejected}</SelectItem>
+                <SelectItem value='reimbursed'>{expensesUiCopy.claimStatus.reimbursed}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size='sm'>
+                  <Icons.add className='mr-2 size-4' />
+                  {copy.create}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{copy.create}</DialogTitle>
+                  <DialogDescription>{expensesUiCopy.description}</DialogDescription>
+                </DialogHeader>
+                <div className='grid gap-4 py-4'>
+                  <div className='grid gap-2'>
+                    <Label>{copy.columns.title}</Label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label>{commonUiCopy.description}</Label>
+                    <Textarea
+                      value={form.description ?? ''}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className='grid gap-2'>
-                  <Label>{commonUiCopy.description}</Label>
-                  <Textarea
-                    value={form.description ?? ''}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
-                <Button onClick={() => void handleCreate()} disabled={createClaim.isPending}>{commonUiCopy.create}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant='outline' onClick={() => setOpen(false)}>
+                    {commonUiCopy.cancel}
+                  </Button>
+                  <Button onClick={() => void handleCreate()} disabled={createClaim.isPending}>
+                    {commonUiCopy.create}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
@@ -158,6 +206,9 @@ export function ExpenseClaimsView() {
             <TableBody>
               {rows.map((row) => {
                 const amt = parseFloat(row.totalAmount || '0') || 0;
+                const isSelfClaim = Boolean(
+                  user?.employeeId && row.employeeId && String(user.employeeId) === String(row.employeeId),
+                );
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
@@ -199,7 +250,7 @@ export function ExpenseClaimsView() {
                             {expensesUiCopy.actions.submit}
                           </Button>
                         ) : null}
-                        {row.status === 'submitted' ? (
+                        {row.status === 'submitted' && canManageExpenses && !isSelfClaim ? (
                           <>
                             <Button
                               variant='default'
@@ -221,7 +272,7 @@ export function ExpenseClaimsView() {
                             </Button>
                           </>
                         ) : null}
-                        {row.status === 'approved' ? (
+                        {row.status === 'approved' && canManageExpenses ? (
                           <Button
                             variant='default'
                             size='sm'

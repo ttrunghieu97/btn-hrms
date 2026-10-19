@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { EmployeeDocumentRepository } from "../../employees/repositories/employee-document.repository";
 import { DocumentQueryRepository } from "../repositories/document-query.repository";
-import { throwNotFound } from "../../../../shared/utils/http-error";
+import { throwForbidden, throwNotFound } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import type { UpdateDocumentDto } from "../dto/documents.dto";
 import type { DocumentListRow } from "../repositories/document-query.repository";
+import type { DataScope } from "../../../../core/security/query-scope.service";
 
 @Injectable()
 export class UpdateDocumentUseCase {
@@ -13,16 +14,26 @@ export class UpdateDocumentUseCase {
     private readonly queryRepo: DocumentQueryRepository,
   ) {}
 
-  async execute(id: string, dto: UpdateDocumentDto): Promise<DocumentListRow> {
+  async execute(id: string, dto: UpdateDocumentDto, scope?: DataScope): Promise<DocumentListRow> {
     const existing = await this.queryRepo.findById(id);
     if (!existing) {
       throwNotFound("Document not found", ERROR_CODES.DOCUMENT_NOT_FOUND, { id });
     }
+    if (scope?.tier === "self" && existing.employeeId !== scope.employeeId) {
+      throwForbidden("Access denied to out-of-scope employee document", ERROR_CODES.PERMISSION_DENIED);
+    }
+    if (
+      scope?.tier === "department" &&
+      (!scope.departmentId || existing.departmentId !== scope.departmentId)
+    ) {
+      throwForbidden("Access denied to out-of-scope department document", ERROR_CODES.PERMISSION_DENIED);
+    }
 
-    // Soft-delete old + insert new (versioned approach matching existing pattern)
-    if (dto.documentType || dto.fileId) {
-      // Note: existing repo method requires transaction, skip for now since
-      // simple document type/file updates can use direct DB call in the query repo
+    if (dto.documentType !== undefined || dto.fileId !== undefined) {
+      await this.repo.updateDocumentById(id, {
+        documentType: dto.documentType,
+        fileId: dto.fileId,
+      });
     }
 
     const result = await this.queryRepo.findById(id);

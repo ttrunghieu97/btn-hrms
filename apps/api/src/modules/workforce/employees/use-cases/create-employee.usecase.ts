@@ -136,6 +136,7 @@ export class CreateEmployeeUseCase {
             lastName: rawEmployeeData.lastName,
             employeeCode: rawEmployeeData.employeeCode,
             userId: user.id,
+            ...(departmentId !== undefined ? { departmentId: departmentId ?? null } : {}),
             status: status ?? "working",
             startDate: startDate ?? todayDateString(),
             endDate: endDate ?? null,
@@ -152,7 +153,7 @@ export class CreateEmployeeUseCase {
           });
         }
 
-        await this.employeesRepo.insertEmploymentRecord(
+        const employmentRecord = await this.employeesRepo.insertEmploymentRecord(
           {
             employeeId: employee.id,
             startDate: startDate ?? todayDateString(),
@@ -171,11 +172,12 @@ export class CreateEmployeeUseCase {
             version: 1,
             effectiveFrom: startDate ?? todayDateString(),
             effectiveTo: endDate ?? null,
+            ...(employmentRecord?.id ? { employmentRecordId: employmentRecord.id } : {}),
           },
           tx,
         );
 
-        await this.employeesRepo.insertOrgAssignment(
+        const orgAssignment = await this.employeesRepo.insertOrgAssignment(
           {
             employeeId: employee.id,
             departmentId: departmentId ?? null,
@@ -187,6 +189,24 @@ export class CreateEmployeeUseCase {
           },
           tx,
         );
+
+        if (
+          typeof this.employeesRepo.updateEmployeeById === "function" &&
+          (employmentRecord?.id || orgAssignment?.id)
+        ) {
+          await this.employeesRepo.updateEmployeeById(
+            employee.id,
+            {
+              ...(employmentRecord?.id
+                ? { currentEmploymentRecordId: employmentRecord.id }
+                : {}),
+              ...(orgAssignment?.id
+                ? { currentOrgAssignmentId: orgAssignment.id }
+                : {}),
+            },
+            tx,
+          );
+        }
 
         return { employeeId: employee.id, userId: user.id };
       }));

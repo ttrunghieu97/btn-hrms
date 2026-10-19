@@ -7,10 +7,7 @@ import { LeaveApprovalGateway } from "./leave-approval.gateway";
 import { LeaveApprovalLinkRepository } from "./leave-approval-link.repository";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
-import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
-import type { AppDatabase } from "@/infrastructure/database/database-client.type";
-import { consumerIdempotency } from "@/infrastructure/database/schema/_shared/consumer-idempotency";
-import { eq } from "drizzle-orm";
+import { EventIdempotencyRepository } from "@/infrastructure/repositories/event-idempotency.repository";
 
 const CONSUMER_ID = "leave-approval-integration";
 
@@ -23,7 +20,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
     private readonly policyResolver: LeaveApprovalPolicyResolver,
     private readonly gateway: LeaveApprovalGateway,
     private readonly linkRepo: LeaveApprovalLinkRepository,
-    @Inject(DATABASE_CONNECTION) private readonly db: AppDatabase,
+    private readonly idempotency: EventIdempotencyRepository,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new ContextLogger(
@@ -46,8 +43,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
   private async handleLeaveApprovalRequested(
     event: LeaveApprovalRequestedEvent,
   ): Promise<void> {
-    const idempotentId = `${CONSUMER_ID}:${event.eventId}`;
-    if (await this.isProcessed(idempotentId)) return;
+    if (await this.idempotency.isProcessed(CONSUMER_ID, event.eventId)) return;
 
     try {
       const { leaveRequestId, employeeId, leaveTypeId, requestedByUserId } =
@@ -61,7 +57,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
         this.logger.log(
           `Correlation already exists for leave ${leaveRequestId} — skipping`,
         );
-        await this.markProcessed(idempotentId);
+        await this.idempotency.markProcessed(CONSUMER_ID, event.eventId);
         return;
       }
 
@@ -88,7 +84,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
         policyId,
       });
 
-      await this.markProcessed(idempotentId);
+      await this.idempotency.markProcessed(CONSUMER_ID, event.eventId);
 
       this.logger.log(
         `Approval requested: leave ${leaveRequestId} → approval ${approvalRequest.id}`,
@@ -105,8 +101,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
   private async handleLeaveCancellationRequested(
     event: LeaveCancellationRequestedEvent,
   ): Promise<void> {
-    const idempotentId = `${CONSUMER_ID}:${event.eventId}`;
-    if (await this.isProcessed(idempotentId)) return;
+    if (await this.idempotency.isProcessed(CONSUMER_ID, event.eventId)) return;
 
     try {
       const { leaveRequestId } = event.data;
@@ -121,7 +116,7 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
 
       await this.gateway.cancelApproval(link.approvalRequestId);
       await this.linkRepo.updateStatus(leaveRequestId, "cancelled");
-      await this.markProcessed(idempotentId);
+      await this.idempotency.markProcessed(CONSUMER_ID, event.eventId);
 
       this.logger.log(
         `Approval cancelled: leave ${leaveRequestId} (approval ${link.approvalRequestId})`,
@@ -133,20 +128,5 @@ export class LeaveApprovalIntegrationHandler implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  private isProcessed(idempotentId: string): Promise<boolean> {
-    return this.db.query.consumerIdempotency
-      .findFirst({
-        where: (t: any, { eq: eqFn }: any) => eqFn(t.eventId, idempotentId),
-      })
-      .then(Boolean);
-  }
-
-  private async markProcessed(idempotentId: string): Promise<void> {
-    await this.db.insert(consumerIdempotency).values({
-      consumerId: CONSUMER_ID,
-      eventId: idempotentId,
-    });
   }
 }

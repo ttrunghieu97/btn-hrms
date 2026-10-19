@@ -1,9 +1,27 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createOnboardingTemplate, updateOnboardingTemplate, deleteOnboardingTemplate } from './onboarding';
-import { completeOnboardingItem, reopenOnboardingItem, skipOnboardingItem } from './processes';
+import {
+  createOnboardingProcess,
+  completeOnboardingItem,
+  reopenOnboardingItem,
+  skipOnboardingItem,
+} from './processes';
 import { onboardingTemplateKeys, onboardingProcessKeys } from '../queries/onboarding-queries';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
 import { onboardingUiCopy } from '@/locales/vi/app-copy';
+
+export function useCreateOnboardingProcess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { employeeId: string; templateId: string; joinDate?: string }) =>
+      createOnboardingProcess(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingProcessKeys.all() });
+      notifyMutationSuccess('Đã khởi tạo quy trình hội nhập cho nhân viên.');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể khởi tạo quy trình hội nhập.'),
+  });
+}
 
 export function useCreateOnboardingTemplate() {
   const qc = useQueryClient();

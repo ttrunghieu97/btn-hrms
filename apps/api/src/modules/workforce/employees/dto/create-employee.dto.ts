@@ -22,6 +22,16 @@ export const EMPLOYEE_COMMAND_STATUSES = [
 ] as const;
 export type EmployeeCommandStatus = (typeof EMPLOYEE_COMMAND_STATUSES)[number];
 
+export const EMPLOYEE_STATUS_VALUES = [
+  "working",
+  "probation",
+  "terminated",
+  "leave",
+  "suspended",
+  "retired",
+] as const;
+export type EmployeeStatusValue = (typeof EMPLOYEE_STATUS_VALUES)[number];
+
 export const CONTRACT_TYPE_VALUES = [
   "permanent",
   "fixed_term",

@@ -15,7 +15,7 @@ import { InjectKafka } from "../kafka/kafka.decorators";
 import { TASK_EVENTS_TOPIC, type TaskDomainEvent } from "../task-domain-events";
 import { IdempotentConsumer } from "./idempotent-consumer";
 import { MetricsService } from "../../../../shared/metrics/metrics.service";
-import { ConsumerIdempotencyRepository } from "../repositories/consumer-idempotency.repository";
+import { EventIdempotencyRepository } from "../../../../infrastructure/repositories/event-idempotency.repository";
 import { TaskAuditLogRepository } from "../repositories/task-audit-log.repository";
 
 @Injectable()
@@ -28,7 +28,7 @@ export class ActivityLogConsumer
   private consumer: Consumer | null = null;
 
   constructor(
-    protected readonly idempotencyRepo: ConsumerIdempotencyRepository,
+    protected readonly idempotencyRepo: EventIdempotencyRepository,
     private readonly auditLogRepo: TaskAuditLogRepository,
     protected readonly metrics: MetricsService,
     @Optional() @InjectKafka() private readonly kafka: Kafka | null,

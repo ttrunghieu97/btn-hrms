@@ -190,4 +190,31 @@ describe('resolvePermissions', () => {
       expect(hasPermission(userPerms, p)).toBe(resolved.includes(p));
     }
   });
+
+  it('employee:edit implies employee:update:self and employee:view, but does NOT imply employee:update:all or employee:manage', () => {
+    expect(hasPermission(['employee:edit'], 'employee:update:self')).toBe(true);
+    expect(hasPermission(['employee:edit'], 'employee:view')).toBe(true);
+    expect(hasPermission(['employee:edit'], 'employee:create')).toBe(true);
+    expect(hasPermission(['employee:edit'], 'employee:update:all')).toBe(false);
+    expect(hasPermission(['employee:edit'], 'employee:manage')).toBe(false);
+    expect(hasPermission(['employee:update:all'], 'employee:edit')).toBe(true);
+    expect(hasPermission(['employee:update:all'], 'employee:update:self')).toBe(true);
+
+    const deptEditorResolved = resolvePermissions(['employee:view:department', 'employee:edit']);
+    expect(deptEditorResolved).toContain('employee:view:department');
+    expect(deptEditorResolved).toContain('employee:view:self');
+    expect(deptEditorResolved).toContain('employee:update:self');
+    expect(deptEditorResolved).not.toContain('employee:view:all');
+    expect(deptEditorResolved).not.toContain('employee:update:all');
+    expect(deptEditorResolved).not.toContain('employee:manage');
+  });
+
+  it('resolves attendance overtime, timesheet, and period hierarchies', () => {
+    expect(hasPermission(['attendance:overtime:approve'], 'attendance:overtime:submit')).toBe(true);
+    expect(hasPermission(['attendance:timesheet:manage'], 'attendance:timesheet:view')).toBe(true);
+    expect(hasPermission(['attendance:period:review'], 'attendance:period:view')).toBe(true);
+    expect(hasPermission(['attendance:period:lock'], 'attendance:period:view')).toBe(true);
+    expect(hasPermission(['attendance:report'], 'attendance:timesheet:view')).toBe(true);
+    expect(hasPermission(['attendance:report'], 'attendance:period:view')).toBe(true);
+  });
 });

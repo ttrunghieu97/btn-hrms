@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import * as dotenv from "dotenv";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../../infrastructure/database/schema";
@@ -227,6 +227,7 @@ describe("Phase 6G — Residual Payroll Findings Remediation Suite (P6F-001, P6F
       try {
         await expect(
           db.transaction(async (txDb) => {
+            await txDb.execute(sql`SELECT pg_advisory_xact_lock(20260601)`);
             // Seed 3 distinct users: Alice, Bob, Charlie
             const [userAlice] = await txDb
               .insert(schema.users)

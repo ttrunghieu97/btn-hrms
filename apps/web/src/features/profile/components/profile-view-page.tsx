@@ -348,7 +348,22 @@ export default function ProfileViewPage() {
       <div className="space-y-8 xl:col-span-2">
         <div className="flex items-center justify-between">
           <div />
-          {user?.permissions?.some((p) => p === 'sys:all' || p === 'ALL' || p === 'employees:view' || p === 'employees:view:department' || p === 'employees:view:all') ? (
+          {user?.permissions?.some((p) =>
+            [
+              'sys:all',
+              'ALL',
+              'employee:view',
+              'employee:view:department',
+              'employee:view:all',
+              'employee:edit',
+              'employee:manage',
+              'employees:view',
+              'employees:view:department',
+              'employees:view:all',
+              'employees:edit',
+              'employees:manage',
+            ].includes(p),
+          ) ? (
             <Button
               variant="outline"
               size="sm"

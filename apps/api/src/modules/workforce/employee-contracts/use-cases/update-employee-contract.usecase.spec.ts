@@ -106,4 +106,64 @@ describe(UpdateEmployeeContractUseCase.name, () => {
     expect(repo.upsertCurrentEmploymentRecord).not.toHaveBeenCalled();
     expect(repo.amend).not.toHaveBeenCalled();
   });
+
+  it("clears endDate and effectiveTo to null when switching to a permanent contract", async () => {
+    const tx = {} as AppDatabase;
+    const repo = {
+      transaction: jest.fn(
+        async (handler: (transaction: AppDatabase) => Promise<unknown>) =>
+          handler(tx),
+      ),
+      findEmployeeContractSnapshot: jest
+        .fn()
+        .mockResolvedValueOnce(employeeSnapshot)
+        .mockResolvedValueOnce({
+          ...employeeSnapshot,
+          employmentRecords: [
+            {
+              ...employeeSnapshot.employmentRecords[0]!,
+              endDate: null,
+            },
+          ],
+          contracts: [
+            {
+              ...employeeSnapshot.contracts[0]!,
+              contractType: "permanent",
+              effectiveTo: null,
+            },
+          ],
+        }),
+      upsertCurrentEmploymentRecord: jest
+        .fn()
+        .mockResolvedValue({ id: "employment-1" }),
+      amend: jest.fn().mockResolvedValue({ id: "contract-2" }),
+    };
+    const useCase = new UpdateEmployeeContractUseCase(
+      repo as unknown as EmployeeContractsRepository,
+    );
+
+    await useCase.execute("employee-1", {
+      contractType: "permanent",
+      startDate: "2026-04-01",
+    });
+
+    expect(repo.upsertCurrentEmploymentRecord).toHaveBeenCalledWith(
+      "employee-1",
+      {
+        startDate: "2026-04-01",
+        endDate: null,
+      },
+      tx,
+    );
+    expect(repo.amend).toHaveBeenCalledWith(
+      "employee-1",
+      {
+        employmentRecordId: "employment-1",
+        contractType: "permanent",
+        effectiveFrom: "2026-04-01",
+        effectiveTo: null,
+      },
+      tx,
+    );
+  });
 });

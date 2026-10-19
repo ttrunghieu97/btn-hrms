@@ -4,6 +4,7 @@ import { LeaveLifecycleService } from "../services/leave-lifecycle.service";
 import { LeaveDecisionHandler } from "../../../../integration/leave-approval/leave-decision.handler.service";
 import { LeaveApprovalListener } from "../../../../integration/leave-approval/leave-approval.listener";
 import { ApprovalRequestCompletedEvent } from "../../../../core/events/events/approval-request-completed.event";
+import { EventIdempotencyRepository } from "../../../../infrastructure/repositories/event-idempotency.repository";
 
 interface LeaveBalanceRow {
   id: string;
@@ -456,7 +457,7 @@ function createStatefulLeaveHarness(initialAvailableQuota = 5) {
     eventBus as any,
     decisionHandler,
     linkRepo as any,
-    dbForListener as any,
+    new EventIdempotencyRepository(dbForListener as any),
     requestContext as any,
     tracing as any,
   );

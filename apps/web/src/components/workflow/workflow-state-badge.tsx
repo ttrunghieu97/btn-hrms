@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { WorkflowState } from '@/workflows/types';
+import type { WorkflowState } from './types';
 
 export interface WorkflowStateBadgeProps {
   state?: string | WorkflowState;

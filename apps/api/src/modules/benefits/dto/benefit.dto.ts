@@ -20,4 +20,6 @@ export class PlanResponseDto {
 export class EnrollmentResponseDto {
   id!: string; planId!: string; employeeId!: string;
   status!: string; coverageType!: string;
+  effectiveFrom?: string | null;
+  enrolledAt?: string;
 }

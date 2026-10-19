@@ -56,6 +56,24 @@ describe('onboarding queries', () => {
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
+
+    it('forwards status and employeeId query parameters when provided', async () => {
+      (customFetch as jest.Mock).mockResolvedValue({
+        data: { rows: [{ id: 'p2', status: 'in_progress' }], pagination: { page: 1, limit: 20, total: 1 } },
+        status: 200, headers: new Headers(),
+      });
+
+      const { onboardingProcessesQueryOptions } = await import('./queries');
+      const { result } = renderHook(
+        () => useQuery(onboardingProcessesQueryOptions(1, 20, 'in_progress', 'emp-123')),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(customFetch).toHaveBeenCalledWith(
+        '/api/v1/onboarding/processes?page=1&limit=20&status=in_progress&employeeId=emp-123',
+      );
+    });
   });
 
   describe('onboardingTemplatesQueryOptions', () => {

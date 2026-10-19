@@ -16,14 +16,17 @@ export interface IAttendanceTimekeepingRepository {
     values: typeof schema.attendances.$inferInsert,
     tx?: AppDatabase,
   ): Promise<ClockEventRow | null>;
-  listClockEvents(query: {
-    employeeId?: string;
-    from?: string;
-    to?: string;
-    source?: "mobile" | "web" | "api" | "manual";
-    page?: number;
-    limit?: number;
-  }): Promise<{ rows: unknown[]; total: number; page: number; limit: number }>;
+  listClockEvents(
+    query: {
+      employeeId?: string;
+      from?: string;
+      to?: string;
+      source?: "mobile" | "web" | "api" | "manual";
+      page?: number;
+      limit?: number;
+    },
+    scope?: { tier: string; departmentId?: string; employeeId?: string },
+  ): Promise<{ rows: unknown[]; total: number; page: number; limit: number }>;
   findClockEventsByEmployeeDay(
     employeeId: string,
     workDate: string,

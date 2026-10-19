@@ -10,6 +10,9 @@ type PayrollRunResponseRow = {
   createdAt: Date;
   updatedAt: Date;
   payrollPeriod?: { id: string; code: string; name: string } | null;
+  isProvisional?: boolean;
+  calculationStatus?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type PayrollRunEntityInput = {
@@ -21,6 +24,26 @@ type PayrollRunEntityInput = {
 
 export class PayrollRunMapper {
   static toDto(row: PayrollRunResponseRow) {
+    const meta =
+      row.metadata && typeof row.metadata === "object"
+        ? (row.metadata as Record<string, unknown>)
+        : undefined;
+    const isConfirmedRun =
+      row.isProvisional === false ||
+      meta?.isProvisional === false ||
+      meta?.calculationStatus === "CONFIRMED" ||
+      row.calculationStatus === "CONFIRMED" ||
+      row.status === "approved" ||
+      row.status === "posted";
+    const calculationStatus =
+      row.calculationStatus ??
+      (typeof meta?.calculationStatus === "string"
+        ? meta.calculationStatus
+        : isConfirmedRun
+          ? "CONFIRMED"
+          : "PROVISIONAL_POLICY_UNCONFIRMED");
+    const isProvisional = row.isProvisional ?? !isConfirmedRun;
+
     return {
       id: row.id,
       payrollPeriodId: row.payrollPeriodId,
@@ -32,6 +55,8 @@ export class PayrollRunMapper {
       notes: row.notes ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      isProvisional,
+      calculationStatus,
       payrollPeriod: row.payrollPeriod
         ? {
             id: row.payrollPeriod.id,

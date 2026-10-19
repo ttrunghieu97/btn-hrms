@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { formatDateVN } from "@/lib/date";
 import { useQuery } from '@tanstack/react-query';
-import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +46,7 @@ interface PaginatedResponse<T> {
 /* ------------------------------------------------------------------ */
 
 const ACTIVE_OPTIONS = [
-  { value: '', label: 'Tất cả' },
+  { value: 'all', label: 'Tất cả' },
   { value: 'true', label: 'Đang sử dụng' },
   { value: 'false', label: 'Không hoạt động' },
 ] as const;
@@ -121,6 +121,7 @@ export function DocumentsView() {
   const [params, setParams] = useQueryStates({
     page: pageParser,
     perPage: perPageParser,
+    employeeName: parseAsString,
     search: parseAsString,
     isActive: parseAsString,
   });
@@ -129,7 +130,8 @@ export function DocumentsView() {
 
   const q = React.useMemo(() => {
     const p: Record<string, unknown> = { page: params.page, limit: params.perPage };
-    if (params.search) p.search = params.search;
+    const searchTerm = params.employeeName || params.search;
+    if (searchTerm) p.search = searchTerm;
     if (params.isActive === 'true') p.isActive = true;
     else if (params.isActive === 'false') p.isActive = false;
     return p;
@@ -139,7 +141,7 @@ export function DocumentsView() {
     queryKey: documentKeys.list(q),
     queryFn: async () => {
       const sp = new URLSearchParams();
-      Object.entries(q).forEach(([k, v]) => { if (v !== undefined && v !== '' && v !== false) sp.set(k, String(v)); });
+      Object.entries(q).forEach(([k, v]) => { if (v !== undefined && v !== '') sp.set(k, String(v)); });
       const res = await customFetch<PaginatedResponse<DocumentRow>>(`/api/v1/documents?${sp.toString()}`);
       return res;
     },
@@ -166,18 +168,19 @@ export function DocumentsView() {
   }, []);
 
   const setParam = (key: string, value: string) => {
-    setParams({ ...params, page: 1, [key]: value || null }, { shallow: true }).catch(() => {});
+    const resolved = value === 'all' ? '' : value;
+    setParams({ ...params, page: 1, [key]: resolved || null }, { shallow: true }).catch(() => {});
   };
 
-  const hasFilters = Boolean(params.search || params.isActive);
-  const clearFilters = () => setParams({ page: 1, search: null, isActive: null }, { shallow: true }).catch(() => {});
+  const hasFilters = Boolean(params.employeeName || params.search || params.isActive);
+  const clearFilters = () => setParams({ page: 1, employeeName: null, search: null, isActive: null }, { shallow: true }).catch(() => {});
 
   return (
     <div className='flex flex-1 flex-col gap-4 min-h-0'>
-      <DataTable table={table} isLoading={isLoading}>
+      <DataTable table={table} isLoading={isLoading} onRowClick={handleRowClick}>
         <DataTableToolbar table={table}>
           <div className='flex items-center gap-2 flex-wrap'>
-            <Select value={params.isActive ?? ''} onValueChange={(v) => setParam('isActive', v)}>
+            <Select value={params.isActive || 'all'} onValueChange={(v) => setParam('isActive', v)}>
               <SelectTrigger className='h-9 w-[160px]'>
                 <SelectValue placeholder='Trạng thái' />
               </SelectTrigger>

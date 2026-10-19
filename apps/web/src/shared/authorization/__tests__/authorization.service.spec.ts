@@ -25,6 +25,10 @@ describe('AuthorizationService (Default-Deny Policy)', () => {
       const userPermissions = ['leave:view'];
       expect(canAccessRoute(ROUTES.EMPLOYEES, userPermissions)).toBe(false);
     });
+
+    it('honors canonical @project/permissions hierarchy and resource normalization (e.g. employees:manage)', () => {
+      expect(canAccessRoute(ROUTES.EMPLOYEES, ['employees:manage'])).toBe(true);
+    });
   });
 
   describe('canAccessResource', () => {

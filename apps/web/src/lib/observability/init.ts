@@ -21,9 +21,13 @@ export async function initObservability(): Promise<void> {
   await initSentry();
 }
 
-async function initSentry(): Promise<void> {
+function isSentryConfigured(): boolean {
+  return Boolean(envClient.sentryDsn) && !envClient.sentryDisabled;
+}
+
+export async function initSentry(): Promise<void> {
+  if (!isSentryConfigured()) return;
   const dsn = envClient.sentryDsn;
-  if (!dsn) return;
 
   try {
     const Sentry = await import('@sentry/nextjs');
@@ -77,6 +81,7 @@ async function initSentry(): Promise<void> {
 export async function setSentryUser(
   user: { id: string | number; email?: string; username?: string } | null
 ): Promise<void> {
+  if (!isSentryConfigured()) return;
   try {
     const Sentry = await import('@sentry/nextjs');
     if (!user) {
@@ -97,6 +102,7 @@ export async function setSentryUser(
  * Tag the active Sentry scope with a request id (correlates to backend logs).
  */
 export async function setSentryRequestId(requestId: string | null): Promise<void> {
+  if (!isSentryConfigured()) return;
   try {
     const Sentry = await import('@sentry/nextjs');
     if (!requestId) {

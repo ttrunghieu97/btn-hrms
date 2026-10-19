@@ -1103,6 +1103,7 @@ describe("Phase 6C — Payroll Bypass, Immutability, Audit Redaction & Adapter O
       try {
         await expect(
           sql.begin(async (tx) => {
+            await tx.unsafe("SELECT pg_advisory_xact_lock(20260601)");
             const [user] = await tx.unsafe<{ id: string }[]>(`
               INSERT INTO users (username, email, password_hash)
               VALUES ('phase6c_pg_user', 'phase6c_pg@example.com', 'hash')

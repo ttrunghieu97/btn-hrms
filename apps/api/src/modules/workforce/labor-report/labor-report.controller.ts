@@ -17,7 +17,7 @@ export class LaborReportController {
   ) {}
 
   @Get()
-  @CheckPolicy(EmployeePolicies.view)
+  @CheckPolicy(EmployeePolicies.viewAll)
   @Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
   @ApiOperation({ summary: "Export Mẫu 01/PLI - Excel (.xlsx)" })
   async export(@Query() query: LaborReportQueryDto, @Res() res: Response) {
@@ -29,7 +29,7 @@ export class LaborReportController {
   }
 
   @Get("docx")
-  @CheckPolicy(EmployeePolicies.view)
+  @CheckPolicy(EmployeePolicies.viewAll)
   @Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
   @ApiOperation({ summary: "Export Mẫu 01/PLI - Word (.docx)" })
   async exportDocx(@Query() query: LaborReportQueryDto, @Res() res: Response) {

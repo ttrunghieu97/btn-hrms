@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Permissions } from "../../../../core/security/permissions/permissions.registry";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
-import { throwBadRequest, throwForbidden } from "../../../../shared/utils/http-error";
+import { throwBadRequest, throwForbidden, throwInternalServer } from "../../../../shared/utils/http-error";
 import { AttendancePeriodLockRepository, type PeriodTransitionRecord } from "../repositories/attendance-period-lock.repository";
-import { AttendancePeriodLockService, AttendancePeriodLock } from "../services/attendance-period-lock.service";
+import { type AttendancePeriodLock } from "../services/attendance-period-lock.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { TimesheetPeriodLockedEvent } from "../../../../core/events/events/timesheet-period-locked.event";
 import { TimesheetPeriodUnlockedEvent } from "../../../../core/events/events/timesheet-period-unlocked.event";
@@ -40,9 +40,9 @@ export function registerCloseValidator(
 const TRANSITION_MAP: Record<PeriodAction, { from: string[]; to: string }> = {
   review: { from: ["open"], to: "in_review" },
   approve: { from: ["in_review"], to: "locked" },
-  lock: { from: ["in_review"], to: "locked" },
+  lock: { from: ["open", "in_review"], to: "locked" },
   unlock: { from: ["locked"], to: "open" },
-  close: { from: ["payroll_posted"], to: "closed" },
+  close: { from: ["locked", "payroll_posted"], to: "closed" },
   reopen: { from: ["locked", "closed"], to: "open" },
 };
 
@@ -74,7 +74,6 @@ export function computeAvailableActions(status: string, permissions: string[] = 
 export class PeriodLockService {
   constructor(
     private readonly periodLockRepo: AttendancePeriodLockRepository,
-    private readonly periodLockService: AttendancePeriodLockService,
     private readonly eventOutbox: EventOutboxService,
     private readonly snapshotService: TimesheetSnapshotService,
     private readonly reconciliationService: PayrollReconciliationService,
@@ -116,6 +115,7 @@ export class PeriodLockService {
 
       await this.eventOutbox.stage(
         new TimesheetPeriodLockedEvent({ period, actorUserId, remarks }),
+        tx,
       );
 
       return result;
@@ -144,13 +144,15 @@ export class PeriodLockService {
 
       await this.eventOutbox.stage(
         new TimesheetPeriodUnlockedEvent({ period, actorUserId, remarks }),
+        tx,
       );
 
       return result;
     });
   }
 
-  async close(actorUserId: string, period: string, remarks: string): Promise<AttendancePeriodLock> {
+  async close(actorUserId: string, period: string, remarks?: string): Promise<AttendancePeriodLock> {
+    const effectiveRemarks = remarks?.trim() || "Closed period";
     const lock = await this.periodLockRepo.ensurePeriod(period);
     this.assertCan("close", lock.status);
 
@@ -174,7 +176,7 @@ export class PeriodLockService {
         period,
         status: "closed",
         userId: actorUserId,
-        remarks,
+        remarks: effectiveRemarks,
       }, tx);
 
       await this.periodLockRepo.recordTransition({
@@ -182,12 +184,13 @@ export class PeriodLockService {
         fromStatus: lock.status,
         toStatus: "closed",
         changedByUserId: actorUserId,
-        reason: remarks,
+        reason: effectiveRemarks,
         metadata: { snapshotCount },
       }, tx);
 
       await this.eventOutbox.stage(
-        new TimesheetPeriodClosedEvent({ period, actorUserId, remarks, snapshotCount }),
+        new TimesheetPeriodClosedEvent({ period, actorUserId, remarks: effectiveRemarks, snapshotCount }),
+        tx,
       );
 
       return r;
@@ -223,6 +226,7 @@ export class PeriodLockService {
 
       await this.eventOutbox.stage(
         new TimesheetPeriodReviewedEvent({ period, actorUserId }),
+        tx,
       );
 
       return result;
@@ -234,6 +238,8 @@ export class PeriodLockService {
     this.assertCan("approve", lock.status);
 
     return this.periodLockRepo.transaction(async (tx) => {
+      const snapshotCount = await this.snapshotService.createSnapshotForPeriod(period, "locked", tx);
+
       const result = await this.periodLockRepo.upsert({
         period,
         status: "locked",
@@ -246,14 +252,72 @@ export class PeriodLockService {
         toStatus: "locked",
         changedByUserId: actorUserId,
         reason: "Approved",
+        metadata: { snapshotCount },
       }, tx);
 
       await this.eventOutbox.stage(
         new TimesheetPeriodApprovedEvent({ period, actorUserId }),
+        tx,
       );
 
       return result;
     });
+  }
+
+  async listEmployeeVerification(period: string) {
+    const rows = await this.periodLockRepo.listEmployeeVerification(period);
+    return {
+      period,
+      employees: rows.map((r) => ({
+        employeeId: r.employeeId,
+        status: r.status,
+        verifiedByUserId: r.verifiedByUserId ?? null,
+        verifiedAt: r.verifiedAt ? r.verifiedAt.toISOString() : null,
+      })),
+    };
+  }
+
+  async verifyEmployee(actorUserId: string, period: string, employeeId: string) {
+    const lock = await this.periodLockRepo.ensurePeriod(period);
+    if (lock.status !== "open" && lock.status !== "in_review") {
+      throwBadRequest(
+        `Period ${period} is ${lock.status} — employee verification cannot be modified`,
+        ERROR_CODES.INVALID_REQUEST,
+        { period, status: lock.status },
+      );
+    }
+    await this.periodLockRepo.ensureEmployeeVerification(period, employeeId);
+    const row = await this.periodLockRepo.markEmployeeVerified(period, employeeId, actorUserId);
+    if (!row) {
+      throwInternalServer("Failed to verify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
+    }
+    return {
+      employeeId: row.employeeId,
+      status: row.status,
+      verifiedByUserId: row.verifiedByUserId ?? null,
+      verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
+    };
+  }
+
+  async unverifyEmployee(period: string, employeeId: string) {
+    const lock = await this.periodLockRepo.ensurePeriod(period);
+    if (lock.status !== "open" && lock.status !== "in_review") {
+      throwBadRequest(
+        `Period ${period} is ${lock.status} — employee verification cannot be modified`,
+        ERROR_CODES.INVALID_REQUEST,
+        { period, status: lock.status },
+      );
+    }
+    const row = await this.periodLockRepo.unverifyEmployee(period, employeeId);
+    if (!row) {
+      throwInternalServer("Failed to unverify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
+    }
+    return {
+      employeeId: row.employeeId,
+      status: row.status,
+      verifiedByUserId: null,
+      verifiedAt: null,
+    };
   }
 
   async validateClose(period: string): Promise<CloseValidationResult> {
@@ -305,6 +369,7 @@ export class PeriodLockService {
 
       await this.eventOutbox.stage(
         new TimesheetPeriodReopenedEvent({ period, actorUserId, remarks }),
+        tx,
       );
 
       return result;

@@ -6,9 +6,7 @@ import { LeaveApprovalLinkRepository } from "./leave-approval-link.repository";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
 import { TracingService } from "@/shared/context/tracing.service";
-import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
-import type { AppDatabase } from "@/infrastructure/database/database-client.type";
-import { consumerIdempotency } from "@/infrastructure/database/schema/_shared/consumer-idempotency";
+import { EventIdempotencyRepository } from "@/infrastructure/repositories/event-idempotency.repository";
 
 const CONSUMER_ID = "leave-approval-listener";
 
@@ -20,7 +18,7 @@ export class LeaveApprovalListener implements OnModuleInit {
     @Inject(EVENT_BUS_TOKEN) private readonly eventBus: IEventBus,
     private readonly decisionHandler: LeaveDecisionHandler,
     private readonly linkRepo: LeaveApprovalLinkRepository,
-    @Inject(DATABASE_CONNECTION) private readonly db: AppDatabase,
+    private readonly idempotency: EventIdempotencyRepository,
     private readonly requestContext: RequestContextService,
     private readonly tracing: TracingService,
   ) {
@@ -70,8 +68,8 @@ export class LeaveApprovalListener implements OnModuleInit {
   ): Promise<void> {
     const { approvalRequestId, subjectId: leaveRequestId, outcome, decidedByUserId, completedAt } =
       event.data;
-    const idempotentId = `${CONSUMER_ID}:${approvalRequestId}:${outcome}`;
-    if (await this.isProcessed(idempotentId)) return;
+    const idempotentEventId = event.eventId || approvalRequestId;
+    if (await this.idempotency.isProcessed(CONSUMER_ID, idempotentEventId)) return;
 
     try {
       // Verify via correlation link
@@ -101,15 +99,8 @@ export class LeaveApprovalListener implements OnModuleInit {
         });
       }
 
-      const effectiveStatus =
-        decisionResult?.finalStatus === "approved" ||
-        decisionResult?.finalStatus === "rejected" ||
-        decisionResult?.finalStatus === "cancelled"
-          ? decisionResult.finalStatus
-          : outcome;
-
-      await this.linkRepo.updateStatus(leaveRequestId, effectiveStatus);
-      await this.markProcessed(idempotentId);
+      const effectiveStatus = decisionResult?.finalStatus ?? outcome;
+      await this.idempotency.markProcessed(CONSUMER_ID, idempotentEventId);
 
       this.logger.log(
         `Engine ${outcome} (effective: ${effectiveStatus}) applied to leave ${leaveRequestId}`,
@@ -121,20 +112,5 @@ export class LeaveApprovalListener implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  private isProcessed(idempotentId: string): Promise<boolean> {
-    return this.db.query.consumerIdempotency
-      .findFirst({
-        where: (t: any, { eq: eqFn }: any) => eqFn(t.eventId, idempotentId),
-      })
-      .then(Boolean);
-  }
-
-  private async markProcessed(idempotentId: string): Promise<void> {
-    await this.db.insert(consumerIdempotency).values({
-      consumerId: CONSUMER_ID,
-      eventId: idempotentId,
-    });
   }
 }

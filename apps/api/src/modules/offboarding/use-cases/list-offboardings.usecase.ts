@@ -12,8 +12,11 @@ export class ListOffboardingsUseCase {
   async execute(
     page = 1,
     limit = 20,
+    filters?: { employeeId?: string; status?: string },
   ): Promise<{ rows: OffboardingProcessListItemDto[]; total: number }> {
-    const result = await this.processReader.findByType("offboarding", page, limit);
+    const result = filters
+      ? await this.processReader.findByType("offboarding", page, limit, filters)
+      : await this.processReader.findByType("offboarding", page, limit);
 
     return {
       rows: result.rows.map((r) => ({

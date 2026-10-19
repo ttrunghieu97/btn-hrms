@@ -55,7 +55,11 @@ export function OffboardingView() {
     status: parseAsString,
   });
 
-  const { data, error, isLoading, refetch } = useOffboardingList(params.page, params.limit);
+  const { data, error, isLoading, refetch } = useOffboardingList(
+    params.page,
+    params.limit,
+    params.status,
+  );
   const rows: OffboardingRow[] = data?.rows ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / params.limit));

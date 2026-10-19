@@ -31,7 +31,6 @@ export function getPreferredLandingRoute(user: UserMeResponseDto | null | undefi
   // Try fallback pages — verify permission before redirecting
   const fallbacks: [string, string][] = [
     ['/account/profile', 'employees:view:self'],
-    ['/overview', 'dashboard:view'],
   ];
   for (const [url, perm] of fallbacks) {
     if (hasPermission(user, perm) && canAccessRoute(url, user.permissions)) {

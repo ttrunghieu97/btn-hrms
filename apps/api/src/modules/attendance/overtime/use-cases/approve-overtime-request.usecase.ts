@@ -5,6 +5,8 @@ import { OvertimeWorkflowService } from "../services/overtime-workflow.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 
+import { DataScope } from "../../../../core/security/types/data-scope.interface";
+
 @Injectable()
 export class ApproveOvertimeRequestUseCase {
   private readonly logger: ContextLogger;
@@ -15,11 +17,17 @@ export class ApproveOvertimeRequestUseCase {
     this.logger = new ContextLogger(this.requestContext, ApproveOvertimeRequestUseCase.name);
   }
 
-  async execute(id: string, actorUserId: string, dto: ApproveOvertimeDto) {
+  async execute(
+    id: string,
+    actorUserId: string,
+    dto: ApproveOvertimeDto,
+    context?: { actorEmployeeId?: string | null; scope?: DataScope },
+  ) {
     const result = await this.workflow.approveRequest(
       id,
       actorUserId,
       dto.approvedMinutes,
+      context,
     );
     return OvertimeMapper.toDto(result);
   }

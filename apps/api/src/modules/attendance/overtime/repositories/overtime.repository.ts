@@ -107,6 +107,31 @@ export class OvertimeRepository {
     return this.db.transaction(callback);
   }
 
+  async isEmployeeInDepartment(
+    employeeId: string,
+    departmentId: string,
+    tx: AppDatabase = this.db,
+  ): Promise<boolean> {
+    const emp = await tx.query.employees.findFirst({
+      where: and(
+        eq(schema.employees.id, employeeId),
+        eq(schema.employees.departmentId, departmentId),
+      ),
+      columns: { id: true },
+    });
+    if (emp) return true;
+
+    const assignment = await tx.query.orgAssignments.findFirst({
+      where: and(
+        eq(schema.orgAssignments.employeeId, employeeId),
+        eq(schema.orgAssignments.departmentId, departmentId),
+        eq(schema.orgAssignments.isCurrent, true),
+      ),
+      columns: { id: true },
+    });
+    return Boolean(assignment);
+  }
+
   async delete(id: string): Promise<void> {
     await this.db
       .delete(schema.attendanceOvertimeRequests)

@@ -107,4 +107,27 @@ describe("OverrideAttendanceSummaryUseCase", () => {
       }),
     ).rejects.toThrow("At least one override field must be provided");
   });
+
+  it("should preserve existing note when updating another cell field without note", async () => {
+    mockRepo.findPeriodLock.mockResolvedValue({ status: "open" });
+    mockRepo.findOverride.mockResolvedValue({
+      id: "ov-existing",
+      overriddenWorkedMinutes: 480,
+      note: "Existing audit note",
+    });
+
+    await useCase.execute("actor-1", {
+      employeeId: "emp-1",
+      workDate: "2026-08-01",
+      reason: "manual_correction",
+      overriddenWorkedMinutes: 450,
+    });
+
+    expect(mockRepo.updateOverride).toHaveBeenCalledWith(
+      "ov-existing",
+      expect.objectContaining({
+        note: "Existing audit note",
+      }),
+    );
+  });
 });

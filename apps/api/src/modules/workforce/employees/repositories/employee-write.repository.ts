@@ -1,5 +1,6 @@
 import type { Tx } from "./employee-repository.types";
 import {
+  employeeContracts,
   employees,
   employmentRecords,
   orgAssignments,
@@ -22,9 +23,12 @@ export class EmployeeWriteRepository {
   async create(
     data: typeof employees.$inferInsert,
   ): Promise<typeof employees.$inferSelect> {
+    const encrypted = this.encryption
+      ? this.encryption.encryptPiiFields(data as Record<string, unknown>)
+      : data;
     const [row] = await this.db
       .insert(employees)
-      .values(data)
+      .values(encrypted as typeof employees.$inferInsert)
       .returning();
     if (!row) throw new Error("failed_to_create_employee");
     return row;
@@ -53,7 +57,7 @@ export class EmployeeWriteRepository {
     const encrypted = this.encryption
       ? this.encryption.encryptPiiFields(data)
       : data;
-    const { expectedVersion, ...cleanData } = data as any;
+    const { expectedVersion, ...cleanData } = encrypted as any;
     const whereCondition =
       expectedVersion !== undefined
         ? and(eq(employees.id, id), eq(employees.version, expectedVersion))
@@ -129,6 +133,7 @@ export class EmployeeWriteRepository {
   }
 
   async hardDeleteEmployee(employeeId: string, tx: Tx) {
+    await tx.delete(employeeContracts).where(eq(employeeContracts.employeeId, employeeId));
     await tx.delete(employees).where(eq(employees.id, employeeId));
   }
 

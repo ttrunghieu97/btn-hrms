@@ -33,7 +33,6 @@ import { Resource } from "../../../core/security/decorators/resource.decorator";
 import { EmployeePolicies } from "../../../core/security/policies/employee.policy";
 import { Employee } from "../../../core/security/types/resource-entities";
 import { QueryScopeService } from "../../../core/security/query-scope.service";
-import { Permissions } from "../../../core/security/permissions/permissions.registry";
 import type { AuthUser } from "../../../core/security/types/auth-user.interface";
 import { ListEmployeesUseCase } from "./use-cases/list-employees.usecase";
 import { GetEmployeeByUserUseCase } from "./use-cases/get-employee-by-user.usecase";
@@ -41,14 +40,8 @@ import { GetEmployeeUseCase } from "./use-cases/get-employee.usecase";
 import { CreateEmployeeUseCase } from "./use-cases/create-employee.usecase";
 import { UpdateEmployeeUseCase } from "./use-cases/update-employee.usecase";
 
-const SENSITIVE_PERMISSION = Permissions.EMPLOYEES_MANAGE_SENSITIVE;
-
 function hasSensitiveAccess(user: AuthUser): boolean {
-  return (
-    user.isSuperAdmin === true ||
-    user.permissions?.includes(Permissions.SYS_ALL) === true ||
-    user.permissions?.includes(SENSITIVE_PERMISSION) === true
-  );
+  return EmployeePolicies.viewSensitive.handle(user);
 }
 
 @ApiTags("Employees HR Management")
@@ -87,7 +80,7 @@ export class EmployeesController {
   @ApiOperation({ summary: "Get current employee profile" })
   @ApiOkResponse({ type: EmployeeEnvelopeDto })
   getMyProfile(@Request() req: { user: AuthUser }) {
-    return this.getEmployeeByUser.execute(req.user.id, true);
+    return this.getEmployeeByUser.execute(req.user.id, true, true);
   }
 
   @Get(":id")

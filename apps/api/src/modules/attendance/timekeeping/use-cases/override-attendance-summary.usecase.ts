@@ -119,7 +119,7 @@ export class OverrideAttendanceSummaryUseCase {
     if (existing) {
       const updated = await this.repo.updateOverride(existing.id, {
         reason: dto.reason,
-        note: dto.note,
+        note: dto.note !== undefined ? dto.note : existing.note,
         overriddenStatus: dto.overriddenStatus ?? existing.overriddenStatus,
         overriddenWorkedMinutes: dto.overriddenWorkedMinutes ?? existing.overriddenWorkedMinutes,
         overriddenLateMinutes: dto.overriddenLateMinutes ?? existing.overriddenLateMinutes,

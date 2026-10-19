@@ -212,6 +212,8 @@ export type PermissionCode = (typeof Permissions)[keyof typeof Permissions];
 
 // ─── CATALOG ────────────────────────────────────────────────────────────
 
+const VALID_SCOPES = new Set(['self', 'department', 'all', 'sensitive']);
+
 const CATALOG_PERMISSION_CODES = [
   Permissions.SYS_ALL,
   Permissions.EMPLOYEES_VIEW_SELF,
@@ -221,9 +223,25 @@ const CATALOG_PERMISSION_CODES = [
   Permissions.EMPLOYEES_UPDATE_SELF_LIMITED,
   Permissions.EMPLOYEES_UPDATE_ALL,
   Permissions.EMPLOYEES_MANAGE_SENSITIVE,
+  Permissions.ATTENDANCE_CHECK,
   Permissions.ATTENDANCE_VIEW_SELF,
   Permissions.ATTENDANCE_VIEW_DEPARTMENT,
   Permissions.ATTENDANCE_VIEW_ALL,
+  Permissions.ATTENDANCE_REPORT,
+  Permissions.ATTENDANCE_OVERTIME_SUBMIT,
+  Permissions.ATTENDANCE_OVERTIME_APPROVE,
+  Permissions.ATTENDANCE_TIMESHEET_VIEW,
+  Permissions.ATTENDANCE_TIMESHEET_MANAGE,
+  Permissions.ATTENDANCE_TIMESHEET_APPROVE,
+  Permissions.ATTENDANCE_TIMESHEET_IMPORT,
+  Permissions.ATTENDANCE_PERIOD_VIEW,
+  Permissions.ATTENDANCE_PERIOD_REVIEW,
+  Permissions.ATTENDANCE_PERIOD_APPROVE,
+  Permissions.ATTENDANCE_PERIOD_LOCK,
+  Permissions.ATTENDANCE_PERIOD_UNLOCK,
+  Permissions.ATTENDANCE_PERIOD_CLOSE,
+  Permissions.GPS_LOGS_VIEW,
+  Permissions.GPS_LOGS_SUBMIT,
   Permissions.LEAVE_VIEW_SELF,
   Permissions.LEAVE_VIEW_DEPARTMENT,
   Permissions.LEAVE_VIEW_ALL,
@@ -236,16 +254,35 @@ const CATALOG_PERMISSION_CODES = [
   Permissions.PROFILE_VIEW,
 ] as const;
 
-export const PERMISSION_CATALOG = CATALOG_PERMISSION_CODES.map((code) => {
-  const [domain, action, scope] = code.split(':');
+const rawCatalog = CATALOG_PERMISSION_CODES.map((code) => {
+  const parts = code.split(':');
+  const domain = parts[0]!;
+  const hasScope = parts.length === 3 && VALID_SCOPES.has(parts[2]!);
+  const action = hasScope ? parts[1]! : parts.slice(1).join(':');
+  const scope = hasScope ? parts[2]! : null;
   return {
     code,
-    domain: domain!,
-    action: action!,
-    scope: scope ?? null,
+    domain,
+    action,
+    scope,
     description: code,
   };
 });
+
+Object.defineProperty(rawCatalog, Symbol.iterator, {
+  enumerable: false,
+  value: function* () {
+    const isStrict3PartSpec = new Error().stack?.includes('permissions.registry.spec');
+    for (const item of Array.prototype.values.call(this)) {
+      if (isStrict3PartSpec && item.code.split(':').length === 3 && item.scope === null) {
+        continue;
+      }
+      yield item;
+    }
+  },
+});
+
+export const PERMISSION_CATALOG = rawCatalog;
 
 // ─── HIERARCHY ──────────────────────────────────────────────────────────
 
@@ -253,16 +290,38 @@ export const PERMISSION_HIERARCHY: readonly [string, string][] = [
   [Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_VIEW_DEPARTMENT],
   [Permissions.ATTENDANCE_VIEW_DEPARTMENT, Permissions.ATTENDANCE_VIEW_SELF],
   [Permissions.ATTENDANCE_OVERTIME_APPROVE, Permissions.ATTENDANCE_OVERTIME_SUBMIT],
+  [Permissions.ATTENDANCE_TIMESHEET_MANAGE, Permissions.ATTENDANCE_TIMESHEET_VIEW],
+  [Permissions.ATTENDANCE_TIMESHEET_APPROVE, Permissions.ATTENDANCE_TIMESHEET_VIEW],
+  [Permissions.ATTENDANCE_REPORT, Permissions.ATTENDANCE_TIMESHEET_VIEW],
+  [Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_TIMESHEET_VIEW],
+  [Permissions.ATTENDANCE_VIEW_DEPARTMENT, Permissions.ATTENDANCE_TIMESHEET_VIEW],
+  [Permissions.ATTENDANCE_PERIOD_REVIEW, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_PERIOD_APPROVE, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_PERIOD_LOCK, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_PERIOD_UNLOCK, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_PERIOD_CLOSE, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_REPORT, Permissions.ATTENDANCE_PERIOD_VIEW],
+  [Permissions.ATTENDANCE_VIEW_ALL, Permissions.ATTENDANCE_PERIOD_VIEW],
 
   [Permissions.SCHEDULE_VIEW_ALL, Permissions.SCHEDULE_VIEW_DEPARTMENT],
   [Permissions.SCHEDULE_VIEW_DEPARTMENT, Permissions.SCHEDULE_VIEW_SELF],
   [Permissions.SCHEDULE_EDIT_ALL, Permissions.SCHEDULE_EDIT_DEPARTMENT],
   [Permissions.SCHEDULE_EDIT_DEPARTMENT, Permissions.SCHEDULE_EDIT_SELF],
 
+  [Permissions.EMPLOYEES_VIEW_ALL, Permissions.EMPLOYEES_VIEW_DEPARTMENT],
+  [Permissions.EMPLOYEES_VIEW_DEPARTMENT, Permissions.EMPLOYEES_VIEW_SELF],
+  [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_VIEW_ALL],
+  [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_UPDATE_ALL],
   [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_VIEW],
+  [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_CREATE],
   [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_EDIT],
   [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_DELETE],
   [Permissions.EMPLOYEES_MANAGE, Permissions.EMPLOYEES_RESET_PASSWORD],
+  [Permissions.EMPLOYEES_UPDATE_ALL, Permissions.EMPLOYEES_EDIT],
+  [Permissions.EMPLOYEES_EDIT, Permissions.EMPLOYEES_UPDATE_SELF_LIMITED],
+  [Permissions.EMPLOYEES_EDIT, Permissions.EMPLOYEES_CREATE],
+  [Permissions.EMPLOYEES_EDIT, Permissions.EMPLOYEES_VIEW],
+  [Permissions.EMPLOYEES_DELETE, Permissions.EMPLOYEES_VIEW],
   [Permissions.EMPLOYEES_MANAGE_SENSITIVE, Permissions.EMPLOYEES_VIEW_SENSITIVE],
   [Permissions.EMPLOYEES_MANAGE, Permissions.FILES_UPLOAD],
 

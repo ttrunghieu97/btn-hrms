@@ -268,18 +268,30 @@ export class OnboardingProcessRepository {
     type: "onboarding" | "offboarding",
     page = 1,
     limit = 20,
+    filters?: { employeeId?: string; status?: string },
   ): Promise<{ rows: { id: string; employeeId: string; status: string; startDate: string; completedAt: Date | null; createdAt: Date }[]; total: number }> {
     const offset = (page - 1) * limit;
+    const conditions = [
+      eq(boardingProcesses.type, type),
+      isNull(boardingProcesses.deletedAt),
+    ];
+    if (filters?.employeeId) {
+      conditions.push(eq(boardingProcesses.employeeId, filters.employeeId));
+    }
+    if (filters?.status) {
+      conditions.push(
+        eq(
+          boardingProcesses.status,
+          filters.status as NonNullable<typeof boardingProcesses.$inferInsert["status"]>,
+        ),
+      );
+    }
+    const whereClause = and(...conditions);
 
     const [countResult] = await this.db
       .select({ count: sql`count(*)::int` })
       .from(boardingProcesses)
-      .where(
-        and(
-          eq(boardingProcesses.type, type),
-          isNull(boardingProcesses.deletedAt),
-        ),
-      );
+      .where(whereClause);
 
     const rows = await this.db
       .select({
@@ -291,12 +303,7 @@ export class OnboardingProcessRepository {
         createdAt: boardingProcesses.createdAt,
       })
       .from(boardingProcesses)
-      .where(
-        and(
-          eq(boardingProcesses.type, type),
-          isNull(boardingProcesses.deletedAt),
-        ),
-      )
+      .where(whereClause)
       .orderBy(sql`${boardingProcesses.createdAt} desc`)
       .limit(limit)
       .offset(offset);

@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, employeeUiCopy } from '@/lib/app-copy';
@@ -39,6 +38,15 @@ const closeDialogCopy = {
   unsavedDescription: 'Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn rời đi và bỏ tất cả thay đổi?',
 };
 
+function splitVietnameseFullName(fullName: string): { lastName: string; firstName: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { lastName: '', firstName: '' };
+  if (parts.length === 1) return { lastName: '', firstName: parts[0] };
+  const firstName = parts[parts.length - 1] ?? '';
+  const lastName = parts.slice(0, -1).join(' ');
+  return { lastName, firstName };
+}
+
 function buildPlaceholderEmployee(formValues: {
   firstName: string;
   lastName: string;
@@ -73,11 +81,39 @@ function buildPlaceholderEmployee(formValues: {
 
 export function EmployeeCreatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const shouldReduceMotion = useReducedMotion();
   const [isDirty, setIsDirty] = React.useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('overview');
   const pendingJumpRef = React.useRef(false);
+  const prefilledOfferRef = React.useRef(false);
+
+  const fromOfferId = searchParams.get('fromOfferId');
+
+  const initialOfferValues = React.useMemo(() => {
+    if (!fromOfferId) return undefined;
+    const fullName = searchParams.get('fullName') ?? '';
+    const email = searchParams.get('email') ?? '';
+    const phone = searchParams.get('phone') ?? '';
+    const startDate = searchParams.get('startDate') ?? '';
+    const { lastName, firstName } = fullName
+      ? splitVietnameseFullName(fullName)
+      : { lastName: '', firstName: '' };
+    const suggestedUsername = email
+      ? (email.split('@')[0]?.replace(/[^a-zA-Z0-9._-]/g, '') ?? '')
+      : '';
+
+    return {
+      ...(lastName ? { lastName } : {}),
+      ...(firstName ? { firstName } : {}),
+      ...(email ? { email } : {}),
+      ...(suggestedUsername ? { username: suggestedUsername } : {}),
+      ...(phone ? { phoneNumber: phone } : {}),
+      ...(startDate ? { startDate } : {}),
+      status: 'probation' as const,
+    };
+  }, [fromOfferId, searchParams]);
 
   const form = useEmployeeForm({
     open: true,
@@ -94,7 +130,45 @@ export function EmployeeCreatePage() {
       }
     },
     employee: null,
+    initialValues: initialOfferValues,
   });
+
+  const handleFieldChangeRef = React.useRef(form.handleFieldChange);
+  handleFieldChangeRef.current = form.handleFieldChange;
+
+  React.useEffect(() => {
+    if (prefilledOfferRef.current || !fromOfferId) return;
+    prefilledOfferRef.current = true;
+
+    const fullName = searchParams.get('fullName') ?? '';
+    const email = searchParams.get('email') ?? '';
+    const phone = searchParams.get('phone') ?? '';
+    const startDate = searchParams.get('startDate') ?? '';
+
+    if (fullName) {
+      const { lastName, firstName } = splitVietnameseFullName(fullName);
+      if (lastName) handleFieldChangeRef.current('lastName', lastName);
+      if (firstName) handleFieldChangeRef.current('firstName', firstName);
+    }
+    if (email) {
+      handleFieldChangeRef.current('email', email);
+      const suggestedUsername = email.split('@')[0]?.replace(/[^a-zA-Z0-9._-]/g, '') ?? '';
+      if (suggestedUsername) {
+        handleFieldChangeRef.current('username', suggestedUsername);
+      }
+    }
+    if (phone) {
+      handleFieldChangeRef.current('phoneNumber', phone);
+    }
+    if (startDate) {
+      handleFieldChangeRef.current('startDate', startDate);
+    }
+    handleFieldChangeRef.current('status', 'probation');
+
+    return () => {
+      prefilledOfferRef.current = false;
+    };
+  }, [fromOfferId, searchParams]);
 
 
   const handleOpenChange = React.useCallback(
@@ -269,6 +343,16 @@ export function EmployeeCreatePage() {
         />
 
         <div className='flex-1 overflow-y-auto bg-muted/5 px-8 py-6 min-h-0'>
+          {fromOfferId && (
+            <div className='mb-4 flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs'>
+              <Icons.circleCheck className='size-4 shrink-0 text-emerald-600' />
+              <span className='text-foreground'>
+                Đang khởi tạo hồ sơ nhân viên từ <strong>Thư mời nhận việc đã chấp thuận</strong>.
+                Thông tin ứng viên đã được điền sẵn, vui lòng kiểm tra phòng ban, vị trí và lưu hồ
+                sơ để hệ thống tự động cấp tài khoản &amp; Onboarding.
+              </span>
+            </div>
+          )}
           <AnimatePresence mode='wait'>
             <motion.div
               key={activeTab}

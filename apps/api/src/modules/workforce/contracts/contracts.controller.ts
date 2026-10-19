@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, Patch, Post, Query, Req,
+  Body, Controller, Get, Optional, Param, Patch, Post, Query, Req,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
@@ -10,11 +10,11 @@ import { CreateContractUseCase } from "./use-cases/create-contract.usecase";
 import { AmendContractUseCase } from "./use-cases/amend-contract.usecase";
 import { GetContractHistoryUseCase } from "./use-cases/get-contract-history.usecase";
 import { ListContractsQueryDto, CreateContractDto, UpdateContractDto } from "./dto/contracts.dto";
-import { ContractResponseDto, ContractHistoryItemDto } from "./dto/contract-response.dto";
+import { ContractHistoryItemDto } from "./dto/contract-response.dto";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { Resource } from "../../../core/security/decorators/resource.decorator";
-import { Employee } from "../../../core/security/types/resource-entities";
 import { PaginatedEnvelopeDto, ApiEnvelopeDto } from "../../../shared/dto/api-response.dto";
+import { QueryScopeService } from "../../../core/security/query-scope.service";
+import type { AuthUser } from "../../../core/security/types/auth-user.interface";
 
 @ApiTags("Contracts")
 @ApiBearerAuth()
@@ -26,14 +26,22 @@ export class ContractsController {
     private readonly createContract: CreateContractUseCase,
     private readonly amendContract: AmendContractUseCase,
     private readonly getContractHistory: GetContractHistoryUseCase,
+    @Optional() private readonly queryScopeService?: QueryScopeService,
   ) {}
 
   @Get()
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "List contracts with pagination, filter, and sort" })
   @ApiOkResponse({ type: PaginatedEnvelopeDto })
-  async findAll(@Query() query: ListContractsQueryDto) {
-    const result = await this.listContracts.execute(query);
+  async findAll(
+    @Query() query: ListContractsQueryDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const result = await this.listContracts.execute(query, scope);
     return {
       data: result.rows,
       meta: {
@@ -54,8 +62,15 @@ export class ContractsController {
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "Get contract by ID" })
   @ApiOkResponse({ type: ApiEnvelopeDto })
-  async findOne(@Param("id") id: string) {
-    const contract = await this.getContract.execute(id);
+  async findOne(
+    @Param("id") id: string,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const contract = await this.getContract.execute(id, scope);
     return {
       data: contract,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -67,8 +82,15 @@ export class ContractsController {
   @CheckPolicy(EmployeePolicies.view)
   @ApiOperation({ summary: "Get contract version history" })
   @ApiOkResponse({ type: [ContractHistoryItemDto] })
-  async history(@Param("id") id: string) {
-    const history = await this.getContractHistory.execute(id);
+  async history(
+    @Param("id") id: string,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const history = await this.getContractHistory.execute(id, scope);
     return {
       data: history,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -81,8 +103,15 @@ export class ContractsController {
   @AuditLog({ action: "contract_create", entity: "employee" })
   @ApiOperation({ summary: "Create a new contract" })
   @ApiOkResponse({ type: ApiEnvelopeDto })
-  async create(@Body() dto: CreateContractDto) {
-    const contract = await this.createContract.execute(dto);
+  async create(
+    @Body() dto: CreateContractDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const contract = await this.createContract.execute(dto, scope);
     return {
       data: contract,
       meta: { requestId: "", timestamp: new Date().toISOString() },
@@ -95,8 +124,16 @@ export class ContractsController {
   @AuditLog({ action: "contract_amend", entity: "employee" })
   @ApiOperation({ summary: "Amend an existing contract (creates a new version)" })
   @ApiOkResponse({ type: ApiEnvelopeDto })
-  async amend(@Param("id") id: string, @Body() dto: UpdateContractDto) {
-    const contract = await this.amendContract.execute(id, dto);
+  async amend(
+    @Param("id") id: string,
+    @Body() dto: UpdateContractDto,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    const scope =
+      req?.user && this.queryScopeService
+        ? this.queryScopeService.resolveScope(req.user, "employees")
+        : undefined;
+    const contract = await this.amendContract.execute(id, dto, scope);
     return {
       data: contract,
       meta: { requestId: "", timestamp: new Date().toISOString() },

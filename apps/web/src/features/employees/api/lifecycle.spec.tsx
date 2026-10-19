@@ -118,4 +118,32 @@ describe('useChangeEmployeeStatusMutation', () => {
     const cached = qc.getQueryData(employeeKeys.detail('emp-1')) as any;
     expect(cached?.status).toBe('working');
   });
+
+  it('validates canonical 6-value employeeStatusSchema and maps getSmartStatus / getEmployeeStatusLabel', async () => {
+    const { employeeStatusSchema } = await import('../schemas/employee.schema');
+    const { getSmartStatus, getEmployeeStatusLabel } = await import('../utils/employee-status');
+
+    const canonicalStatuses = [
+      'working',
+      'probation',
+      'terminated',
+      'leave',
+      'suspended',
+      'retired',
+    ] as const;
+
+    for (const status of canonicalStatuses) {
+      expect(employeeStatusSchema.safeParse(status).success).toBe(true);
+      const smart = getSmartStatus({ status });
+      expect(smart.kind).toBe(status);
+      expect(smart.label).toBe(getEmployeeStatusLabel(status));
+      expect(smart.label.length).toBeGreaterThan(0);
+    }
+
+    // Legacy / non-canonical uppercase values must be rejected by employeeStatusSchema
+    for (const invalid of ['ACTIVE', 'ON_LEAVE', 'RESIGNED', 'ARCHIVED']) {
+      expect(employeeStatusSchema.safeParse(invalid).success).toBe(false);
+      expect(getSmartStatus({ status: invalid }).kind).toBe('unknown');
+    }
+  });
 });

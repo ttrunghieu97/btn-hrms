@@ -6,9 +6,8 @@ import { AssetApprovalLinkRepository } from "./asset-approval-link.repository";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
 import { TracingService } from "@/shared/context/tracing.service";
-import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
+import { EventIdempotencyRepository } from "@/infrastructure/repositories/event-idempotency.repository";
 import type { AppDatabase } from "@/infrastructure/database/database-client.type";
-import { consumerIdempotency } from "@/infrastructure/database/schema/_shared/consumer-idempotency";
 import { ASSET_SUBJECT_TYPES } from "./asset-approval.gateway";
 
 const CONSUMER_ID = "asset-approval-listener";
@@ -21,15 +20,20 @@ const SUBJECT_FROM_ENGINE: Record<string, "request"> = {
 @Injectable()
 export class AssetApprovalListener implements OnModuleInit {
   private readonly logger: ContextLogger;
+  private readonly idempotency: EventIdempotencyRepository;
 
   constructor(
     @Inject(EVENT_BUS_TOKEN) private readonly eventBus: IEventBus,
     private readonly decisionHandler: AssetDecisionHandler,
     private readonly linkRepo: AssetApprovalLinkRepository,
-    @Inject(DATABASE_CONNECTION) private readonly db: AppDatabase,
+    idempotencyOrDb: EventIdempotencyRepository,
     private readonly requestContext: RequestContextService,
     private readonly tracing: TracingService,
   ) {
+    this.idempotency =
+      typeof (idempotencyOrDb as EventIdempotencyRepository)?.isProcessed === "function"
+        ? idempotencyOrDb
+        : new EventIdempotencyRepository(idempotencyOrDb as unknown as AppDatabase);
     this.logger = new ContextLogger(
       this.requestContext,
       AssetApprovalListener.name,
@@ -75,8 +79,8 @@ export class AssetApprovalListener implements OnModuleInit {
     subjectType: "request",
   ): Promise<void> {
     const { approvalRequestId, subjectId, outcome, completedAt } = event.data;
-    const idempotentId = `${CONSUMER_ID}:${approvalRequestId}:${outcome}`;
-    if (await this.isProcessed(idempotentId)) return;
+    const idempotentEventId = event.eventId || approvalRequestId;
+    if (await this.idempotency.isProcessed(CONSUMER_ID, idempotentEventId)) return;
 
     try {
       const link = await this.linkRepo.findByApprovalRequestId(
@@ -99,7 +103,7 @@ export class AssetApprovalListener implements OnModuleInit {
       });
 
       await this.linkRepo.updateStatus(approvalRequestId, decision);
-      await this.markProcessed(idempotentId);
+      await this.idempotency.markProcessed(CONSUMER_ID, idempotentEventId);
       this.logger.log(`Engine ${decision} applied to ${subjectType} ${subjectId}`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -108,20 +112,5 @@ export class AssetApprovalListener implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  private isProcessed(idempotentId: string): Promise<boolean> {
-    return this.db.query.consumerIdempotency
-      .findFirst({
-        where: (t: any, { eq: eqFn }: any) => eqFn(t.eventId, idempotentId),
-      })
-      .then(Boolean);
-  }
-
-  private async markProcessed(idempotentId: string): Promise<void> {
-    await this.db.insert(consumerIdempotency).values({
-      consumerId: CONSUMER_ID,
-      eventId: idempotentId,
-    });
   }
 }

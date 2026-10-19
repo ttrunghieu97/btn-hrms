@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from "@nestjs/common";
 import { DashboardController } from "./dashboard.controller";
 import { DashboardService } from "./application/dashboard.service";
 import { DashboardWidgetRegistry } from "./application/dashboard-widget-registry";
+import { GetAttendanceStatsUseCase } from "./use-cases/get-attendance-stats.usecase";
 import { WorkforceAggregateService } from "./infrastructure/repositories/workforce-aggregate.service";
 import { AttendanceAggregateService } from "./infrastructure/repositories/attendance-aggregate.service";
 import { LeaveAggregateService } from "./infrastructure/repositories/leave-aggregate.service";
@@ -27,6 +28,7 @@ import { PendingApprovalsWidgetProvider } from "./widgets/attendance/pending-app
     // Core
     DashboardService,
     DashboardWidgetRegistry,
+    GetAttendanceStatsUseCase,
 
     // Aggregate services
     WorkforceAggregateService,

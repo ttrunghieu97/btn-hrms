@@ -33,7 +33,7 @@ export type AttendancePeriodLock = {
 const STATUS_TRANSITIONS: Record<AttendancePeriodStatus, AttendancePeriodStatus[]> = {
   open: ["in_review", "locked"],
   in_review: ["open", "locked"],
-  locked: ["open", "in_review", "payroll_processing"],
+  locked: ["open", "in_review", "payroll_processing", "closed"],
   payroll_processing: ["payroll_posted", "open"],
   payroll_posted: ["open", "closed"],
   closed: ["open"], // privileged reopen only
@@ -58,7 +58,7 @@ export class AttendancePeriodLockService {
   }
 
   canClose(status: AttendancePeriodStatus): boolean {
-    return status === "payroll_posted";
+    return status === "locked" || status === "payroll_posted";
   }
 
   canReopen(status: AttendancePeriodStatus): boolean {

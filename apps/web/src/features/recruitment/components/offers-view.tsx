@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { applicationOffersQueryOptions } from '../api/queries';
 import {
@@ -9,7 +10,11 @@ import {
   useDecideOffer,
 } from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
-import { OFFER_STATUS_MAP, type OfferRow } from './status-maps';
+import {
+  OFFER_STATUS_MAP,
+  type CandidateSummary,
+  type OfferRow,
+} from './status-maps';
 import {
   notifyMutationError,
   notifyMutationSuccess,
@@ -35,7 +40,13 @@ const copy = recruitmentUiCopy.offers;
  * OffersPanel — embedded in the application detail dialog. Offers are scoped
  * to a single application (the API list requires an applicationId).
  */
-export function OffersPanel({ applicationId }: { applicationId: string }) {
+export function OffersPanel({
+  applicationId,
+  candidate,
+}: {
+  applicationId: string;
+  candidate?: CandidateSummary | null;
+}) {
   const { data, isLoading } = useQuery(
     applicationOffersQueryOptions(applicationId),
   );
@@ -68,7 +79,7 @@ export function OffersPanel({ applicationId }: { applicationId: string }) {
                   status={offer.status ?? ''}
                   mapping={OFFER_STATUS_MAP}
                 />
-                <OfferActions offer={offer} />
+                <OfferActions offer={offer} candidate={candidate} />
               </div>
             </li>
           ))}
@@ -78,7 +89,13 @@ export function OffersPanel({ applicationId }: { applicationId: string }) {
   );
 }
 
-function OfferActions({ offer }: { offer: OfferRow }) {
+function OfferActions({
+  offer,
+  candidate,
+}: {
+  offer: OfferRow;
+  candidate?: CandidateSummary | null;
+}) {
   const submit = useSubmitOffer();
   const decide = useDecideOffer();
 
@@ -113,6 +130,14 @@ function OfferActions({ offer }: { offer: OfferRow }) {
     );
   }
 
+  if (offer.status === 'pending_approval') {
+    return (
+      <Button asChild variant='ghost' size='sm' className='text-xs'>
+        <Link href='/approvals'>Hộp thư duyệt</Link>
+      </Button>
+    );
+  }
+
   if (offer.status === 'approved') {
     return (
       <div className='flex gap-2'>
@@ -133,6 +158,23 @@ function OfferActions({ offer }: { offer: OfferRow }) {
           {copy.actions.decline}
         </Button>
       </div>
+    );
+  }
+
+  if (offer.status === 'accepted') {
+    const params = new URLSearchParams();
+    params.set('fromOfferId', offer.id);
+    if (candidate?.fullName) params.set('fullName', candidate.fullName);
+    if (candidate?.email) params.set('email', candidate.email);
+    if (candidate?.phone) params.set('phone', candidate.phone);
+    if (offer.startDate) params.set('startDate', offer.startDate.slice(0, 10));
+
+    return (
+      <Button asChild size='sm' className='bg-emerald-600 hover:bg-emerald-700 text-white'>
+        <Link href={`/employees/new?${params.toString()}`}>
+          Tạo hồ sơ nhân viên
+        </Link>
+      </Button>
     );
   }
 

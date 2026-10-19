@@ -1,5 +1,5 @@
-import {  Inject , Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { Inject, Injectable } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../database/database.provider";
 import { AppDatabase } from "../database/database-client.type";
 import * as schema from "../database/schema";
@@ -43,11 +43,25 @@ export class ResourceLoaderRepository {
           id: schema.employees.id,
           userId: schema.employees.userId,
           departmentId: schema.employees.departmentId,
+          orgDepartmentId: schema.orgAssignments.departmentId,
         })
         .from(schema.employees)
+        .leftJoin(
+          schema.orgAssignments,
+          and(
+            eq(schema.orgAssignments.employeeId, schema.employees.id),
+            eq(schema.orgAssignments.isCurrent, true),
+            eq(schema.orgAssignments.assignmentType, "primary"),
+          ),
+        )
         .where(eq(schema.employees.id, paramValue))
         .limit(1);
-      return row ?? null;
+      if (!row) return null;
+      return {
+        id: row.id,
+        userId: row.userId,
+        departmentId: row.departmentId ?? row.orgDepartmentId ?? null,
+      };
     }
 
     const [row] = await this.db
@@ -55,14 +69,29 @@ export class ResourceLoaderRepository {
         id: schema.employees.id,
         userId: schema.employees.userId,
         departmentId: schema.employees.departmentId,
+        orgDepartmentId: schema.orgAssignments.departmentId,
         username: schema.users.username,
       })
       .from(schema.employees)
       .innerJoin(schema.users, eq(schema.employees.userId, schema.users.id))
+      .leftJoin(
+        schema.orgAssignments,
+        and(
+          eq(schema.orgAssignments.employeeId, schema.employees.id),
+          eq(schema.orgAssignments.isCurrent, true),
+          eq(schema.orgAssignments.assignmentType, "primary"),
+        ),
+      )
       .where(eq(schema.users.username, paramValue))
       .limit(1);
 
-    return row ?? null;
+    if (!row) return null;
+    return {
+      id: row.id,
+      userId: row.userId,
+      departmentId: row.departmentId ?? row.orgDepartmentId ?? null,
+      username: row.username,
+    };
   }
 
   private async loadSchedule(paramValue: string) {

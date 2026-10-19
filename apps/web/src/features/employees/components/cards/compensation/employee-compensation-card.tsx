@@ -39,8 +39,11 @@ import {
   ALLOWANCE_TYPE_CONFIG,
   getStandardAllowanceSuggestion,
 } from '../../../utils/compensation-standards';
+import { hasAnyPermission } from '@project/permissions';
 import { cn } from '@/lib/utils';
 import { formatDateVN } from '@/lib/date';
+import { permissions } from '@/lib/permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface EmployeeCompensationCardProps {
   employeeId: string;
@@ -51,8 +54,16 @@ interface EmployeeCompensationCardProps {
 export function EmployeeCompensationCard({
   employeeId,
   jobTitle,
-  departmentName,
 }: EmployeeCompensationCardProps) {
+  const user = useAuthStore((state) => state.user);
+  const canEdit =
+    Boolean(user?.isSuperAdmin) ||
+    hasAnyPermission(user?.permissions ?? [], [
+      permissions.employees.edit,
+      permissions.employees.manage,
+      permissions.employees.manageSensitive,
+    ]);
+
   // Queries
   const { data: salary, isLoading: salaryLoading } = useEmployeeSalaryQuery(employeeId);
   const { data: allowances = [], isLoading: allowancesLoading } = useEmployeeAllowancesQuery(employeeId);
@@ -204,25 +215,27 @@ export function EmployeeCompensationCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={() => setSalaryOpen(true)}
-          >
-            <Icons.edit className="size-3.5" /> Điều chỉnh LCB
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={handleOpenAdd}
-          >
-            <Icons.add className="size-3.5" /> Thêm phụ cấp
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => setSalaryOpen(true)}
+            >
+              <Icons.edit className="size-3.5" /> Điều chỉnh LCB
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={handleOpenAdd}
+            >
+              <Icons.add className="size-3.5" /> Thêm phụ cấp
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Content ── */}
@@ -280,7 +293,7 @@ export function EmployeeCompensationCard({
             </div>
 
             {/* 2. Smart Suggestion Banner if position holds standard allowance */}
-            {suggestion && !hasPositionAllowance && (
+            {canEdit && suggestion && !hasPositionAllowance && (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs">
                 <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                   <Icons.sparkles className="size-4 shrink-0" />
@@ -312,11 +325,13 @@ export function EmployeeCompensationCard({
               {allowances.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center text-xs text-muted-foreground">
                   Chưa có khoản phụ cấp nào được thiết lập cho nhân viên này.
-                  <div className="mt-2">
-                    <Button type="button" variant="outline" size="sm" onClick={handleOpenAdd} className="text-xs h-7">
-                      <Icons.add className="mr-1 size-3" /> Thêm phụ cấp đầu tiên
-                    </Button>
-                  </div>
+                  {canEdit && (
+                    <div className="mt-2">
+                      <Button type="button" variant="outline" size="sm" onClick={handleOpenAdd} className="text-xs h-7">
+                        <Icons.add className="mr-1 size-3" /> Thêm phụ cấp đầu tiên
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y rounded-lg border border-border/60 bg-card overflow-hidden">
@@ -355,28 +370,30 @@ export function EmployeeCompensationCard({
                           <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
                             +{Number(a.amount).toFixed(2)} VND
                           </span>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => handleOpenEdit(a)}
-                            >
-                              <Icons.edit className="size-3.5" />
-                              <span className="sr-only">Sửa</span>
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => setDeletingId(a.id)}
-                            >
-                              <Icons.trash className="size-3.5" />
-                              <span className="sr-only">Xoá</span>
-                            </Button>
-                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleOpenEdit(a)}
+                              >
+                                <Icons.edit className="size-3.5" />
+                                <span className="sr-only">Sửa</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => setDeletingId(a.id)}
+                              >
+                                <Icons.trash className="size-3.5" />
+                                <span className="sr-only">Xoá</span>
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

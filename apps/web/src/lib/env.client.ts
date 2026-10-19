@@ -134,6 +134,7 @@ export const envClient = Object.freeze({
   isDevAppEnv: appEnv === 'dev',
   isProdAppEnv: appEnv === 'prod',
   apiBaseUrl: normalizeApiBaseUrl(rawEnv.NEXT_PUBLIC_API_URL),
+  timezone: normalizeOptionalString(rawEnv.NEXT_PUBLIC_TIMEZONE) ?? 'Asia/Ho_Chi_Minh',
   googleClientId: normalizeOptionalString(rawEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID),
   demoMode: normalizeOptionalString(rawEnv.NEXT_PUBLIC_DEMO_MODE),
   debug: normalizeOptionalString(rawEnv.NEXT_PUBLIC_DEBUG),

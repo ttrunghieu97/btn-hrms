@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { EmployeesRepository } from "../repositories/employees.repository";
-import { throwNotFound, throwBadRequest } from "../../../../shared/utils/http-error";
+import { throwNotFound, throwBadRequest, throwConflict } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
@@ -33,6 +33,7 @@ export class RequestTransferUseCase {
     await this.lifecycle.assertOrgRefsAreValid({
       departmentId: dto.toDepartmentId,
       positionId: dto.toPositionId,
+      managerEmployeeId: dto.toManagerEmployeeId,
     });
     await EmployeeHierarchyGuard.validateNoCycles({
       employeeId,
@@ -58,6 +59,18 @@ export class RequestTransferUseCase {
         requestedByUserId: currentUser?.userId ?? null,
       },
     });
+
+    if (
+      instance.currentState &&
+      instance.currentState !== "draft" &&
+      instance.currentState !== "initiated"
+    ) {
+      throwConflict(
+        "An active transfer request already exists for this employee",
+        ERROR_CODES.CONFLICT,
+        { employeeId, workflowInstanceId: instance.id, currentState: instance.currentState },
+      );
+    }
 
     // Transition initiated -> manager_approval
     await this.workflowEngine.transition(instance.id, "submit", currentUser?.userId ?? null);

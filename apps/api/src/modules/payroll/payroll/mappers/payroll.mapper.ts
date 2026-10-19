@@ -17,6 +17,9 @@ type PayrollResponseRow = {
   currency: string;
   effectiveFrom?: string | null;
   effectiveTo?: string | null;
+  isProvisional?: boolean;
+  calculationStatus?: string | null;
+  metadata?: Record<string, unknown> | null;
   employee?: {
     id: string;
     firstName: string;
@@ -33,6 +36,19 @@ type PayrollResponseRow = {
 export class PayrollMapper {
   static toResponseDto(row: PayrollResponseRow): PayrollResponseDto {
     const emp = row?.employee;
+    const meta =
+      row.metadata && typeof row.metadata === "object" ? row.metadata : null;
+    const calculationStatus =
+      row.calculationStatus ??
+      (typeof meta?.calculationStatus === "string"
+        ? meta.calculationStatus
+        : "PROVISIONAL_POLICY_UNCONFIRMED");
+    const isProvisional =
+      row.isProvisional !== undefined
+        ? row.isProvisional
+        : meta?.isProvisional === false
+          ? false
+          : true;
     return {
       id: row.id,
       employeeId: row.employeeId,
@@ -68,6 +84,9 @@ export class PayrollMapper {
       currency: row.currency,
       effectiveFrom: row.effectiveFrom ?? null,
       effectiveTo: row.effectiveTo ?? null,
+      isProvisional,
+      calculationStatus,
+      metadata: meta,
       employee: emp
         ? {
             id: emp.id,

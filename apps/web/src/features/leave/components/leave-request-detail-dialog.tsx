@@ -45,8 +45,13 @@ export function LeaveRequestDetailDialog({
   onOpenChange,
 }: LeaveRequestDetailDialogProps) {
   const user = useAuthStore((s) => s.user);
-  const canApprove = hasPermission(user?.permissions ?? [], permissions.leave.approve) ||
+  const hasApprovePerm =
+    hasPermission(user?.permissions ?? [], permissions.leave.approve) ||
     hasPermission(user?.permissions ?? [], permissions.leave.edit);
+  const isSelfRequest = Boolean(
+    user?.employeeId && item?.employeeId && String(user.employeeId) === String(item.employeeId),
+  );
+  const canApprove = hasApprovePerm && !isSelfRequest;
   const canCancel = true;
 
   const [decisionComment, setDecisionComment] = React.useState('');

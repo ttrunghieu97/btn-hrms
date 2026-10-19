@@ -11,7 +11,6 @@ import { CheckUsernameUseCase } from "./use-cases/check-username.usecase";
 import { CreateEmployeeUseCase } from "./use-cases/create-employee.usecase";
 import { UpdateEmployeeUseCase } from "./use-cases/update-employee.usecase";
 import { DeleteEmployeeUseCase } from "./use-cases/delete-employee.usecase";
-import { RestoreEmployeeUseCase } from "./use-cases/restore-employee.usecase";
 import { PurgeEmployeeUseCase } from "./use-cases/purge-employee.usecase";
 import { CheckEmployeeCodeUseCase } from "./use-cases/check-employee-code.usecase";
 import { EmployeeDataPipe } from "./employee-data.pipe";
@@ -45,7 +44,6 @@ describe("EmployeesController Scoping", () => {
         { provide: CreateEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: UpdateEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: DeleteEmployeeUseCase, useValue: { execute: jest.fn() } },
-        { provide: RestoreEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: PurgeEmployeeUseCase, useValue: { execute: jest.fn() } },
         { provide: ResetEmployeePasswordUseCase, useValue: {} },
         { provide: EmployeeDataPipe, useValue: { transform: jest.fn() } },
@@ -99,5 +97,37 @@ describe("EmployeesController Scoping", () => {
     const metadata = Reflect.getMetadata(INTERCEPTORS_METADATA, handler);
 
     expect(metadata).toEqual(expect.arrayContaining([expect.any(Function)]));
+  });
+
+  it.each([
+    [["employee:view:sensitive"], true],
+    [["employees:view:sensitive"], true],
+    [["employee:manage:sensitive"], true],
+    [["employees:manage:sensitive"], true],
+    [["employee:view:all", "employee:edit"], false],
+    [["employee:view:self"], false],
+  ])("passes sensitiveAllowed=%s for user permissions %j on findAll and findOne", async (perms, expected) => {
+    const mockUser = {
+      id: "user-1",
+      permissions: perms,
+      departmentId: "dept-1",
+    } as any;
+    const query = new EmployeeQueryDto();
+    (queryScopeService.resolveScope as jest.Mock).mockReturnValue({ tier: "all" });
+
+    await controller.findAll(query, { user: mockUser });
+    expect(listEmployeesUseCase.execute).toHaveBeenLastCalledWith(
+      query,
+      { tier: "all" },
+      expected,
+    );
+
+    const getEmployeeUseCase = controller["getEmployee"];
+    await controller.findOne("emp-1", query, { user: mockUser });
+    expect(getEmployeeUseCase.execute).toHaveBeenLastCalledWith(
+      "emp-1",
+      query,
+      expected,
+    );
   });
 });

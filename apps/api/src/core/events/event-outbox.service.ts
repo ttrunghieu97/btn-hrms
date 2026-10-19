@@ -23,6 +23,15 @@ import { RequestContextService } from "../../shared/context/request-context.serv
 import { EventOutboxRepository } from "./event-outbox.repository";
 import { MetricsService } from "../../shared/metrics/metrics.service";
 import type { AppDatabase } from "../../infrastructure/database/database-client.type";
+import { throwConflict } from "../../shared/utils/http-error";
+import { ERROR_CODES } from "../../shared/constants/error-codes";
+
+const PAYROLL_RELEASE_EVENT_TYPES = new Set([
+  "payroll.approved",
+  "payroll.posted",
+  "payroll.payslip.published",
+  "payroll.financial-publication.completed",
+]);
 
 type EventLike = {
   eventType?: unknown;
@@ -69,6 +78,34 @@ export class EventOutboxService {
     assertEventRegistered(baseType, eventVersion);
     // DomainEvent stores payload in .data; plain events use payload directly
     const payloadToValidate = (envelope.payload as any)?.data ?? envelope.payload;
+
+    if (PAYROLL_RELEASE_EVENT_TYPES.has(baseType)) {
+      const payloadObj =
+        payloadToValidate && typeof payloadToValidate === "object"
+          ? (payloadToValidate as Record<string, unknown>)
+          : {};
+      const eventObj = eventLike(event) as Record<string, unknown>;
+      const calcStatus =
+        payloadObj.calculationStatus ?? eventObj.calculationStatus;
+      if (
+        payloadObj.isProvisional === true ||
+        eventObj.isProvisional === true ||
+        calcStatus === "PROVISIONAL_POLICY_UNCONFIRMED" ||
+        payloadObj.settlementComplete === false ||
+        (baseType === "payroll.financial-publication.completed" &&
+          calcStatus !== "CONFIRMED")
+      ) {
+        throwConflict(
+          `Cannot stage payroll release or financial publication event '${envelope.eventType}' while calculation remains provisional`,
+          ERROR_CODES.INVALID_STATUS_TRANSITION,
+          {
+            eventType: envelope.eventType,
+            calculationStatus: calcStatus ?? "PROVISIONAL_POLICY_UNCONFIRMED",
+          },
+        );
+      }
+    }
+
     validatePayload(baseType, eventVersion, payloadToValidate);
 
     const row = await this.outboxRepo.insert(envelope, tx);

@@ -9,24 +9,28 @@ import {
 } from "./asset-approval-link.repository";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
-import { DATABASE_CONNECTION } from "@/infrastructure/database/database.tokens";
+import { EventIdempotencyRepository } from "@/infrastructure/repositories/event-idempotency.repository";
 import type { AppDatabase } from "@/infrastructure/database/database-client.type";
-import { consumerIdempotency } from "@/infrastructure/database/schema/_shared/consumer-idempotency";
 
 const CONSUMER_ID = "asset-approval-integration";
 
 @Injectable()
 export class AssetApprovalIntegrationHandler implements OnModuleInit {
   private readonly logger: ContextLogger;
+  private readonly idempotency: EventIdempotencyRepository;
 
   constructor(
     @Inject(EVENT_BUS_TOKEN) private readonly eventBus: IEventBus,
     private readonly policyResolver: AssetApprovalPolicyResolver,
     private readonly gateway: AssetApprovalGateway,
     private readonly linkRepo: AssetApprovalLinkRepository,
-    @Inject(DATABASE_CONNECTION) private readonly db: AppDatabase,
+    idempotencyOrDb: EventIdempotencyRepository,
     private readonly requestContext: RequestContextService,
   ) {
+    this.idempotency =
+      typeof (idempotencyOrDb as EventIdempotencyRepository)?.isProcessed === "function"
+        ? idempotencyOrDb
+        : new EventIdempotencyRepository(idempotencyOrDb as unknown as AppDatabase);
     this.logger = new ContextLogger(
       this.requestContext,
       AssetApprovalIntegrationHandler.name,
@@ -62,8 +66,7 @@ export class AssetApprovalIntegrationHandler implements OnModuleInit {
     requestedByUserId: string | null,
     metadata: Record<string, unknown>,
   ): Promise<void> {
-    const idempotentId = `${CONSUMER_ID}:${eventId}`;
-    if (await this.isProcessed(idempotentId)) return;
+    if (await this.idempotency.isProcessed(CONSUMER_ID, eventId)) return;
 
     try {
       const existingLink = await this.linkRepo.findBySubject(
@@ -74,7 +77,7 @@ export class AssetApprovalIntegrationHandler implements OnModuleInit {
         this.logger.log(
           `Correlation already exists for ${subjectType} ${subjectId} — skipping`,
         );
-        await this.markProcessed(idempotentId);
+        await this.idempotency.markProcessed(CONSUMER_ID, eventId);
         return;
       }
 
@@ -101,7 +104,7 @@ export class AssetApprovalIntegrationHandler implements OnModuleInit {
         policyId,
       });
 
-      await this.markProcessed(idempotentId);
+      await this.idempotency.markProcessed(CONSUMER_ID, eventId);
       this.logger.log(
         `Approval requested: ${subjectType} ${subjectId} → approval ${approvalRequest.id}`,
       );
@@ -112,20 +115,5 @@ export class AssetApprovalIntegrationHandler implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  private isProcessed(idempotentId: string): Promise<boolean> {
-    return this.db.query.consumerIdempotency
-      .findFirst({
-        where: (t: any, { eq: eqFn }: any) => eqFn(t.eventId, idempotentId),
-      })
-      .then(Boolean);
-  }
-
-  private async markProcessed(idempotentId: string): Promise<void> {
-    await this.db.insert(consumerIdempotency).values({
-      consumerId: CONSUMER_ID,
-      eventId: idempotentId,
-    });
   }
 }

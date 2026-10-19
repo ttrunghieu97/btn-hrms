@@ -324,14 +324,17 @@ export class AttendanceTimekeepingRepository
     return row ?? null;
   }
 
-  async listClockEvents(query: {
-    employeeId?: string;
-    from?: string;
-    to?: string;
-    source?: "mobile" | "web" | "api" | "manual";
-    page?: number;
-    limit?: number;
-  }): Promise<{
+  async listClockEvents(
+    query: {
+      employeeId?: string;
+      from?: string;
+      to?: string;
+      source?: "mobile" | "web" | "api" | "manual";
+      page?: number;
+      limit?: number;
+    },
+    scope?: { tier: string; departmentId?: string; employeeId?: string },
+  ): Promise<{
     rows: unknown[];
     total: number;
     page: number;
@@ -341,6 +344,15 @@ export class AttendanceTimekeepingRepository
     const offset = (page - 1) * limit;
 
     const conditions: SQL[] = [];
+    if (scope?.tier === "self" && scope.employeeId) {
+      conditions.push(eq(schema.attendances.employeeId, scope.employeeId));
+    } else if (scope?.tier === "department" && scope.departmentId) {
+      const deptEmpSubquery = this.db
+        .select({ id: schema.employees.id })
+        .from(schema.employees)
+        .where(eq(schema.employees.departmentId, scope.departmentId));
+      conditions.push(inArray(schema.attendances.employeeId, deptEmpSubquery));
+    }
     if (employeeId) conditions.push(eq(schema.attendances.employeeId, employeeId));
     if (from) conditions.push(gte(schema.attendances.date, from));
     if (to) conditions.push(lte(schema.attendances.date, to));
@@ -634,7 +646,7 @@ export class AttendanceTimekeepingRepository
 
     const where = conditions.length === 1 ? conditions[0] : and(...conditions);
 
-    const rows = await this.db.query.attendanceDailySummaries.findMany({
+    const rawRows = await this.db.query.attendanceDailySummaries.findMany({
       where,
       with: {
         employee: { with: { department: true } },
@@ -643,6 +655,47 @@ export class AttendanceTimekeepingRepository
       orderBy: [desc(schema.attendanceDailySummaries.workDate)],
       limit,
       offset,
+    });
+
+    const empIds = Array.from(new Set(rawRows.map((r) => r.employeeId)));
+    const punchMap = new Map<string, { checkIn: string | null; checkOut: string | null }>();
+    if (empIds.length > 0) {
+      const events = await this.db
+        .select({
+          employeeId: schema.attendances.employeeId,
+          date: schema.attendances.date,
+          type: schema.attendances.type,
+          time: schema.attendances.time,
+        })
+        .from(schema.attendances)
+        .where(
+          and(
+            inArray(schema.attendances.employeeId, empIds),
+            gte(schema.attendances.date, from),
+            lte(schema.attendances.date, to),
+          ),
+        );
+      for (const ev of events) {
+        if (!ev.time) continue;
+        const key = `${ev.employeeId}_${ev.date}`;
+        const entry = punchMap.get(key) ?? { checkIn: null, checkOut: null };
+        const iso = ev.time.toISOString();
+        if (ev.type === "check_in") {
+          if (!entry.checkIn || ev.time < new Date(entry.checkIn)) entry.checkIn = iso;
+        } else if (ev.type === "check_out") {
+          if (!entry.checkOut || ev.time > new Date(entry.checkOut)) entry.checkOut = iso;
+        }
+        punchMap.set(key, entry);
+      }
+    }
+
+    const rows = rawRows.map((r) => {
+      const punches = punchMap.get(`${r.employeeId}_${r.workDate}`);
+      return {
+        ...r,
+        checkIn: punches?.checkIn ?? null,
+        checkOut: punches?.checkOut ?? null,
+      };
     });
 
     const [totalResult] = await this.db
@@ -731,7 +784,7 @@ export class AttendanceTimekeepingRepository
     return created;
   }
 
-  async findWorkspaceData(query: { departmentId?: string; from: string; to: string }): Promise<{
+  async findWorkspaceData(query: { departmentId?: string; employeeId?: string; from: string; to: string }): Promise<{
     employees: {
       id: string;
       employeeCode: string;
@@ -773,7 +826,15 @@ export class AttendanceTimekeepingRepository
   }> {
     const conditions: SQL[] = [];
     if (query.departmentId) {
-      conditions.push(eq(schema.orgAssignments.departmentId, query.departmentId));
+      conditions.push(
+        or(
+          eq(schema.orgAssignments.departmentId, query.departmentId),
+          eq(schema.employees.departmentId, query.departmentId),
+        )!,
+      );
+    }
+    if (query.employeeId) {
+      conditions.push(eq(schema.employees.id, query.employeeId));
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

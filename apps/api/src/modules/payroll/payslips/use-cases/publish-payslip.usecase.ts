@@ -12,6 +12,7 @@ import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
 import { PayslipPublishedEvent } from "../../../../core/events/events/payslip-published.event";
+import { isProvisionalPayslipMetadata } from "../../payroll-runs/use-cases/payroll-runs.usecases";
 
 @Injectable()
 export class PublishPayslipUseCase {
@@ -54,7 +55,10 @@ export class PublishPayslipUseCase {
       );
     }
 
-    const existingMeta = (record.metadata ?? {}) as Record<string, unknown>;
+    const existingMeta =
+      record.metadata && typeof record.metadata === "object"
+        ? (record.metadata as Record<string, unknown>)
+        : {};
     if (
       existingMeta.settlementComplete === false ||
       existingMeta.requiresManualReviewBeforePublish === true
@@ -70,23 +74,20 @@ export class PublishPayslipUseCase {
       );
     }
 
-    if (
-      existingMeta.calculationStatus === "PROVISIONAL_POLICY_UNCONFIRMED" ||
-      existingMeta.isProvisional === true ||
-      (existingMeta.source === "legacy-payroll-upsert" &&
-        existingMeta.calculationStatus !== "CONFIRMED")
-    ) {
+    const provisionalCheck = isProvisionalPayslipMetadata(record.metadata);
+    if (provisionalCheck.isProvisional) {
       throwConflict(
         "Provisional payroll payslip cannot be published while HR/Finance payroll policies remain unconfirmed",
         ERROR_CODES.INVALID_STATUS_TRANSITION,
         {
           payslipId: id,
           calculationStatus:
-            existingMeta.calculationStatus ?? "PROVISIONAL_POLICY_UNCONFIRMED",
+            provisionalCheck.calculationStatus ?? "PROVISIONAL_POLICY_UNCONFIRMED",
           policyBlockerCode:
-            existingMeta.policyBlockerCode ??
+            provisionalCheck.policyBlockerCode ??
             "BIZ_004_PAYROLL_POLICY_UNCONFIRMED",
           unconfirmedPolicyComponents:
+            provisionalCheck.unconfirmedComponents ??
             existingMeta.unconfirmedPolicyComponents ??
             existingMeta.omittedComponents ??
             [],

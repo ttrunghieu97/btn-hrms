@@ -33,6 +33,11 @@ export class ApproveTransferUseCase {
 
     const currentUser = this.requestContext.get();
 
+    const metadata = (instance.metadata ?? {});
+    const effectiveDate = (metadata.effectiveDate as string) ?? "";
+    const today = todayDateString();
+    const shouldApplyNow = transition === "hr_approve" && (!effectiveDate || effectiveDate <= today);
+
     await this.workflowEngine.recordTransition({
       instanceId,
       fromState: instance.currentState,
@@ -44,17 +49,28 @@ export class ApproveTransferUseCase {
 
     await this.workflowEngine.updateInstance(instanceId, {
       currentState: transition === "manager_approve" ? "hr_approval" : "approved",
-      ...(transition === "hr_approve" ? { status: "completed", completedAt: new Date() } : {}),
     });
 
     if (transition === "hr_approve") {
-      const metadata = (instance.metadata ?? {});
-      const effectiveDate = (metadata.effectiveDate as string) ?? "";
-      const today = todayDateString();
-
-      await this.applyTransfer.execute(instanceId, effectiveDate <= today);
+      await this.eventOutbox.stage(
+        new EmployeeTransferApprovedEvent({
+          employeeId,
+          approvedByUserId: currentUser?.userId ?? null,
+          workflowInstanceId: instanceId,
+          effectiveDate,
+        }),
+      );
     }
 
-    return { success: true, role, newState: transition === "manager_approve" ? "hr_approval" : "approved" };
+    if (shouldApplyNow) {
+      await this.applyTransfer.execute(instanceId, true, employeeId);
+    }
+
+    return {
+      success: true,
+      role,
+      newState: transition === "manager_approve" ? "hr_approval" : "approved",
+      applied: shouldApplyNow,
+    };
   }
 }

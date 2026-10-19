@@ -65,6 +65,11 @@ const TASK_TRANSITION_DEFS = [
   { from: 'revision', action: 'resubmit' as TaskAction, to: 'submitted', allowedRoles: ['assignee'], requiresResult: true },
   // revision → cancelled (creator/manager gives up)
   { from: 'revision', action: 'cancel' as TaskAction, to: 'cancelled', allowedRoles: ['creator', 'manager', 'admin'], requiresReason: true },
+
+  // declined → assigned (creator/manager re-assigns after decline — aligned with backend TASK_TRANSITIONS)
+  { from: 'declined', action: 'assign' as TaskAction, to: 'assigned', allowedRoles: ['creator', 'manager', 'admin'] },
+  // declined → cancelled (creator/manager cancels after decline — aligned with backend TASK_TRANSITIONS)
+  { from: 'declined', action: 'cancel' as TaskAction, to: 'cancelled', allowedRoles: ['creator', 'manager', 'admin'], requiresReason: true },
 ] as const;
 
 /* ------------------------------------------------------------------ */

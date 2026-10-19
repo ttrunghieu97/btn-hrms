@@ -1,23 +1,16 @@
-import { envClient } from "@/lib/env.client";
-import { tokenStore } from "@/lib/token-store";
+import { customFetch } from "@/lib/fetcher";
+import { extractList, extractPagination, unwrapData } from "@/lib/api-extract";
 
-const BASE = `${envClient.apiBaseUrl.replace(/\/+$/, "")}/offboarding`;
+const BASE = "/api/v1/offboarding";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== "undefined" ? tokenStore.get() : null;
-  const res = await fetch(`${BASE}${path}`, {
+  return customFetch<T>(`${BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message || `Request failed: ${res.status}`);
-  }
-  return res.json();
 }
 
 export interface OffboardingProcessListItem {
@@ -39,40 +32,21 @@ export interface OffboardingProcessDetail {
 export async function fetchOffboardingList(
   page = 1,
   limit = 20,
+  status?: string | null,
 ): Promise<{ rows: OffboardingProcessListItem[]; total: number }> {
-  const json = await request<unknown>(`?page=${page}&limit=${limit}`);
-  if (json && typeof json === "object") {
-    const obj = json as Record<string, unknown>;
-    const meta =
-      ((obj.meta as Record<string, unknown> | undefined)?.pagination as
-        | Record<string, unknown>
-        | undefined) ?? (obj.meta as Record<string, unknown> | undefined);
-    if (Array.isArray(obj.data)) {
-      return {
-        rows: obj.data as OffboardingProcessListItem[],
-        total: Number(meta?.total ?? obj.data.length),
-      };
-    }
-    if (Array.isArray(obj.rows)) {
-      return {
-        rows: obj.rows as OffboardingProcessListItem[],
-        total: Number(obj.total ?? meta?.total ?? obj.rows.length),
-      };
-    }
-  }
-  return { rows: [], total: 0 };
+  const statusQuery = status ? `&status=${encodeURIComponent(status)}` : "";
+  const json = await request<unknown>(`?page=${page}&limit=${limit}${statusQuery}`);
+  const rows = extractList<OffboardingProcessListItem>(json);
+  const pagination = extractPagination(json);
+  return {
+    rows,
+    total: Number(pagination?.total ?? rows.length),
+  };
 }
 
 export async function fetchOffboardingDetail(id: string): Promise<OffboardingProcessDetail> {
   const json = await request<unknown>(`/${id}`);
-  if (json && typeof json === "object") {
-    const obj = json as Record<string, unknown>;
-    if (obj.data && typeof obj.data === "object") {
-      return obj.data as OffboardingProcessDetail;
-    }
-    return obj as unknown as OffboardingProcessDetail;
-  }
-  return json as OffboardingProcessDetail;
+  return unwrapData<OffboardingProcessDetail>(json);
 }
 
 export async function completeChecklistItem(processId: string, taskId: string, skip = false) {

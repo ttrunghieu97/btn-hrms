@@ -1,24 +1,10 @@
-import { envClient } from '@/lib/env.client';
-import { tokenStore } from '@/lib/token-store';
-import { extractList, extractPagination, unwrapData, type PaginationMeta } from '@/lib/api-extract';
-
-const BASE = envClient.apiBaseUrl.replace(/\/+$/, '');
+import { customFetch } from '@/lib/fetcher';
+import { unwrapData } from '@/lib/api-extract';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? tokenStore.get() : null;
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message || `Request failed: ${res.status}`);
-  }
-  return res.json();
+  const apiPath = path.startsWith('/api/v1') ? path : `/api/v1${path}`;
+  const res = await customFetch<unknown>(apiPath, options);
+  return unwrapData<T>(res);
 }
 
 export interface ApprovalPolicy {

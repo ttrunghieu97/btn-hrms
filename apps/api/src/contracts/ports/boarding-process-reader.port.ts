@@ -66,6 +66,7 @@ export interface IBoardingProcessReader {
     type: "onboarding" | "offboarding",
     page?: number,
     limit?: number,
+    filters?: { employeeId?: string; status?: string },
   ): Promise<PaginatedProcesses>;
 
   findActiveTemplateByType(

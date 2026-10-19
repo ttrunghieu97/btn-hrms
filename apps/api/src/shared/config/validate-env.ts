@@ -1,51 +1,19 @@
 type Env = Record<string, string | undefined>;
 
-const INSECURE_DEFAULTS = new Set([
-  "change_me", "changeme", "change-me", "change_me_in_prod",
-  "changeit", "admin", "admin123", "administrator",
-  "password", "password123", "passw0rd", "p@ssw0rd",
-  "secret", "secret_key", "secretkey", "supersecret",
-  "default", "test", "test123", "example", "examplekey",
-  "root", "toor", "minioadmin", "postgres", "hrms",
-  "hrms_secret", "redis", "guest", "user", "demo", "dev",
-  "development", "qwerty", "123456", "1234567", "12345678",
-  "letmein", "welcome", "welcome123", "iloveyou",
-  "null", "undefined", "none", "todo", "tbd",
-  "placeholder", "__set_via_vault__",
-]);
-
-const INSECURE_SUBSTRINGS = [
-  "change_me", "changeme", "change-me", "placeholder",
-  "set_via_vault", "set-via-vault",
-  "your_secret", "your-secret", "yoursecret",
-  "replace_me", "replaceme", "todo", "fixme", "example",
-];
-
-const KNOWN_COMPROMISED = new Set([
-  "vwOYdY15w5KFoZjGrnxf6KskmkW4xZVzHnNfWtiZtqo=",
-  "vwOYdY15w5KFoZjdrnxf6KskmkW4xZVzHnNfWtiZtqo-",
-  "minioadmin",
-  "hrms_secret",
-]);
+const INSECURE_SUBSTRINGS = ["123"];
 
 function assertSecretStrength(value: string, label: string, minLength: number) {
   const trimmed = String(value).trim();
   if (!trimmed) throw new Error(`${label} must not be empty`);
+  if (trimmed.length < minLength) {
+    throw new Error(`${label} must be at least ${minLength} characters (got ${trimmed.length}).`);
+  }
 
   const lower = trimmed.toLowerCase();
-  if (INSECURE_DEFAULTS.has(lower)) {
-    throw new Error(`${label} is a known insecure default ("${trimmed}"). Generate a strong random value.`);
-  }
   for (const needle of INSECURE_SUBSTRINGS) {
     if (lower.includes(needle)) {
       throw new Error(`${label} contains insecure placeholder "${needle}". Provide a real secret.`);
     }
-  }
-  if (KNOWN_COMPROMISED.has(trimmed)) {
-    throw new Error(`${label} is a known-compromised value. Rotate immediately.`);
-  }
-  if (trimmed.length < minLength) {
-    throw new Error(`${label} must be at least ${minLength} characters (got ${trimmed.length}).`);
   }
 }
 
@@ -105,15 +73,29 @@ export function validateEnv(config: Env) {
   if (config.STORAGE_S3_URL) {
     validateUrl(config.STORAGE_S3_URL, "STORAGE_S3_URL", ["http:", "https:"]);
   }
-  if (config.STORAGE_SIGNED_URL_TTL_SEC && Number.isNaN(Number(config.STORAGE_SIGNED_URL_TTL_SEC))) {
+  if (
+    config.STORAGE_SIGNED_URL_TTL_SEC &&
+    Number.isNaN(Number(config.STORAGE_SIGNED_URL_TTL_SEC))
+  ) {
     throw new Error("STORAGE_SIGNED_URL_TTL_SEC must be a number");
   }
 
   // ── URLs (prefixed based) ─────────────────────────────────────
   if (config.REDIS_URL) validateUrl(config.REDIS_URL, "REDIS_URL", ["redis:", "rediss:"]);
-  if (config.APP_URL) validateUrl(config.APP_URL, "APP_URL", ["http:", "https:"]);
+  if (config.APP_URL) {
+    for (const url of String(config.APP_URL)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
+      validateUrl(url, "APP_URL", ["http:", "https:"]);
+    }
+  }
   if (config.OBSERVABILITY_OTEL_URL) {
-    validateUrl(config.OBSERVABILITY_OTEL_URL, "OBSERVABILITY_OTEL_URL", ["http:", "https:", "grpc:"]);
+    validateUrl(config.OBSERVABILITY_OTEL_URL, "OBSERVABILITY_OTEL_URL", [
+      "http:",
+      "https:",
+      "grpc:",
+    ]);
   }
   if (config.OBSERVABILITY_SENTRY_DSN) {
     validateUrl(config.OBSERVABILITY_SENTRY_DSN, "OBSERVABILITY_SENTRY_DSN", ["http:", "https:"]);
@@ -136,9 +118,15 @@ export function validateEnv(config: Env) {
     }
   }
   if (config.AUTH_REFRESH_TOKEN_CLEANUP_ENABLED) {
-    validateBoolean(config.AUTH_REFRESH_TOKEN_CLEANUP_ENABLED, "AUTH_REFRESH_TOKEN_CLEANUP_ENABLED");
+    validateBoolean(
+      config.AUTH_REFRESH_TOKEN_CLEANUP_ENABLED,
+      "AUTH_REFRESH_TOKEN_CLEANUP_ENABLED",
+    );
   }
-  if (config.AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS && Number.isNaN(Number(config.AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS))) {
+  if (
+    config.AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS &&
+    Number.isNaN(Number(config.AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS))
+  ) {
     throw new Error("AUTH_REFRESH_TOKEN_CLEANUP_INTERVAL_MS must be a number");
   }
 
@@ -146,25 +134,41 @@ export function validateEnv(config: Env) {
   if (config.WEBHOOK_SECRET && !String(config.WEBHOOK_SECRET).trim()) {
     throw new Error("WEBHOOK_SECRET must not be empty when set");
   }
-  if (config.WEBHOOK_DELIVERY_TIMEOUT_MS && Number.isNaN(Number(config.WEBHOOK_DELIVERY_TIMEOUT_MS))) {
+  if (
+    config.WEBHOOK_DELIVERY_TIMEOUT_MS &&
+    Number.isNaN(Number(config.WEBHOOK_DELIVERY_TIMEOUT_MS))
+  ) {
     throw new Error("WEBHOOK_DELIVERY_TIMEOUT_MS must be a number");
   }
   if (config.WEBHOOK_ALLOW_INSECURE_HTTP) {
     validateBoolean(config.WEBHOOK_ALLOW_INSECURE_HTTP, "WEBHOOK_ALLOW_INSECURE_HTTP");
   }
   if (config.WEBHOOK_TARGET_ALLOWLIST) {
-    const parts = String(config.WEBHOOK_TARGET_ALLOWLIST).split(",").map((s) => s.trim()).filter(Boolean);
-    if (!parts.length) throw new Error("WEBHOOK_TARGET_ALLOWLIST must contain at least one hostname when set");
+    const parts = String(config.WEBHOOK_TARGET_ALLOWLIST)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!parts.length)
+      throw new Error("WEBHOOK_TARGET_ALLOWLIST must contain at least one hostname when set");
   }
 
   // ── Vault ─────────────────────────────────────────────────────
-  if (isProduction && String(config.FEATURE_VAULT || "").toLowerCase() === "true" && !String(config.VAULT_TOKEN || "").trim()) {
+  if (
+    isProduction &&
+    String(config.FEATURE_VAULT || "").toLowerCase() === "true" &&
+    !String(config.VAULT_TOKEN || "").trim()
+  ) {
     throw new Error("VAULT_TOKEN is required when FEATURE_VAULT=true in production");
   }
   if (config.VAULT_ADDR) validateUrl(config.VAULT_ADDR, "VAULT_ADDR", ["http:", "https:"]);
 
   // ── Feature flags ─────────────────────────────────────────────
-  for (const key of ["FEATURE_SWAGGER", "FEATURE_DB_VERIFY", "FEATURE_VAULT", "FEATURE_REDIS_EVENT_BUS"]) {
+  for (const key of [
+    "FEATURE_SWAGGER",
+    "FEATURE_DB_VERIFY",
+    "FEATURE_VAULT",
+    "FEATURE_REDIS_EVENT_BUS",
+  ]) {
     if (config[key]) validateBoolean(config[key], key);
   }
 
@@ -175,7 +179,10 @@ export function validateEnv(config: Env) {
   if (config.MAX_REQUEST_BODY_KB && Number.isNaN(Number(config.MAX_REQUEST_BODY_KB))) {
     throw new Error("MAX_REQUEST_BODY_KB must be a number");
   }
-  if (config.OUTBOX_MAX_CONCURRENT_PER_TYPE && Number.isNaN(Number(config.OUTBOX_MAX_CONCURRENT_PER_TYPE))) {
+  if (
+    config.OUTBOX_MAX_CONCURRENT_PER_TYPE &&
+    Number.isNaN(Number(config.OUTBOX_MAX_CONCURRENT_PER_TYPE))
+  ) {
     throw new Error("OUTBOX_MAX_CONCURRENT_PER_TYPE must be a number");
   }
 
@@ -185,7 +192,8 @@ export function validateEnv(config: Env) {
     const num = Number(val);
     const isNum = Number.isInteger(num) && num >= 0;
     const isBool = ["true", "false"].includes(val);
-    if (!isNum && !isBool) throw new Error("TRUST_PROXY must be true, false, or a non-negative integer");
+    if (!isNum && !isBool)
+      throw new Error("TRUST_PROXY must be true, false, or a non-negative integer");
   }
 
   // ── Production-only safety checks ────────────────────────────

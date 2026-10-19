@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Param, Body, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags, ApiProperty } from "@nestjs/swagger";
 import { IsString, IsOptional, IsIn } from "class-validator";
-import { RequirePermission } from "../../../core/security/decorators/require-permission.decorator";
+import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
+import { AttendancePolicies } from "../../../core/security/policies/attendance.policy";
 import { RecordAttendanceEventUseCase } from "./use-cases/record-attendance-event.usecase";
 import { ReconcileAttendanceDayUseCase } from "./use-cases/reconcile-attendance-day.usecase";
 
@@ -39,7 +40,7 @@ export class ReconciliationController {
   ) {}
 
   @Post("events")
-  @RequirePermission("attendance:reconcile")
+  @CheckPolicy(AttendancePolicies.report)
   @ApiOperation({ summary: "Record a clock-in/clock-out event" })
   @ApiOkResponse({ description: "Event recorded successfully" })
   async recordEvent(@Body() dto: CreateEventDto) {
@@ -53,7 +54,7 @@ export class ReconciliationController {
   }
 
   @Get(":date")
-  @RequirePermission("attendance:view:all")
+  @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "Reconcile attendance for a date: sessions + violations" })
   @ApiOkResponse({ description: "Reconciliation result" })
   async reconcile(

@@ -55,10 +55,28 @@ import { fetchEmployeeTimeline, type TimelineEventDto, type TimelineQueryParams 
 import { contractKeys } from '../api/contract-queries';
 
 import {
+  applyEmployeeTransfer,
+  bulkArchiveEmployees,
+  bulkChangeEmployeeStatus,
+  cancelEmployeeTransfer,
+  cancelScheduledTermination,
+  fetchEmployeeBoardingStatus,
+  fetchEmployeeWorkflowInstances,
   getEmployeeStatusHistory,
+  hrApproveTransfer,
+  managerApproveTransfer,
   rehireEmployee,
+  rejectEmployeeTransfer,
+  requestEmployeeTransfer,
+  scheduleEmployeeTermination,
+  type BulkOperationResponse,
+  type EmployeeBoardingSummary,
+  type EmployeeWorkflowInstanceItem,
   type RehireEmployeeRequest,
   type RehireEmployeeResponse,
+  type RequestTransferPayload,
+  type RequestTransferResponse,
+  type ScheduleTerminationRequest,
 } from '../api/employee-lifecycle';
 
 export type Employee = EmployeeResponseDto;
@@ -97,6 +115,8 @@ export const employeeKeys = {
   ...createKeyFactory<EmployeeListParams>('employees'),
   me: () => ['employees', 'me'] as const,
   statusHistory: (id: string) => ['employees', id, 'status-history'] as const,
+  workflowInstances: (id: string) => ['employees', id, 'workflow-instances'] as const,
+  boardingStatus: (id: string) => ['employees', id, 'boarding-status'] as const,
 };
 
 export const departmentKeys = createKeyFactory('departments');
@@ -183,7 +203,7 @@ export function useEmployeeTimelineQuery(employeeId: string, params?: TimelineQu
 
 interface MutationContext {
   previousLists: Array<[readonly unknown[], EmployeeListResult | undefined]>;
-  previousDetail?: Employee;
+  previousDetail?: unknown;
 }
 
 function applyEmployeePatch(
@@ -191,6 +211,40 @@ function applyEmployeePatch(
   patch: Partial<Employee>
 ): Employee {
   return { ...target, ...patch };
+}
+
+function applyDetailCachePatch(
+  cached: unknown,
+  patch: Partial<Employee>
+): unknown {
+  if (!cached || typeof cached !== 'object') return cached;
+  if (
+    'data' in cached &&
+    cached.data &&
+    typeof cached.data === 'object' &&
+    !Array.isArray(cached.data)
+  ) {
+    const env = cached as { data: unknown };
+    if (
+      'data' in (env.data as Record<string, unknown>) &&
+      (env.data as { data?: unknown }).data &&
+      typeof (env.data as { data?: unknown }).data === 'object'
+    ) {
+      const inner = env.data as { data: Employee };
+      return {
+        ...cached,
+        data: {
+          ...inner,
+          data: applyEmployeePatch(inner.data, patch)
+        }
+      };
+    }
+    return {
+      ...cached,
+      data: applyEmployeePatch(env.data as Employee, patch)
+    };
+  }
+  return applyEmployeePatch(cached as Employee, patch);
 }
 
 function setListEmployeeOptimistically(
@@ -458,14 +512,14 @@ export function useUpdateEmployeeMutation(
       const previousLists = queryClient.getQueriesData<EmployeeListResult>({
         queryKey: employeeKeys.lists()
       });
-      const previousDetail = queryClient.getQueryData<Employee>(
+      const previousDetail = queryClient.getQueryData(
         employeeKeys.detail(id)
       );
       const patch = toOptimisticPatch(data);
       if (previousDetail) {
         queryClient.setQueryData(
           employeeKeys.detail(id),
-          applyEmployeePatch(previousDetail, patch)
+          applyDetailCachePatch(previousDetail, patch)
         );
       }
       setListEmployeeOptimistically(queryClient, id, (e) =>
@@ -621,14 +675,33 @@ export function usePurgeEmployeeMutation(
 
 export function useBulkRemoveEmployeesMutation(
   queryClient: QueryClient,
-  options?: UseMutationOptions<unknown, Error, string[]>
+  options?: UseMutationOptions<BulkOperationResponse, Error, string[]>
 ) {
-  return useMutation<unknown, Error, string[]>({
+  return useMutation<BulkOperationResponse, Error, string[]>({
     mutationFn: async (ids) => {
-      // Sequential individual deletes — no backend bulk endpoint
-      for (const id of ids) {
-        await employeeAdminControllerRemove(id);
-      }
+      return bulkArchiveEmployees(ids);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
+    },
+    ...options
+  });
+}
+
+export interface BulkChangeStatusVariables {
+  employeeIds: string[];
+  status: 'working' | 'probation' | 'leave' | 'suspended' | 'retired';
+  effectiveDate?: string;
+  reason?: string;
+}
+
+export function useBulkChangeStatusMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<BulkOperationResponse, Error, BulkChangeStatusVariables>
+) {
+  return useMutation<BulkOperationResponse, Error, BulkChangeStatusVariables>({
+    mutationFn: async (payload) => {
+      return bulkChangeEmployeeStatus(payload);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
@@ -658,7 +731,7 @@ export function useResetEmployeePasswordMutation(
 }
 
 /* ------------------------------------------------------------------ */
-/* Employee Status History Query                                       */
+/* Employee Status History, Workflows & Boarding Queries              */
 /* ------------------------------------------------------------------ */
 
 export function useEmployeeStatusHistoryQuery(id: string) {
@@ -666,6 +739,24 @@ export function useEmployeeStatusHistoryQuery(id: string) {
     queryKey: employeeKeys.statusHistory(id),
     queryFn: () => getEmployeeStatusHistory(id),
     enabled: Boolean(id),
+    ...queryPolicyPresets['employees'],
+  });
+}
+
+export function useEmployeeWorkflowInstancesQuery(id: string, enabled = true) {
+  return useQuery<EmployeeWorkflowInstanceItem[], Error>({
+    queryKey: employeeKeys.workflowInstances(id),
+    queryFn: () => fetchEmployeeWorkflowInstances(id),
+    enabled: Boolean(id) && enabled,
+    ...queryPolicyPresets['employees'],
+  });
+}
+
+export function useEmployeeBoardingStatusQuery(id: string, enabled = true) {
+  return useQuery<EmployeeBoardingSummary, Error>({
+    queryKey: employeeKeys.boardingStatus(id),
+    queryFn: () => fetchEmployeeBoardingStatus(id),
+    enabled: Boolean(id) && enabled,
     ...queryPolicyPresets['employees'],
   });
 }
@@ -705,7 +796,7 @@ export function useChangeEmployeeStatusMutation(
       const previousLists = queryClient.getQueriesData<EmployeeListResult>({
         queryKey: employeeKeys.lists(),
       });
-      const previousDetail = queryClient.getQueryData<Employee>(employeeKeys.detail(id));
+      const previousDetail = queryClient.getQueryData(employeeKeys.detail(id));
 
       setListEmployeeOptimistically(queryClient, id, (employee) => ({
         ...employee,
@@ -713,10 +804,10 @@ export function useChangeEmployeeStatusMutation(
       }));
 
       if (previousDetail) {
-        queryClient.setQueryData<Employee>(employeeKeys.detail(id), {
-          ...previousDetail,
-          status: _status,
-        });
+        queryClient.setQueryData(
+          employeeKeys.detail(id),
+          applyDetailCachePatch(previousDetail, { status: _status }),
+        );
       }
 
       return { previousLists, previousDetail };
@@ -759,11 +850,160 @@ export function useRehireEmployeeMutation(
         queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
         queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
         queryClient.invalidateQueries({ queryKey: employeeKeys.statusHistory(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.boardingStatus(id) }),
         queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
       ]);
     },
     ...options,
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Scheduled Termination & Transfer Mutations                         */
+/* ------------------------------------------------------------------ */
+
+export function useScheduleTerminationMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<unknown, Error, { id: string; data: ScheduleTerminationRequest }>
+) {
+  return useMutation({
+    mutationFn: async ({ id, data }) => scheduleEmployeeTermination(id, data),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useCancelScheduledTerminationMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<unknown, Error, string>
+) {
+  return useMutation({
+    mutationFn: async (id) => cancelScheduledTermination(id),
+    onSettled: async (_d, _e, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useRequestTransferMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<RequestTransferResponse, Error, { id: string; data: RequestTransferPayload }>
+) {
+  return useMutation({
+    mutationFn: async ({ id, data }) => requestEmployeeTransfer(id, data),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useApproveTransferMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<
+    { success: boolean; role: string; newState: string },
+    Error,
+    { id: string; instanceId: string; stage: 'manager' | 'hr' }
+  >
+) {
+  return useMutation({
+    mutationFn: async ({ id, instanceId, stage }) =>
+      stage === 'manager'
+        ? managerApproveTransfer(id, instanceId)
+        : hrApproveTransfer(id, instanceId),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useRejectTransferMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<
+    { success: boolean },
+    Error,
+    { id: string; instanceId: string; note?: string }
+  >
+) {
+  return useMutation({
+    mutationFn: async ({ id, instanceId, note }) =>
+      rejectEmployeeTransfer(id, instanceId, note),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useApplyTransferMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<
+    { success: boolean; employeeId: string; effectiveDate: string },
+    Error,
+    { id: string; instanceId: string }
+  >
+) {
+  return useMutation({
+    mutationFn: async ({ id, instanceId }) =>
+      applyEmployeeTransfer(id, instanceId),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
+export function useCancelTransferMutation(
+  queryClient: QueryClient,
+  options?: UseMutationOptions<
+    { success: boolean },
+    Error,
+    { id: string; instanceId: string }
+  >
+) {
+  return useMutation({
+    mutationFn: async ({ id, instanceId }) =>
+      cancelEmployeeTransfer(id, instanceId),
+    onSettled: async (_d, _e, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.workflowInstances(id) }),
+        queryClient.invalidateQueries({ queryKey: timelineKeys.lists() }),
+      ]);
+    },
+    ...options,
+  });
+}
+
 
 

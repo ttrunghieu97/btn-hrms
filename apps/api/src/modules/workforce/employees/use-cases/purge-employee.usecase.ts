@@ -1,7 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { EmployeesRepository } from "../repositories/employees.repository";
-import { throwNotFound } from "../../../../shared/utils/http-error";
+import { throwConflict, throwNotFound } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
+import { ERROR_REASONS } from "../../../../shared/constants/error-reasons";
 import { StorageService } from "../../../../infrastructure/storage/storage.service";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
@@ -33,7 +34,7 @@ export class PurgeEmployeeUseCase {
       identifier,
     );
 
-    let employee: { id: string; userId: string } | null | undefined;
+    let employee: { id: string; userId?: string | null; deletedAt?: Date | string | null } | null | undefined;
 
     if (isUuid) {
       employee =
@@ -54,6 +55,17 @@ export class PurgeEmployeeUseCase {
       });
     }
 
+    if (!employee.deletedAt) {
+      throwConflict(
+        "Employee must be archived before purging",
+        ERROR_CODES.INVALID_STATUS_TRANSITION,
+        {
+          identifier,
+          reason: ERROR_REASONS.INVALID_STATE,
+        },
+      );
+    }
+
     const { id: employeeId, userId } = employee;
 
     // Revoke sessions + delete user inside the same tx. Deleting `users` cascades
@@ -62,8 +74,12 @@ export class PurgeEmployeeUseCase {
     // Throws if user is referenced by a `restrict` FK (e.g. permission_grants /
     // access_grants they approved/created) — caller must clean those first.
     await this.employeesRepo.transaction(async (tx) => {
-      await this.identityAdmin.revokeSessions(userId, tx);
-      await this.identityAdmin.deleteUser(userId, tx);
+      if (userId) {
+        await this.identityAdmin.revokeSessions(userId, tx);
+        await this.identityAdmin.deleteUser(userId, tx);
+      } else {
+        await this.employeesRepo.hardDeleteEmployee(employeeId, tx);
+      }
     });
 
     // Storage cleanup happens outside the tx. S3 deletes are best-effort and

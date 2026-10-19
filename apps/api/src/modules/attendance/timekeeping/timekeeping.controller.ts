@@ -15,8 +15,6 @@ import { AuthUser } from "../../../core/security/types/auth-user.interface";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { AttendancePolicies } from "../../../core/security/policies/attendance.policy";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { throwInternalServer } from "../../../shared/utils/http-error";
-import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { AttendanceClockEventQueryDto } from "./dto/attendance-clock-event-query.dto";
 import { AttendanceExceptionQueryDto } from "./dto/attendance-exception-query.dto";
 import { AttendanceTimesheetQueryDto } from "./dto/attendance-timesheet-query.dto";
@@ -40,7 +38,6 @@ import { PeriodLockService } from "./services/period-lock.service";
 import { PayrollReconciliationService } from "./services/payroll-reconciliation.service";
 import { AttendanceAdjustmentService } from "./services/attendance-adjustment.service";
 import { AttendanceHealthService } from "./services/attendance-health.service";
-import { AttendancePeriodLockRepository } from "./repositories/attendance-period-lock.repository";
 import type { PeriodTransitionRecord } from "./repositories/attendance-period-lock.repository";
 import { QueryTimesheetWorkspaceUseCase } from "./use-cases/query-timesheet-workspace.usecase";
 import {
@@ -72,7 +69,6 @@ export class TimekeepingController {
     private readonly attendanceCapturePolicy: AttendanceCapturePolicyService,
     private readonly timesheetService: TimesheetService,
     private readonly periodLockService: PeriodLockService,
-    private readonly periodLockRepo: AttendancePeriodLockRepository,
     private readonly queryTimesheetWorkspace: QueryTimesheetWorkspaceUseCase,
     private readonly payrollReconciliationService: PayrollReconciliationService,
     private readonly adjustmentService: AttendanceAdjustmentService,
@@ -100,7 +96,7 @@ export class TimekeepingController {
   }
 
   @Post("corrections")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetManage)
   @AuditLog({ action: "attendance_correction_create", entity: "attendance" })
   @ApiOperation({ summary: "Create manual attendance correction" })
   @ApiOkResponse({ description: "Manual correction created" })
@@ -115,20 +111,26 @@ export class TimekeepingController {
   @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "List attendance clock events" })
   @ApiOkResponse({ description: "List of clock events" })
-  async listEvents(@Query() query: AttendanceClockEventQueryDto) {
-    return this.listClockEvents.execute(query);
+  async listEvents(
+    @Request() req: ExpressRequest & { user?: AuthUser },
+    @Query() query: AttendanceClockEventQueryDto,
+  ) {
+    return this.listClockEvents.execute(query, req?.user);
   }
 
   @Get("exceptions")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetView)
   @ApiOperation({ summary: "List attendance exceptions" })
   @ApiOkResponse({ description: "List of exceptions" })
-  async listAttendanceExceptions(@Query() query: AttendanceExceptionQueryDto) {
-    return this.listExceptions.execute(query);
+  async listAttendanceExceptions(
+    @Request() req: ExpressRequest & { user?: AuthUser },
+    @Query() query: AttendanceExceptionQueryDto,
+  ) {
+    return this.listExceptions.execute(query, req?.user);
   }
 
   @Patch("exceptions/:id/resolve")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetManage)
   @AuditLog({
     action: "attendance_exception_resolve",
     entity: "attendance_exception",
@@ -144,7 +146,7 @@ export class TimekeepingController {
   }
 
   @Post("summary-overrides")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetManage)
   @AuditLog({
     action: "attendance_summary_override",
     entity: "attendance_summary",
@@ -159,13 +161,14 @@ export class TimekeepingController {
   }
 
   @Get("timesheets")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetView)
   @ApiOperation({ summary: "Query attendance timesheet summaries" })
   @ApiOkResponse({ description: "Timesheet summaries" })
   async queryAttendanceTimesheet(
+    @Request() req: ExpressRequest & { user?: AuthUser },
     @Query() query: AttendanceTimesheetQueryDto,
   ) {
-    return this.queryTimesheet.execute(query);
+    return this.queryTimesheet.execute(query, req?.user);
   }
 
   // ─── Timesheet Batch ──────────────────────────────────────────────
@@ -225,7 +228,7 @@ export class TimekeepingController {
   @ApiOkResponse({ description: "Period closed" })
   async closePeriod(
     @Request() req: ExpressRequest & { user: AuthUser },
-    @Body() dto: UnlockPeriodDto,
+    @Body() dto: LockPeriodDto,
   ) {
     const lock = await this.periodLockService.close(
       req.user.id,
@@ -285,22 +288,13 @@ export class TimekeepingController {
   }
 
   @Get("period-locks/:period/employees")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.periodView)
   @ApiOperation({ summary: "List employee verification status for a period" })
   @ApiOkResponse({ type: EmployeeVerificationListDto })
   async listEmployeeVerification(
     @Param("period") period: string,
   ): Promise<EmployeeVerificationListDto> {
-    const rows = await this.periodLockRepo.listEmployeeVerification(period);
-    return {
-      period,
-      employees: rows.map((r) => ({
-        employeeId: r.employeeId,
-        status: r.status,
-        verifiedByUserId: r.verifiedByUserId ?? null,
-        verifiedAt: r.verifiedAt ? r.verifiedAt.toISOString() : null,
-      })),
-    };
+    return this.periodLockService.listEmployeeVerification(period);
   }
 
   @Post("period-locks/:period/employees/:employeeId/verify")
@@ -313,17 +307,7 @@ export class TimekeepingController {
     @Param("period") period: string,
     @Param("employeeId") employeeId: string,
   ): Promise<EmployeeVerificationDto> {
-    await this.periodLockRepo.ensureEmployeeVerification(period, employeeId);
-    const row = await this.periodLockRepo.markEmployeeVerified(period, employeeId, req.user.id);
-    if (!row) {
-      throwInternalServer("Failed to verify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
-    }
-    return {
-      employeeId: row.employeeId,
-      status: row.status,
-      verifiedByUserId: row.verifiedByUserId ?? null,
-      verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
-    };
+    return this.periodLockService.verifyEmployee(req.user.id, period, employeeId);
   }
 
   @Post("period-locks/:period/employees/:employeeId/unverify")
@@ -335,31 +319,22 @@ export class TimekeepingController {
     @Param("period") period: string,
     @Param("employeeId") employeeId: string,
   ): Promise<EmployeeVerificationDto> {
-    const row = await this.periodLockRepo.unverifyEmployee(period, employeeId);
-    if (!row) {
-      throwInternalServer("Failed to unverify employee timesheet", ERROR_CODES.INTERNAL_ERROR);
-    }
-    return {
-      employeeId: row.employeeId,
-      status: row.status,
-      verifiedByUserId: null,
-      verifiedAt: null,
-    };
+    return this.periodLockService.unverifyEmployee(period, employeeId);
   }
 
   @Get("timesheet-workspace")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetView)
   @ApiOperation({ summary: "Get timesheet workspace data for a period" })
   @ApiOkResponse({ type: TimesheetWorkspaceResponseDto })
   async getTimesheetWorkspace(
     @Request() req: ExpressRequest & { user: AuthUser },
     @Query() query: TimesheetWorkspaceQueryDto,
   ): Promise<TimesheetWorkspaceResponseDto> {
-    return this.queryTimesheetWorkspace.execute(query, req.user.permissions);
+    return this.queryTimesheetWorkspace.execute(query, req.user);
   }
 
   @Get("period-locks/:period")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.periodView)
   @ApiOperation({ summary: "Get attendance period lock status" })
   @ApiOkResponse({ description: "Period lock status" })
   async getPeriodLock(
@@ -370,7 +345,7 @@ export class TimekeepingController {
   }
 
   @Get("period-locks/:period/validate-close")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.periodView)
   @ApiOperation({ summary: "Validate whether period can be closed" })
   @ApiOkResponse({ description: "Close validation result" })
   async validateClose(
@@ -381,7 +356,7 @@ export class TimekeepingController {
   }
 
   @Get("period-locks/:period/history")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.periodView)
   @ApiOperation({ summary: "Get period lifecycle history" })
   @ApiOkResponse({ description: "Period transition history" })
   async getPeriodHistory(
@@ -394,7 +369,7 @@ export class TimekeepingController {
   // ─── Attendance Adjustments ─────────────────────────────────────────
 
   @Post("adjustments")
-  @CheckPolicy(AttendancePolicies.report)
+  @CheckPolicy(AttendancePolicies.timesheetManage)
   @AuditLog({ action: "attendance_adjustment_create", entity: "attendance" })
   @ApiOperation({ summary: "Create post-closure attendance adjustment" })
   @ApiOkResponse({ description: "Adjustment created" })
@@ -518,7 +493,6 @@ export class TimekeepingController {
   ) {
     const items = await this.payrollReconciliationService.getReconciliationItems(
       id,
-      "MATCH",
     );
     return { data: items.filter((i) => i.diffType !== "MATCH") };
   }

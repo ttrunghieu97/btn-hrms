@@ -4,11 +4,16 @@ import { PayrollPeriodsRepository } from "../repositories/payroll-periods.reposi
 import { PayrollPeriodMapper } from "../mappers/payroll-period.mapper";
 import {
   throwBadRequest,
+  throwConflict,
   throwNotFound,
 } from "../../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
+import {
+  isProvisionalPayrollRunRecord,
+  isProvisionalPayslipMetadata,
+} from "../../payroll-runs/use-cases/payroll-runs.usecases";
 
 @Injectable()
 export class UpdatePayrollPeriodUseCase {
@@ -58,6 +63,45 @@ export class UpdatePayrollPeriodUseCase {
         ERROR_CODES.INVALID_STATUS_TRANSITION,
         { payrollPeriodId: id, from: existing.status, to: dto.status },
       );
+    }
+
+    if (
+      dto.status === "closed" &&
+      typeof this.payrollPeriodsRepo.findRunsWithPayslipsByPeriodId === "function"
+    ) {
+      const periodRuns =
+        await this.payrollPeriodsRepo.findRunsWithPayslipsByPeriodId(id);
+      for (const run of periodRuns) {
+        const runCheck = isProvisionalPayrollRunRecord(run);
+        const runPayslips = Array.isArray((run as { payslips?: unknown[] }).payslips)
+          ? ((run as { payslips: Array<{ id?: string; metadata?: unknown }> }).payslips)
+          : [];
+        const provisionalPayslip = runPayslips.find(
+          (ps) => isProvisionalPayslipMetadata(ps.metadata).isProvisional,
+        );
+        if (runCheck.isProvisional || provisionalPayslip || runPayslips.length === 0) {
+          throwConflict(
+            "Cannot close or finalize payroll period while it contains provisional payroll runs or unconfirmed payslips",
+            ERROR_CODES.INVALID_STATUS_TRANSITION,
+            {
+              payrollPeriodId: id,
+              payrollRunId: run.id,
+              payslipId: provisionalPayslip?.id ?? null,
+            },
+          );
+        }
+        if (run.status !== "posted") {
+          throwConflict(
+            `Cannot close or finalize payroll period while payroll run '${run.id}' is in '${run.status}' status; all runs must be posted`,
+            ERROR_CODES.INVALID_STATUS_TRANSITION,
+            {
+              payrollPeriodId: id,
+              payrollRunId: run.id,
+              payrollRunStatus: run.status,
+            },
+          );
+        }
+      }
     }
 
     const startsOn = dto.startsOn ?? existing.startsOn;

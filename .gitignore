@@ -69,17 +69,20 @@ Thumbs.db
 
 # Local agent / scratch
 .agent/
-.claude/worktrees/
+.claude/
 .opencode/
 .superpowers/
 memory-bank/
 archive/
 data/
+scratch/
 /.sisyphus/
+*.db
 *.bak
 *.bak.*
 *.orig
 *.old
+apps/web/test-results/
 
 # App-local generated temp files
 apps/web/openapi.tmp.json

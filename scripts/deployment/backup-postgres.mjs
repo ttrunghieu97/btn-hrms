@@ -15,11 +15,15 @@ mkdirSync(backupDir, { recursive: true });
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const output = resolve(backupDir, `btn-hrms-${timestamp}.dump`);
 
-const result = spawnSync("pg_dump", ["--format=custom", "--no-owner", "--no-acl", "--file", output], {
-  env: { ...process.env, PGDATABASE: databaseUrl },
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
+const result = spawnSync(
+  "pg_dump",
+  ["--format=custom", "--no-owner", "--no-acl", "--dbname", databaseUrl, "--file", output],
+  {
+    env: process.env,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  },
+);
 
 if (result.status !== 0) {
   console.error("PostgreSQL backup failed.");

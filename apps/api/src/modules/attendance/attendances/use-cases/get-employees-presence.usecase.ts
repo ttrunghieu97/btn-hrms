@@ -8,6 +8,7 @@ import { EMPLOYEE_SHIFT_READER_PORT, type EmployeeShiftReaderPort } from "../../
 import { LEAVE_READER_PORT, type ILeaveReaderPort } from "../../../../contracts/ports/leave-reader.port";
 import { CLOCK_PORT, type ClockPort } from "../ports/clock.port";
 import { PresenceQueryDto, PresenceStatus } from "../dto/presence-query.dto";
+import { DataScope } from "../../../../core/security/types/data-scope.interface";
 
 @Injectable()
 export class GetEmployeesPresenceUseCase {
@@ -24,18 +25,26 @@ export class GetEmployeesPresenceUseCase {
     private readonly clock: ClockPort,
   ) {}
 
-  async execute(query: PresenceQueryDto) {
+  async execute(query: PresenceQueryDto, scope?: DataScope) {
     const today = this.clock.today();
     const now = this.clock.now();
 
+    const effectiveDepartmentId =
+      scope?.tier === "department" && scope.departmentId
+        ? scope.departmentId
+        : query.departmentId;
+
     // 1. Fetch active employees matching the query filter
-    const employees = await this.employeeReader.findActiveEmployees(query.departmentId);
+    const employees = await this.employeeReader.findActiveEmployees(effectiveDepartmentId);
     if (!employees || employees.length === 0) {
       return { items: [] };
     }
 
-    // Filter by employee IDs if specified
+    // Filter by employee IDs if specified or scoped to self
     let targetEmployees = employees;
+    if (scope?.tier === "self") {
+      targetEmployees = targetEmployees.filter((emp) => emp.id === scope.employeeId);
+    }
     if (query.employeeIds) {
       const ids = query.employeeIds.split(",").map((id) => id.trim());
       targetEmployees = targetEmployees.filter((emp) => ids.includes(emp.id));
@@ -181,8 +190,8 @@ export class GetEmployeesPresenceUseCase {
     return { items: filteredItems };
   }
 
-  async getSummary(query: PresenceQueryDto) {
-    const { items } = await this.execute(query);
+  async getSummary(query: PresenceQueryDto, scope?: DataScope) {
+    const { items } = await this.execute(query, scope);
     const summary = {
       active: 0,
       break: 0,

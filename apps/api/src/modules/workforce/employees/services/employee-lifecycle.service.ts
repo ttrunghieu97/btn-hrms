@@ -1,4 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
+import { and, desc, eq } from "drizzle-orm";
 import { todayDateString } from "../../../../shared/utils/date-format";
 import { EmployeesRepository } from "../repositories/employees.repository";
 import { ChangeEmployeeStatusDto } from "../dto/change-employee-status.dto";
@@ -108,6 +109,39 @@ export class EmployeeLifecycleService {
     }
   }
 
+  assertCanImmediateTerminate(emp: { status?: string | null; deletedAt?: unknown }): void {
+    if (emp.deletedAt) {
+      throwBadRequest("Cannot terminate deleted employee", ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED, {
+        reason: ERROR_REASONS.INVALID_STATE,
+      });
+    }
+    if (emp.status === "terminated" || emp.status === "retired") {
+      throwBadRequest("Employee already terminated", ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED, {
+        reason: ERROR_REASONS.INVALID_STATE,
+        status: emp.status,
+      });
+    }
+  }
+
+  assertLifecycleOperation(
+    operation: Parameters<typeof assertLifecycleOperation>[0],
+    emp: Parameters<typeof assertLifecycleOperation>[1],
+    opts?: Parameters<typeof assertLifecycleOperation>[2],
+  ): void {
+    assertLifecycleOperation(operation, emp, opts);
+  }
+
+  async findPositionById(positionId: string) {
+    if (!this.positionsReader) return null;
+    if (typeof (this.positionsReader as any).findPositionById === "function") {
+      return (this.positionsReader as any).findPositionById(positionId);
+    }
+    if (typeof this.positionsReader.findById === "function") {
+      return this.positionsReader.findById(positionId);
+    }
+    return null;
+  }
+
   async changeStatus(employeeId: string, dto: ChangeEmployeeStatusDto) {
     const employee = await this.employeesRepo.findById(employeeId);
     if (!employee) {
@@ -158,7 +192,8 @@ export class EmployeeLifecycleService {
 
   /**
    * Execute immediate termination within an existing transaction.
-   * Called by TerminateEmployeeUseCase. Does not stage events; caller manages outbox.
+   * Called by TerminateEmployeeUseCase and ExecuteScheduledTerminationsUseCase.
+   * Closes current employment_records and org_assignments so subsequent rehire will not hit unique constraints.
    */
   async executeImmediateTermination(
     employeeId: string,
@@ -172,10 +207,42 @@ export class EmployeeLifecycleService {
         status: "terminated",
         endDate: dto.effectiveDate,
         lastWorkingDate: dto.lastWorkingDate ?? null,
+        currentEmploymentRecordId: null,
+        currentOrgAssignmentId: null,
         updatedAt: new Date(),
       },
       tx,
     );
+
+    if (typeof tx?.update === "function") {
+      await tx
+        .update(employmentRecords)
+        .set({
+          isCurrent: false,
+          endDate: dto.effectiveDate,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(employmentRecords.employeeId, employeeId),
+            eq(employmentRecords.isCurrent, true),
+          ),
+        );
+
+      await tx
+        .update(orgAssignments)
+        .set({
+          isCurrent: false,
+          effectiveTo: dto.effectiveDate,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(orgAssignments.employeeId, employeeId),
+            eq(orgAssignments.isCurrent, true),
+          ),
+        );
+    }
 
     await tx.insert(employeeStatusHistory).values({
       employeeId,
@@ -230,7 +297,16 @@ export class EmployeeLifecycleService {
     actorUserId: string | null,
     tx: any,
   ) {
-    const emp = await this.employeesRepo.findByIdentifier(employeeId);
+    const emp =
+      (typeof this.employeesRepo.findEmployeeById === "function"
+        ? await this.employeesRepo.findEmployeeById(employeeId)
+        : null) ??
+      (typeof this.employeesRepo.findDeletedEmployeeById === "function"
+        ? await this.employeesRepo.findDeletedEmployeeById(employeeId)
+        : null) ??
+      (typeof this.employeesRepo.findByIdentifier === "function"
+        ? await this.employeesRepo.findByIdentifier(employeeId)
+        : null);
     if (!emp) {
       throwNotFound("Employee not found", ERROR_CODES.EMPLOYEE_NOT_FOUND, { employeeId });
     }
@@ -239,9 +315,60 @@ export class EmployeeLifecycleService {
     const newStatus = input.status ?? "working";
     const hireDate = input.hireDate;
 
+    let resolvedJobTitle = input.jobTitle ?? null;
+    if (!resolvedJobTitle && input.positionId) {
+      const pos = await this.findPositionById(input.positionId);
+      resolvedJobTitle = (pos as any)?.title ?? pos?.name ?? null;
+    }
+
     // Clear archive if present
     if (emp.deletedAt) {
       await this.employeesRepo.restoreEmployee(employeeId, tx);
+    }
+
+    // Defensively close any lingering isCurrent=true records/assignments/contracts
+    let nextContractVersion = 1;
+    if (typeof tx?.update === "function") {
+      await tx
+        .update(employmentRecords)
+        .set({ isCurrent: false, endDate: hireDate, updatedAt: new Date() })
+        .where(
+          and(
+            eq(employmentRecords.employeeId, employeeId),
+            eq(employmentRecords.isCurrent, true),
+          ),
+        );
+
+      await tx
+        .update(orgAssignments)
+        .set({ isCurrent: false, effectiveTo: hireDate, updatedAt: new Date() })
+        .where(
+          and(
+            eq(orgAssignments.employeeId, employeeId),
+            eq(orgAssignments.isCurrent, true),
+          ),
+        );
+
+      await tx
+        .update(employeeContracts)
+        .set({ isCurrent: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(employeeContracts.employeeId, employeeId),
+            eq(employeeContracts.isCurrent, true),
+          ),
+        );
+    }
+
+    if (typeof tx?.select === "function") {
+      const existingContracts = await tx
+        .select({ version: employeeContracts.version })
+        .from(employeeContracts)
+        .where(eq(employeeContracts.employeeId, employeeId))
+        .orderBy(desc(employeeContracts.version))
+        .limit(1);
+      const maxVersion = existingContracts?.[0]?.version ?? 0;
+      nextContractVersion = maxVersion + 1;
     }
 
     // Update employee main record
@@ -249,10 +376,11 @@ export class EmployeeLifecycleService {
       employeeId,
       {
         status: newStatus,
+        ...(input.departmentId !== undefined ? { departmentId: input.departmentId ?? null } : {}),
         startDate: hireDate,
         endDate: null,
         lastWorkingDate: null,
-        probationEndDate: newStatus === "probation" ? null : null,
+        probationEndDate: null,
         updatedAt: new Date(),
       },
       tx,
@@ -271,17 +399,22 @@ export class EmployeeLifecycleService {
     const newEmploymentId = newEmployment?.id;
 
     // Create new org assignment
-    await tx.insert(orgAssignments).values({
+    const orgInsertQuery = tx.insert(orgAssignments).values({
       employeeId,
       departmentId: input.departmentId ?? null,
       managerEmployeeId: input.managerEmployeeId ?? null,
-      jobTitle: input.jobTitle ?? null,
+      jobTitle: resolvedJobTitle,
       assignmentType: "primary",
       isCurrent: true,
       effectiveFrom: hireDate,
     });
+    const newOrgRows =
+      typeof orgInsertQuery?.returning === "function"
+        ? await orgInsertQuery.returning()
+        : await orgInsertQuery;
+    const newOrgAssignmentId = Array.isArray(newOrgRows) ? newOrgRows[0]?.id : undefined;
 
-    // Create new contract
+    // Create new contract with incremented version
     await tx.insert(employeeContracts).values({
       employeeId,
       contractType: input.contractType,
@@ -289,13 +422,16 @@ export class EmployeeLifecycleService {
       employmentRecordId: newEmploymentId ?? null,
       isCurrent: true,
       effectiveFrom: hireDate,
-      version: 1,
+      version: nextContractVersion,
     });
 
-    // Link employment record to employee
+    // Link employment record & org assignment to employee
     await this.employeesRepo.updateEmployeeById(
       employeeId,
-      { currentEmploymentRecordId: newEmploymentId ?? null },
+      {
+        currentEmploymentRecordId: newEmploymentId ?? null,
+        ...(newOrgAssignmentId ? { currentOrgAssignmentId: newOrgAssignmentId } : {}),
+      },
       tx,
     );
 

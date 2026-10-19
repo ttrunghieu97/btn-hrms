@@ -329,15 +329,7 @@ export function PermissionMatrix({
     if (cannotEdit) return;
     const actionIds = CATEGORY_MAP[category as keyof typeof CATEGORY_MAP];
     if (!actionIds) return;
-    const newAssignments = { ...assignments };
-    actionIds.forEach(actionId => {
-      const permissionId = `${resourceId}:${actionId}`;
-      const exists = catalog.permissions.some(p => p.id === permissionId);
-      if (exists) {
-        newAssignments[permissionId] = { selected: grant, scopeId: assignments[permissionId]?.scopeId || 'all' };
-      }
-    });
-    onChange(newAssignments);
+    handleToggleCellGroup(resourceId, [...actionIds], grant);
   };
 
   const handleClearResource = (resourceId: string) => {

@@ -1,10 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, count, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import {
   employeeDocuments,
   employees,
-  employmentRecords,
   orgAssignments,
   departments,
   files,
@@ -14,6 +13,7 @@ import { safeLimit, safePage } from "../../../../shared/dto/pagination.dto";
 import { searchAny, combineWhere } from "../../../../shared/utils/where.util";
 import { resolveSortOrder } from "../../../../shared/utils/sort.util";
 import type { ListDocumentsQueryDto } from "../dto/documents.dto";
+import type { DataScope } from "../../../../core/security/query-scope.service";
 
 const DOCUMENT_SORT_FIELDS = {
   createdAt: employeeDocuments.createdAt,
@@ -33,6 +33,7 @@ export interface DocumentListRow {
   employeeId: string;
   employeeName: string;
   employeeCode: string | null;
+  departmentId?: string | null;
   departmentName: string | null;
   documentType: string;
   fileId: string;
@@ -56,13 +57,26 @@ export class DocumentQueryRepository {
     private readonly db: AppDatabase,
   ) {}
 
-  async findPaginated(query: ListDocumentsQueryDto): Promise<PaginatedDocuments> {
+  async findPaginated(query: ListDocumentsQueryDto, scope?: DataScope): Promise<PaginatedDocuments> {
     const page = safePage(query.page);
     const limit = safeLimit(query.limit);
     const search = query.search?.trim() || undefined;
     const offset = (page - 1) * limit;
 
     const where: SQL[] = [isNull(employees.deletedAt)];
+
+    if (scope?.tier === "self") {
+      if (!scope.employeeId) {
+        return { rows: [], total: 0, page, limit };
+      }
+      where.push(eq(employeeDocuments.employeeId, scope.employeeId));
+    } else if (scope?.tier === "department") {
+      if (!scope.departmentId) {
+        return { rows: [], total: 0, page, limit };
+      }
+      where.push(eq(orgAssignments.departmentId, scope.departmentId));
+      where.push(eq(orgAssignments.isCurrent, true));
+    }
 
     if (query.employeeId) {
       where.push(eq(employeeDocuments.employeeId, query.employeeId));
@@ -113,6 +127,7 @@ export class DocumentQueryRepository {
         employeeId: employeeDocuments.employeeId,
         employeeName: sql<string>`concat(${employees.lastName}, ' ', ${employees.firstName})`,
         employeeCode: employees.employeeCode,
+        departmentId: orgAssignments.departmentId,
         departmentName: departments.name,
         documentType: employeeDocuments.documentType,
         fileId: employeeDocuments.fileId,
@@ -155,6 +170,7 @@ export class DocumentQueryRepository {
         employeeId: employeeDocuments.employeeId,
         employeeName: sql<string>`concat(${employees.lastName}, ' ', ${employees.firstName})`,
         employeeCode: employees.employeeCode,
+        departmentId: orgAssignments.departmentId,
         departmentName: departments.name,
         documentType: employeeDocuments.documentType,
         fileId: employeeDocuments.fileId,
@@ -178,5 +194,24 @@ export class DocumentQueryRepository {
       .limit(1);
 
     return row ?? null;
+  }
+
+  async findEmployeeDepartmentId(employeeId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({
+        departmentId: sql<string | null>`coalesce(${orgAssignments.departmentId}, ${employees.departmentId})`,
+      })
+      .from(employees)
+      .leftJoin(
+        orgAssignments,
+        and(
+          eq(orgAssignments.employeeId, employees.id),
+          eq(orgAssignments.isCurrent, true),
+        ),
+      )
+      .where(eq(employees.id, employeeId))
+      .limit(1);
+
+    return row?.departmentId ?? null;
   }
 }

@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { RequisitionsRepository } from "@/modules/recruitment/requisitions/repositories/requisitions.repository";
 import { OffersRepository } from "@/modules/recruitment/offers/repositories/offers.repository";
-import {
-  RecruitmentApprovalLinkRepository,
-  type RecruitmentApprovalSubject,
-} from "./recruitment-approval-link.repository";
+import { type RecruitmentApprovalSubject } from "./recruitment-approval-link.repository";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
 
@@ -18,7 +15,6 @@ export class RecruitmentDecisionHandler {
   constructor(
     private readonly requisitionsRepo: RequisitionsRepository,
     private readonly offersRepo: OffersRepository,
-    private readonly linkRepo: RecruitmentApprovalLinkRepository,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new ContextLogger(

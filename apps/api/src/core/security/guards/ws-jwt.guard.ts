@@ -36,7 +36,7 @@ export class WsJwtGuard implements CanActivate {
       return false;
     }
 
-    let payload: { sub: string; email: string };
+    let payload: { sub: string; email: string; azv?: number };
     try {
       payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>("AUTH_JWT_SECRET"),
@@ -48,16 +48,24 @@ export class WsJwtGuard implements CanActivate {
     }
 
     const session = await this.securityRepo.loadAuthSession(payload.sub);
-    if (
-      !session?.user ||
-      !(await this.securityRepo.isAuthUserActive(payload.sub))
-    ) {
+    const sessionUser = session?.user as { isActive?: boolean } | undefined;
+    const isActive =
+      typeof sessionUser?.isActive === "boolean"
+        ? sessionUser.isActive
+        : await this.securityRepo.isAuthUserActive(payload.sub);
+    if (!session?.user || !isActive) {
       this.logger.warn("WS connection rejected: inactive user");
       client.disconnect();
       return false;
     }
 
     const dbUser = session.user;
+    const tokenVersion = payload.azv ?? 0;
+    if (tokenVersion < (dbUser.authorizationVersion ?? 1)) {
+      this.logger.warn("WS connection rejected: outdated authorization version");
+      client.disconnect();
+      return false;
+    }
     const employeeRow = session.employee;
 
     let effectivePermissions: string[];

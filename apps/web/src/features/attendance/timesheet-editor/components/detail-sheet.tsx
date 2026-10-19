@@ -947,7 +947,7 @@ export function DetailSheet({
   onReopenPeriod,
   periodStatus,
 }: DetailSheetProps) {
-  const isPeriodOpen = periodStatus !== 'closed';
+  const isPeriodOpen = periodStatus === 'open' || periodStatus === 'in_review';
 
   const handleTogglePeriodStatus = React.useCallback(() => {
     if (isPeriodOpen) {
@@ -1185,16 +1185,16 @@ export function DetailSheet({
           workDate: wd,
           reason: 'manual_correction',
         };
-        if (updates.checkInMorning != null) {
+        if (updates.checkInMorning !== undefined) {
           payload.checkInMorning = updates.checkInMorning as unknown as OverrideAttendanceSummaryDto['checkInMorning'];
         }
-        if (updates.checkOutMorning != null) {
+        if (updates.checkOutMorning !== undefined) {
           payload.checkOutMorning = updates.checkOutMorning as unknown as OverrideAttendanceSummaryDto['checkOutMorning'];
         }
-        if (updates.checkInAfternoon != null) {
+        if (updates.checkInAfternoon !== undefined) {
           payload.checkInAfternoon = updates.checkInAfternoon as unknown as OverrideAttendanceSummaryDto['checkInAfternoon'];
         }
-        if (updates.checkOutAfternoon != null) {
+        if (updates.checkOutAfternoon !== undefined) {
           payload.checkOutAfternoon = updates.checkOutAfternoon as unknown as OverrideAttendanceSummaryDto['checkOutAfternoon'];
         }
         if (updates.breakMinutes != null) {

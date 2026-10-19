@@ -159,19 +159,22 @@ export class PlatformApprovalEngineService {
       throwBadRequest("Cannot cancel a non-pending approval request", ERROR_CODES.APPROVAL_REQUEST_NOT_PENDING, { approvalRequestId, status: req.status });
     }
 
-    // Cancel all pending steps
-    const stepIds = req.currentStepIndex !== undefined
-      ? Array.from({ length: req.currentStepIndex + 1 }, (_, i) => i)
-      : [0];
+    if (typeof this.repo.skipPendingSteps === "function") {
+      await this.repo.skipPendingSteps(approvalRequestId);
+    } else {
+      const stepIds = req.currentStepIndex !== undefined
+        ? Array.from({ length: req.currentStepIndex + 1 }, (_, i) => i)
+        : [0];
 
-    for (const stepIndex of stepIds) {
-      const step = await this.repo.findStep(approvalRequestId, stepIndex);
-      if (step?.status === "pending") {
-        await this.repo.updateStep(step.id, {
-          status: "skipped",
-          decidedByUserId: null,
-          decidedAt: new Date(),
-        });
+      for (const stepIndex of stepIds) {
+        const step = await this.repo.findStep(approvalRequestId, stepIndex);
+        if (step?.status === "pending") {
+          await this.repo.updateStep(step.id, {
+            status: "skipped",
+            decidedByUserId: null,
+            decidedAt: new Date(),
+          });
+        }
       }
     }
 

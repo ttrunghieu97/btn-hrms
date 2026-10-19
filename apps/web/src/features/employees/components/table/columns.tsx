@@ -4,6 +4,7 @@ import type { EmployeeResponseDto } from '@/api/generated/model';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Column, ColumnDef } from '@tanstack/react-table';
 import { ChevronDownIcon, ChevronUpIcon, CaretSortIcon } from '@radix-ui/react-icons';
@@ -71,6 +72,32 @@ function SortHeader({
 }
 
 export const columns = (onRowClick?: (employee: EmployeeResponseDto) => void): ColumnDef<EmployeeResponseDto>[] => [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label='Chọn tất cả nhân viên trong trang'
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label='Chọn nhân viên'
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    size: 36,
+    meta: {
+      responsivePriority: 'core'
+    }
+  },
   {
     id: 'name',
     accessorFn: (row) => getEmployeeName(row),

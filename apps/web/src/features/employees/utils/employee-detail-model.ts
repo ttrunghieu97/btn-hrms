@@ -202,25 +202,27 @@ export function buildEmployeePayload(formValues: EditFormValues): any {
     }, []),
     certifications: formValues.certifications.reduce<any[]>((items, cert) => {
       if (cert.status === 'empty' && !cert.name.trim() && !cert.issuedBy.trim()) return items;
+      const isLocalId = cert.id.startsWith('local-') || cert.id.startsWith('cert-');
+      const resolvedId = isLocalId ? undefined : cert.id;
       if (cert.tempFileToken) {
         items.push({
-          id: cert.id.startsWith('local-') ? undefined : cert.id,
+          id: resolvedId,
           name: cert.name,
           issuedBy: cert.issuedBy,
           issuedDate: cert.issuedDate || undefined,
           expiredDate: cert.expiredDate || undefined,
-          attachment: { mode: 'replace' as const, tempFileToken: cert.tempFileToken },
+          evidence: { mode: 'replace' as const, tempFileToken: cert.tempFileToken },
         });
         return items;
       }
       const mode = cert.status === 'removing' ? ('remove' as const) : ('keep' as const);
       items.push({
-        id: cert.id.startsWith('local-') ? undefined : cert.id,
+        id: resolvedId,
         name: cert.name,
         issuedBy: cert.issuedBy,
         issuedDate: cert.issuedDate || undefined,
         expiredDate: cert.expiredDate || undefined,
-        attachment: cert.attachmentId ? { mode, attachmentId: cert.attachmentId } : undefined,
+        evidence: cert.attachmentId ? { mode, attachmentId: cert.attachmentId } : undefined,
       });
       return items;
     }, []),

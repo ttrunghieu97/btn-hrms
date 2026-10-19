@@ -68,4 +68,64 @@ describe('onboarding mutations', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
     });
   });
+
+  describe('useCreateOnboardingProcess & useCompleteOnboardingItem', () => {
+    it('creates an onboarding process for an employee and invalidates process queries', async () => {
+      (customFetch as jest.Mock).mockResolvedValue({
+        data: { id: 'proc-1', employeeId: 'emp-1', status: 'pending' },
+        status: 201, headers: new Headers(),
+      });
+
+      const { useCreateOnboardingProcess } = await import('./mutations');
+      const { qc, Wrapper } = createWrapper();
+      const invalidateSpy = jest.spyOn(qc, 'invalidateQueries');
+      const { result } = renderHook(() => useCreateOnboardingProcess(), { wrapper: Wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          employeeId: 'emp-1',
+          templateId: 'tpl-1',
+          joinDate: '2026-11-01',
+        });
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(customFetch).toHaveBeenCalledWith(
+        '/api/v1/onboarding/processes',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            employeeId: 'emp-1',
+            templateId: 'tpl-1',
+            joinDate: '2026-11-01',
+          }),
+        }),
+      );
+      expect(invalidateSpy).toHaveBeenCalled();
+    });
+
+    it('completes an onboarding checklist item', async () => {
+      (customFetch as jest.Mock).mockResolvedValue({
+        data: { id: 'item-1', status: 'completed', isCompleted: true },
+        status: 200, headers: new Headers(),
+      });
+
+      const { useCompleteOnboardingItem } = await import('./mutations');
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useCompleteOnboardingItem(), { wrapper: Wrapper });
+
+      await act(async () => {
+        result.current.mutate({ processId: 'proc-1', itemId: 'item-1', note: 'Done' });
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(customFetch).toHaveBeenCalledWith(
+        '/api/v1/onboarding/processes/proc-1/items/item-1/complete',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ note: 'Done' }),
+        }),
+      );
+    });
+  });
 });

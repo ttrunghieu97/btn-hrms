@@ -17,6 +17,10 @@ import {
   useReopenOnboardingItem,
   useSkipOnboardingItem,
 } from '../api/mutations';
+import { unwrapData } from '@/lib/api-extract';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission } from '@project/permissions';
+import { permissions } from '@/lib/permissions';
 
 const ONBOARDING_STATUS_MAP: StatusMap = {
   pending: { label: 'Chờ xử lý', variant: 'outline' },
@@ -44,6 +48,18 @@ interface ProcessDetailProps {
 }
 
 export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
+  const user = useAuthStore((s) => s.user);
+  const userPermissions = user?.permissions ?? [];
+  const canEdit = Boolean(
+    user?.isSuperAdmin ||
+      userPermissions.includes('ALL') ||
+      userPermissions.includes('sys:all') ||
+      hasAnyPermission(userPermissions, [
+        permissions.employees.edit,
+        permissions.employees.update,
+      ]),
+  );
+
   const { data, error, isLoading, refetch } = useQuery(onboardingProcessDetailQueryOptions(processId));
   const completeMutation = useCompleteOnboardingItem();
   const reopenMutation = useReopenOnboardingItem();
@@ -67,7 +83,7 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
     );
   }
 
-  const process = data as unknown as {
+  const process = unwrapData<{
     id: string;
     employeeId: string;
     templateId: string | null;
@@ -90,7 +106,7 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
       completedByUserID: string | null;
       status: string;
     }>;
-  } | undefined;
+  }>(data);
 
   if (!process) {
     return <div className='text-muted-foreground text-sm p-6'>Không tìm thấy quy trình</div>;
@@ -101,13 +117,13 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
   else if (process.status === 'in_progress') currentStepIndex = 1;
   else if (process.status === 'completed') currentStepIndex = 2;
 
-  const failedStepIndex =
-    process.status === 'cancelled' || process.status === 'terminated'
-      ? currentStepIndex
-      : undefined;
+  const isTerminalCancelled =
+    process.status === 'cancelled' || process.status === 'terminated';
+  const failedStepIndex = isTerminalCancelled ? currentStepIndex : undefined;
 
-  const completedCount = process.checklistItems.filter((i) => i.isCompleted).length;
-  const totalCount = process.checklistItems.length;
+  const checklistItems = process.checklistItems ?? [];
+  const completedCount = checklistItems.filter((i) => i.isCompleted).length;
+  const totalCount = checklistItems.length;
 
   let nextActor = 'Chuyên viên Nhân sự & Quản lý';
   let actionGuidance = 'Theo dõi và hỗ trợ nhân viên mới.';
@@ -127,7 +143,7 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
     actionGuidance =
       'Quy trình hội nhập thành công. Nhân viên đã tiếp nhận đầy đủ văn hóa và chuyển sang giai đoạn chính thức.';
     actionResultPreview = 'Nhân viên chính thức gia nhập tổ chức.';
-  } else if (process.status === 'cancelled' || process.status === 'terminated') {
+  } else if (isTerminalCancelled) {
     nextActor = 'Quy trình đã dừng';
     actionGuidance = 'Thủ tục hội nhập đã kết thúc trước thời hạn.';
   }
@@ -170,11 +186,11 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
           </p>
         </CardHeader>
         <CardContent>
-          {process.checklistItems.length === 0 ? (
+          {checklistItems.length === 0 ? (
             <p className='text-sm text-muted-foreground'>Chưa có mục nào trong checklist</p>
           ) : (
             <div className='space-y-3'>
-              {process.checklistItems.map((item) => (
+              {checklistItems.map((item) => (
                 <div
                   key={item.id}
                   className='flex items-center justify-between rounded-lg border p-3.5 bg-card hover:bg-muted/30 transition-colors'
@@ -218,40 +234,44 @@ export function OnboardingProcessDetailView({ processId }: ProcessDetailProps) {
                   </div>
                   <div className='flex items-center gap-2'>
                     <StatusBadge status={item.status} mapping={CHECKLIST_STATUS_MAP} />
-                    {!item.isCompleted && item.status !== 'skipped' ? (
-                      <div className='flex items-center gap-1.5'>
-                        <Button
-                          size='sm'
-                          className='h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white'
-                          onClick={() => completeMutation.mutate({ processId: process.id, itemId: item.id })}
-                          disabled={completeMutation.isPending}
-                        >
-                          <Icons.check className='size-3.5 mr-1' />
-                          Hoàn thành
-                        </Button>
-                        {!item.mandatory && (
+                    {canEdit && !isTerminalCancelled && (
+                      <>
+                        {!item.isCompleted && item.status !== 'skipped' ? (
+                          <div className='flex items-center gap-1.5'>
+                            <Button
+                              size='sm'
+                              className='h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white'
+                              onClick={() => completeMutation.mutate({ processId: process.id, itemId: item.id })}
+                              disabled={completeMutation.isPending}
+                            >
+                              <Icons.check className='size-3.5 mr-1' />
+                              Hoàn thành
+                            </Button>
+                            {!item.mandatory && (
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                className='h-8 text-xs text-muted-foreground hover:text-foreground'
+                                onClick={() => skipMutation.mutate({ processId: process.id, itemId: item.id })}
+                                disabled={skipMutation.isPending}
+                              >
+                                Bỏ qua
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
                           <Button
                             size='sm'
-                            variant='ghost'
-                            className='h-8 text-xs text-muted-foreground hover:text-foreground'
-                            onClick={() => skipMutation.mutate({ processId: process.id, itemId: item.id })}
-                            disabled={skipMutation.isPending}
+                            variant='outline'
+                            className='h-8 text-xs'
+                            onClick={() => reopenMutation.mutate({ processId: process.id, itemId: item.id })}
+                            disabled={reopenMutation.isPending}
                           >
-                            Bỏ qua
+                            <Icons.refresh className='size-3.5 mr-1' />
+                            Mở lại
                           </Button>
                         )}
-                      </div>
-                    ) : (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        className='h-8 text-xs'
-                        onClick={() => reopenMutation.mutate({ processId: process.id, itemId: item.id })}
-                        disabled={reopenMutation.isPending}
-                      >
-                        <Icons.refresh className='size-3.5 mr-1' />
-                        Mở lại
-                      </Button>
+                      </>
                     )}
                   </div>
                 </div>

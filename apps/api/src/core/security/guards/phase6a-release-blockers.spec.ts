@@ -379,6 +379,7 @@ describe("Phase 6A — Release Blocker Remediation Suite", () => {
       try {
         await expect(
           sql.begin(async (tx) => {
+            await tx.unsafe("SELECT pg_advisory_xact_lock(20260601)");
             // 1. Seed a test user and employee
             const [user] = await tx.unsafe<{ id: string }[]>(`
               INSERT INTO users (username, email, password_hash)

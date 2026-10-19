@@ -12,9 +12,15 @@ import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 function buildEmploymentRecordValues(
   dto: UpdateEmployeeContractDto,
 ): EmploymentRecordValues {
+  const effectiveEndDate =
+    dto.endDate !== undefined
+      ? dto.endDate
+      : dto.contractType === "permanent"
+        ? null
+        : undefined;
   return {
     ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
-    ...(dto.endDate !== undefined ? { endDate: dto.endDate } : {}),
+    ...(effectiveEndDate !== undefined ? { endDate: effectiveEndDate } : {}),
   };
 }
 
@@ -22,11 +28,17 @@ function buildEmployeeContractValues(
   dto: UpdateEmployeeContractDto,
   employmentRecordId?: string,
 ): EmployeeContractValues {
+  const effectiveEndDate =
+    dto.endDate !== undefined
+      ? dto.endDate
+      : dto.contractType === "permanent"
+        ? null
+        : undefined;
   return {
     ...(employmentRecordId ? { employmentRecordId } : {}),
     ...(dto.contractType !== undefined ? { contractType: dto.contractType } : {}),
     ...(dto.startDate !== undefined ? { effectiveFrom: dto.startDate } : {}),
-    ...(dto.endDate !== undefined ? { effectiveTo: dto.endDate } : {}),
+    ...(effectiveEndDate !== undefined ? { effectiveTo: effectiveEndDate } : {}),
   };
 }
 

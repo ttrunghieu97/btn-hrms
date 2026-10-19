@@ -6,6 +6,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { ContextLogger } from "@/shared/logging/context-logger";
 import { RequestContextService } from "@/shared/context/request-context.service";
 import {
+  isProvisionalPayrollRunRecord,
   isProvisionalPayslipMetadata,
   resolveCurrentCycleApprovalHistory,
 } from "@/modules/payroll/payroll-runs/use-cases/payroll-runs.usecases";
@@ -192,28 +193,33 @@ export class PayrollDecisionHandler {
       return;
     }
 
-    if (isProvisionalPayslipMetadata((existing as any).metadata ?? existing).isProvisional) {
+    if (isProvisionalPayrollRunRecord(existing).isProvisional) {
       this.logger.warn(
         `Payroll run ${payrollRunId} is marked provisional — refusing approval while HR/Finance policies remain unconfirmed`,
       );
       return;
     }
 
-    if (this.db.query.payslips?.findMany) {
-      const runPayslips = await this.db.query.payslips.findMany({
-        where: eq(schema.payslips.payrollRunId, payrollRunId),
-      });
-      if (runPayslips.length === 0) {
-        this.logger.warn(`Payroll run ${payrollRunId} has no generated payslips — refusing approval`);
+    if (!this.db.query?.payslips?.findMany) {
+      this.logger.warn(
+        `Payslip query unavailable for payroll run ${payrollRunId} — refusing approval fail-closed`,
+      );
+      return;
+    }
+
+    const runPayslips = await this.db.query.payslips.findMany({
+      where: eq(schema.payslips.payrollRunId, payrollRunId),
+    });
+    if (runPayslips.length === 0) {
+      this.logger.warn(`Payroll run ${payrollRunId} has no generated payslips — refusing approval`);
+      return;
+    }
+    for (const payslip of runPayslips) {
+      if (isProvisionalPayslipMetadata(payslip.metadata).isProvisional) {
+        this.logger.warn(
+          `Payroll run ${payrollRunId} contains provisional payslip ${payslip.id} — refusing approval while HR/Finance policies remain unconfirmed`,
+        );
         return;
-      }
-      for (const payslip of runPayslips) {
-        if (isProvisionalPayslipMetadata(payslip.metadata).isProvisional) {
-          this.logger.warn(
-            `Payroll run ${payrollRunId} contains provisional payslip ${payslip.id} — refusing approval while HR/Finance policies remain unconfirmed`,
-          );
-          return;
-        }
       }
     }
 
@@ -242,7 +248,7 @@ export class PayrollDecisionHandler {
         if (
           !currentRun ||
           currentRun.status !== "pending_approval" ||
-          isProvisionalPayslipMetadata((currentRun as any).metadata ?? currentRun).isProvisional
+          isProvisionalPayrollRunRecord(currentRun).isProvisional
         ) {
           return;
         }

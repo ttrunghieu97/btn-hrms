@@ -4,6 +4,7 @@ import { EmployeesRepository } from "../repositories/employees.repository";
 import { GetEmployeeUseCase } from "./get-employee.usecase";
 import { normalizeUsername } from "../employees.helpers";
 import { EmployeeMapper } from "../mappers/employee.mapper";
+import { assertStatusTransition } from "../services/employee-lifecycle-state-machine";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { throwBadRequest, throwConflict, throwNotFound } from "../../../../shared/utils/http-error";
@@ -78,6 +79,15 @@ export class UpdateEmployeeUseCase {
             });
           }
 
+          const currentStatus = (context as { status?: string }).status;
+          if (
+            status !== undefined &&
+            currentStatus !== undefined &&
+            status !== currentStatus
+          ) {
+            assertStatusTransition(currentStatus, status);
+          }
+
           const { employeeId: empId, userId, username } = context;
           const userUpdate: Partial<{
             username: string;
@@ -108,6 +118,7 @@ export class UpdateEmployeeUseCase {
             empId,
             {
               ...employeeCoreData,
+              ...(departmentId !== undefined ? { departmentId } : {}),
               ...(status !== undefined ? { status } : {}),
               ...(startDate !== undefined ? { startDate } : {}),
               ...(endDate !== undefined ? { endDate } : {}),
@@ -139,7 +150,6 @@ export class UpdateEmployeeUseCase {
             },
             tx,
           );
-
         },
       });
     } catch (err: any  ) {

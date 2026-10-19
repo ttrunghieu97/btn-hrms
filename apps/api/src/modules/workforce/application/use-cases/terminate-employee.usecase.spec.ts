@@ -152,4 +152,76 @@ describe(TerminateEmployeeUseCase.name, () => {
       tx,
     );
   });
+
+  it("rejects when employee is retired", async () => {
+    const { useCase, employeeRepo } = buildUseCase({
+      employeeRepo: {
+        findById: jest.fn().mockResolvedValue({
+          id: "e1",
+          userId: "u1",
+          status: "retired",
+          endDate: null,
+        }),
+      },
+    });
+
+    const err = await useCase.execute("e1", { reason: "test", effectiveDate: "2099-12-31" }).catch((e) => e);
+    expect(err).toBeDefined();
+    expect(err.getResponse()).toMatchObject({
+      error: ERROR_CODES.EMPLOYEE_ALREADY_TERMINATED,
+    });
+    expect(employeeRepo.updateEmployeeById).not.toHaveBeenCalled();
+  });
+
+  it("rejects when lastWorkingDate is after effectiveDate", async () => {
+    const { useCase, lifecycle } = buildUseCase();
+
+    const err = await useCase
+      .execute("e1", {
+        reason: "resign",
+        effectiveDate: "2026-06-01",
+        lastWorkingDate: "2026-06-10",
+      })
+      .catch((e) => e);
+    expect(err).toBeDefined();
+    expect(err.getResponse()).toMatchObject({
+      error: ERROR_CODES.VALIDATION_ERROR,
+    });
+    expect(lifecycle.executeImmediateTermination).not.toHaveBeenCalled();
+  });
+
+  it("terminates employee without linked userId and does not throw 404", async () => {
+    const identityAdmin = {
+      deactivateUser: jest.fn().mockResolvedValue(undefined),
+      deactivateUserAndRevokeSessions: jest.fn().mockResolvedValue(undefined),
+    };
+    const { employeeRepo, contractRepo, lifecycle, eventOutbox, tx } = buildUseCase({
+      employeeRepo: {
+        findById: jest.fn().mockResolvedValue({
+          id: "e1",
+          userId: null,
+          status: "working",
+          endDate: null,
+        }),
+      },
+    });
+    const useCase = new TerminateEmployeeUseCase(
+      employeeRepo,
+      contractRepo,
+      lifecycle,
+      eventOutbox,
+      { get: () => ({ userId: "actor-1" }) } as any,
+      identityAdmin as any,
+    );
+
+    await useCase.execute("e1", { reason: "no_user", effectiveDate: "2099-12-31" });
+    expect(lifecycle.executeImmediateTermination).toHaveBeenCalledWith(
+      "e1",
+      { reason: "no_user", effectiveDate: "2099-12-31" },
+      "actor-1",
+      tx,
+    );
+    expect(identityAdmin.deactivateUser).not.toHaveBeenCalled();
+    expect(identityAdmin.deactivateUserAndRevokeSessions).not.toHaveBeenCalled();
+  });
 });

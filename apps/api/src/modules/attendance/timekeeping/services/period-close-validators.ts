@@ -41,9 +41,8 @@ export class PendingExceptionValidator implements OnModuleInit {
 }
 
 /**
- * Blocks close while any employee with attendance data is still draft.
- * HR must verify (mark done) every employee before the period can close —
- * snapshots only include done employees.
+ * Blocks close while any tracked employee verification row in the period is still in draft status.
+ * HR must verify (mark done) all tracked employee verification rows before the period can close.
  */
 @Injectable()
 export class PendingEmployeeVerificationValidator implements OnModuleInit {

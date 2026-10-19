@@ -8,8 +8,8 @@ import {
 } from '@/features/employees';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import { getQueryClient } from '@/lib/query-client';
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { employeesControllerFindOne } from '@/api/generated/employees-hr-management/employees-hr-management';
 import { employeeContractsControllerGet } from '@/api/generated/employee-contracts/employee-contracts';
 import { cookies } from 'next/headers';
@@ -75,14 +75,16 @@ export default async function EmployeeDetailPageRoute(props: PageProps) {
   }
 
   return (
-    <Suspense fallback={
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-10 w-1/4" />
-        <Skeleton className="h-6 w-1/3" />
-        <Skeleton className="h-[500px] w-full" />
-      </div>
-    }>
-      <EmployeeDetailPage employeeId={employeeId} />
-    </Suspense>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Suspense fallback={
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-10 w-1/4" />
+          <Skeleton className="h-6 w-1/3" />
+          <Skeleton className="h-[500px] w-full" />
+        </div>
+      }>
+        <EmployeeDetailPage employeeId={employeeId} />
+      </Suspense>
+    </HydrationBoundary>
   );
 }

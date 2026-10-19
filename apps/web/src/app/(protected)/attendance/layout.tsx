@@ -33,14 +33,30 @@ export default function AttendanceLayout({ children }: { children: React.ReactNo
     'attendance:timesheet:approve',
   ]);
   const canPeriodLock = hasAnyPermission(user?.permissions ?? [], [
+    'attendance:period:view',
+    'attendance:period:review',
+    'attendance:period:approve',
     'attendance:period:lock',
     'attendance:period:unlock',
     'attendance:period:close',
+    'attendance:report',
+  ]);
+  const canAnalytics = canAdmin || hasAnyPermission(user?.permissions ?? [], [
+    'dashboard:view',
+    'attendance:report',
   ]);
 
   const tabs = [
-    { href: '/attendance/management', label: 'Quản lý bảng công' },
+    { href: '/attendance', label: 'Chấm công cá nhân' },
+    ...(canTimesheet || canPeriodLock || canAdmin
+      ? [
+          { href: '/attendance/management', label: 'Quản lý bảng công' },
+          { href: '/attendance/summary', label: 'Tổng hợp & Đối soát kỳ công' },
+        ]
+      : []),
+    { href: '/attendance/history', label: 'Lịch sử chấm công' },
     { href: '/attendance/gps-logs', label: 'Nhật ký định vị GPS' },
+    ...(canAnalytics ? [{ href: '/attendance/analytics', label: 'Phân tích chuyên cần' }] : []),
   ];
 
   return (

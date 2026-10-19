@@ -27,6 +27,15 @@ describe('createBoardIntent', () => {
     }
   });
 
+  it('accepts declined -> assigned (by creator)', () => {
+    const result = createBoardIntent(makeTask({ id: '1', status: 'declined' }), 'assigned', creator, { assigneeId: 'a2' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.intent.action).toBe('assign');
+      expect(result.intent.toState).toBe('assigned');
+    }
+  });
+
   it('rejects room-temperature mapping', () => {
     const result = createBoardIntent(makeTask({ id: '1', status: 'created' }), 'completed', creator);
     expect(result.ok).toBe(false);

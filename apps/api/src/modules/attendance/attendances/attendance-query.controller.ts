@@ -65,24 +65,42 @@ export class AttendanceQueryController {
   @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "List employees checked in today" })
   @ApiOkResponse({ type: AttendanceListEnvelopeDto })
-  async checkedInToday(@Query("date") date?: string) {
-    return this.getCheckedInToday.execute(date);
+  async checkedInToday(
+    @Query("date") date?: string,
+    @Request() req?: ExpressRequest & { user?: AuthUser },
+  ) {
+    const scope = req?.user
+      ? this.queryScopeService.resolveScope(req.user, "attendance")
+      : undefined;
+    return this.getCheckedInToday.execute(date, scope);
   }
 
   @Get("presence")
   @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "List current employee working presence status" })
   @ApiOkResponse({ type: PresenceListResponseDto })
-  async getPresence(@Query() query: PresenceQueryDto) {
-    return this.getEmployeesPresence.execute(query);
+  async getPresence(
+    @Query() query: PresenceQueryDto,
+    @Request() req?: ExpressRequest & { user?: AuthUser },
+  ) {
+    const scope = req?.user
+      ? this.queryScopeService.resolveScope(req.user, "attendance")
+      : undefined;
+    return this.getEmployeesPresence.execute(query, scope);
   }
 
   @Get("presence/summary")
   @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "Get count summary of employee presence states" })
   @ApiOkResponse({ type: PresenceSummaryResponseDto })
-  async getPresenceSummary(@Query() query: PresenceQueryDto) {
-    return this.getEmployeesPresence.getSummary(query);
+  async getPresenceSummary(
+    @Query() query: PresenceQueryDto,
+    @Request() req?: ExpressRequest & { user?: AuthUser },
+  ) {
+    const scope = req?.user
+      ? this.queryScopeService.resolveScope(req.user, "attendance")
+      : undefined;
+    return this.getEmployeesPresence.getSummary(query, scope);
   }
 
   @Get("history")

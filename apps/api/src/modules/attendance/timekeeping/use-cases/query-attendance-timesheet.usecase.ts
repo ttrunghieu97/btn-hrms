@@ -4,6 +4,8 @@ import { AttendanceTimekeepingRepository } from "../repositories/attendance-time
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import { ATTENDANCE_PAY_POLICY, type AttendancePayPolicy } from "../../../../contracts/ports/attendance-pay-policy.port";
+import { QueryScopeService } from "../../../../core/security/query-scope.service";
+import { AuthUser } from "../../../../core/security/types/auth-user.interface";
 
 type TimesheetRow = {
   id: string;
@@ -18,6 +20,15 @@ type TimesheetRow = {
   earlyLeaveMinutes: number | null;
   overtimeMinutes: number | null;
   isHoliday: boolean | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  employee?: {
+    id: string;
+    employeeCode?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    department?: { id: string; name: string } | null;
+  } | null;
   exceptions?: { status: string }[];
 };
 
@@ -29,13 +40,24 @@ export class QueryAttendanceTimesheetUseCase {
     private readonly requestContext: RequestContextService,
     @Inject(ATTENDANCE_PAY_POLICY)
     private readonly payPolicy: AttendancePayPolicy,
+    private readonly queryScope?: QueryScopeService,
   ) {
     this.logger = new ContextLogger(this.requestContext, QueryAttendanceTimesheetUseCase.name);
   }
 
-  async execute(query: AttendanceTimesheetQueryDto) {
+  async execute(query: AttendanceTimesheetQueryDto, user?: AuthUser) {
+    const scopedQuery = { ...query };
+    if (user && this.queryScope) {
+      const scope = this.queryScope.resolveScope(user, "attendance");
+      if (scope.tier === "self") {
+        scopedQuery.employeeId = scope.employeeId;
+      } else if (scope.tier === "department") {
+        scopedQuery.departmentId = scope.departmentId;
+      }
+    }
+
     const { rows, total, page, limit } =
-      await this.repo.listTimesheetSummaries(query);
+      await this.repo.listTimesheetSummaries(scopedQuery);
 
     const data = (rows as TimesheetRow[]).map((row) => {
       const exceptions = row.exceptions ?? [];
@@ -67,8 +89,18 @@ export class QueryAttendanceTimesheetUseCase {
         { includeUnresolvedAsPayable: query.includeUnresolvedAsPayable },
       );
 
+      const emp = row.employee;
+      const employeeName = emp
+        ? [emp.lastName, emp.firstName].filter(Boolean).join(" ").trim() || undefined
+        : undefined;
+
       return {
         ...row,
+        date: row.workDate,
+        checkIn: row.checkIn ?? null,
+        checkOut: row.checkOut ?? null,
+        employeeName,
+        employeeCode: emp?.employeeCode ?? undefined,
         hasPendingException: exceptionState === "pending",
         exceptionState,
         payableMinutes: policyResult.payableMinutes,

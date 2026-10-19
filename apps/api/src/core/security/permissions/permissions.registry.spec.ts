@@ -1,4 +1,5 @@
 import { parsePermissionCode } from '../../../modules/identity/access-control/domain/permission-code';
+import { PermissionHierarchyResolver } from './permission-hierarchy.resolver';
 import { PERMISSION_CATALOG, Permissions } from './permissions.registry';
 
 describe('Permissions catalog', () => {
@@ -22,4 +23,42 @@ describe('Permissions catalog', () => {
       );
     }
   });
+
+  it('expands employee:edit to employee:update:self, employee:view, and employee:create without broadening to employee:update:all or employee:view:all', () => {
+    const resolver = new PermissionHierarchyResolver();
+
+    const expandedFromEdit = resolver.expand(['employee:edit']);
+    expect(expandedFromEdit).toEqual(
+      expect.arrayContaining([
+        'employee:edit',
+        'employees:edit',
+        'employee:update:self',
+        'employees:update:self',
+        'employee:view',
+        'employees:view',
+        'employee:create',
+        'employees:create',
+      ]),
+    );
+    expect(expandedFromEdit).not.toContain('employee:update:all');
+    expect(expandedFromEdit).not.toContain('employees:update:all');
+    expect(expandedFromEdit).not.toContain('employee:view:all');
+    expect(expandedFromEdit).not.toContain('employees:view:all');
+    expect(expandedFromEdit).not.toContain('employee:manage');
+
+    const expandedDeptCombo = resolver.expand(['employee:edit', 'employee:view:department']);
+    expect(expandedDeptCombo).toContain('employee:view:department');
+    expect(expandedDeptCombo).toContain('employee:view:self');
+    expect(expandedDeptCombo).toContain('employee:update:self');
+    expect(expandedDeptCombo).not.toContain('employee:update:all');
+    expect(expandedDeptCombo).not.toContain('employee:view:all');
+
+    const expandedSelfCombo = resolver.expand(['employee:edit', 'employee:view:self']);
+    expect(expandedSelfCombo).toContain('employee:view:self');
+    expect(expandedSelfCombo).toContain('employee:update:self');
+    expect(expandedSelfCombo).not.toContain('employee:update:all');
+    expect(expandedSelfCombo).not.toContain('employee:view:all');
+    expect(expandedSelfCombo).not.toContain('employee:view:department');
+  });
 });
+

@@ -57,4 +57,18 @@ describe('getVietnameseApiErrorMessage', () => {
 
     expect(message).toBe('Khong the luu ban ghi');
   });
+
+  it('resolves field-specific error messages before generic contract messages and delegates contract lookup to resolveAppError', () => {
+    const message = getVietnameseApiErrorMessage(
+      new ApiError({
+        message: 'Validation failed',
+        code: ApiErrorCode.VALIDATION,
+        backendCode: 'VALIDATION_ERROR',
+        details: { field: 'employee_code' }
+      }),
+      'Khong the luu ban ghi'
+    );
+
+    expect(message).toBe('Ma nhan vien khong hop le');
+  });
 });

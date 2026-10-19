@@ -1,12 +1,11 @@
+import { hasPermission } from '@project/permissions';
 import type { AuthorizationRule } from '../types/authorization.types';
-
-const ROOT_PERMISSIONS = ['sys:all', 'ALL'];
 
 /**
  * Evaluates an authorization rule against user permissions.
- * v1.x Contract:
- * - Level 0: Super-Admin Root Privilege Bypass (sys:all)
- * - Level 1: Standard Exact Matching for anyOf / allOf
+ * Delegates matching to @project/permissions `hasPermission` so root bypass
+ * (`sys:all` / `ALL`), hierarchy (`manage` -> `read`/`write`/etc.), and
+ * resource normalization are identical across Edge proxy and SSR/Client.
  */
 export function evaluatePermissionRule(
   rule: AuthorizationRule | undefined,
@@ -14,22 +13,15 @@ export function evaluatePermissionRule(
 ): boolean {
   if (!rule) return false;
 
-  const granted = userPermissions ?? [];
+  const granted = userPermissions ? Array.from(userPermissions) : [];
 
-  // Super-Admin Bypass
-  if (ROOT_PERMISSIONS.some((r) => granted.includes(r))) {
-    return true;
-  }
-
-  // Exact Match for allOf
   if (rule.allOf && rule.allOf.length > 0) {
-    const hasAll = rule.allOf.every((p) => granted.includes(p));
+    const hasAll = rule.allOf.every((p) => hasPermission(granted, p));
     if (!hasAll) return false;
   }
 
-  // Exact Match for anyOf
   if (rule.anyOf && rule.anyOf.length > 0) {
-    const hasAny = rule.anyOf.some((p) => granted.includes(p));
+    const hasAny = rule.anyOf.some((p) => hasPermission(granted, p));
     if (!hasAny) return false;
   }
 

@@ -1,7 +1,6 @@
 import { EmployeeCreatePage } from '@/features/employees';
 import { buildDashboardMetadataTitle, pageCopy } from '@/lib/app-copy';
 import { requireServerSession } from '@/lib/server/auth-session';
-import { permissions } from '@/lib/permissions';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 

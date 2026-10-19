@@ -6,6 +6,8 @@ import { throwForbidden } from '../../shared/utils/http-error';
 import { ERROR_CODES } from '../../shared/constants/error-codes';
 import { ERROR_REASONS } from '../../shared/constants/error-reasons';
 
+export type { DataScope };
+
 @Injectable()
 export class QueryScopeService {
   constructor(private readonly policyEngine: PolicyEngine) {}
@@ -23,11 +25,15 @@ export class QueryScopeService {
 
     const scopeId = user.scopeId ?? undefined;
 
-    if (user.isSuperAdmin || user.permissions?.includes('ALL')) {
+    if (user.isSuperAdmin || user.permissions?.includes('ALL') || user.permissions?.includes('sys:all')) {
       return { tier: 'all', scopeId };
     }
 
-    if (this.policyEngine.can(user, `${domain}:view:all`) || this.policyEngine.can(user, `${domain}:view`)) {
+    if (
+      this.policyEngine.can(user, `${domain}:view:all`) ||
+      this.policyEngine.can(user, `${domain}:update:all`) ||
+      this.policyEngine.can(user, `${domain}:manage`)
+    ) {
       return { tier: 'all', scopeId };
     }
 
@@ -52,6 +58,10 @@ export class QueryScopeService {
          });
       }
       return { tier: 'self', scopeId, employeeId: String(user.employeeId) };
+    }
+
+    if (this.policyEngine.can(user, `${domain}:view`) || this.policyEngine.can(user, `${domain}:edit`)) {
+      return { tier: 'all', scopeId };
     }
 
     throwForbidden(`Bạn không có quyền xem danh sách ${domain}`, ERROR_CODES.PERMISSION_DENIED, {
