@@ -47,7 +47,10 @@ export class DashboardController {
   @CheckPolicy(AttendancePolicies.view)
   @ApiOperation({ summary: "Get attendance analytics statistics" })
   @ApiQuery({ name: "month", required: false })
-  async getAttendanceStats(@Query("month") month?: string) {
-    return this.getAttendanceStatsUseCase.execute(month);
+  async getAttendanceStats(
+    @Query("month") month?: string,
+    @Req() req?: { user?: AuthUser },
+  ) {
+    return this.getAttendanceStatsUseCase.execute(month, req?.user);
   }
 }

@@ -12,7 +12,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiQuery } from "@nestjs/swagger";
 import { CheckPolicy } from "../../../core/security/decorators/check-policy.decorator";
 import { RequirePermission } from "../../../core/security/decorators/require-permission.decorator";
-import { throwBadRequest } from "../../../shared/utils/http-error";
+import { throwBadRequest, throwForbidden } from "../../../shared/utils/http-error";
+import { ERROR_CODES } from "../../../shared/constants/error-codes";
+import { hasPermission } from "@project/permissions";
+import { Permissions } from "../../../core/security/permissions/permissions.registry";
 import { SchedulePolicies } from "../../../core/security/policies/schedule.policy";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
 import { CreateScheduleRequestUseCase } from "./use-cases/create-schedule-request.usecase";
@@ -55,7 +58,7 @@ export class ScheduleRequestsController {
   }
 
   @Get()
-  @RequirePermission("schedule:view:self")
+  @RequirePermission(Permissions.SCHEDULE_VIEW_SELF)
   @ApiOperation({ summary: "List schedule requests. HR sees all, ?employeeId= filters." })
   @ApiQuery({ name: "status", required: false })
   @ApiQuery({ name: "employeeId", required: false })
@@ -64,20 +67,31 @@ export class ScheduleRequestsController {
     @Query("status") status?: string,
     @Query("employeeId") employeeId?: string
   ) {
-    const isHR = req.user.permissions?.includes("schedule:manage");
+    const canViewAll =
+      Boolean(req.user.isSuperAdmin) ||
+      hasPermission(req.user.permissions ?? [], Permissions.SCHEDULE_VIEW_ALL) ||
+      hasPermission(req.user.permissions ?? [], Permissions.SCHEDULE_EDIT_ALL);
     const filters: { status?: string; employeeId?: string } = {};
 
     if (status) filters.status = status;
-    if (employeeId) filters.employeeId = employeeId;
-    // Non-HR employees see only their own
-    if (!isHR) filters.employeeId = req.user.employeeId;
+    if (canViewAll) {
+      if (employeeId) filters.employeeId = employeeId;
+    } else {
+      if (!req.user.employeeId) {
+        throwForbidden(
+          "Employee profile is required to view self-scoped schedule requests",
+          ERROR_CODES.FORBIDDEN,
+        );
+      }
+      filters.employeeId = req.user.employeeId;
+    }
 
     const records = await this.listUseCase.execute(filters);
     return records.map(mapScheduleRequestToDto);
   }
 
   @Post(":id/approve")
-  @RequirePermission("schedule:edit:all")
+  @RequirePermission(Permissions.SCHEDULE_EDIT_ALL)
   @AuditLog({ action: "schedule_request_approve", entity: "schedule_request" })
   @ApiOperation({ summary: "Approve a schedule request (HR)" })
   async approve(

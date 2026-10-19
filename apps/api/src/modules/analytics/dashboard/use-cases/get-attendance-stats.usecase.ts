@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
+import { hasAnyPermission, hasPermission } from "@project/permissions";
+import { Permissions } from "../../../../core/security/permissions/permissions.registry";
+import type { AuthUser } from "../../../../core/security/types/auth-user.interface";
+import { ERROR_CODES } from "../../../../shared/constants/error-codes";
 import { todayDateString } from "../../../../shared/utils/date-format";
+import { throwForbidden } from "../../../../shared/utils/http-error";
 import { AttendanceAggregateService } from "../infrastructure/repositories/attendance-aggregate.service";
 import { WorkforceAggregateService } from "../infrastructure/repositories/workforce-aggregate.service";
 
@@ -42,7 +47,27 @@ export class GetAttendanceStatsUseCase {
     private readonly workforce: WorkforceAggregateService,
   ) {}
 
-  async execute(month?: string): Promise<AttendanceStatsResult> {
+  async execute(month?: string, user?: AuthUser): Promise<AttendanceStatsResult> {
+    if (user) {
+      const perms = user.permissions ?? [];
+      const canViewAnalytics =
+        Boolean(user.isSuperAdmin) ||
+        hasAnyPermission(perms, [
+          Permissions.SYS_ALL,
+          Permissions.ATTENDANCE_VIEW_ALL,
+          Permissions.ATTENDANCE_REPORT,
+          Permissions.ATTENDANCE_VIEW_DEPARTMENT,
+          Permissions.DASHBOARD_VIEW,
+        ]);
+
+      if (!canViewAnalytics) {
+        throwForbidden(
+          "Insufficient permissions to view attendance analytics",
+          ERROR_CODES.FORBIDDEN,
+        );
+      }
+    }
+
     const now = new Date();
     let year = now.getFullYear();
     let monthNum = now.getMonth() + 1;
@@ -118,7 +143,18 @@ export class GetAttendanceStatsUseCase {
       deptMetrics.map((m) => [m.departmentId, m]),
     );
 
-    const departmentRates = deptHeadcounts.map((dept) => {
+    const hasCompanyWideAttendanceScope =
+      !user ||
+      Boolean(user.isSuperAdmin) ||
+      hasPermission(user.permissions ?? [], Permissions.ATTENDANCE_VIEW_ALL) ||
+      hasPermission(user.permissions ?? [], Permissions.ATTENDANCE_REPORT);
+
+    const scopedDeptHeadcounts =
+      !hasCompanyWideAttendanceScope && user?.departmentId
+        ? deptHeadcounts.filter((dept) => dept.departmentId === user.departmentId)
+        : deptHeadcounts;
+
+    const departmentRates = scopedDeptHeadcounts.map((dept) => {
       const m = deptMetricMap.get(dept.departmentId);
       const deptRate =
         m && m.totalRecords > 0
