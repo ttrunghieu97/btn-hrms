@@ -2,10 +2,10 @@
 
 ## 1. Current Execution State
 
-- **Active Phase**: Phase 3 & Phase 4 (Vertical Slice Execution — Task VS-4 in progress)
+- **Active Phase**: Phase 4 (Verification & Unit Test Suite Expansion — Task VS-5 in progress)
 - **Branch / Base Commit**: `master` (`6df1b76`)
 - **Working Tree Policy**: Preserve all existing valid user changes (`6df1b76`). Atomic Git commits after each verified vertical slice.
-- **Next Immediate Action**: Execute **Task VS-4** (Enforce self-scope on non-manager Performance queries/mutations & sync `seed.ts` with `@project/permissions`).
+- **Next Immediate Action**: Execute **Task VS-5** (Add unit test suites for probation evaluation, scheduled transfers/terminations, self-service resignation/profile update, education CRUD, and task templates).
 
 ---
 
@@ -21,7 +21,7 @@
 | Monorepo Typecheck | `pnpm typecheck` | `0` | `PASS` | `tsc --noEmit` passed on `@project/api` and `frontend` |
 | Tracked Secrets Scan | `pnpm security:check-tracked-secrets` | `0` | `PASS` | Zero tracked secrets found |
 | Deployment Env Contract | `pnpm deployment:check-env --mode=example` | `0` | `PASS` | `.env.example` satisfies deployment schema |
-| Backend Test Suite | `pnpm test:api` | `0` | `PASS` | **346/346 suites passed (1,471/1,471 tests)** |
+| Backend Test Suite | `pnpm test:api` | `0` | `PASS` | **348/348 suites passed (1,481/1,481 tests)** |
 | Frontend Test Suite | `pnpm test:web` | `0` | `PASS` | **67/67 suites passed (403/403 tests)** |
 
 ---
@@ -30,13 +30,13 @@
 
 | Domain Classification | Bounded Context / Module | Backend (`apps/api`) | Frontend (`apps/web`) | Baseline Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Core** | Identity, RBAC & Approvals (`iam`, `approvals`, `@project/permissions`) | 27 permission modules, `PolicyService`, `ApprovalWorkflows`, `AuditLogInterceptor` | `/administration`, `/administration/audit-logs`, `/approvals`, `PermissionGate` | `IN_PROGRESS` (Seed sync in VS-4) |
+| **Core** | Identity, RBAC & Approvals (`iam`, `approvals`, `@project/permissions`) | 27 permission modules, `PolicyService`, `ApprovalWorkflows`, `AuditLogInterceptor` | `/administration`, `/administration/audit-logs`, `/approvals`, `PermissionGate` | `PASS` (Seed sync verified in VS-4) |
 | **Core** | Organization & Workforce Lifecycle (`organization`, `workforce/employees`, `contracts`) | `employees` (PII AES-256-GCM), `Hire`, `EvaluateProbation`, `Transfer`, `ExecuteScheduledTransfers`, `Promote`, `Terminate`, `ScheduleTermination`, `Rehire`, `SubmitResignationRequest`, `UpdateMyProfile`, `contracts`, `contract_addendums` | `/organization`, `/employees`, `/employees/[id]`, `/profile`, `/contracts`, `/workspace/hr` | `IN_PROGRESS` (`/workspace/hr` live data verified in VS-1; unit tests in VS-5) |
 | **Core** | Attendance, Timekeeping & Shifts (`attendance`, `scheduling`) | `timekeeping`, `attendance_periods`, `attendance_exceptions`, `overtime_requests`, `shifts`, `schedule_requests` | `/attendance`, `/shifts`, `AttendanceHomeScreen`, `timesheet-editor`, `reconciliation-tab` | `PASS` (`schedule_requests`, `attendance-stats`, and `explain-attendance-exception` verified in VS-3) |
 | **Core** | Payroll & Compensation (`payroll`) | `payroll_periods`, `payroll_runs`, `payslips`, `final_settlements`, `salary_advances`, `thirteenth_month_bonuses`, fail-closed `PD-04` guards | `/payroll` (periods, runs, payslips, components, bonuses, advances) | `PASS` (36 live-DB integrity tests verified; statutory PIT/SI formula deferred under `PD-04`) |
 | **Supporting** | Leave Management (`leave`) | `leave_types`, `leave_policies`, `leave_balances`, `leave_requests`, `holidays`, `compensatory_leaves` | `/leave` (requests, approval inbox, balances, types) | `PASS` |
 | **Supporting** | Onboarding, Offboarding & Tasks (`onboarding`, `offboarding`, `tasks`) | `onboarding_templates`, `onboarding_workflows`, `offboarding_workflows`, `tasks`, `task_templates` | `/onboarding`, `/offboarding`, `/tasks` (board, list, analytics, templates) | `IN_PROGRESS` (`task-templates` unit tests in VS-5) |
-| **Supporting** | Talent & Total Rewards (`recruitment`, `performance`, `learning`, `benefits`, `expenses`) | Full CRUD + workflow controllers & use-cases across all 5 modules | `/recruitment`, `/performance`, `/learning`, `/benefits`, `/expenses` | `IN_PROGRESS` (`performance` non-manager scope isolation in VS-4) |
+| **Supporting** | Talent & Total Rewards (`recruitment`, `performance`, `learning`, `benefits`, `expenses`) | Full CRUD + workflow controllers & use-cases across all 5 modules | `/recruitment`, `/performance`, `/learning`, `/benefits`, `/expenses` | `PASS` (`performance` non-manager scope isolation verified in VS-4) |
 | **Generic** | Platform Notifications, Chat, Webhooks, Analytics & Reports (`platform-notifications`, `chat`, `integration-hub`, `analytics`) | `platform-notifications`, `chat`, `webhooks`, `dashboard`, `reports` | `/notifications`, `/chat`, `/reports`, `/dashboard`, webhook admin UI | `PASS` (`platform-notifications` RBAC & UI tab gating verified in VS-2) |
 
 ---
@@ -51,8 +51,8 @@
 | **VS-1** | Phase 3/4 | **Frontend UI & Test Alignment**: Fix `DataTable` responsive test contract & wire `/workspace/hr` to live HRMS APIs | `PASS` | 1 | `pnpm test:web && pnpm check` | `0` | **66/66 web suites (401/401 tests) PASS**, `depcruise` 0 violations, `typecheck` PASS |
 | **VS-2** | Phase 3/4 | **Notifications RBAC & UI Gating**: Align `PlatformNotificationsController` permissions with `@project/permissions` & gate Templates tab in `NotificationsPage` | `PASS` | 1 | `pnpm --filter @project/api test platform-notifications.controller.spec.ts && pnpm --filter frontend test notifications-page.spec.tsx && pnpm check` | `0` | **4/4 API tests & 2/2 web tests PASS**, `pnpm check` exit `0` |
 | **VS-3** | Phase 3/4 | **Scheduling & Attendance Analytics RBAC**: Fix `ScheduleRequestsController` invalid `"schedule:manage"` check & enforce scope in `DashboardController.getAttendanceStats` + unit tests | `PASS` | 1 | `pnpm --filter @project/api test "schedule-requests.controller.spec.ts\|get-attendance-stats.usecase.spec.ts\|explain-attendance-exception.usecase.spec.ts" && pnpm check` | `0` | **3/3 API suites (13/13 tests) PASS**, `pnpm check` exit `0` |
-| **VS-4** | Phase 3/4 | **Performance Scope Isolation & Permission Seed Sync**: Enforce self-scope on non-manager Performance queries/mutations & sync `seed.ts` with `@project/permissions` | `IN_PROGRESS` | 0 | `pnpm test:api -- performance\|seed && pnpm check` | — | Target: `performance.controller.ts`, `performance/use-cases/*.ts`, `seed.ts`, specs |
-| **VS-5** | Phase 4 | **Workforce Lifecycle & Task Templates Unit Test Suite**: Add unit test suites for probation evaluation, scheduled transfers/terminations, self-service resignation/profile update, education CRUD, and task templates | `TODO` | 0 | `pnpm test:api && pnpm check` | — | Target: `evaluate-probation.usecase.spec.ts`, `execute-scheduled-transfers.usecase.spec.ts`, `submit-resignation-request.usecase.spec.ts`, `update-my-profile.usecase.spec.ts`, `schedule-termination.usecase.spec.ts`, `education.usecases.spec.ts`, `task-templates.usecases.spec.ts` |
+| **VS-4** | Phase 3/4 | **Performance Scope Isolation & Permission Seed Sync**: Enforce self-scope on non-manager Performance queries/mutations & sync `seed.ts` with `@project/permissions` | `PASS` | 1 | `pnpm --filter @project/api test "performance\|seed.spec.ts" && pnpm check` | `0` | **24/24 API suites (53/53 tests) PASS**, `pnpm check` exit `0` |
+| **VS-5** | Phase 4 | **Workforce Lifecycle & Task Templates Unit Test Suite**: Add unit test suites for probation evaluation, scheduled transfers/terminations, self-service resignation/profile update, education CRUD, and task templates | `IN_PROGRESS` | 0 | `pnpm test:api && pnpm check` | — | Target: `evaluate-probation.usecase.spec.ts`, `execute-scheduled-transfers.usecase.spec.ts`, `submit-resignation-request.usecase.spec.ts`, `update-my-profile.usecase.spec.ts`, `schedule-termination.usecase.spec.ts`, `education.usecases.spec.ts`, `task-templates.usecases.spec.ts` |
 | **VS-6** | Phase 5/6/7 | **Enterprise AppSec Audit, Completeness Matrix, Runbooks & Full Release Gate**: Complete `docs/security/`, `docs/testing/`, `docs/runbooks/` & run `pnpm check:all` | `TODO` | 0 | `pnpm check:all` | — | Full monorepo build, lint, typecheck, arch, depcruise, auth, security, env, 345+ API suites & 65+ web suites |
 
 ---

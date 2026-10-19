@@ -2,6 +2,9 @@ import { Body, Controller, Get, Param, Post, Request } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CheckPolicy } from "../../core/security/decorators/check-policy.decorator";
 import { PerformancePolicies } from "../../core/security/policies/performance.policy";
+import type { AuthUser } from "../../core/security/types/auth-user.interface";
+import { ERROR_CODES } from "../../shared/constants/error-codes";
+import { throwForbidden } from "../../shared/utils/http-error";
 import {
   CreateCycleUseCase,
   ListCyclesUseCase,
@@ -143,8 +146,11 @@ export class PerformanceController {
   }
 
   @Get("cycles/:cycleId/goals")
-  async listGoalsEndpoint(@Param("cycleId") cycleId: string): Promise<GoalResponseDto[]> {
-    return this.listGoals.execute(cycleId);
+  async listGoalsEndpoint(
+    @Param("cycleId") cycleId: string,
+    @Request() req?: { user?: AuthUser },
+  ): Promise<GoalResponseDto[]> {
+    return this.listGoals.execute(cycleId, req?.user);
   }
 
   @Post("goals/:goalId/assign")
@@ -157,8 +163,17 @@ export class PerformanceController {
   }
 
   @Post("goals/:goalId/submit")
-  async submitGoalEndpoint(@Param("goalId") goalId: string, @Request() req: any): Promise<void> {
-    return this.submitGoal.execute(goalId, req.user?.employeeId ?? req.user?.id);
+  async submitGoalEndpoint(
+    @Param("goalId") goalId: string,
+    @Request() req: { user?: AuthUser },
+  ): Promise<void> {
+    if (!req?.user?.employeeId) {
+      throwForbidden(
+        "Employee profile is required to submit performance goals",
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+    return this.submitGoal.execute(goalId, req.user.employeeId);
   }
 
   @Post("goals/:goalId/approve")
@@ -177,15 +192,24 @@ export class PerformanceController {
   @Post("review-assignments/:id/submit")
   async submitReviewEndpoint(
     @Param("id") id: string,
-    @Request() req: any,
+    @Request() req: { user?: AuthUser },
     @Body() dto: SubmitReviewDto,
   ): Promise<void> {
-    return this.submitReview.execute(id, req.user?.employeeId ?? req.user?.id, dto);
+    if (!req?.user?.employeeId) {
+      throwForbidden(
+        "Employee profile is required to submit performance reviews",
+        ERROR_CODES.FORBIDDEN,
+      );
+    }
+    return this.submitReview.execute(id, req.user.employeeId, dto);
   }
 
   @Get("cycles/:cycleId/reviews/summary")
-  async reviewSummaryEndpoint(@Param("cycleId") cycleId: string) {
-    return this.listReviews.execute(cycleId);
+  async reviewSummaryEndpoint(
+    @Param("cycleId") cycleId: string,
+    @Request() req?: { user?: AuthUser },
+  ) {
+    return this.listReviews.execute(cycleId, req?.user);
   }
 
   // ── Results ──

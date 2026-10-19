@@ -2,6 +2,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as bcrypt from "bcrypt";
 import * as crypto from "crypto";
+import { PermissionRegistry } from "@project/permissions";
+import { Permissions } from "../../core/security/permissions/permissions.registry";
 import { loadEnv } from "./env";
 import {
   permissions,
@@ -17,19 +19,11 @@ import {
 } from "./schema";
 import { sql } from "drizzle-orm";
 
-loadEnv();
-
-const connectionString = process.env.DATABASE_DIRECT_URL || process.env.DATABASE_URL;
-if (!connectionString) throw new Error("DATABASE_URL is missing in .env");
-
-const client = postgres(connectionString);
-const db = drizzle(client);
-
 const DEFAULT_PASSWORD = process.env.SEED_PASSWORD ?? crypto.randomBytes(16).toString("hex");
 
 // ─── Data definitions ───────────────────────────────────────────────────────
 
-const PERMISSIONS = [
+const BASE_PERMISSIONS = [
   { code: "sys:all", description: "Toàn quyền hệ thống" },
   { code: "dashboard:view", description: "Xem tổng quan hệ thống" },
   { code: "users:view", description: "Xem danh sách tài khoản" },
@@ -57,6 +51,7 @@ const PERMISSIONS = [
   { code: "schedule:view:all", description: "Xem lịch làm việc toàn công ty" },
   { code: "schedule:edit:self", description: "Chỉnh sửa lịch làm việc của bản thân" },
   { code: "schedule:edit:department", description: "Chỉnh sửa lịch làm việc trong phòng ban" },
+  { code: "schedule:edit:all", description: "Chỉnh sửa lịch làm việc toàn công ty" },
   { code: "attendance:check", description: "Chấm công (check-in/out)" },
   { code: "attendance:view:self", description: "Xem chấm công của bản thân" },
   { code: "attendance:view:department", description: "Xem chấm công trong phòng ban" },
@@ -93,6 +88,27 @@ const PERMISSIONS = [
   { code: "settings:edit", description: "Chỉnh sửa cài đặt hệ thống" },
 ];
 
+function buildCanonicalPermissions(): Array<{ code: string; description: string }> {
+  const byCode = new Map<string, { code: string; description: string }>();
+  for (const item of BASE_PERMISSIONS) {
+    byCode.set(item.code, item);
+  }
+  const allRegistryCodes = [
+    ...Object.values(PermissionRegistry).flatMap((domain) =>
+      Object.values(domain as Record<string, string>),
+    ),
+    ...Object.values(Permissions),
+  ];
+  for (const code of allRegistryCodes) {
+    if (!byCode.has(code)) {
+      byCode.set(code, { code, description: `Quyền hệ thống (${code})` });
+    }
+  }
+  return Array.from(byCode.values());
+}
+
+export const PERMISSIONS = buildCanonicalPermissions();
+
 export const SYSTEM_ROLES = [
   {
     code: "employee_base",
@@ -100,10 +116,28 @@ export const SYSTEM_ROLES = [
     description: "Vai trò mặc định cho nhân viên với quyền tự phục vụ.",
     type: "system",
     permissions: [
-      "schedule:view:self", "attendance:check", "attendance:view:self", "attendance:overtime:submit",
-      "gps-logs:view", "gps-logs:submit",
-      "leave:view:self", "leave:request", "payroll:view:self",
-      "profile:view", "employees:view:self", "dashboard:view",
+      "schedule:view:self",
+      "attendance:check",
+      "attendance:view:self",
+      "attendance:overtime:submit",
+      "gps-logs:view",
+      "gps-logs:submit",
+      "leave:view:self",
+      "leave:request",
+      "payroll:view:self",
+      "profile:view",
+      "employees:view:self",
+      "dashboard:view",
+      Permissions.NOTIFICATIONS_VIEW_SELF,
+      Permissions.PERFORMANCE_VIEW,
+      Permissions.LEARNING_VIEW,
+      Permissions.BENEFITS_VIEW,
+      Permissions.EXPENSES_VIEW,
+      Permissions.TASKS_VIEW_SELF,
+      Permissions.ASSET_VIEW_SELF,
+      Permissions.CHAT_VIEW,
+      Permissions.CHAT_SEND,
+      Permissions.AUTH_CHANGE_PASSWORD,
     ],
   },
   {
@@ -144,6 +178,13 @@ const POSITIONS = [
 // ─── Seed ───────────────────────────────────────────────────────────────────
 
 async function seed() {
+  loadEnv();
+  const connectionString = process.env.DATABASE_DIRECT_URL || process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is missing in .env");
+
+  const client = postgres(connectionString);
+  const db = drizzle(client);
+
   console.log("Seeding permissions, admin user, org data...");
 
   try {
