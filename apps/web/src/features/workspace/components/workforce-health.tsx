@@ -37,10 +37,13 @@ export function WorkforceHealth({ data, isLoading }: WorkforceHealthProps) {
     );
   }
 
+  const activePercentage =
+    data.total > 0 ? ((data.active / data.total) * 100).toFixed(0) : '0';
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <MetricCard title="Total Employees" value={data.total} subtitle={`+${data.newThisMonth} this month`} />
-      <MetricCard title="Active" value={data.active} subtitle={`${((data.active / data.total) * 100).toFixed(0)}% of workforce`} />
+      <MetricCard title="Active" value={data.active} subtitle={`${activePercentage}% of workforce`} />
       <MetricCard title="Probation" value={data.probation} subtitle="Pending confirmation" />
       <MetricCard title="Leaving" value={data.leaving} subtitle="Scheduled to exit" />
     </div>

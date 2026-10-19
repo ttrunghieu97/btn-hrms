@@ -1,28 +1,67 @@
+import { customFetch } from '@/lib/fetcher';
+import { unwrapData } from '@/lib/api-extract';
 import type { TodaySummary } from '../types';
+
+export interface WorkspaceDashboardWidgetDto<TData = unknown> {
+  id: string;
+  title: string;
+  type: string;
+  category: string;
+  data: TData;
+}
+
+export interface WorkspaceDashboardEnvelope {
+  widgets: WorkspaceDashboardWidgetDto[];
+}
+
+export interface WorkspaceTaskItemDto {
+  id: string;
+  workflowId: string;
+  domain: string;
+  domainLabel: string;
+  entityId: string;
+  title: string;
+  subtitle: string;
+  requesterName: string;
+  currentState: string;
+  currentStateLabel: string;
+  priority: 'urgent' | 'high' | 'normal';
+  createdAt?: string;
+  detailUrl: string;
+}
+
+export interface WorkspaceTasksResponseDto {
+  tasks: WorkspaceTaskItemDto[];
+  total: number;
+  countsByDomain: Record<string, number>;
+}
 
 /**
  * Workspace data adapter.
  *
- * Aggregates data from existing feature API calls without creating
- * a dedicated BFF. Each method returns data compatible with the
- * workspace's TodaySummary model.
- *
- * When backend aggregation is justified, replace this adapter
- * with a single /workspace endpoint — not before.
+ * Fetches dashboard widget aggregates and unified workflow tasks directly
+ * via the shared API fetcher without pulling heavy UI feature barrels.
  */
 export const workspaceApi = {
-  async getTodaySummary(): Promise<TodaySummary> {
-    // Phase 1: client-side aggregation from existing feature queries.
-    // The actual data fetching is done via TanStack Query hooks
-    // in features/workspace/queries/ — this adapter exists for
-    // future backend migration.
-    //
-    // Current implementation fetches per-feature in parallel hooks.
-    // See: queries/use-workspace-data.ts
+  async getDashboardOverview(signal?: AbortSignal): Promise<WorkspaceDashboardEnvelope> {
+    const res = await customFetch<WorkspaceDashboardEnvelope>('/api/v1/dashboard', {
+      signal,
+    });
+    return unwrapData<WorkspaceDashboardEnvelope>(res);
+  },
+
+  async getMyWorkflowTasks(signal?: AbortSignal): Promise<WorkspaceTasksResponseDto> {
+    return customFetch<WorkspaceTasksResponseDto>('/workflow/tasks/my', {
+      signal,
+    });
+  },
+
+  async getTodaySummary(signal?: AbortSignal): Promise<TodaySummary> {
+    const tasks = await this.getMyWorkflowTasks(signal);
     return {
       attendance: undefined,
       leaveBalance: undefined,
-      pendingActionsCount: 0,
+      pendingActionsCount: tasks.total ?? tasks.tasks.length,
       notificationsCount: 0,
     };
   },

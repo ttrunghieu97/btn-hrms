@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   HrWorkspaceHeader,
   WorkforceHealth,
   HrActionCenter,
   ComplianceStatus,
   PendingActions,
+  useWorkspaceData,
 } from '@/features/workspace';
-import { useWorkspaceData } from '@/features/workspace';
 
 /**
  * HR Operations Workspace — role-specific view.
@@ -16,44 +17,53 @@ import { useWorkspaceData } from '@/features/workspace';
  * Access: hr, hr_manager, payroll roles
  */
 export default function HrWorkspacePage() {
-  const { summary, actions, isLoading } = useWorkspaceData();
-
-  // Placeholder data — wire to real queries when available
-  const healthData = useMemo(() => ({
-    total: 1248,
-    active: 1102,
-    probation: 86,
-    leaving: 12,
-    newThisMonth: 24,
-  }), []);
-
-  const complianceData = useMemo(() => ({
-    documentsExpiring: 12,
-    contractsEnding: 5,
-    missingProfiles: 8,
-  }), []);
+  const {
+    actions,
+    healthData,
+    complianceData,
+    headerCounts,
+    isLoading,
+    error,
+    refetch,
+  } = useWorkspaceData();
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-6 px-4">
-      {/* HR header with attention summary */}
+      {/* HR header with live attention summary */}
       <HrWorkspaceHeader
-        pendingOnboarding={5}
-        pendingApprovals={3}
-        expiringContracts={2}
+        pendingOnboarding={headerCounts.pendingOnboarding}
+        pendingApprovals={headerCounts.pendingApprovals}
+        expiringContracts={headerCounts.expiringContracts}
       />
+
+      {error && (
+        <Card role="alert" className="border-destructive/40 bg-destructive/5">
+          <CardContent className="flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-destructive">
+                Unable to load workspace metrics
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {error.message || 'An unexpected error occurred while fetching HR workspace data.'}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={refetch}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Workforce health metrics */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Workforce Health</h2>
-        <WorkforceHealth data={healthData} />
+        <WorkforceHealth data={healthData} isLoading={isLoading} />
       </section>
 
-      {/* Lifecycle attention */}
+      {/* Lifecycle attention & compliance */}
       <div className="grid gap-6 lg:grid-cols-2">
         <PendingActions actions={actions} isLoading={isLoading} />
-
-        {/* Compliance */}
-        <ComplianceStatus data={complianceData} />
+        <ComplianceStatus data={complianceData} isLoading={isLoading} />
       </div>
 
       {/* HR actions */}

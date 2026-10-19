@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type * as React from 'react';
 
 /** Aggregate action from any domain, shown in Pending Actions widget. */
 export interface WorkspaceAction {
@@ -24,6 +24,26 @@ export interface TodaySummary {
   };
   pendingActionsCount: number;
   notificationsCount: number;
+}
+
+export interface WorkforceHealthData {
+  total: number;
+  active: number;
+  probation: number;
+  leaving: number;
+  newThisMonth: number;
+}
+
+export interface ComplianceData {
+  documentsExpiring: number;
+  contractsEnding: number;
+  missingProfiles: number;
+}
+
+export interface HrWorkspaceHeaderCounts {
+  pendingOnboarding: number;
+  pendingApprovals: number;
+  expiringContracts: number;
 }
 
 /** Quick action link, permission-gated. */

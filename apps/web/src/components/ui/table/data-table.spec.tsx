@@ -36,10 +36,15 @@ function TestTable({ onRowClick }: { onRowClick?: (row: import('@tanstack/react-
 }
 
 describe('DataTable', () => {
-  it('preserves intrinsic table width for horizontal scrolling', () => {
-    render(<TestTable />);
+  it('preserves intrinsic container width for horizontal scrolling and responsive full-width table layout', () => {
+    const { container } = render(<TestTable />);
 
-    expect(screen.getByRole('table')).toHaveClass('w-max');
+    const tableContainer = container.querySelector('[data-slot="table-container"]');
+    expect(tableContainer).toHaveClass('w-max', 'min-w-full');
+
+    const tableElement = screen.getByRole('table');
+    expect(tableElement).toHaveClass('w-full', 'min-w-full');
+    expect(tableElement).toHaveStyle({ minWidth: '100%' });
   });
 
   it('preserves the row role and supports keyboard row activation', () => {
