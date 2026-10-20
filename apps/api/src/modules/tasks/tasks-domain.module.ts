@@ -5,11 +5,11 @@ import { TaskTemplatesModule } from "./task-templates/task-templates.module";
 
 @Module({
   imports: [
-    TasksModule,
     TaskTemplatesModule,
+    TasksModule,
     RouterModule.register([
-      { path: "tasks", module: TasksModule },
       { path: "tasks/templates", module: TaskTemplatesModule },
+      { path: "tasks", module: TasksModule },
     ]),
   ],
 })

@@ -2,20 +2,20 @@
 
 ## 1. Current Execution State
 
-- **Active Phase**: Phase 8 — Full-Stack Browser E2E Verification (`E2E-5` IN_PROGRESS)
+- **Active Phase**: Phase 8 — Full-Stack Browser E2E Verification (`COMPLETE`)
 - **Branch / Base Commit**: `master` (preserved base commit `6df1b76` + Phase 0–8 commits)
 - **Working Tree Policy**: Clean working tree; all changes committed atomically after passing quality gates.
-- **Next Immediate Action**: Execute `E2E-5` — Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md`.
+- **Next Immediate Action**: None — all Phase 0–8 slices (`P0-1`..`VS-6` and `E2E-0`..`E2E-5`), `pnpm test:e2e`, and `pnpm check:all` are complete and `PASS`.
 
 ---
 
-## 2. Final Verification Summary (`pnpm check:all`)
+## 2. Final Verification Summary (`pnpm check:all` & `pnpm test:e2e`)
 
 | Check / Gate | Command | Exit Code | Status | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| Monorepo Lint | `pnpm lint` | `0` | `PASS` | `oxlint`: 0 warnings, 0 errors across 2,533 files |
+| Monorepo Lint | `pnpm lint` | `0` | `PASS` | `oxlint`: 0 warnings, 0 errors across 2,527 files |
 | Backend Architecture | `pnpm --filter @project/api arch:check` | `0` | `PASS` | 6/6 checks passed (Context Registry, Context Boundaries, DB Access, Module Cycles, Adapter DIP, Compatibility Debt) |
-| Frontend Dependency Cruiser | `pnpm --filter frontend depcruise` | `0` | `PASS` | 1,668 modules, 6,466 dependencies cruised, 0 violations |
+| Frontend Dependency Cruiser | `pnpm --filter frontend depcruise` | `0` | `PASS` | 1,668 modules, 6,470 dependencies cruised, 0 violations |
 | Frontend Authorization Check | `pnpm --filter frontend authorization:check` | `0` | `PASS` | All 85 pages covered (84 routes), 5 PASS, 0 FAIL, 0 WARN |
 | Client & Error Contracts | `pnpm client:verify` | `0` | `PASS` | Generated client and backend error contract catalog verified |
 | Monorepo Typecheck | `pnpm typecheck` | `0` | `PASS` | `tsc --noEmit` passed on `@project/api` and `frontend` |
@@ -24,6 +24,7 @@
 | Backend Test Suite | `pnpm test:api` | `0` | `PASS` | **355/355 suites passed (1,506/1,506 tests)** |
 | Frontend Test Suite | `pnpm test:web` | `0` | `PASS` | **67/67 suites passed (403/403 tests)** |
 | Production Build | `pnpm build` | `0` | `PASS` | `nest build` (`@project/api`) & `next build` (`frontend`, 93 routes) succeeded |
+| Full-Stack Playwright E2E Suite | `pnpm test:e2e` | `0` | `PASS` | **17/17 E2E tests passed across 6 spec files (`40.5s`)** against live `@project/api`, PostgreSQL, and `frontend` |
 
 ---
 
@@ -60,7 +61,7 @@
 | **E2E-2** | Phase 8 | **Workforce Lifecycle & Employee Self-Service**: Verify HR Admin `/employees` hire/detail/decrypted contract & lifecycle actions; verify Employee `/profile` update & resignation/lifecycle request persistence | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-2-workforce-lifecycle-ess.spec.ts` | `0` | **5/5 tests PASS** (verified decrypted PII/contract fields without raw ciphertext, probation extension lifecycle persistence, ESS `/account/profile` contact update, and self-service resignation + HR cancellation) |
 | **E2E-3** | Phase 8 | **Attendance, Shift Requests & Leave Approval Workflow (`VS-3` Verification)**: Verify Employee leave/schedule/attendance exception request submission and Manager/HR approval workflow & widget sync | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-3-attendance-leave-approvals.spec.ts` | `0` | **5/5 tests PASS** (verified Employee leave submission + Manager Approval Inbox approval & balance sync, `/attendance` live view, and `/schedule/my-schedule` shift request + `/schedule/requests` HR approval) |
 | **E2E-4** | Phase 8 | **Payroll Run & `PD-04` Fail-Closed Guard Verification**: Verify HR Admin provisional payslip calculation (`isProvisional`) and `409 Conflict` / `PROVISIONAL_POLICY_UNCONFIRMED` guard on restricted settlement actions | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-4-payroll-pd04-guard.spec.ts` | `0` | **5/5 tests PASS** (verified `PROVISIONAL_POLICY_UNCONFIRMED` badges/warnings, disabled approve/publish buttons, `409 Conflict` on closing period via `/payroll/periods` UI, and `409 Conflict` on direct payslip publish) |
-| **E2E-5** | Phase 8 | **Onboarding, Task Templates & Full Regression Gate**: Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md` | `IN_PROGRESS` | 0 | `pnpm test:e2e && pnpm check:all` | `-` | Starting `E2E-5` |
+| **E2E-5** | Phase 8 | **Onboarding, Task Templates & Full Regression Gate**: Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md` | `PASS` | 1 | `pnpm test:e2e && pnpm check:all` | `0` | **17/17 E2E tests PASS (`40.5s`)** & `pnpm check:all` exit `0`; fixed `TasksDomainModule` route order, `InstantiateTaskTemplateUseCase` empty-body default, and `TaskTemplatesView`/`TaskWorkflowActions` contracts |
 
 ---
 

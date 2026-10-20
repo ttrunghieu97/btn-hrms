@@ -47,6 +47,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 
 interface ChecklistEntry {
+  text?: string;
+  done?: boolean;
   title?: string;
   completed?: boolean;
   [key: string]: unknown;
@@ -182,7 +184,13 @@ export function TaskTemplatesView() {
     setPriority(normalizedPriority);
     const lines = Array.isArray(item.checklist)
       ? item.checklist
-          .map((c) => (typeof c.title === 'string' ? c.title : ''))
+          .map((c) =>
+            typeof c.text === 'string'
+              ? c.text
+              : typeof c.title === 'string'
+                ? c.title
+                : '',
+          )
           .filter(Boolean)
           .join('\n')
       : '';
@@ -201,7 +209,7 @@ export function TaskTemplatesView() {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-      .map((itemTitle) => ({ title: itemTitle, completed: false }));
+      .map((itemText) => ({ text: itemText, done: false }));
 
     if (editingTemplate) {
       updateMutation.mutate({

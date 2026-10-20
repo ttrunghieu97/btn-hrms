@@ -4,6 +4,7 @@ describe('system roles seed', () => {
   it('defines enterprise system roles', () => {
     expect(SYSTEM_ROLES.map((role: any) => role.code)).toEqual([
       'employee_base',
+      'department_manager',
       'system_admin',
     ]);
   });

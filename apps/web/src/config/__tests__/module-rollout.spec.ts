@@ -10,10 +10,22 @@ import {
   isRouteInVisibleModule,
   resolveEnabledModuleIds,
 } from '../module-rollout';
-import { navGroups } from '../nav-config';
 import { generateNav } from '@/features/authorization/utils/nav-generator';
 
 describe('module-rollout centralized registry', () => {
+  const originalEnabledModules = process.env.NEXT_PUBLIC_ENABLED_MODULES;
+  const originalEnabledNavGroups = process.env.ENABLED_NAV_GROUPS;
+
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_ENABLED_MODULES;
+    delete process.env.ENABLED_NAV_GROUPS;
+    jest.resetModules();
+  });
+
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_ENABLED_MODULES = originalEnabledModules;
+    process.env.ENABLED_NAV_GROUPS = originalEnabledNavGroups;
+  });
   it('enables employees, attendance, and account routes by default', () => {
     const enabled = resolveEnabledModuleIds('');
     expect(Array.from(enabled).sort()).toEqual([
@@ -35,6 +47,7 @@ describe('module-rollout centralized registry', () => {
     expect(isModuleNavVisible('account', '')).toBe(false);
     expect(isModuleNavVisible('leave', '')).toBe(false);
 
+    const { navGroups } = require('../nav-config') as typeof import('../nav-config');
     const visibleNavUrls = navGroups
       .flatMap((g) => g.items)
       .filter((item) => item.visible)

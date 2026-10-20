@@ -153,7 +153,7 @@ export function TaskWorkflowActions({ task }: TaskWorkflowActionsProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {getActionUiConfig(pendingTransition ?? '').label}
+              {pendingTransition ? getActionUiConfig(pendingTransition).label : ''}
             </DialogTitle>
             <DialogDescription>{taskUiCopy.workflow.reasonDescription}</DialogDescription>
           </DialogHeader>
@@ -177,7 +177,7 @@ export function TaskWorkflowActions({ task }: TaskWorkflowActionsProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {getActionUiConfig(pendingTransition ?? '').label}
+              {pendingTransition ? getActionUiConfig(pendingTransition).label : ''}
             </DialogTitle>
             <DialogDescription>{taskUiCopy.workflow.resultDescription}</DialogDescription>
           </DialogHeader>

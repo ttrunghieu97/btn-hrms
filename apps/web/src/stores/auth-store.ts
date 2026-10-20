@@ -138,11 +138,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
         ) as number | null;
         applyAccessToken(accessToken, expiresIn ?? 1800);
 
-        const meRes = await usersControllerGetMe();
+        const [meRes] = await Promise.all([
+          usersControllerGetMe(),
+          fetch("/api/auth/permission-session", { method: "POST" }).catch(() => undefined),
+        ]);
         const user = meRes.status === 200 ? unwrapData<User | null>(meRes) : null;
         set({ user, initialized: true });
         void setSentryUser(user ? { id: user.id, username: user.username } : null);
-        await fetch("/api/auth/permission-session", { method: "POST" }).catch(() => undefined);
         toast.success(feedbackCopy.auth.signInSuccess);
         return user;
       } catch (err) {
@@ -170,11 +172,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
         ) as number | null;
         applyAccessToken(accessToken, expiresIn ?? 1800);
 
-        const meRes = await usersControllerGetMe();
+        const [meRes] = await Promise.all([
+          usersControllerGetMe(),
+          fetch("/api/auth/permission-session", { method: "POST" }).catch(() => undefined),
+        ]);
         const user = meRes.status === 200 ? unwrapData<User | null>(meRes) : null;
         set({ user, initialized: true });
         void setSentryUser(user ? { id: user.id, username: user.username } : null);
-        await fetch("/api/auth/permission-session", { method: "POST" }).catch(() => undefined);
         toast.success(feedbackCopy.auth.signInSuccess);
         return user;
       } catch (err) {

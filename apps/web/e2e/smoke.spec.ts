@@ -52,9 +52,25 @@ test.describe("E2E-0: Multi-Role Auth & Session Persistence Smoke Suite", () => 
     const tracker = attachRuntimeErrorTracker(page);
 
     await page.goto("/auth/sign-in");
-    await page.locator('input[name="username"]').fill("probation.emp");
-    await page.locator('input[name="password"]').fill(SEED_PASSWORD);
-    await page.locator('button[type="submit"]').click();
+    const usernameInput = page.locator('input[name="username"]');
+    const passwordInput = page.locator('input[name="password"]');
+    const submitButton = page.locator('button[type="submit"]');
+
+    await expect(usernameInput).toBeVisible();
+    await expect(passwordInput).toBeVisible();
+
+    await usernameInput.fill("probation.emp");
+    await passwordInput.fill(SEED_PASSWORD);
+
+    const permSessionPromise = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/auth/permission-session") &&
+        res.request().method() === "POST",
+    );
+
+    await submitButton.click();
+    const permRes = await permSessionPromise;
+    expect(permRes.status()).toBe(200);
 
     await page.waitForURL((url) => !url.pathname.startsWith("/auth/sign-in"), {
       timeout: 20000,

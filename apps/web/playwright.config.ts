@@ -23,6 +23,9 @@ const executablePath = resolveLocalChromiumExecutable();
 const webPort = Number(process.env.E2E_WEB_PORT || 8080);
 const apiPort = Number(process.env.E2E_API_PORT || 3001);
 const skipAuthSetup = process.env.E2E_SKIP_AUTH_SETUP === "1";
+const hasProductionBuild = fs.existsSync(
+  path.join(__dirname, ".next", "BUILD_ID"),
+);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,6 +34,9 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   timeout: 60000,
+  expect: {
+    timeout: 15000,
+  },
   use: {
     baseURL: `http://localhost:${webPort}`,
     trace: "on-first-retry",
@@ -51,13 +57,16 @@ export default defineConfig({
       },
     },
     {
-      command: process.env.E2E_WEB_PORT
-        ? `npx next start --port ${webPort}`
-        : `npx next dev --webpack --port ${webPort}`,
+      command:
+        process.env.E2E_WEB_PORT || hasProductionBuild
+          ? `npx next start --port ${webPort}`
+          : `npx next dev --webpack --port ${webPort}`,
       url: `http://localhost:${webPort}/auth/sign-in`,
       reuseExistingServer: !process.env.CI && !process.env.E2E_WEB_PORT,
       timeout: 120000,
       env: {
+        NODE_OPTIONS: "--max-old-space-size=4096",
+        BUILD_STANDALONE: "false",
         NEXT_PUBLIC_API_URL: "/api/v1",
         NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${apiPort}/api/v1`,
         INTERNAL_API_URL: `http://127.0.0.1:${apiPort}`,
