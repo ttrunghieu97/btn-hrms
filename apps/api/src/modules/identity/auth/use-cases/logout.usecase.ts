@@ -29,8 +29,15 @@ export class LogoutUseCase extends AuthUseCaseBase {
       return false;
     }
 
-    const allowedOrigins = this.authConfig.getAllowedFrontendOrigins();
-    if (allowedOrigins.includes(normalizedOrigin)) {
+    const allowedOrigins = new Set(this.authConfig.getAllowedFrontendOrigins());
+    for (const allowed of Array.from(allowedOrigins)) {
+      if (allowed.includes("://127.0.0.1:")) {
+        allowedOrigins.add(allowed.replace("://127.0.0.1:", "://localhost:"));
+      } else if (allowed.includes("://localhost:")) {
+        allowedOrigins.add(allowed.replace("://localhost:", "://127.0.0.1:"));
+      }
+    }
+    if (allowedOrigins.has(normalizedOrigin)) {
       return true;
     }
 

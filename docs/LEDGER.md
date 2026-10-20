@@ -2,10 +2,10 @@
 
 ## 1. Current Execution State
 
-- **Active Phase**: Phase 7 Complete (`GOAL_COMPLETE` — All Phases 0–7 & Vertical Slices `VS-1`..`VS-6` Verified)
-- **Branch / Base Commit**: `master` (preserved base commit `6df1b76` + atomic commits `a31351f`, `b0e38a2`, `835695a`, `b87a39a`, `78aa988`)
+- **Active Phase**: Phase 8 — Full-Stack Browser E2E Verification (`E2E-1` IN_PROGRESS)
+- **Branch / Base Commit**: `master` (preserved base commit `6df1b76` + Phase 0–7 commits through `78aa988`)
 - **Working Tree Policy**: Clean working tree; all changes committed atomically after passing quality gates.
-- **Next Immediate Action**: None — `pnpm check:all` exited with code `0` (355/355 API test suites, 67/67 Web test suites, full `@project/api` & `frontend` production builds).
+- **Next Immediate Action**: Execute `E2E-1` — Verify RBAC, route guards, `/workspace/hr` live metrics, `/notifications` Templates tab gating, and `/performance` self-scope isolation.
 
 ---
 
@@ -55,6 +55,12 @@
 | **VS-4** | Phase 3/4 | **Performance Scope Isolation & Permission Seed Sync**: Enforce self-scope on non-manager Performance queries/mutations & sync `seed.ts` with `@project/permissions` | `PASS` | 1 | `pnpm --filter @project/api test "performance\|seed.spec.ts" && pnpm check` | `0` | **24/24 API suites (53/53 tests) PASS**, `pnpm check` exit `0` |
 | **VS-5** | Phase 4 | **Workforce Lifecycle & Task Templates Unit Test Suite**: Add unit test suites for probation evaluation, scheduled transfers/terminations, self-service resignation/profile update, education CRUD, and task templates | `PASS` | 1 | `pnpm --filter @project/api test "evaluate-probation\|execute-scheduled-transfers\|submit-resignation-request\|update-my-profile\|schedule-termination\|education.usecases\|task-templates.usecases" && pnpm check` | `0` | **7/7 API suites (25/25 tests) PASS**, `pnpm check` exit `0` |
 | **VS-6** | Phase 5/6/7 | **Enterprise AppSec Audit, Completeness Matrix, Runbooks & Full Release Gate**: Complete `docs/security/`, `docs/testing/`, `docs/runbooks/` & run `pnpm check:all` | `PASS` | 1 | `pnpm check:all` | `0` | **355/355 API suites (1,506 tests) & 67/67 Web suites (403 tests) PASS**, full build PASS |
+| **E2E-0** | Phase 8 | **E2E Infrastructure, Auth Fixtures & Server Orchestration**: Harden Playwright config, deterministic multi-role seed (`seed.ts`), zero-5xx/pageerror fixture, server orchestration, and multi-role `storageState` (`admin`, `manager`, `employee`) | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/smoke.spec.ts` | `0` | **6/6 tests PASS** (3 persona auth setups + 3 smoke/session persistence tests; fixed CSRF origin alias, `session_perms` race, and workflow scheduler JSONB query) |
+| **E2E-1** | Phase 8 | **RBAC, Route Guards & Scope Isolation (`VS-1`, `VS-2`, `VS-4` Verification)**: Verify HR Admin `/workspace/hr` live metrics & `/notifications` Templates tab; verify Employee restricted from Templates tab, `/administration`, and isolated on `/performance` | `IN_PROGRESS` | 0 | `pnpm --filter frontend exec playwright test e2e/e2e-1-rbac-scope-isolation.spec.ts` | `-` | Starting `E2E-1` |
+| **E2E-2** | Phase 8 | **Workforce Lifecycle & Employee Self-Service**: Verify HR Admin `/employees` hire/detail/decrypted contract & lifecycle actions; verify Employee `/profile` update & resignation/lifecycle request persistence | `TODO` | 0 | `pnpm test:e2e e2e/e2e-2-workforce-lifecycle-ess.spec.ts` | `-` | Pending `E2E-1` |
+| **E2E-3** | Phase 8 | **Attendance, Shift Requests & Leave Approval Workflow (`VS-3` Verification)**: Verify Employee leave/schedule/attendance exception request submission and Manager/HR approval workflow & widget sync | `TODO` | 0 | `pnpm test:e2e e2e/e2e-3-attendance-leave-approvals.spec.ts` | `-` | Pending `E2E-2` |
+| **E2E-4** | Phase 8 | **Payroll Run & `PD-04` Fail-Closed Guard Verification**: Verify HR Admin provisional payslip calculation (`isProvisional`) and `409 Conflict` / `PROVISIONAL_POLICY_UNCONFIRMED` guard on restricted settlement actions | `TODO` | 0 | `pnpm test:e2e e2e/e2e-4-payroll-pd04-guard.spec.ts` | `-` | Pending `E2E-3` |
+| **E2E-5** | Phase 8 | **Onboarding, Task Templates & Full Regression Gate**: Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md` | `TODO` | 0 | `pnpm test:e2e && pnpm check:all` | `-` | Pending `E2E-4` |
 
 ---
 

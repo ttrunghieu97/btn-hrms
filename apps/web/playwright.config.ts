@@ -37,19 +37,35 @@ export default defineConfig({
     screenshot: "only-on-failure",
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
-  webServer: {
-    command: process.env.E2E_WEB_PORT
-      ? `npx next start --port ${webPort}`
-      : `npx next dev --webpack --port ${webPort}`,
-    url: `http://localhost:${webPort}/auth/sign-in`,
-    reuseExistingServer: !process.env.CI && !process.env.E2E_WEB_PORT,
-    timeout: 120000,
-    env: {
-      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${apiPort}`,
-      INTERNAL_API_URL: `http://127.0.0.1:${apiPort}`,
-      API_URL: `http://127.0.0.1:${apiPort}`,
+  webServer: [
+    {
+      command: `pnpm --dir ../api start:dev`,
+      url: `http://127.0.0.1:${apiPort}/api/v1/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      env: {
+        PORT: String(apiPort),
+        FRONTEND_URL: `http://localhost:${webPort},http://127.0.0.1:${webPort}`,
+        CORS_ORIGIN: `http://localhost:${webPort},http://127.0.0.1:${webPort}`,
+        ENABLED_NAV_GROUPS: "*",
+      },
     },
-  },
+    {
+      command: process.env.E2E_WEB_PORT
+        ? `npx next start --port ${webPort}`
+        : `npx next dev --webpack --port ${webPort}`,
+      url: `http://localhost:${webPort}/auth/sign-in`,
+      reuseExistingServer: !process.env.CI && !process.env.E2E_WEB_PORT,
+      timeout: 120000,
+      env: {
+        NEXT_PUBLIC_API_URL: "/api/v1",
+        NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${apiPort}/api/v1`,
+        INTERNAL_API_URL: `http://127.0.0.1:${apiPort}`,
+        API_URL: `http://127.0.0.1:${apiPort}`,
+        NEXT_PUBLIC_ENABLED_MODULES: "*",
+      },
+    },
+  ],
   projects: skipAuthSetup
     ? [
         {
@@ -64,9 +80,11 @@ export default defineConfig({
         },
         {
           name: "chromium",
-          use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/admin.json" },
+          use: {
+            ...devices["Desktop Chrome"],
+            storageState: "playwright/.auth/admin.json",
+          },
           dependencies: ["setup"],
         },
       ],
 });
-

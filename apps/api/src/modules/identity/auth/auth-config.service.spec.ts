@@ -43,14 +43,17 @@ describe("AuthConfigService", () => {
     expect(opts.maxAge).toBe(30 * 60 * 1000);
   });
 
-  it("parses allowed frontend origins from APP_URL", () => {
+  it("parses allowed frontend origins from APP_URL, FRONTEND_URL, and CORS_ORIGIN", () => {
     const svc = makeService({
       APP_URL: "http://localhost:8080, https://hrms.example.com/ ",
+      FRONTEND_URL: "http://localhost:8080",
+      CORS_ORIGIN: "http://127.0.0.1:8080/",
     });
 
     expect(svc.getAllowedFrontendOrigins()).toEqual([
       "http://localhost:8080",
       "https://hrms.example.com",
+      "http://127.0.0.1:8080",
     ]);
   });
 });

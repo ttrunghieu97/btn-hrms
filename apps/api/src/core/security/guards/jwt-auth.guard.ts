@@ -182,6 +182,13 @@ export class JwtAuthGuard implements CanActivate {
           }
         }
       }
+      for (const allowed of Array.from(allowedOrigins)) {
+        if (allowed.includes("://127.0.0.1:")) {
+          allowedOrigins.add(allowed.replace("://127.0.0.1:", "://localhost:"));
+        } else if (allowed.includes("://localhost:")) {
+          allowedOrigins.add(allowed.replace("://localhost:", "://127.0.0.1:"));
+        }
+      }
 
       if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin)) {
         throwForbidden(

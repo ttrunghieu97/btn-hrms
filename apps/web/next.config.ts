@@ -4,6 +4,7 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
 
 const baseConfig: NextConfig = {
+  devIndicators: false,
   output: process.env.BUILD_STANDALONE === "true" ? "standalone" : undefined,
   // Required for standalone mode in a pnpm monorepo: traces dependencies from workspace root
   outputFileTracingRoot: path.resolve(__dirname, '../../'),

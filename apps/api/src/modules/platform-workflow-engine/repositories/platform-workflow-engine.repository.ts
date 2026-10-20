@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, desc, eq, asc, count, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, asc, count, inArray, isNull, sql } from "drizzle-orm";
 import { DATABASE_CONNECTION } from "../../../infrastructure/database/database.provider";
 import { AppDatabase } from "../../../infrastructure/database/database-client.type";
 import {
@@ -125,11 +125,11 @@ export class PlatformWorkflowEngineRepository {
   ) {
     const db = this.db as any;
     const instances = await db.query.workflowInstances.findMany({
-      where: (wi: any, { eq, and, lte }: any) =>
+      where: (wi: any, { eq, and }: any) =>
         and(
           eq(wi.definitionId, definitionId),
           eq(wi.status, "active"),
-          lte(wi.metadata.effectiveDate, beforeDate),
+          sql`(${wi.metadata}->>'effectiveDate') <= ${beforeDate}`,
         ),
       limit,
     });

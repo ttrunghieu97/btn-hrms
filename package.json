@@ -31,6 +31,7 @@
     "test": "pnpm --filter @project/api test --maxWorkers=3 && pnpm --filter frontend test",
     "test:api": "pnpm --filter @project/api test --maxWorkers=3",
     "test:web": "pnpm --filter frontend test",
+    "test:e2e": "pnpm --filter frontend e2e",
     "client:generate": "pnpm --filter @project/api openapi:generate && pnpm --filter @project/api error-contracts:json ../web/error-contracts.manifest.json && pnpm --filter frontend client:generate",
     "client:verify": "pnpm --filter @project/api error-contracts:verify ../web/error-contracts.manifest.json && pnpm --filter frontend client:verify && pnpm --filter frontend typecheck",
     "openapi:json": "pnpm --filter @project/api openapi:json",

@@ -83,6 +83,7 @@ scratch/
 *.orig
 *.old
 apps/web/test-results/
+apps/web/playwright/.auth/
 
 # App-local generated temp files
 apps/web/openapi.tmp.json

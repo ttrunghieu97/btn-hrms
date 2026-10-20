@@ -169,6 +169,13 @@ export class AuthController {
       allowedOrigins.add(`http://${host}`);
       allowedOrigins.add(`https://${host}`);
     }
+    for (const allowed of Array.from(allowedOrigins)) {
+      if (allowed.includes("://127.0.0.1:")) {
+        allowedOrigins.add(allowed.replace("://127.0.0.1:", "://localhost:"));
+      } else if (allowed.includes("://localhost:")) {
+        allowedOrigins.add(allowed.replace("://localhost:", "://127.0.0.1:"));
+      }
+    }
 
     if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin!)) {
       throwForbidden(

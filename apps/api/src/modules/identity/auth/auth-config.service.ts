@@ -7,11 +7,21 @@ export class AuthConfigService {
   constructor(private readonly config: ConfigService) {}
 
   getAllowedFrontendOrigins() {
-    const raw = String(this.config.get("APP_URL") || "");
-    return raw
-      .split(",")
-      .map((value) => value.trim().replace(/\/+$/, ""))
-      .filter(Boolean);
+    const raw = [
+      this.config.get("APP_URL"),
+      this.config.get("FRONTEND_URL"),
+      this.config.get("CORS_ORIGIN"),
+    ]
+      .filter(Boolean)
+      .join(",");
+    return Array.from(
+      new Set(
+        raw
+          .split(",")
+          .map((value) => value.trim().replace(/\/+$/, ""))
+          .filter(Boolean),
+      ),
+    );
   }
 
   getAccessCookieName() {
