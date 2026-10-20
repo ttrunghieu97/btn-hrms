@@ -53,8 +53,19 @@ interface LeaveRequestRow {
   id: string;
   employeeId?: string;
   employeeName?: string;
+  employee?: {
+    id: string;
+    employeeCode?: string;
+    fullName?: string;
+    departmentName?: string | null;
+  };
   leaveTypeId?: string;
   leaveTypeName?: string;
+  leaveType?: {
+    id: string;
+    code?: string;
+    name?: string;
+  };
   startDate?: string;
   endDate?: string;
   status?: string;
@@ -101,7 +112,7 @@ export function LeaveRequestsTable({ hideHeader = false }: LeaveRequestsTablePro
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('employeeName', {
+      columnHelper.accessor((row) => row.employeeName ?? row.employee?.fullName, {
         id: 'employee',
         header: commonUiCopy.employee ?? 'Nhân viên',
         cell: ({ row, getValue }) => (
@@ -114,7 +125,7 @@ export function LeaveRequestsTable({ hideHeader = false }: LeaveRequestsTablePro
           </button>
         ),
       }),
-      columnHelper.accessor('leaveTypeName', {
+      columnHelper.accessor((row) => row.leaveTypeName ?? row.leaveType?.name, {
         id: 'type',
         header: commonUiCopy.type ?? 'Loại',
         cell: ({ getValue }) => (

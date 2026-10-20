@@ -91,14 +91,18 @@ export function MyScheduleView() {
 
   async function handleSubmitRequest() {
     if (!reqDate) return;
-    await createRequestMut.mutateAsync({
-      requestType: reqType,
-      date: reqDate,
-      reason: reqReason || undefined,
-    });
-    setRequestSheetOpen(false);
-    setReqDate('');
-    setReqReason('');
+    try {
+      await createRequestMut.mutateAsync({
+        requestType: reqType,
+        date: reqDate,
+        reason: reqReason || undefined,
+      });
+      setRequestSheetOpen(false);
+      setReqDate('');
+      setReqReason('');
+    } catch {
+      // Handled by useCreateRequest onError toast
+    }
   }
 
   return (

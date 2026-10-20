@@ -137,6 +137,28 @@ class CreateSchedulePolicyHandler implements PolicyHandler {
   }
 }
 
+class CreateScheduleRequestPolicyHandler implements PolicyHandler {
+  readonly policyName = "CreateScheduleRequest";
+  readonly requiredAnyOfPermissions = [
+    Permissions.SCHEDULE_EDIT_SELF,
+    Permissions.SCHEDULE_VIEW_SELF,
+    Permissions.SCHEDULE_CREATE,
+    Permissions.SCHEDULE_EDIT_ALL,
+    Permissions.SCHEDULE_EDIT_DEPARTMENT,
+  ];
+  handle(user: AuthUser): boolean {
+    if (user.isSuperAdmin || user.permissions?.includes("sys:all")) return true;
+    const perms = user.permissions ?? [];
+    return (
+      perms.includes(Permissions.SCHEDULE_EDIT_SELF) ||
+      perms.includes(Permissions.SCHEDULE_VIEW_SELF) ||
+      perms.includes(Permissions.SCHEDULE_CREATE) ||
+      perms.includes(Permissions.SCHEDULE_EDIT_ALL) ||
+      perms.includes(Permissions.SCHEDULE_EDIT_DEPARTMENT)
+    );
+  }
+}
+
 class DeleteSchedulePolicyHandler implements PolicyHandler {
   readonly policyName = "DeleteSchedule";
   readonly requiredAnyOfPermissions = [
@@ -258,6 +280,7 @@ export const SchedulePolicies = {
   edit: new EditSchedulePolicyHandler(),
   update: new EditSchedulePolicyHandler(),
   create: new CreateSchedulePolicyHandler(),
+  requestSelf: new CreateScheduleRequestPolicyHandler(),
   delete: new DeleteSchedulePolicyHandler(),
   copy: new CopySchedulePolicyHandler(),
 };

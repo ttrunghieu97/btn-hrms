@@ -64,7 +64,7 @@ export class ApprovalInboxController {
     }
 
     return this.gateway.decideStep({
-      requestId: id,
+      requestId: step.requestId ?? id,
       stepIndex: step.stepIndex,
       decision: "approve",
       decidedByUserId: req.user.id,
@@ -90,7 +90,7 @@ export class ApprovalInboxController {
     }
 
     return this.gateway.decideStep({
-      requestId: id,
+      requestId: step.requestId ?? id,
       stepIndex: step.stepIndex,
       decision: "reject",
       decidedByUserId: req.user.id,

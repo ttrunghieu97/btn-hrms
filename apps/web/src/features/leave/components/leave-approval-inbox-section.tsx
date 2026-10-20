@@ -12,6 +12,9 @@ import {
   useRejectLeaveInboxRequest,
 } from '../api/mutations';
 import { LeaveRequestDetailDialog, type LeaveRequestDetailItem } from './leave-request-detail-dialog';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasPermission } from '@project/permissions';
+import { permissions } from '@/lib/permissions';
 
 interface InboxItem {
   approvalRequestId: string;
@@ -36,7 +39,11 @@ interface InboxItem {
 }
 
 export function LeaveApprovalInboxSection() {
-  const { data, isLoading } = useApprovalInboxControllerList();
+  const user = useAuthStore((s) => s.user);
+  const canApprove = hasPermission(user?.permissions ?? [], permissions.leave.approve);
+  const { data, isLoading } = useApprovalInboxControllerList({
+    query: { enabled: canApprove },
+  });
   const rawItems = extractList<InboxItem>(data);
 
   const [selectedDetail, setSelectedDetail] = React.useState<LeaveRequestDetailItem | null>(null);

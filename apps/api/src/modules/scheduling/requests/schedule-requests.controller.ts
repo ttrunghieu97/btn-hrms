@@ -37,7 +37,7 @@ export class ScheduleRequestsController {
   ) {}
 
   @Post()
-  @CheckPolicy(SchedulePolicies.create)
+  @CheckPolicy(SchedulePolicies.requestSelf)
   @AuditLog({ action: "schedule_request_create", entity: "schedule_request" })
   @ApiOperation({ summary: "Submit a schedule request (employee)" })
   async create(

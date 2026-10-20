@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { CreateLeaveRequestDto } from "../dto/create-leave-request.dto";
 import { LeaveRequestsRepository } from "../repositories/leave-requests.repository";
 import { LeaveAttendanceReconciliationService } from "../services/leave-attendance-reconciliation.service";
@@ -13,6 +13,7 @@ import { LeaveRequestMapper } from "../mappers/leave-request.mapper";
 import { LeaveApprovalRequestedEvent } from "../../../../core/events/events/leave-approval-requested.event";
 import { LeaveApprovedEvent } from "../../../../core/events/events/leave-approved.event";
 import { EventOutboxService } from "../../../../core/events/event-outbox.service";
+import { EventOutboxDispatcherService } from "../../../../core/events/event-outbox-dispatcher.service";
 import { ContextLogger } from "../../../../shared/logging/context-logger";
 import { RequestContextService } from "../../../../shared/context/request-context.service";
 import type { AuthUser } from "../../../../core/security/types/auth-user.interface";
@@ -26,6 +27,7 @@ export class CreateLeaveRequestUseCase {
     private readonly reconciliationService: LeaveAttendanceReconciliationService,
     private readonly requestContext: RequestContextService,
     private readonly authService: LeaveAuthorizationService,
+    @Optional() private readonly outboxDispatcher?: EventOutboxDispatcherService,
   ) {
     this.logger = new ContextLogger(this.requestContext, CreateLeaveRequestUseCase.name);
   }
@@ -264,6 +266,12 @@ export class CreateLeaveRequestUseCase {
       const approved = await this.leaveRequestsRepo.findById(created!.id);
       if (approved) {
         await this.reconciliationService.reconcileApprovedLeave(approved);
+      }
+    } else if (this.outboxDispatcher) {
+      try {
+        await this.outboxDispatcher.dispatchOnce();
+      } catch {
+        // Non-fatal: periodic outbox dispatcher will retry
       }
     }
 
