@@ -490,11 +490,16 @@ export async function evaluateEmployeeProbation(
   id: string,
   data: EvaluateProbationPayload,
 ): Promise<EvaluateProbationResponse> {
+  const { extendedEndDate, lastWorkingDate: _lastWorkingDate, ...rest } = data;
+  const payload = {
+    ...rest,
+    ...(extendedEndDate ? { newProbationEndDate: extendedEndDate } : {}),
+  };
   const response = await customFetch<EvaluateProbationResponse>(
     `/api/v1/employees/${id}/probation/evaluate`,
     {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     },
   );

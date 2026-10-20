@@ -81,7 +81,10 @@ export function useSubmitMyResignationMutation() {
       }>('/api/v1/employees/me/resignation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          requestedLastWorkingDate: payload.lastWorkingDate || payload.effectiveDate,
+          reason: payload.reason,
+        }),
       });
       return unwrapData(response);
     },
