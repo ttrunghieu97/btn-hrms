@@ -2,10 +2,10 @@
 
 ## 1. Current Execution State
 
-- **Active Phase**: Phase 8 — Full-Stack Browser E2E Verification (`E2E-2` IN_PROGRESS)
+- **Active Phase**: Phase 8 — Full-Stack Browser E2E Verification (`E2E-5` IN_PROGRESS)
 - **Branch / Base Commit**: `master` (preserved base commit `6df1b76` + Phase 0–8 commits)
 - **Working Tree Policy**: Clean working tree; all changes committed atomically after passing quality gates.
-- **Next Immediate Action**: Execute `E2E-2` — Verify Workforce Lifecycle (`/employees`, `/employees/[id]`, decrypted PII, probation evaluation) & Employee Self-Service (`/account/profile` update & resignation request).
+- **Next Immediate Action**: Execute `E2E-5` — Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md`.
 
 ---
 
@@ -59,8 +59,8 @@
 | **E2E-1** | Phase 8 | **RBAC, Route Guards & Scope Isolation (`VS-1`, `VS-2`, `VS-4` Verification)**: Verify HR Admin `/workspace/hr` live metrics & `/notifications` Templates tab; verify Employee restricted from Templates tab, `/administration`, and isolated on `/performance` | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-1-rbac-scope-isolation.spec.ts` | `0` | **5/5 tests PASS** (verified `/workspace/hr` live headcount, Notification Templates CRUD & RBAC gating, `/unauthorized` redirects, and `/performance` self-scope isolation + cross-actor 403) |
 | **E2E-2** | Phase 8 | **Workforce Lifecycle & Employee Self-Service**: Verify HR Admin `/employees` hire/detail/decrypted contract & lifecycle actions; verify Employee `/profile` update & resignation/lifecycle request persistence | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-2-workforce-lifecycle-ess.spec.ts` | `0` | **5/5 tests PASS** (verified decrypted PII/contract fields without raw ciphertext, probation extension lifecycle persistence, ESS `/account/profile` contact update, and self-service resignation + HR cancellation) |
 | **E2E-3** | Phase 8 | **Attendance, Shift Requests & Leave Approval Workflow (`VS-3` Verification)**: Verify Employee leave/schedule/attendance exception request submission and Manager/HR approval workflow & widget sync | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-3-attendance-leave-approvals.spec.ts` | `0` | **5/5 tests PASS** (verified Employee leave submission + Manager Approval Inbox approval & balance sync, `/attendance` live view, and `/schedule/my-schedule` shift request + `/schedule/requests` HR approval) |
-| **E2E-4** | Phase 8 | **Payroll Run & `PD-04` Fail-Closed Guard Verification**: Verify HR Admin provisional payslip calculation (`isProvisional`) and `409 Conflict` / `PROVISIONAL_POLICY_UNCONFIRMED` guard on restricted settlement actions | `IN_PROGRESS` | 0 | `pnpm --filter frontend exec playwright test e2e/e2e-4-payroll-pd04-guard.spec.ts` | `-` | Starting `E2E-4` |
-| **E2E-5** | Phase 8 | **Onboarding, Task Templates & Full Regression Gate**: Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md` | `TODO` | 0 | `pnpm test:e2e && pnpm check:all` | `-` | Pending `E2E-4` |
+| **E2E-4** | Phase 8 | **Payroll Run & `PD-04` Fail-Closed Guard Verification**: Verify HR Admin provisional payslip calculation (`isProvisional`) and `409 Conflict` / `PROVISIONAL_POLICY_UNCONFIRMED` guard on restricted settlement actions | `PASS` | 1 | `pnpm --filter frontend exec playwright test e2e/e2e-4-payroll-pd04-guard.spec.ts` | `0` | **5/5 tests PASS** (verified `PROVISIONAL_POLICY_UNCONFIRMED` badges/warnings, disabled approve/publish buttons, `409 Conflict` on closing period via `/payroll/periods` UI, and `409 Conflict` on direct payslip publish) |
+| **E2E-5** | Phase 8 | **Onboarding, Task Templates & Full Regression Gate**: Verify `/onboarding` & `/tasks` end-to-end, run full `pnpm test:e2e` + `pnpm check:all`, and document `docs/testing/e2e-verification-report.md` | `IN_PROGRESS` | 0 | `pnpm test:e2e && pnpm check:all` | `-` | Starting `E2E-5` |
 
 ---
 

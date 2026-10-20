@@ -22,6 +22,7 @@ export const createPayrollPeriodSchema = z.object({
   startsOn: z.string().min(1, 'Vui lòng chọn ngày bắt đầu').regex(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng YYYY-MM-DD'),
   endsOn: z.string().min(1, 'Vui lòng chọn ngày kết thúc').regex(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng YYYY-MM-DD'),
   payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Định dạng YYYY-MM-DD').or(z.literal('')),
+  status: z.enum(['draft', 'open', 'processing', 'closed', 'paid']).optional(),
 });
 
 export type CreatePayrollPeriodFormValues = z.infer<typeof createPayrollPeriodSchema>;

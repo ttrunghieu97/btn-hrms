@@ -50,21 +50,29 @@ export function PayrollRunsPageClient() {
 
   const handleSave = useCallback(
     async (values: CreatePayrollRunPayload) => {
-      if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, data: values });
-      } else {
-        await createMutation.mutateAsync(values);
+      try {
+        if (editing) {
+          await updateMutation.mutateAsync({ id: editing.id, data: values });
+        } else {
+          await createMutation.mutateAsync(values);
+        }
+        setDialogOpen(false);
+        setEditing(null);
+      } catch {
+        // Error notification handled by mutation onError
       }
-      setDialogOpen(false);
-      setEditing(null);
     },
     [editing, createMutation, updateMutation],
   );
 
   const handleGenerateConfirm = useCallback(async () => {
     if (!generateId) return;
-    await generateMutation.mutateAsync(generateId);
-    setGenerateId(null);
+    try {
+      await generateMutation.mutateAsync(generateId);
+      setGenerateId(null);
+    } catch {
+      // Error notification handled by mutation onError
+    }
   }, [generateId, generateMutation]);
 
   const handleView = useCallback(

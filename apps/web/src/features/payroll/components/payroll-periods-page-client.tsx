@@ -42,13 +42,17 @@ export function PayrollPeriodsPageClient() {
 
   const handleSave = useCallback(
     async (values: CreatePayrollPeriodPayload) => {
-      if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, data: values });
-      } else {
-        await createMutation.mutateAsync(values);
+      try {
+        if (editing) {
+          await updateMutation.mutateAsync({ id: editing.id, data: values });
+        } else {
+          await createMutation.mutateAsync(values);
+        }
+        setDialogOpen(false);
+        setEditing(null);
+      } catch {
+        // Error notification handled by mutation onError
       }
-      setDialogOpen(false);
-      setEditing(null);
     },
     [editing, createMutation, updateMutation],
   );

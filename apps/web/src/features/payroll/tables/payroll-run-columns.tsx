@@ -14,15 +14,30 @@ export const onViewRef = { current: (_id: string) => {} };
 function ActionsCell({ row }: { row: Row<PayrollRun> }) {
   return (
     <div className='flex items-center gap-1'>
-      <Button variant='ghost' size='icon' onClick={() => onViewRef.current(row.original.id)}>
+      <Button
+        variant='ghost'
+        size='icon'
+        aria-label='Xem chi tiết bảng lương'
+        onClick={() => onViewRef.current(row.original.id)}
+      >
         <Icons.search className='h-4 w-4' />
       </Button>
       {row.original.status === 'draft' && (
         <>
-          <Button variant='ghost' size='icon' onClick={() => onEditRunRef.current(row.original)}>
+          <Button
+            variant='ghost'
+            size='icon'
+            aria-label='Sửa bảng lương'
+            onClick={() => onEditRunRef.current(row.original)}
+          >
             <Icons.edit className='h-4 w-4' />
           </Button>
-          <Button variant='ghost' size='icon' onClick={() => onGenerateRef.current(row.original.id)}>
+          <Button
+            variant='ghost'
+            size='icon'
+            aria-label='Tính toán phiếu lương'
+            onClick={() => onGenerateRef.current(row.original.id)}
+          >
             <Icons.sparkles className='h-4 w-4' />
           </Button>
         </>

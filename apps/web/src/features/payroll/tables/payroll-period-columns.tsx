@@ -17,7 +17,12 @@ export const onEditPeriodRef = { current: (_item: PayrollPeriod) => {} };
 
 function ActionsCell({ row }: { row: Row<PayrollPeriod> }) {
   return (
-    <Button variant='ghost' size='icon' onClick={() => onEditPeriodRef.current(row.original)}>
+    <Button
+      variant='ghost'
+      size='icon'
+      aria-label='Sửa kỳ lương'
+      onClick={() => onEditPeriodRef.current(row.original)}
+    >
       <Icons.edit className='h-4 w-4' />
     </Button>
   );

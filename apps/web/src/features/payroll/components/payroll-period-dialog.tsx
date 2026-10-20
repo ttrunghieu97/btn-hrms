@@ -5,8 +5,15 @@ import { useAppForm } from '@/components/ui/tanstack-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { createPayrollPeriodSchema } from '../schemas/payroll-period-schema';
-import type { PayrollPeriod, CreatePayrollPeriodPayload } from '../types';
+import type { PayrollPeriod, CreatePayrollPeriodPayload, PayrollPeriodStatus } from '../types';
 
 type FormValues = {
   code: string;
@@ -14,6 +21,7 @@ type FormValues = {
   startsOn: string;
   endsOn: string;
   payDate: string;
+  status?: PayrollPeriodStatus;
 };
 
 interface Props {
@@ -24,6 +32,12 @@ interface Props {
   saving?: boolean;
 }
 
+const EDITABLE_PERIOD_STATUS_OPTIONS: ReadonlyArray<{ value: PayrollPeriodStatus; label: string }> = [
+  { value: 'draft', label: 'Nháp' },
+  { value: 'open', label: 'Đang mở' },
+  { value: 'closed', label: 'Đã đóng' },
+];
+
 export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, saving }: Props) {
   const form = useAppForm({
     defaultValues: {
@@ -32,30 +46,17 @@ export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, savin
       startsOn: '',
       endsOn: '',
       payDate: '',
+      status: 'open',
     } as FormValues,
     validators: { onSubmit: createPayrollPeriodSchema },
     onSubmit: ({ value }) => {
-      const dateMatch = value.startsOn.match(/^(\d{4})-(\d{2})/);
-      const parsedYear = dateMatch ? Number(dateMatch[1]) : editing?.year;
-      const parsedMonth = dateMatch ? Number(dateMatch[2]) : editing?.month;
-      const validYear =
-        parsedYear !== undefined && parsedYear >= 1970 && parsedYear <= 2100
-          ? parsedYear
-          : undefined;
-      const validMonth =
-        parsedMonth !== undefined && parsedMonth >= 1 && parsedMonth <= 12
-          ? parsedMonth
-          : undefined;
-
       const payload: CreatePayrollPeriodPayload = {
         code: value.code,
         name: value.name,
-        ...(validYear !== undefined ? { year: validYear } : {}),
-        ...(validMonth !== undefined ? { month: validMonth } : {}),
-        ...(editing?.attendancePeriodId ? { attendancePeriodId: editing.attendancePeriodId } : {}),
         startsOn: value.startsOn,
         endsOn: value.endsOn,
         payDate: value.payDate || undefined,
+        ...(value.status ? { status: value.status } : {}),
       };
       onSave(payload);
     },
@@ -69,6 +70,7 @@ export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, savin
       form.setFieldValue('startsOn', editing.startsOn);
       form.setFieldValue('endsOn', editing.endsOn);
       form.setFieldValue('payDate', editing.payDate ?? '');
+      form.setFieldValue('status', editing.status);
     } else {
       form.reset();
     }
@@ -170,6 +172,34 @@ export function PayrollPeriodDialog({ open, onOpenChange, onSave, editing, savin
                 )}
               </form.AppField>
             </div>
+
+            {editing && (
+              <form.AppField name='status'>
+                {(field) => (
+                  <field.FieldSet>
+                    <field.FieldLabel>Trạng thái kỳ lương</field.FieldLabel>
+                    <field.Field>
+                      <Select
+                        value={field.state.value ?? editing.status}
+                        onValueChange={(v) => field.handleChange(v as PayrollPeriodStatus)}
+                      >
+                        <SelectTrigger aria-label='Trạng thái kỳ lương'>
+                          <SelectValue placeholder='Chọn trạng thái' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDITABLE_PERIOD_STATUS_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </field.Field>
+                    <field.FieldError />
+                  </field.FieldSet>
+                )}
+              </form.AppField>
+            )}
 
             <div className='flex justify-end gap-3 pt-2'>
               <form.Subscribe selector={(s) => s.isSubmitting}>
