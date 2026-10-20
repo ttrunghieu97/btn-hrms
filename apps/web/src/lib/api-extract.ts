@@ -74,5 +74,5 @@ export function unwrapData<T>(input: unknown): T {
   if (envelope && "data" in envelope && envelope["data"] !== undefined) {
     return envelope["data"] as T;
   }
-  return input as T;
+  return (envelope ?? input) as T;
 }

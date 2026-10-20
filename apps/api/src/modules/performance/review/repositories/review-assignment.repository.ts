@@ -82,4 +82,51 @@ export class ReviewAssignmentRepository {
       submitted: all.filter((r) => r.status === "submitted").length,
     };
   }
+
+  async findByCycleWithNames(
+    cycleId: string,
+    employeeId?: string,
+  ): Promise<
+    Array<
+      ReviewAssignmentRow & {
+        employeeName: string | null;
+        reviewerName: string | null;
+      }
+    >
+  > {
+    const conditions = [eq(schema.reviewAssignments.cycleId, cycleId)];
+    if (employeeId) {
+      conditions.push(eq(schema.reviewAssignments.employeeId, employeeId));
+    }
+    const assignments = await this.db.query.reviewAssignments.findMany({
+      where: and(...conditions),
+    });
+    if (assignments.length === 0) return [];
+
+    const empIds = Array.from(
+      new Set(
+        assignments.flatMap((a) => [a.employeeId, a.reviewerId]).filter(Boolean),
+      ),
+    );
+    const empRows =
+      empIds.length > 0
+        ? await this.db
+            .select({
+              id: schema.employees.id,
+              firstName: schema.employees.firstName,
+              lastName: schema.employees.lastName,
+            })
+            .from(schema.employees)
+            .where(inArray(schema.employees.id, empIds))
+        : [];
+    const nameMap = new Map(
+      empRows.map((e) => [e.id, `${e.lastName} ${e.firstName}`.trim()]),
+    );
+
+    return assignments.map((a) => ({
+      ...a,
+      employeeName: nameMap.get(a.employeeId) ?? null,
+      reviewerName: nameMap.get(a.reviewerId) ?? null,
+    }));
+  }
 }

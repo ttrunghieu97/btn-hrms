@@ -51,9 +51,10 @@ export const workspaceApi = {
   },
 
   async getMyWorkflowTasks(signal?: AbortSignal): Promise<WorkspaceTasksResponseDto> {
-    return customFetch<WorkspaceTasksResponseDto>('/workflow/tasks/my', {
+    const res = await customFetch<WorkspaceTasksResponseDto>('/api/v1/workflow/tasks/my', {
       signal,
     });
+    return unwrapData<WorkspaceTasksResponseDto>(res);
   },
 
   async getTodaySummary(signal?: AbortSignal): Promise<TodaySummary> {

@@ -17,6 +17,14 @@ export class ListReviewsUseCase {
       hasPermission(user.permissions ?? [], Permissions.PERFORMANCE_MANAGE);
 
     if (canManage) {
+      if (typeof this.repo.findByCycleWithNames === "function") {
+        const rows = await this.repo.findByCycleWithNames(cycleId);
+        return {
+          total: rows.length,
+          submitted: rows.filter((r) => r.status === "submitted").length,
+          rows,
+        };
+      }
       return this.repo.countByCycle(cycleId);
     }
 
@@ -25,6 +33,15 @@ export class ListReviewsUseCase {
         "Employee profile is required to view self-scoped performance reviews",
         ERROR_CODES.FORBIDDEN,
       );
+    }
+
+    if (typeof this.repo.findByCycleWithNames === "function") {
+      const rows = await this.repo.findByCycleWithNames(cycleId, user.employeeId);
+      return {
+        total: rows.length,
+        submitted: rows.filter((r) => r.status === "submitted").length,
+        rows,
+      };
     }
 
     const selfReviews = await this.repo.findByEmployee(user.employeeId, cycleId);
