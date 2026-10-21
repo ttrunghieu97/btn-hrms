@@ -35,6 +35,29 @@ const themeInitScript = `
     root.classList.toggle('dark', resolved === 'dark');
     root.style.colorScheme = resolved;
   } catch {}
+  try {
+    if (typeof window.performance?.measure === 'function') {
+      const origMeasure = window.performance.measure.bind(window.performance);
+      window.performance.measure = function (name, startOrOptions, endMark) {
+        if (startOrOptions && typeof startOrOptions === 'object') {
+          const rawStart = startOrOptions.start;
+          const rawEnd = startOrOptions.end;
+          const safeStart = typeof rawStart === 'number'
+            ? (Number.isFinite(rawStart) && rawStart >= 0 ? rawStart : 0)
+            : rawStart;
+          const safeEnd = typeof rawEnd === 'number'
+            ? (Number.isFinite(rawEnd) && rawEnd >= 0 ? Math.max(typeof safeStart === 'number' ? safeStart : 0, rawEnd) : (typeof safeStart === 'number' ? safeStart : 0))
+            : rawEnd;
+          startOrOptions = { ...startOrOptions, start: safeStart, end: safeEnd };
+        }
+        try {
+          return origMeasure(name, startOrOptions, endMark);
+        } catch {
+          return undefined;
+        }
+      };
+    }
+  } catch {}
 })();`;
 
 export const metadata: Metadata = {
