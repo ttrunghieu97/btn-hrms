@@ -89,6 +89,9 @@ apps/web/playwright/.auth/
 apps/web/openapi.tmp.json
 apps/web/.env.sentry-build-plugin
 apps/web/.clerk/
+apps/api/openapi.json
+apps/api/apps/
+apps/api/storage/
 
 # Build diagnostics
 apps/api/build-*.txt
