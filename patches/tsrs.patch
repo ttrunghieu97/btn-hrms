@@ -1,0 +1,30 @@
+diff --git a/lib/platform.js b/lib/platform.js
+index 79e1bc4fa84d71bb4cf37168e51ea11dee3f3b6b..b973f48fc107cf45c2df4fc483e9cb6edd12bae4 100644
+--- a/lib/platform.js
++++ b/lib/platform.js
+@@ -35,7 +35,24 @@ function isMusl() {
+     }
+ }
+ 
++function hasLegacyGlibc() {
++    try {
++        const excludeNetwork = process.report.excludeNetwork;
++        process.report.excludeNetwork = true;
++        const glibc = process.report?.getReport?.()?.header?.glibcVersionRuntime;
++        process.report.excludeNetwork = excludeNetwork;
++        if (typeof glibc === "string") {
++            const [major = 0, minor = 0] = glibc.split(".").map(Number);
++            return major < 2 || (major === 2 && minor < 34);
++        }
++    }
++    catch {
++        // Ignore report errors.
++    }
++    return false;
++}
++
+ export function getPlatformPackageName(os = process.platform, cpu = process.arch) {
+-    const suffix = os === "linux" ? (isMusl() ? "-musl" : "-gnu") : "";
++    const suffix = os === "linux" ? (isMusl() || hasLegacyGlibc() ? "-musl" : "-gnu") : "";
+     return `@tsrs/${os}-${cpu}${suffix}`;
+ }

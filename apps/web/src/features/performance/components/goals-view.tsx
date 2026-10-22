@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { performanceGoalsQueryOptions, performanceCyclesQueryOptions } from '../api/queries';
 import { useCreatePerformanceGoal, useTransitionGoal } from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
@@ -50,6 +52,15 @@ const GOAL_ACTIONS: Record<string, { action: string; label: string }[]> = {
 };
 
 export function PerformanceGoalsView() {
+  const user = useAuthStore((s) => s.user);
+  const canManagePerformance =
+    !user ||
+    Boolean(
+      user.isSuperAdmin ||
+        user.permissions?.includes('ALL') ||
+        user.permissions?.includes('sys:all') ||
+        hasAnyPermission(user.permissions, [permissions.performance.manage]),
+    );
   const [params, setParams] = useQueryStates({ cycleId: parseAsString });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '' });
@@ -141,23 +152,27 @@ export function PerformanceGoalsView() {
               {(isLoading ? [] : goals).map((row: PerformanceGoalRow) => (
                 <TableRow key={row.id}>
                   <TableCell className='font-medium'>{row.title ?? '—'}</TableCell>
-                  <TableCell className='text-muted-foreground max-w-xs truncate'>{'—'}</TableCell>
+                  <TableCell className='text-muted-foreground max-w-xs truncate'>
+                    {row.description || '—'}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge mapping={GOAL_STATUS_MAP} status={row.status ?? 'draft'} />
                   </TableCell>
                   <TableCell>
                     <div className='flex gap-1'>
-                      {(GOAL_ACTIONS[row.status ?? ''] ?? []).map((act) => (
-                        <Button
-                          key={act.action}
-                          variant='outline'
-                          size='sm'
-                          onClick={() => transitionGoal.mutate({ goalId: row.id, action: act.action })}
-                          disabled={transitionGoal.isPending}
-                        >
-                          {act.label}
-                        </Button>
-                      ))}
+                      {(GOAL_ACTIONS[row.status ?? ''] ?? [])
+                        .filter((act) => act.action !== 'approve' || canManagePerformance)
+                        .map((act) => (
+                          <Button
+                            key={act.action}
+                            variant='outline'
+                            size='sm'
+                            onClick={() => transitionGoal.mutate({ goalId: row.id, action: act.action })}
+                            disabled={transitionGoal.isPending}
+                          >
+                            {act.label}
+                          </Button>
+                        ))}
                     </div>
                   </TableCell>
                 </TableRow>

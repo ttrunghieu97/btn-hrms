@@ -1,11 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { unwrapData } from '@/lib/api-extract';
+import { resolveInternalApiUrl } from '@/lib/env.server';
 
-const BACKEND_URL = (() => {
-  const runtime = process.env.INTERNAL_API_URL || process.env.API_URL;
-  if (runtime) return runtime.replace(/\/+$/, '') + '/api/v1';
-  return 'http://127.0.0.1:3001/api/v1';
-})();
+const BACKEND_URL = `${resolveInternalApiUrl()}/api/v1`;
 
 export function buildBackendUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -18,11 +15,21 @@ export function createForwardHeaders(request: NextRequest, extra?: HeadersInit):
   const authorizationHeader = request.headers.get('authorization');
   const acceptHeader = request.headers.get('accept');
   const contentTypeHeader = request.headers.get('content-type');
+  const hostHeader = request.headers.get('host');
+  const rawProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase();
+  const forwardedProto =
+    rawProto === 'https' || rawProto === 'http'
+      ? rawProto
+      : request.nextUrl.protocol === 'https:'
+        ? 'https'
+        : 'http';
 
   if (cookieHeader && !headers.has('cookie')) headers.set('cookie', cookieHeader);
   if (authorizationHeader && !headers.has('authorization')) headers.set('authorization', authorizationHeader);
   if (acceptHeader && !headers.has('accept')) headers.set('accept', acceptHeader);
   if (contentTypeHeader && !headers.has('content-type')) headers.set('content-type', contentTypeHeader);
+  if (hostHeader && !headers.has('x-forwarded-host')) headers.set('x-forwarded-host', hostHeader);
+  if (!headers.has('x-forwarded-proto')) headers.set('x-forwarded-proto', forwardedProto);
 
   return headers;
 }

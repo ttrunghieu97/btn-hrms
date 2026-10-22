@@ -8,6 +8,7 @@ import {
   assetUnitsQueryOptions,
   assetHistoryQueryOptions,
   assetSelectEmployeesQueryOptions,
+  assetCatalogQueryOptions,
 } from '../api/queries';
 import { formatDateVN } from '@/lib/date';
 import { useIssueAsset, useReturnAsset } from '../api/mutations';
@@ -23,6 +24,7 @@ import {
   type AssetIssueLineRow,
   type AssetUnitRow,
   type AssetHistoryEntryRow,
+  type AssetTypeRow,
 } from './status-maps';
 import {
   notifyMutationError,
@@ -104,6 +106,26 @@ export function AssetIssuesView() {
   const employees = React.useMemo(
     () => extractList<EmployeeResponseDto>(employeesQuery.data),
     [employeesQuery.data],
+  );
+  const employeeMap = React.useMemo(
+    () =>
+      new Map(
+        employees.map((e) => [
+          e.id,
+          [e.lastName, e.firstName].filter(Boolean).join(' ') || e.username || e.id,
+        ]),
+      ),
+    [employees],
+  );
+
+  const { data: catalogData } = useQuery(assetCatalogQueryOptions({ limit: 500 }));
+  const assetTypeMap = React.useMemo(() => {
+    const list = extractList<AssetTypeRow>(catalogData);
+    return new Map(list.map((t) => [t.id, t.name ?? t.id]));
+  }, [catalogData]);
+  const unitMap = React.useMemo(
+    () => new Map(units.map((u) => [u.id, u])),
+    [units],
   );
 
   const issueMutation = useIssueAsset();
@@ -213,11 +235,22 @@ export function AssetIssuesView() {
                       {rows.flatMap((r) =>
                         (r.lines ?? [])
                           .filter(openLineFromRow)
-                          .map((l) => (
-                            <SelectItem key={l.id} value={l.id}>
-                              {l.assetId ?? l.assetTypeId ?? l.id} ({r.employeeId})
-                            </SelectItem>
-                          )),
+                          .map((l) => {
+                            const empLabel =
+                              (r.employeeId && employeeMap.get(r.employeeId)) ??
+                              r.employeeId;
+                            const typeLabel =
+                              (l.assetTypeId && assetTypeMap.get(l.assetTypeId)) ??
+                              (l.assetId && unitMap.get(l.assetId)?.serialNumber) ??
+                              l.assetId ??
+                              l.assetTypeId ??
+                              l.id;
+                            return (
+                              <SelectItem key={l.id} value={l.id}>
+                                {typeLabel} ({empLabel})
+                              </SelectItem>
+                            );
+                          }),
                       )}
                     </SelectContent>
                   </Select>
@@ -301,7 +334,10 @@ export function AssetIssuesView() {
                         .filter((u) => u.status === 'available' || !u.status)
                         .map((u) => (
                           <SelectItem key={u.id} value={u.id}>
-                            {u.serialNumber || u.id} ({u.assetTypeId})
+                            {u.serialNumber || u.id} (
+                            {(u.assetTypeId && assetTypeMap.get(u.assetTypeId)) ??
+                              u.assetTypeId}
+                            )
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -359,10 +395,26 @@ export function AssetIssuesView() {
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id ?? Math.random().toString()}>
-                  <TableCell className='font-medium'>{row.employeeId ?? '—'}</TableCell>
+                  <TableCell className='font-medium'>
+                    {(row.employeeId && employeeMap.get(row.employeeId)) ??
+                      row.employeeId ??
+                      '—'}
+                  </TableCell>
                   <TableCell>
                     {(row.lines ?? []).length > 0
-                      ? (row.lines ?? []).map((l) => l.assetId ?? l.assetTypeId ?? l.id).join(', ')
+                      ? (row.lines ?? [])
+                          .map((l) => {
+                            const typeName =
+                              (l.assetTypeId && assetTypeMap.get(l.assetTypeId)) ??
+                              l.assetTypeId;
+                            const serial =
+                              (l.assetId && unitMap.get(l.assetId)?.serialNumber) ??
+                              l.assetId;
+                            return typeName && serial && typeName !== serial
+                              ? `${typeName} (${serial})`
+                              : typeName ?? serial ?? l.id;
+                          })
+                          .join(', ')
                       : '—'}
                     <div className='mt-1 flex flex-wrap items-center gap-1.5'>
                       {(row.lines ?? []).map((l) => (

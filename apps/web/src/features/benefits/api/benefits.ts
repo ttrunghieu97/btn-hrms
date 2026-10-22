@@ -66,3 +66,20 @@ export async function approveEnrollment(id: string) {
 export async function cancelEnrollment(id: string) {
   return customFetch(`${BASE}/enrollments/${id}/cancel`, { method: 'POST' });
 }
+
+// ─── Dependents ───
+
+export interface AddDependentPayload {
+  enrollmentId: string;
+  fullName: string;
+  relationship: string;
+  dateOfBirth?: string;
+}
+
+export async function addDependent(dto: AddDependentPayload) {
+  return customFetch(`${BASE}/dependents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  });
+}

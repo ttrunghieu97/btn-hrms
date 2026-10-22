@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { ConfigSection } from './config-section';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+const STORAGE_KEY = 'btn-hrms:settings:security';
 
 export function SecurityConfigCard() {
   const [jwtExpiry] = useState('15 min');
@@ -15,6 +18,37 @@ export function SecurityConfigCard() {
   const [pwUppercase, setPwUppercase] = useState(true);
   const [pwNumbers, setPwNumbers] = useState(true);
   const [pwSymbols, setPwSymbols] = useState(true);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        cspEnabled?: boolean;
+        pwUppercase?: boolean;
+        pwNumbers?: boolean;
+        pwSymbols?: boolean;
+      };
+      if (typeof saved.cspEnabled === 'boolean') setCspEnabled(saved.cspEnabled);
+      if (typeof saved.pwUppercase === 'boolean') setPwUppercase(saved.pwUppercase);
+      if (typeof saved.pwNumbers === 'boolean') setPwNumbers(saved.pwNumbers);
+      if (typeof saved.pwSymbols === 'boolean') setPwSymbols(saved.pwSymbols);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleSave = () => {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ cspEnabled, pwUppercase, pwNumbers, pwSymbols }),
+      );
+      toast.success('Đã lưu cấu hình Bảo mật');
+    } catch {
+      toast.error('Không thể lưu cấu hình Bảo mật');
+    }
+  };
 
   return (
     <ConfigSection title="Security" description="Authentication and authorization settings">
@@ -44,7 +78,9 @@ export function SecurityConfigCard() {
           </ConfigRow>
         </div>
         <div className="flex justify-end pt-2">
-          <Button size="sm" className="h-8 text-xs">Save Security Settings</Button>
+          <Button type="button" size="sm" className="h-8 text-xs" onClick={handleSave}>
+            Save Security Settings
+          </Button>
         </div>
       </div>
     </ConfigSection>

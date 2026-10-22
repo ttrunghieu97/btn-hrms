@@ -38,9 +38,18 @@ async function generateOpenApi() {
   process.env.DATABASE_URL =
     process.env.DATABASE_URL ||
     "postgres://postgres:postgres@localhost:5432/postgres";
-  process.env.AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET || "openapi-docs";
-  process.env.AUTH_JWT_REFRESH_SECRET = process.env.AUTH_JWT_REFRESH_SECRET || "openapi-docs";
-  process.env.APP_URL = process.env.APP_URL || "http://localhost:5173";
+  process.env.AUTH_JWT_SECRET =
+    process.env.AUTH_JWT_SECRET ||
+    "openapi_docs_jwt_access_secret_at_least_32_characters";
+  process.env.AUTH_JWT_REFRESH_SECRET =
+    process.env.AUTH_JWT_REFRESH_SECRET ||
+    "openapi_docs_jwt_refresh_secret_at_least_32_characters";
+  process.env.AUTH_DEFAULT_PASSWORD =
+    process.env.AUTH_DEFAULT_PASSWORD || "OpenApiDocsDefaultPass!@#";
+  process.env.PII_ENCRYPTION_KEY =
+    process.env.PII_ENCRYPTION_KEY ||
+    "openapi_docs_pii_encryption_key_32_chars";
+  process.env.APP_URL = process.env.APP_URL || "http://localhost:8080";
 
   const app = await NestFactory.create(AppModule, {
     logger: false,

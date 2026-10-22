@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { pageCopy, routeLabels } from '@/lib/app-copy';
 import { appLogger } from '@/lib/logger';
 import { requireServerSession } from '@/lib/server/auth-session';
+import { getAccessCookieName } from '@/lib/env.server';
 import { requirePagePermission } from '@/features/authorization';
 import { fetchNav, navKeys } from '@/features/nav';
 import { QueryClient, HydrationBoundary, dehydrate } from '@tanstack/react-query';
@@ -21,8 +22,31 @@ export const metadata: Metadata = {
   }
 };
 
+const ACCESS_COOKIE_NAME = getAccessCookieName();
+
+function resolveAccessTokenRemainingSeconds(rawToken?: string): number | undefined {
+  if (!rawToken) return undefined;
+  const parts = rawToken.split('.');
+  if (parts.length !== 3 || !parts[1]) return undefined;
+  try {
+    const decoded = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
+      exp?: unknown;
+    };
+    if (typeof decoded?.exp === 'number' && Number.isFinite(decoded.exp)) {
+      const remainingSec = Math.floor(decoded.exp - Date.now() / 1000);
+      return Math.max(remainingSec, 15);
+    }
+  } catch {
+    // ignore malformed JWT payload
+  }
+  return undefined;
+}
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [cookieStore, initialUser] = await Promise.all([cookies(), requireServerSession()]);
+  const accessTokenExpiresInSec = resolveAccessTokenRemainingSeconds(
+    cookieStore.get(ACCESS_COOKIE_NAME)?.value
+  );
 
   // SSR permission check — secondary enforcement behind middleware
   const h = await headers();
@@ -50,7 +74,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <KBar>
-      <AuthStoreHydrator user={initialUser}>
+      <AuthStoreHydrator user={initialUser} expiresInSec={accessTokenExpiresInSec}>
         <AuthSessionGate initialUser={initialUser}>
           <HydrationBoundary state={dehydrate(queryClient)}>
             <SidebarProvider defaultOpen={defaultOpen}>

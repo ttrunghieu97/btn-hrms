@@ -1,11 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
-import { AgendaViewSwitcher } from '@/components/ui/agenda';
 import type { PeriodStatus } from '../types';
 
 interface PeriodWorkspaceHeaderProps {
@@ -13,8 +11,6 @@ interface PeriodWorkspaceHeaderProps {
   periodStatus?: PeriodStatus | string | null;
   totalEmployees: number;
   verifiedCount: number;
-  currentMode: 'agenda' | 'matrix';
-  onModeChange: (mode: 'agenda' | 'matrix') => void;
   onNavigatePeriod: (delta: number) => void;
   canTogglePeriodStatus?: boolean;
   isPeriodOpen: boolean;
@@ -85,13 +81,11 @@ function PeriodStatusBadge({
   }
 }
 
-export function PeriodWorkspaceHeader({
+export const PeriodWorkspaceHeader = React.memo(function PeriodWorkspaceHeader({
   period,
   periodStatus,
   totalEmployees,
   verifiedCount,
-  currentMode,
-  onModeChange,
   onNavigatePeriod,
   canTogglePeriodStatus,
   isPeriodOpen,
@@ -99,7 +93,7 @@ export function PeriodWorkspaceHeader({
 }: PeriodWorkspaceHeaderProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 print:hidden">
-      {/* Left: Period Selector + Lifecycle Status (flat on page background matching /attendance/summary) */}
+      {/* Left: Period Selector + Lifecycle Status */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <Button
@@ -135,30 +129,9 @@ export function PeriodWorkspaceHeader({
         </div>
       </div>
 
-      {/* Right: View Switcher + Cross-Page Actions + Lock/Unlock Period */}
-      <div className="flex flex-wrap items-center gap-2">
-        <AgendaViewSwitcher
-          mode={currentMode}
-          onModeChange={onModeChange}
-          agendaLabel="Lịch trình"
-          matrixLabel="Bảng công"
-        />
-
-        <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-          <Link href="/attendance/management?view=presence">
-            <Icons.activity className="mr-1.5 size-3.5" />
-            Hiện diện hôm nay
-          </Link>
-        </Button>
-
-        <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-          <Link href="/attendance/summary">
-            <Icons.check className="mr-1.5 size-3.5" />
-            Quy trình &amp; Đối soát
-          </Link>
-        </Button>
-
-        {canTogglePeriodStatus && (
+      {/* Right: Lock/Unlock Period */}
+      {canTogglePeriodStatus && (
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant={isPeriodOpen ? 'default' : 'outline'}
@@ -178,8 +151,8 @@ export function PeriodWorkspaceHeader({
               </>
             )}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
-}
+});

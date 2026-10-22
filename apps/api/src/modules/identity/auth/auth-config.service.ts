@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CookieOptions } from "express";
+import {
+  normalizeOriginUrl,
+  parseHostHeaderValue,
+  parseTrustedProxyEntries,
+} from "../../../shared/utils/cookie-csrf.util";
 
 @Injectable()
 export class AuthConfigService {
   constructor(private readonly config: ConfigService) {}
 
-  getAllowedFrontendOrigins() {
+  getAllowedFrontendOrigins(): string[] {
     const raw = [
       this.config.get("APP_URL"),
       this.config.get("FRONTEND_URL"),
@@ -14,14 +19,73 @@ export class AuthConfigService {
     ]
       .filter(Boolean)
       .join(",");
-    return Array.from(
-      new Set(
-        raw
-          .split(",")
-          .map((value) => value.trim().replace(/\/+$/, ""))
-          .filter(Boolean),
-      ),
-    );
+
+    const origins = new Set<string>();
+    const configuredPorts = new Set<string>(["8080", "3000"]);
+
+    for (const value of raw.split(",")) {
+      const normalized = normalizeOriginUrl(value);
+      if (normalized) {
+        origins.add(normalized);
+        try {
+          const parsed = new URL(normalized);
+          if (parsed.port) configuredPorts.add(parsed.port);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    const isProduction = this.config.get("NODE_ENV") === "production";
+    const rawDevOrigins = !isProduction
+      ? this.config.get("ALLOWED_DEV_ORIGINS")
+      : undefined;
+
+    if (rawDevOrigins) {
+      for (const entry of String(rawDevOrigins).split(",")) {
+        const trimmed = entry.trim().replace(/\/+$/, "");
+        if (!trimmed) continue;
+
+        if (/^https?:\/\//i.test(trimmed)) {
+          const normalized = normalizeOriginUrl(trimmed);
+          if (normalized) origins.add(normalized);
+          continue;
+        }
+
+        const parsedHost = parseHostHeaderValue(trimmed);
+        if (parsedHost) {
+          origins.add(`http://${parsedHost.host}`);
+          origins.add(`https://${parsedHost.host}`);
+          if (!parsedHost.port) {
+            for (const port of configuredPorts) {
+              origins.add(`http://${parsedHost.hostname}:${port}`);
+              origins.add(`https://${parsedHost.hostname}:${port}`);
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(origins);
+  }
+
+  getTrustProxyConfig(): boolean | number | string {
+    const raw = this.config.get("TRUST_PROXY");
+    if (raw === undefined || raw === null || raw === "") return 1;
+    const normalized = String(raw).trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+    const num = Number(normalized);
+    if (Number.isInteger(num) && num >= 0) return num;
+    return 1;
+  }
+
+  getTrustedProxyIps(): string[] {
+    return parseTrustedProxyEntries(this.config.get("TRUSTED_PROXY_IPS"));
+  }
+
+  isProductionEnv(): boolean {
+    return this.config.get("NODE_ENV") === "production";
   }
 
   getAccessCookieName() {

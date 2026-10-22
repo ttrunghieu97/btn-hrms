@@ -51,7 +51,11 @@ export async function setupTelemetry(): Promise<void> {
     logsUrl ? { url: logsUrl } : undefined,
   );
 
+  const serviceName =
+    process.env.OBSERVABILITY_OTEL_SERVICE_NAME?.trim() || "btn-hrms-api";
+
   const nodeSdk = new NodeSDK({
+    serviceName,
     traceExporter,
     metricReader: new PeriodicExportingMetricReader({
       exporter: metricExporter,

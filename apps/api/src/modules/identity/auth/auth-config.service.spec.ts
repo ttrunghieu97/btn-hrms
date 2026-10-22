@@ -56,4 +56,33 @@ describe("AuthConfigService", () => {
       "http://127.0.0.1:8080",
     ]);
   });
+
+  it("includes normalized ALLOWED_DEV_ORIGINS in non-production and ignores invalid entries", () => {
+    const devSvc = makeService({
+      NODE_ENV: "development",
+      APP_URL: "http://localhost:8080/",
+      ALLOWED_DEV_ORIGINS:
+        "http://192.168.1.50:8080, 10.0.0.12:8080, https://dev.hrms.local:8443/, ftp://invalid.local, not a url",
+    });
+
+    expect(devSvc.getAllowedFrontendOrigins()).toEqual([
+      "http://localhost:8080",
+      "http://192.168.1.50:8080",
+      "http://10.0.0.12:8080",
+      "https://10.0.0.12:8080",
+      "https://dev.hrms.local:8443",
+    ]);
+  });
+
+  it("ignores ALLOWED_DEV_ORIGINS in production", () => {
+    const prodSvc = makeService({
+      NODE_ENV: "production",
+      APP_URL: "https://hrms.example.com",
+      ALLOWED_DEV_ORIGINS: "http://192.168.1.50:8080",
+    });
+
+    expect(prodSvc.getAllowedFrontendOrigins()).toEqual([
+      "https://hrms.example.com",
+    ]);
+  });
 });

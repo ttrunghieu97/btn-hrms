@@ -92,9 +92,10 @@ const sampleUser: User = {
   id: 'user-101',
   username: 'nguyen.van.a',
   email: 'nguyenvana@bachthaongan.vn',
-  employeeId: 'emp-101',
   employeeUsername: 'NV00101',
   isSuperAdmin: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
   roleIds: ['role-hr'],
   permissions: ['users:view']
 };

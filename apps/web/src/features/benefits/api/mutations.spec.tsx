@@ -58,10 +58,32 @@ describe('benefits mutations', () => {
     it('cancels enrollment', async () => {
       (customFetch as jest.Mock).mockResolvedValue({ data: { id: 'e1', status: 'cancelled' }, status: 200, headers: new Headers() });
       const { useCancelEnrollment } = await import('./mutations');
-      const { qc, Wrapper } = createWrapper();
+      const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useCancelEnrollment(), { wrapper: Wrapper });
       await act(async () => { result.current.mutate('e1' as any); });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    });
+  });
+
+  describe('useAddDependent', () => {
+    it('adds dependent to enrollment', async () => {
+      (customFetch as jest.Mock).mockResolvedValue({ data: { id: 'dep-1', fullName: 'Nguyen Van B' }, status: 201, headers: new Headers() });
+      const { useAddDependent } = await import('./mutations');
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useAddDependent(), { wrapper: Wrapper });
+      await act(async () => {
+        result.current.mutate({
+          enrollmentId: 'e1',
+          fullName: 'Nguyen Van B',
+          relationship: 'child',
+          dateOfBirth: '2018-05-10',
+        });
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(customFetch).toHaveBeenCalledWith(
+        '/api/v1/benefits/dependents',
+        expect.objectContaining({ method: 'POST' }),
+      );
     });
   });
 });

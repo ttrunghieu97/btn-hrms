@@ -4,6 +4,8 @@
  * No Node.js deps — safe for Edge runtime and Node.js.
  */
 
+import { getAuthCookieSecret } from '@/lib/env.server';
+
 const CURRENT_VERSION = 2;
 const COOKIE_PREFIX = 'ps_v' + CURRENT_VERSION + ':';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -44,18 +46,7 @@ function base64UrlToString(b64url: string): string {
 }
 
 function getSecret(explicitSecret?: string): string {
-  const secret =
-    explicitSecret ||
-    process.env.AUTH_COOKIE_SECRET ||
-    process.env.AUTH_JWT_SECRET ||
-    process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('AUTH_COOKIE_SECRET or AUTH_JWT_SECRET must be configured');
-    }
-    return 'btn-hrms-dev-cookie-secret-do-not-use-in-production';
-  }
-  return secret;
+  return getAuthCookieSecret(explicitSecret);
 }
 
 async function getCryptoKey(secret: string): Promise<CryptoKey> {

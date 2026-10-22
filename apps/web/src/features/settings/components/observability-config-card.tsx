@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { ConfigSection } from './config-section';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+const STORAGE_KEY = 'btn-hrms:settings:observability';
 
 export function ObservabilityConfigCard() {
   const [metricsEnabled, setMetricsEnabled] = useState(true);
@@ -13,6 +16,37 @@ export function ObservabilityConfigCard() {
   const [strictReady, setStrictReady] = useState(true);
   const [sentryEnabled, setSentryEnabled] = useState(true);
   const [retention] = useState('30 days');
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        metricsEnabled?: boolean;
+        tracingEnabled?: boolean;
+        strictReady?: boolean;
+        sentryEnabled?: boolean;
+      };
+      if (typeof saved.metricsEnabled === 'boolean') setMetricsEnabled(saved.metricsEnabled);
+      if (typeof saved.tracingEnabled === 'boolean') setTracingEnabled(saved.tracingEnabled);
+      if (typeof saved.strictReady === 'boolean') setStrictReady(saved.strictReady);
+      if (typeof saved.sentryEnabled === 'boolean') setSentryEnabled(saved.sentryEnabled);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleSave = () => {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ metricsEnabled, tracingEnabled, strictReady, sentryEnabled }),
+      );
+      toast.success('Đã lưu cấu hình Giám sát (Observability)');
+    } catch {
+      toast.error('Không thể lưu cấu hình Giám sát');
+    }
+  };
 
   return (
     <ConfigSection title="Observability" description="Monitoring, logging, and tracing configuration">
@@ -33,7 +67,9 @@ export function ObservabilityConfigCard() {
           <Badge variant="secondary" className="font-mono">{retention}</Badge>
         </ConfigRow>
         <div className="flex justify-end pt-2">
-          <Button size="sm" className="h-8 text-xs">Save Observability Settings</Button>
+          <Button type="button" size="sm" className="h-8 text-xs" onClick={handleSave}>
+            Save Observability Settings
+          </Button>
         </div>
       </div>
     </ConfigSection>

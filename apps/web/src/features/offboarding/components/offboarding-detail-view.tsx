@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useOffboardingDetail } from "../queries";
+import { employeesQueryOptions } from "@/features/employees";
 import {
   useCompleteChecklistItem,
   useDecideClearance,
@@ -19,6 +20,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -86,11 +94,34 @@ interface DetailProps {
 
 export function OffboardingDetailView({ processId }: DetailProps) {
   const { data, error, isLoading, refetch } = useOffboardingDetail(processId);
+  const { data: employeesData } = useQuery(employeesQueryOptions({ page: 1, limit: 200 }));
   const completeItem = useCompleteChecklistItem();
   const decideClearance = useDecideClearance();
   const scheduleInterview = useScheduleExitInterview();
   const recordInterview = useRecordExitInterview();
   const completeOffboarding = useCompleteOffboarding();
+
+  const employeeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const emp of employeesData?.employees ?? []) {
+      const fullName = [emp.lastName, emp.firstName].filter(Boolean).join(" ");
+      map.set(emp.id, emp.employeeCode ? `${fullName} (${emp.employeeCode})` : fullName);
+    }
+    return map;
+  }, [employeesData]);
+
+  const interviewerOptions = useMemo(
+    () =>
+      (employeesData?.employees ?? []).map((emp) => {
+        const fullName = [emp.lastName, emp.firstName].filter(Boolean).join(" ");
+        const userId = (emp as { userId?: string }).userId ?? emp.id;
+        return {
+          value: userId,
+          label: emp.employeeCode ? `${fullName} (${emp.employeeCode})` : fullName,
+        };
+      }),
+    [employeesData],
+  );
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
@@ -239,11 +270,14 @@ export function OffboardingDetailView({ processId }: DetailProps) {
       ? formatDateVN(process.targetEndDate)
       : "—";
 
+  const employeeDisplayName =
+    employeeMap.get(process.employeeId) ?? process.employeeId;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 p-6">
       {/* Workflow Hero */}
       <GlobalWorkflowHero
-        title={`Thôi việc: Nhân viên ${process.employeeId}`}
+        title={`Thôi việc: Nhân viên ${employeeDisplayName}`}
         badge={<StatusBadge status={process.status} mapping={OFFBOARDING_STATUS_MAP} />}
         subtitle={`Ngày bắt đầu: ${process.startDate ? formatDateVN(process.startDate) : "—"} • Dự kiến kết thúc: ${endDateText} • Mã quy trình: ${process.id.slice(0, 8)}`}
         steps={OFFBOARDING_STEPS}
@@ -280,14 +314,28 @@ export function OffboardingDetailView({ processId }: DetailProps) {
                   <div className="flex items-center gap-2">
                     <StatusBadge status={item.status} mapping={CHECKLIST_STATUS_MAP} />
                     {canDoTask(item) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => completeItem.mutate({ processId, taskId: item.id })}
-                        disabled={completeItem.isPending}
-                      >
-                        Hoàn tất
-                      </Button>
+                      <>
+                        {!item.mandatory && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              completeItem.mutate({ processId, taskId: item.id, skip: true })
+                            }
+                            disabled={completeItem.isPending}
+                          >
+                            Bỏ qua
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => completeItem.mutate({ processId, taskId: item.id })}
+                          disabled={completeItem.isPending}
+                        >
+                          Hoàn tất
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -429,13 +477,32 @@ export function OffboardingDetailView({ processId }: DetailProps) {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label>Người phỏng vấn (User ID)</Label>
+                    <Label>Người phỏng vấn</Label>
+                    {interviewerOptions.length > 0 && (
+                      <Select
+                        value={scheduleForm.interviewerUserId}
+                        onValueChange={(val) =>
+                          setScheduleForm({ ...scheduleForm, interviewerUserId: val })
+                        }
+                      >
+                        <SelectTrigger aria-label="Chọn người phỏng vấn">
+                          <SelectValue placeholder="Chọn nhân sự phỏng vấn..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {interviewerOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Input
                       value={scheduleForm.interviewerUserId}
                       onChange={(e) =>
                         setScheduleForm({ ...scheduleForm, interviewerUserId: e.target.value })
                       }
-                      placeholder="Nhập User ID..."
+                      placeholder="Hoặc nhập User ID..."
                     />
                   </div>
                   <div className="grid gap-2">

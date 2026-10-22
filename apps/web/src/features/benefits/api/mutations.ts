@@ -5,8 +5,10 @@ import {
   enrollEmployee,
   approveEnrollment,
   cancelEnrollment,
+  addDependent,
   type CreatePlanPayload,
   type EnrollEmployeePayload,
+  type AddDependentPayload,
 } from './benefits';
 import { benefitPlanKeys, benefitEnrollmentKeys } from '../queries/benefit-queries';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
@@ -71,5 +73,17 @@ export function useCancelEnrollment() {
       notifyMutationSuccess(benefitsUiCopy.feedback.cancelled);
     },
     onError: (error) => notifyMutationError(error, benefitsUiCopy.feedback.cancelFailed),
+  });
+}
+
+export function useAddDependent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: AddDependentPayload) => addDependent(dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: benefitEnrollmentKeys.all() });
+      notifyMutationSuccess('Đã thêm người phụ thuộc');
+    },
+    onError: (error) => notifyMutationError(error, 'Thêm người phụ thuộc thất bại'),
   });
 }

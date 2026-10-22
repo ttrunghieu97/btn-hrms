@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { benefitPlansQueryOptions } from '../api/queries';
 import { useCreateBenefitPlan, usePublishBenefitPlan } from '../api/mutations';
 import type { BenefitPlanListFilters } from '../queries/benefit-queries';
@@ -12,6 +14,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import {
   Select,
@@ -50,6 +53,15 @@ import { pageParser } from '@/lib/pagination';
 const copy = benefitsUiCopy.plans;
 
 export function BenefitPlansView() {
+  const user = useAuthStore((s) => s.user);
+  const canManage =
+    !user ||
+    Boolean(
+      user.isSuperAdmin ||
+        user.permissions?.includes('ALL') ||
+        user.permissions?.includes('sys:all') ||
+        hasAnyPermission(user.permissions, [permissions.benefits.manage]),
+    );
   const [params, setParams] = useQueryStates({
     page: pageParser,
     search: parseAsString,
@@ -57,7 +69,10 @@ export function BenefitPlansView() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateBenefitPlanFormValues>({
     name: '',
+    description: '',
     coverageType: 'employee_only',
+    employerContribution: undefined,
+    employeeContribution: undefined,
   });
 
   const filters: BenefitPlanListFilters = {
@@ -83,7 +98,13 @@ export function BenefitPlansView() {
     }
     await createPlan.mutateAsync(parsed.data);
     setOpen(false);
-    setForm({ name: '', coverageType: 'employee_only' });
+    setForm({
+      name: '',
+      description: '',
+      coverageType: 'employee_only',
+      employerContribution: undefined,
+      employeeContribution: undefined,
+    });
   }
 
   if (error && !isLoading) {
@@ -99,63 +120,109 @@ export function BenefitPlansView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-end gap-4'>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size='sm'>
-              <Icons.add className='mr-1.5 size-4' />
-              {copy.create}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{copy.create}</DialogTitle>
-              <DialogDescription>
-                {benefitsUiCopy.description}
-              </DialogDescription>
-            </DialogHeader>
-            <div className='grid gap-4 py-4'>
-              <div className='grid gap-2'>
-                <Label htmlFor='benefit-plan-name'>{copy.columns.name}</Label>
-                <Input
-                  id='benefit-plan-name'
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder='Tên gói phúc lợi'
-                  required
-                />
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='benefit-plan-coverage'>{copy.columns.coverageType}</Label>
-                <Select
-                  value={form.coverageType}
-                  onValueChange={(val) =>
-                    setForm({ ...form, coverageType: val as CreateBenefitPlanFormValues['coverageType'] })
-                  }
-                >
-                  <SelectTrigger id='benefit-plan-coverage'>
-                    <SelectValue placeholder='Chọn loại bảo hiểm' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='employee_only'>Chỉ nhân viên</SelectItem>
-                    <SelectItem value='employee_plus_one'>Nhân viên + 1</SelectItem>
-                    <SelectItem value='family'>Gia đình</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant='outline' onClick={() => setOpen(false)}>
-                {commonUiCopy.cancel}
+      {canManage ? (
+        <div className='flex items-center justify-end gap-4'>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size='sm'>
+                <Icons.add className='mr-1.5 size-4' />
+                {copy.create}
               </Button>
-              <Button onClick={() => void handleCreate()} disabled={createPlan.isPending}>
-                {createPlan.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
-                {commonUiCopy.create}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{copy.create}</DialogTitle>
+                <DialogDescription>
+                  {benefitsUiCopy.description}
+                </DialogDescription>
+              </DialogHeader>
+              <div className='grid gap-4 py-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='benefit-plan-name'>{copy.columns.name}</Label>
+                  <Input
+                    id='benefit-plan-name'
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder='Tên gói phúc lợi'
+                    required
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='benefit-plan-coverage'>{copy.columns.coverageType}</Label>
+                  <Select
+                    value={form.coverageType}
+                    onValueChange={(val) =>
+                      setForm({ ...form, coverageType: val as CreateBenefitPlanFormValues['coverageType'] })
+                    }
+                  >
+                    <SelectTrigger id='benefit-plan-coverage'>
+                      <SelectValue placeholder='Chọn loại bảo hiểm' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='employee_only'>Chỉ nhân viên</SelectItem>
+                      <SelectItem value='employee_plus_one'>Nhân viên + 1</SelectItem>
+                      <SelectItem value='family'>Gia đình</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='grid grid-cols-2 gap-3'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='benefit-emp-contrib'>{copy.columns.employerContribution}</Label>
+                    <Input
+                      id='benefit-emp-contrib'
+                      type='number'
+                      min={0}
+                      value={form.employerContribution ?? ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          employerContribution: e.target.value ? Number(e.target.value) : undefined,
+                        })
+                      }
+                      placeholder='0'
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='benefit-ee-contrib'>{copy.columns.employeeContribution}</Label>
+                    <Input
+                      id='benefit-ee-contrib'
+                      type='number'
+                      min={0}
+                      value={form.employeeContribution ?? ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          employeeContribution: e.target.value ? Number(e.target.value) : undefined,
+                        })
+                      }
+                      placeholder='0'
+                    />
+                  </div>
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='benefit-plan-desc'>{commonUiCopy.description}</Label>
+                  <Textarea
+                    id='benefit-plan-desc'
+                    value={form.description ?? ''}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder='Mô tả quyền lợi, hạn mức và điều kiện áp dụng...'
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant='outline' onClick={() => setOpen(false)}>
+                  {commonUiCopy.cancel}
+                </Button>
+                <Button onClick={() => void handleCreate()} disabled={createPlan.isPending}>
+                  {createPlan.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
+                  {commonUiCopy.create}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : null}
 
       {rows.length === 0 && !isLoading ? (
         <AppEmptyState
@@ -191,7 +258,7 @@ export function BenefitPlansView() {
                     {row.employeeContribution ?? '—'}
                   </div>
                 </div>
-                {row.status === 'draft' && (
+                {row.status === 'draft' && canManage && (
                   <div className='pt-1 flex justify-end'>
                     <Button
                       variant='outline'
@@ -233,7 +300,7 @@ export function BenefitPlansView() {
                     <TableCell>{row.employeeContribution ?? '—'}</TableCell>
                     <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
                     <TableCell className='text-right'>
-                      {row.status === 'draft' ? (
+                      {row.status === 'draft' && canManage ? (
                         <Button
                           variant='outline'
                           size='sm'

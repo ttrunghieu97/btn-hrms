@@ -32,19 +32,26 @@ export class StorageConfigService {
     // Parse STORAGE_S3_URL as a connection URI
     // Format: http[s]://accessKey:secretKey@endpoint:port?region=xx&forcePathStyle=true
     const s3Url = config.get<string>("STORAGE_S3_URL");
+    const rawForcePathStyle = config.get<string>("STORAGE_S3_FORCE_PATH_STYLE");
+    const fallbackForcePathStyle =
+      rawForcePathStyle !== undefined && String(rawForcePathStyle).trim() !== ""
+        ? String(rawForcePathStyle).trim().toLowerCase() !== "false"
+        : true;
     if (s3Url) {
       const url = new URL(s3Url);
       this.s3AccessKey = decodeURIComponent(url.username);
       this.s3SecretKey = decodeURIComponent(url.password);
       this.s3Endpoint = url.origin; // protocol + host + port
       this.s3Region = url.searchParams.get("region") || "us-east-1";
-      this.s3ForcePathStyle = url.searchParams.get("forcePathStyle") !== "false";
+      this.s3ForcePathStyle = url.searchParams.has("forcePathStyle")
+        ? url.searchParams.get("forcePathStyle") !== "false"
+        : fallbackForcePathStyle;
     } else {
       this.s3AccessKey = "";
       this.s3SecretKey = "";
       this.s3Endpoint = "http://localhost:9000";
       this.s3Region = "us-east-1";
-      this.s3ForcePathStyle = true;
+      this.s3ForcePathStyle = fallbackForcePathStyle;
     }
   }
 }

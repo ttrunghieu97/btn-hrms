@@ -10,6 +10,8 @@ const tabs = [
   { href: '/administration/approval', label: routeLabels.approval },
   { href: '/administration/workflows', label: 'Quy trình động' },
   { href: '/administration/audit-logs', label: 'Nhật ký hệ thống' },
+  { href: '/admin/integrations', label: 'Tích hợp & Webhook' },
+  { href: '/admin/settings', label: 'Cấu hình hệ thống' },
 ];
 
 export default function AdministrationLayout({ children }: { children: React.ReactNode }) {

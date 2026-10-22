@@ -10,6 +10,11 @@ export async function createCourse(dto: { title: string; description?: string; e
 }
 export async function publishCourse(id: string) { return customFetch(`${BASE}/courses/${id}/publish`, { method: 'POST' }); }
 export async function enrollCourse(courseId: string) { return customFetch(BASE + '/enrollments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ courseId }) }); }
+export async function listMyEnrollments() { return customFetch(`${BASE}/enrollments`); }
+export async function completeCourseEnrollment(id: string) { return customFetch(`${BASE}/enrollments/${id}/complete`, { method: 'POST' }); }
+export async function assignCourseToEmployees(dto: { courseId: string; employeeIds: string[]; dueDate?: string }) {
+  return customFetch(`${BASE}/assignments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
+}
 
 // ─── Sessions ───
 export async function listSessions(courseId: string) { return customFetch(`${BASE}/courses/${courseId}/sessions`); }
@@ -28,6 +33,18 @@ export async function listCertDefinitions() { return customFetch(`${BASE}/certif
 export async function createCertDefinition(dto: { name: string; description?: string; issuer?: string; validityMonths?: number }) {
   return customFetch(BASE + '/certifications/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
 }
+export async function issueEmployeeCertificate(dto: { definitionId: string; employeeId: string; courseId?: string }) {
+  return customFetch(`${BASE}/certifications/issue`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
+}
+export async function listEmployeeCertificates(employeeId: string) {
+  return customFetch(`${BASE}/certifications/employee/${employeeId}`);
+}
+export async function renewEmployeeCertificate(id: string) {
+  return customFetch(`${BASE}/certifications/${id}/renew`, { method: 'POST' });
+}
+export async function revokeEmployeeCertificate(id: string) {
+  return customFetch(`${BASE}/certifications/${id}/revoke`, { method: 'POST' });
+}
 
 // ─── Learning Paths ───
 export async function listLearningPaths() { return customFetch(`${BASE}/paths`); }
@@ -36,3 +53,9 @@ export async function createLearningPath(dto: { name: string; description?: stri
   return customFetch(BASE + '/paths', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
 }
 export async function publishLearningPath(id: string) { return customFetch(`${BASE}/paths/${id}/publish`, { method: 'POST' }); }
+export async function assignLearningPath(dto: { pathId: string; employeeIds: string[] }) {
+  return customFetch(`${BASE}/paths/assign`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
+}
+export async function completeLearningPath(id: string) {
+  return customFetch(`${BASE}/paths/${id}/complete`, { method: 'POST' });
+}

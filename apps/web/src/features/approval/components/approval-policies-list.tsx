@@ -2,8 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useQueryStates, parseAsInteger } from 'nuqs';
-import { useApprovalPoliciesQuery, useCreateApprovalPolicyMutation, useDeactivateApprovalPolicyMutation } from '../api/queries';
+import { useQueryStates } from 'nuqs';
+import {
+  useApprovalPoliciesQuery,
+  useCreateApprovalPolicyMutation,
+  useUpdateApprovalPolicyMutation,
+  useDeactivateApprovalPolicyMutation,
+} from '../api/queries';
 import type { ApprovalPolicy } from '../api/service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,8 +69,87 @@ function CreatePolicyDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+function EditPolicyDialog({
+  policy,
+  onClose,
+}: {
+  policy: ApprovalPolicy;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(policy.name ?? '');
+  const [description, setDescription] = useState(policy.description ?? '');
+  const [steps, setSteps] = useState(
+    JSON.stringify(policy.steps ?? { steps: [{ approverUserId: null }] }, null, 2),
+  );
+  const mutation = useUpdateApprovalPolicyMutation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await mutation.mutateAsync({
+        id: policy.id,
+        data: {
+          name: name || undefined,
+          description: description || undefined,
+          steps: JSON.parse(steps),
+        },
+      });
+      onClose();
+    } catch {
+      /* handled by mutation */
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Chỉnh sửa quy trình phê duyệt</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className='space-y-4'>
+        <div>
+          <Label>Key</Label>
+          <Input value={policy.key} disabled className='font-mono text-xs' />
+        </div>
+        <div>
+          <Label>Tên</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder='Phê duyệt chi phí'
+          />
+        </div>
+        <div>
+          <Label>Mô tả</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Steps (JSON)</Label>
+          <Textarea
+            value={steps}
+            onChange={(e) => setSteps(e.target.value)}
+            className='font-mono text-xs'
+            rows={6}
+          />
+        </div>
+        <div className='flex justify-end gap-2'>
+          <Button type='button' variant='outline' onClick={onClose}>
+            Hủy
+          </Button>
+          <Button type='submit' disabled={mutation.isPending}>
+            Lưu thay đổi
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  );
+}
+
 export default function ApprovalPoliciesListPage() {
   const [showCreate, setShowCreate] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<ApprovalPolicy | null>(null);
   const [params] = useQueryStates({
     page: pageParser,
     perPage: perPageParser,
@@ -111,16 +195,28 @@ export default function ApprovalPoliciesListPage() {
       header: '',
       cell: ({ row }) => {
         const policy = row.original;
-        return policy.isActive ? (
-          <Button
-            variant='ghost'
-            size='sm'
-            aria-label='Ngừng hoạt động quy trình'
-            onClick={() => deactivateMutation.mutate(policy.id)}
-          >
-            <Icons.trash className='h-4 w-4' />
-          </Button>
-        ) : null;
+        return (
+          <div className='flex items-center justify-end gap-1'>
+            <Button
+              variant='ghost'
+              size='sm'
+              aria-label='Chỉnh sửa quy trình'
+              onClick={() => setEditingPolicy(policy)}
+            >
+              <Icons.edit className='h-4 w-4' />
+            </Button>
+            {policy.isActive ? (
+              <Button
+                variant='ghost'
+                size='sm'
+                aria-label='Ngừng hoạt động quy trình'
+                onClick={() => deactivateMutation.mutate(policy.id)}
+              >
+                <Icons.trash className='h-4 w-4' />
+              </Button>
+            ) : null}
+          </div>
+        );
       },
     }),
   ], [deactivateMutation]);
@@ -155,6 +251,19 @@ export default function ApprovalPoliciesListPage() {
             </Button>
           </DialogTrigger>
           {showCreate && <CreatePolicyDialog onClose={() => setShowCreate(false)} />}
+        </Dialog>
+        <Dialog
+          open={Boolean(editingPolicy)}
+          onOpenChange={(open) => {
+            if (!open) setEditingPolicy(null);
+          }}
+        >
+          {editingPolicy && (
+            <EditPolicyDialog
+              policy={editingPolicy}
+              onClose={() => setEditingPolicy(null)}
+            />
+          )}
         </Dialog>
       </div>
       <DataTable

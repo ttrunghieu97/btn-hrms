@@ -6,9 +6,11 @@ import { useAuthStore } from '@/stores/auth-store';
 
 export default function AuthStoreHydrator({
   user,
+  expiresInSec,
   children
 }: {
   user: UserMeResponseDto;
+  expiresInSec?: number;
   children: React.ReactNode;
 }) {
   const hydrated = React.useRef(false);
@@ -17,9 +19,9 @@ export default function AuthStoreHydrator({
   React.useEffect(() => {
     if (!hydrated.current) {
       hydrated.current = true;
-      useAuthStore.getState().hydrateFromServer(user);
+      useAuthStore.getState().hydrateFromServer(user, expiresInSec);
     }
-  }, [user]);
+  }, [user, expiresInSec]);
 
   return <>{children}</>;
 }

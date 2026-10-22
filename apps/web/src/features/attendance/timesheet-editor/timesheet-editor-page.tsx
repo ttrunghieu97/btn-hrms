@@ -1,36 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useTimesheet } from './hooks/use-timesheet';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { timekeepingControllerGetTimesheetWorkspace } from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
+import { unwrapData } from '@/lib/api-extract';
+import {
+  getTimesheetWorkspaceQueryKey,
+  useTimesheet,
+} from './hooks/use-timesheet';
 import { usePeriodLock } from './hooks/use-period-lock';
 import { DetailSheet } from './components/detail-sheet';
-import {
-  type TimesheetWorkspaceRecord,
-  type TimesheetWorkspaceEmployee,
-} from './types';
-import { getRecord } from './utils';
-import { timekeepingControllerOverrideAttendanceSummary } from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
-import type {
-  OverrideAttendanceSummaryDtoReason,
-  OverrideAttendanceSummaryDtoOverriddenStatus,
-} from '@/api/generated/model';
-import { showToast } from '@/lib/toast';
+import type { TimesheetWorkspaceResponse } from './types';
 import { attendanceUiCopy } from '@/lib/app-copy';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -41,13 +26,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
 import { attendance, hasPermission } from '@/lib/permissions';
 
@@ -58,160 +36,6 @@ function shiftPeriod(period: string, delta: number): string {
   const d = new Date(y!, m! - 1, 1);
   d.setMonth(d.getMonth() + delta);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-// ─── Audited Adjustment / Manual Entry Dialog ──────────────────────────
-
-interface AdjustmentModalProps {
-  employeeName: string;
-  workDate: string;
-  isNewEntry: boolean;
-  currentRecord?: TimesheetWorkspaceRecord;
-  onClose: () => void;
-  onConfirm: (payload: {
-    reason: string;
-    note?: string;
-    overriddenStatus?: string;
-    overriddenWorkedMinutes?: number;
-  }) => Promise<void>;
-}
-
-function AdjustmentModal({
-  employeeName,
-  workDate,
-  isNewEntry,
-  currentRecord,
-  onClose,
-  onConfirm,
-}: AdjustmentModalProps) {
-  const [reason, setReason] = React.useState('manual_correction');
-  const [note, setNote] = React.useState('');
-  const [overriddenStatus, setOverriddenStatus] = React.useState(
-    currentRecord?.status ?? 'present',
-  );
-  const [workedHours, setWorkedHours] = React.useState(
-    currentRecord?.workedMinutes
-      ? String(Math.round((currentRecord.workedMinutes / 60) * 10) / 10)
-      : '8',
-  );
-  const [submitting, setSubmitting] = React.useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await onConfirm({
-        reason,
-        note: note.trim() || undefined,
-        overriddenStatus,
-        overriddenWorkedMinutes: Math.round(Number(workedHours) * 60),
-      });
-      onClose();
-    } catch {
-      /* Handled by caller */
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isNewEntry ? 'Chấm công thủ công' : 'Điều chỉnh giờ công'} —{' '}
-            {employeeName}
-          </DialogTitle>
-          <DialogDescription>
-            Ngày:{' '}
-            <span className="text-foreground font-mono font-semibold">
-              {workDate}
-            </span>{' '}
-            · Mọi thay đổi đều được ghi lại lý do cho đối soát.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-1.5">
-            <Label htmlFor="adj-status">Loại công / Trạng thái</Label>
-            <Select
-              value={overriddenStatus}
-              onValueChange={setOverriddenStatus}
-            >
-              <SelectTrigger id="adj-status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="present">Công thường (Có mặt)</SelectItem>
-                <SelectItem value="late">Đi muộn</SelectItem>
-                <SelectItem value="early_leave">Về sớm</SelectItem>
-                <SelectItem value="leave">Nghỉ phép</SelectItem>
-                <SelectItem value="holiday">Nghỉ lễ</SelectItem>
-                <SelectItem value="absent">Vắng mặt (Không công)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="adj-hours">Số công / Tổng giờ (giờ)</Label>
-            <Input
-              id="adj-hours"
-              type="number"
-              min="0"
-              max="24"
-              step="0.5"
-              value={workedHours}
-              onChange={(e) => setWorkedHours(e.target.value)}
-              className="font-mono"
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="adj-reason">Lý do (Bắt buộc audit)</Label>
-            <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger id="adj-reason" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="manual_correction">
-                  HR nhập thủ công / Quên quẹt thẻ
-                </SelectItem>
-                <SelectItem value="policy_exception">
-                  Ngoại lệ chính sách / Công tác
-                </SelectItem>
-                <SelectItem value="data_fix">
-                  Sửa lỗi thiết bị chấm công
-                </SelectItem>
-                <SelectItem value="reconciliation">
-                  Đối soát dữ liệu kỳ công
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="adj-note">Ghi chú chi tiết</Label>
-            <Textarea
-              id="adj-note"
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Nhập ghi chú chi tiết…"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Hủy
-            </Button>
-            <Button type="submit" isLoading={submitting}>
-              {submitting ? 'Đang lưu…' : 'Lưu công'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 // ─── Close Period Confirmation Dialog ──────────────────────────────────
@@ -323,7 +147,7 @@ export function TimesheetEditorPage({
 }: {
   defaultPeriod?: string;
 }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams();
   const searchParams = useSearchParams();
   const routePeriod =
@@ -333,36 +157,88 @@ export function TimesheetEditorPage({
   const ts = useTimesheet(activePeriod);
   const pl = usePeriodLock();
 
+  // Prefetch adjacent months (-1 and +1) after current period paint so month switching is instant
+  React.useEffect(() => {
+    if (ts.loading) return;
+    const timer = setTimeout(() => {
+      for (const delta of [-1, 1]) {
+        const adjPeriod = shiftPeriod(ts.period, delta);
+        void queryClient.prefetchQuery({
+          queryKey: getTimesheetWorkspaceQueryKey(adjPeriod),
+          queryFn: async ({ signal }) => {
+            const res = await timekeepingControllerGetTimesheetWorkspace(
+              { period: adjPeriod },
+              { signal },
+            );
+            return unwrapData<TimesheetWorkspaceResponse>(res);
+          },
+          staleTime: 30_000,
+        });
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [queryClient, ts.loading, ts.period]);
+
+  // Restore period state on browser Back / Forward navigation
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const match = window.location.pathname.match(
+        /\/attendance\/management\/periods\/(\d{4}-\d{2})/,
+      );
+      const popPeriod = match?.[1] ?? activePeriod;
+      if (popPeriod) {
+        ts.setPeriod(popPeriod);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activePeriod, ts]);
+
   const navigatePeriod = React.useCallback(
     (delta: number) => {
       const nextPeriod = shiftPeriod(ts.period, delta);
-      const query = searchParams.toString()
-        ? `?${searchParams.toString()}`
-        : '';
-      router.push(`/attendance/management/periods/${nextPeriod}${query}`);
+      ts.setPeriod(nextPeriod);
+      if (typeof window !== 'undefined') {
+        const currentSearch = window.location.search
+          ? window.location.search
+          : searchParams.toString()
+            ? `?${searchParams.toString()}`
+            : '';
+        const nextUrl = `/attendance/management/periods/${nextPeriod}${currentSearch}`;
+        const currentUrl = `${window.location.pathname}${window.location.search}`;
+        if (currentUrl !== nextUrl) {
+          window.history.pushState(window.history.state, '', nextUrl);
+        }
+      }
     },
-    [router, searchParams, ts.period],
+    [searchParams, ts],
   );
 
-  const [adjustingDate, setAdjustingDate] = React.useState<string | null>(null);
-  const [adjustingEmployee, setAdjustingEmployee] =
-    React.useState<TimesheetWorkspaceEmployee | null>(null);
   const [showClose, setShowClose] = React.useState(false);
   const [showReopen, setShowReopen] = React.useState(false);
 
   const user = useAuthStore((s) => s.user);
   const canEdit = ts.periodStatus === 'open' || ts.periodStatus === 'in_review';
-  const canLockPeriod =
-    hasPermission(user?.permissions, attendance.periodApprove) ||
-    hasPermission(user?.permissions, attendance.periodClose) ||
+  const hasLockPerm =
     ts.availableActions.includes('lock') ||
-    ts.availableActions.includes('approve');
-  const canUnlockOrReopenPeriod =
-    ts.periodStatus === 'locked'
-      ? hasPermission(user?.permissions, attendance.periodUnlock) ||
-        ts.availableActions.includes('unlock')
-      : hasPermission(user?.permissions, attendance.periodClose) ||
-        ts.availableActions.includes('reopen');
+    hasPermission(user?.permissions, attendance.periodLock);
+  const hasApprovePerm =
+    ts.periodStatus === 'in_review' &&
+    (ts.availableActions.includes('approve') ||
+      hasPermission(user?.permissions, attendance.periodApprove));
+  const canLockPeriod = hasLockPerm || hasApprovePerm;
+
+  const hasUnlockPerm =
+    ts.periodStatus === 'locked' &&
+    (ts.availableActions.includes('unlock') ||
+      hasPermission(user?.permissions, attendance.periodUnlock));
+  const hasReopenPerm =
+    (ts.periodStatus === 'locked' || ts.periodStatus === 'closed') &&
+    (ts.availableActions.includes('reopen') ||
+      hasPermission(user?.permissions, attendance.periodClose));
+  const canUnlockOrReopenPeriod = hasUnlockPerm || hasReopenPerm;
+
   const canTogglePeriodStatus = canEdit
     ? canLockPeriod
     : canUnlockOrReopenPeriod;
@@ -375,64 +251,30 @@ export function TimesheetEditorPage({
 
   const handleLock = React.useCallback(
     async (remarks: string) => {
-      const ok = await pl.lock(ts.period, remarks);
+      const cleanRemarks = remarks.trim();
+      const ok =
+        ts.periodStatus === 'in_review' && !hasLockPerm && hasApprovePerm
+          ? await pl.approve(ts.period)
+          : await pl.lock(ts.period, cleanRemarks || undefined);
       if (ok) await ts.reload();
       setShowClose(false);
     },
-    [pl, ts],
+    [hasApprovePerm, hasLockPerm, pl, ts],
   );
 
   const handleReopen = React.useCallback(
     async (remarks: string) => {
+      const cleanRemarks = remarks.trim();
       const remarkText =
-        remarks ||
-        (ts.periodStatus === 'locked'
-          ? 'HR mở khóa kỳ công'
-          : 'HR mở lại kỳ công');
-      const ok =
-        ts.periodStatus === 'locked'
-          ? await pl.unlock(ts.period, remarkText)
-          : await pl.reopen(ts.period, remarkText);
+        cleanRemarks ||
+        (hasUnlockPerm ? 'HR mở khóa kỳ công' : 'HR mở lại kỳ công');
+      const ok = hasUnlockPerm
+        ? await pl.unlock(ts.period, remarkText)
+        : await pl.reopen(ts.period, remarkText);
       if (ok) await ts.reload();
       setShowReopen(false);
     },
-    [pl, ts],
-  );
-
-  const handleOverrideSubmit = async (payload: {
-    reason: string;
-    note?: string;
-    overriddenStatus?: string;
-    overriddenWorkedMinutes?: number;
-  }) => {
-    if (!adjustingEmployee || !adjustingDate) return;
-    try {
-      await timekeepingControllerOverrideAttendanceSummary({
-        employeeId: adjustingEmployee.id,
-        workDate: adjustingDate,
-        reason: payload.reason as OverrideAttendanceSummaryDtoReason,
-        note: payload.note,
-        overriddenStatus:
-          payload.overriddenStatus as OverrideAttendanceSummaryDtoOverriddenStatus,
-        overriddenWorkedMinutes: payload.overriddenWorkedMinutes,
-      });
-
-      showToast.success('Đã lưu công thành công');
-      await ts.reload();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lưu công thất bại';
-      showToast.error(msg);
-      throw new Error('Override failed');
-    }
-  };
-
-  const onAdjust = React.useCallback(
-    (emp: TimesheetWorkspaceEmployee, workDate: string) => {
-      if (!canEdit) return;
-      setAdjustingEmployee(emp);
-      setAdjustingDate(workDate);
-    },
-    [canEdit],
+    [hasUnlockPerm, pl, ts],
   );
 
   if (ts.loading) {
@@ -460,7 +302,6 @@ export function TimesheetEditorPage({
           records={ts.records}
           canEdit={canEdit}
           canTogglePeriodStatus={canTogglePeriodStatus}
-          onAdjust={onAdjust}
           onReload={ts.reload}
           navigatePeriod={navigatePeriod}
           onClosePeriod={() => setShowClose(true)}
@@ -483,22 +324,6 @@ export function TimesheetEditorPage({
           period={ts.period}
           onClose={() => setShowReopen(false)}
           onConfirm={handleReopen}
-        />
-      )}
-      {adjustingDate && adjustingEmployee && (
-        <AdjustmentModal
-          employeeName={adjustingEmployee.fullName}
-          workDate={adjustingDate}
-          isNewEntry={
-            !getRecord(ts.records, adjustingEmployee.id, adjustingDate)
-          }
-          currentRecord={getRecord(
-            ts.records,
-            adjustingEmployee.id,
-            adjustingDate,
-          )}
-          onClose={() => setAdjustingDate(null)}
-          onConfirm={handleOverrideSubmit}
         />
       )}
     </div>

@@ -3,6 +3,8 @@ import {
   createCourse,
   publishCourse,
   enrollCourse,
+  completeCourseEnrollment,
+  assignCourseToEmployees,
   createSession,
   publishSession,
   cancelSession,
@@ -11,8 +13,13 @@ import {
   checkInSession,
   completeSession,
   createCertDefinition,
+  issueEmployeeCertificate,
+  renewEmployeeCertificate,
+  revokeEmployeeCertificate,
   createLearningPath,
   publishLearningPath,
+  assignLearningPath,
+  completeLearningPath,
 } from './learning';
 import { learningCourseKeys, learningSessionKeys, learningCertKeys, learningPathKeys } from '../queries/learning-queries';
 import { notifyMutationError, notifyMutationSuccess } from '@/lib/mutation-feedback';
@@ -40,6 +47,29 @@ export function useEnrollCourse() {
     mutationFn: (courseId: string) => enrollCourse(courseId),
     onSuccess: () => { qc.invalidateQueries({ queryKey: learningCourseKeys.all() }); notifyMutationSuccess(learningUiCopy.feedback.enrolled); },
     onError: (e) => notifyMutationError(e, learningUiCopy.feedback.enrollFailed),
+  });
+}
+export function useCompleteCourseEnrollment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (enrollmentId: string) => completeCourseEnrollment(enrollmentId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningCourseKeys.all() });
+      notifyMutationSuccess('Đã hoàn thành khóa học');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể hoàn thành khóa học'),
+  });
+}
+export function useAssignCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { courseId: string; employeeIds: string[]; dueDate?: string }) =>
+      assignCourseToEmployees(dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningCourseKeys.all() });
+      notifyMutationSuccess('Đã giao khóa học cho nhân viên');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể giao khóa học'),
   });
 }
 export function useCreateSession() {
@@ -106,6 +136,40 @@ export function useCreateCertDefinition() {
     onError: (e) => notifyMutationError(e, learningUiCopy.feedback.certDefCreateFailed),
   });
 }
+export function useIssueCertificate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { definitionId: string; employeeId: string; courseId?: string }) =>
+      issueEmployeeCertificate(dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningCertKeys.all() });
+      notifyMutationSuccess('Đã cấp chứng chỉ cho nhân viên');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể cấp chứng chỉ'),
+  });
+}
+export function useRenewCertificate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => renewEmployeeCertificate(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningCertKeys.all() });
+      notifyMutationSuccess('Đã gia hạn chứng chỉ');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể gia hạn chứng chỉ'),
+  });
+}
+export function useRevokeCertificate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => revokeEmployeeCertificate(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningCertKeys.all() });
+      notifyMutationSuccess('Đã thu hồi chứng chỉ');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể thu hồi chứng chỉ'),
+  });
+}
 export function useCreateLearningPath() {
   const qc = useQueryClient();
   return useMutation({
@@ -120,5 +184,28 @@ export function usePublishLearningPath() {
     mutationFn: ({ id }: { id: string }) => publishLearningPath(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: learningPathKeys.all() }); notifyMutationSuccess(learningUiCopy.feedback.pathPublished); },
     onError: (e) => notifyMutationError(e, learningUiCopy.feedback.pathPublishFailed),
+  });
+}
+export function useAssignLearningPath() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { pathId: string; employeeIds: string[] }) =>
+      assignLearningPath(dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningPathKeys.all() });
+      notifyMutationSuccess('Đã gán lộ trình học tập');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể gán lộ trình học tập'),
+  });
+}
+export function useCompleteLearningPath() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => completeLearningPath(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: learningPathKeys.all() });
+      notifyMutationSuccess('Đã hoàn thành lộ trình học tập');
+    },
+    onError: (e) => notifyMutationError(e, 'Không thể hoàn thành lộ trình học tập'),
   });
 }

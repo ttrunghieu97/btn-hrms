@@ -7,10 +7,9 @@ import {
 } from '../board-validation';
 import type { Task } from '../../../utils/task-types';
 
-function makeTask(overrides: Partial<Task> & { id: string; status: string }): Task {
+function makeTask(overrides: Omit<Partial<Task>, 'status'> & { id: string; status: string }): Task {
   return {
     title: 'Test',
-    status: 'created',
     ...overrides,
   } as Task;
 }
@@ -63,7 +62,7 @@ describe('checkCompletedAssignee', () => {
   });
 
   it('warns completed with assignee', () => {
-    const tasks = [makeTask({ id: '1', status: 'completed', assignee: { id: 'a1', fullName: 'A' } })];
+    const tasks = [makeTask({ id: '1', status: 'completed', assignee: { id: 'a1', firstName: 'A', lastName: 'User', fullName: 'A', employeeCode: 'EMP001' } })];
     const issues = checkCompletedAssignee(tasks);
     expect(issues).toHaveLength(1);
     expect(issues[0].severity).toBe('warn');
@@ -82,7 +81,7 @@ describe('validateBoard', () => {
   it('aggregates multiple issues', () => {
     const tasks = [
       makeTask({ id: '1', status: 'bogus' }),
-      makeTask({ id: '2', status: 'completed', assignee: { id: 'a1', fullName: 'A' } }),
+      makeTask({ id: '2', status: 'completed', assignee: { id: 'a1', firstName: 'A', lastName: 'User', fullName: 'A', employeeCode: 'EMP001' } }),
     ];
     expect(validateBoard(tasks).length).toBeGreaterThanOrEqual(2);
   });

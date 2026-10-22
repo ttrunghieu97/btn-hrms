@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
+import { envClient } from '@/lib/env.client';
 import { useState } from 'react';
 
 interface GoogleSsoButtonProps {
@@ -38,7 +39,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = envClient.googleClientId || '';
 
 export function GoogleSsoButton({ onSuccess, label, variant = 'login' }: GoogleSsoButtonProps) {
   const [loading, setLoading] = useState(false);

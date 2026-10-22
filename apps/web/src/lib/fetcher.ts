@@ -12,10 +12,16 @@
  * token-reuse detection and revokes the entire session.
  */
 
-import { ApiError, ApiErrorCode, resolveApiErrorCode, type ApiErrorDetails } from './api-error';
+import {
+  ApiError,
+  parseRetryAfterMs,
+  resolveApiErrorCode,
+  type ApiErrorDetails
+} from './api-error';
 import { envClient } from './env.client';
+import { resolveInternalApiUrl } from './env.server';
 import { commonUiCopy } from './app-copy';
-import { isUnauthenticatedError } from './error-taxonomy';
+import { isNonSessionAuthError } from './error-taxonomy';
 import { appLogger } from './logger';
 import { setSentryRequestId } from './observability/init';
 import { emitPerformanceEvent } from './performance';
@@ -31,7 +37,14 @@ const API_ORIGIN = (() => {
   }
 })();
 
-const SKIP_REFRESH_PATHS = ['/auth/login', '/auth/signin', '/auth/signup', '/auth/refresh'];
+const SKIP_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/signin',
+  '/auth/signup',
+  '/auth/refresh',
+  '/auth/sso/',
+  '/auth/logout'
+];
 const REQUEST_TIMEOUT_MS = 15_000;
 
 type RefreshResolver = {
@@ -71,7 +84,7 @@ function buildUrl(input: string): string {
   if (/^https?:\/\//i.test(input)) return input;
   if (input.startsWith('/api/')) {
     if (typeof window !== 'undefined') return input; // let next rewrite handle in browser
-    const internalUrl = process.env.INTERNAL_API_URL || process.env.API_URL || 'http://127.0.0.1:3001';
+    const internalUrl = resolveInternalApiUrl();
     return `${internalUrl}${input}`;
   }
   return `${BASE_URL}${input.startsWith('/') ? input : `/${input}`}`;
@@ -104,7 +117,8 @@ async function parseError(res: Response, requestId: string): Promise<ApiError> {
     backendCode: root?.error?.code,
     status: res.status,
     details: root?.error?.details,
-    requestId
+    requestId,
+    retryAfterMs: parseRetryAfterMs(res.headers.get('retry-after'))
   });
 }
 
@@ -210,8 +224,13 @@ async function execute<T>(
     });
   }
 
-  // Refresh on 401 (skip auth endpoints + retried request)
+  // Refresh on 401 (skip auth endpoints + retried request + non-session credential/MFA 401s)
   if (res.status === 401 && attempt === 0 && !shouldSkipRefresh(url)) {
+    const initialAuthError = await parseError(res, requestId);
+    if (isNonSessionAuthError(initialAuthError)) {
+      throw initialAuthError;
+    }
+
     appLogger.info('auth_fetch_401_refresh_attempt', {
       source: 'fetcher',
       url,
@@ -243,6 +262,7 @@ async function execute<T>(
 
     isRefreshing = true;
     try {
+      const hasRefreshHandler = Boolean(_refreshHandler);
       // Delegate to auth-store refresh (single mutex). Fall back to no-op if not yet wired.
       const newToken = _refreshHandler ? await _refreshHandler() : null;
       if (!newToken) {
@@ -252,12 +272,14 @@ async function execute<T>(
           status: 401,
           requestId
         });
-        appLogger.warn('auth_fetch_refresh_failed', {
-          source: 'fetcher',
-          url,
-          requestId,
-          reason: 'refresh_handler_returned_null'
-        });
+        if (!hasRefreshHandler) {
+          appLogger.warn('auth_fetch_refresh_failed', {
+            source: 'fetcher',
+            url,
+            requestId,
+            reason: 'refresh_handler_not_configured'
+          });
+        }
         notifyRefreshFailed(authErr);
         throw authErr;
       }
@@ -267,16 +289,10 @@ async function execute<T>(
         requestId
       });
       notifyRefreshed(newToken);
-      return execute<T>(url, init, 1);
+      const retryHeaders = normalizeHeaders(init.headers);
+      retryHeaders.set('Authorization', `Bearer ${newToken}`);
+      return execute<T>(url, { ...init, headers: retryHeaders }, 1);
     } catch (err) {
-      if (!isUnauthenticatedError(err)) {
-        appLogger.error('auth_fetch_refresh_failed', {
-          source: 'fetcher',
-          url,
-          requestId,
-          reason: err instanceof Error ? err.message : 'unknown_error'
-        });
-      }
       notifyRefreshFailed(err);
       throw err;
     } finally {

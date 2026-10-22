@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DATABASE_CONNECTION } from "../../../../infrastructure/database/database.provider";
 import * as schema from "../../../../infrastructure/database/schema";
-import { and, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { BaseRepository } from "../../../../infrastructure/repositories/base.repository";
 import { CONTRACTS_TOKENS } from "../../../../contracts/contracts.tokens";
 import { AuditLogPort } from "../../../../contracts/ports/audit-log.port";
@@ -152,8 +152,21 @@ export class AuthRepository extends BaseRepository<
     return rows.length;
   }
 
-  revokeRefreshTokenFamily(userId: string, tx?: PostgresJsDatabase<typeof schema>) {
-    return this.revokeAllRefreshTokens(userId, tx);
+  async revokeRefreshTokenFamily(userId: string, tx?: PostgresJsDatabase<typeof schema>) {
+    const db = tx ?? this.db;
+    const rows = await db
+      .delete(schema.refreshTokens)
+      .where(
+        and(
+          eq(schema.refreshTokens.userId, userId),
+          or(
+            isNotNull(schema.refreshTokens.supersededAt),
+            isNotNull(schema.refreshTokens.revokedAt),
+          ),
+        ),
+      )
+      .returning({ id: schema.refreshTokens.id });
+    return rows.length;
   }
 
   async createSecurityAuditLog(values: {
@@ -294,7 +307,12 @@ export class AuthRepository extends BaseRepository<
     const db = tx ?? this.db;
     const deleted = await db
       .delete(schema.refreshTokens)
-      .where(lt(schema.refreshTokens.expiresAt, now))
+      .where(
+        or(
+          lt(schema.refreshTokens.expiresAt, now),
+          isNotNull(schema.refreshTokens.revokedAt),
+        ),
+      )
       .returning({ id: schema.refreshTokens.id });
     return deleted.length;
   }

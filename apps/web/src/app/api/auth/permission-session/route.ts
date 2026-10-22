@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendUrl } from '@/lib/server/backend-proxy';
+import { isProductionServerEnv } from '@/lib/env.server';
 
 /**
  * API route to manage permission session cookie.
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   nextResponse.cookies.set('session_perms', cookieValue, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProductionServerEnv(),
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24, // 24h
@@ -56,7 +57,7 @@ export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set('session_perms', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProductionServerEnv(),
     sameSite: 'lax',
     path: '/',
     maxAge: 0,

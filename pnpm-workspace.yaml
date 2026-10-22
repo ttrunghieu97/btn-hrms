@@ -2,6 +2,15 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+supportedArchitectures:
+  os:
+    - current
+  cpu:
+    - current
+  libc:
+    - glibc
+    - musl
+
 allowBuilds:
   '@scarf/scarf': true
   '@sentry/cli': true
@@ -26,3 +35,6 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
+
+patchedDependencies:
+  tsrs: patches/tsrs.patch

@@ -122,6 +122,10 @@ export class QueryTimesheetWorkspaceUseCase {
       checkOutMorning: string | null;
       checkInAfternoon: string | null;
       checkOutAfternoon: string | null;
+      hasExplicitInMorning: boolean;
+      hasExplicitOutMorning: boolean;
+      hasExplicitInAfternoon: boolean;
+      hasExplicitOutAfternoon: boolean;
     }>();
     for (const event of eventRows) {
       if (event.date < from || event.date > to) continue;
@@ -133,30 +137,55 @@ export class QueryTimesheetWorkspaceUseCase {
         checkOutMorning: null,
         checkInAfternoon: null,
         checkOutAfternoon: null,
+        hasExplicitInMorning: false,
+        hasExplicitOutMorning: false,
+        hasExplicitInAfternoon: false,
+        hasExplicitOutAfternoon: false,
       };
       const timeStr = event.time ? event.time.toISOString() : null;
       if (!timeStr) continue;
 
       const dateObj = new Date(event.time!);
+      if (Number.isNaN(dateObj.getTime())) continue;
       const h = dateObj.getHours();
-      const session = event.session || (h < 12 ? "morning" : h < 14 ? "noon" : "afternoon");
 
       if (event.type === "check_in") {
-        if (session === "morning" || (!entry.checkInMorning && h < 12)) {
+        if (event.session === "morning") {
           entry.checkInMorning = timeStr;
-        } else if (session === "afternoon" || session === "noon" || h >= 12) {
+          entry.hasExplicitInMorning = true;
+        } else if (event.session === "afternoon") {
           entry.checkInAfternoon = timeStr;
+          entry.hasExplicitInAfternoon = true;
+        } else if (!event.session) {
+          if (h < 12) {
+            if (!entry.hasExplicitInMorning) {
+              entry.checkInMorning = timeStr;
+            }
+          } else if (!entry.hasExplicitInAfternoon) {
+            entry.checkInAfternoon = timeStr;
+          }
         }
-        if (!entry.checkIn || dateObj < new Date(entry.checkIn)) {
+        // Note: event.session === "noon" is LUNCH_DUTY check and must not overwrite morning/afternoon shift punches
+        if (event.session !== "noon" && (!entry.checkIn || dateObj < new Date(entry.checkIn))) {
           entry.checkIn = timeStr;
         }
       } else if (event.type === "check_out") {
-        if (session === "morning" || (!entry.checkOutMorning && h < 13)) {
+        if (event.session === "morning") {
           entry.checkOutMorning = timeStr;
-        } else if (session === "afternoon" || session === "noon" || h >= 13) {
+          entry.hasExplicitOutMorning = true;
+        } else if (event.session === "afternoon") {
           entry.checkOutAfternoon = timeStr;
+          entry.hasExplicitOutAfternoon = true;
+        } else if (!event.session) {
+          if (h < 13) {
+            if (!entry.hasExplicitOutMorning) {
+              entry.checkOutMorning = timeStr;
+            }
+          } else if (!entry.hasExplicitOutAfternoon) {
+            entry.checkOutAfternoon = timeStr;
+          }
         }
-        if (!entry.checkOut || dateObj > new Date(entry.checkOut)) {
+        if (event.session !== "noon" && (!entry.checkOut || dateObj > new Date(entry.checkOut))) {
           entry.checkOut = timeStr;
         }
       }
@@ -192,6 +221,7 @@ export class QueryTimesheetWorkspaceUseCase {
         overtimeMinutes: row.overtimeMinutes ? Number(row.overtimeMinutes) : null,
         personalBreakMinutes: row.personalBreakMinutes ? Number(row.personalBreakMinutes) : null,
         lunchDutyMinutes: row.lunchDutyMinutes ? Number(row.lunchDutyMinutes) : null,
+        duty30kMinutes: row.duty30kMinutes ? Number(row.duty30kMinutes) : null,
         nightShiftDutyCount: row.nightShiftDutyCount ? Number(row.nightShiftDutyCount) : null,
         waterBoothDutyCount: row.waterBoothDutyCount ? Number(row.waterBoothDutyCount) : null,
         isHoliday: row.isHoliday,

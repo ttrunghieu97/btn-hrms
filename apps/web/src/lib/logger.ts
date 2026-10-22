@@ -15,10 +15,15 @@ type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 type LogMeta = Record<string, unknown>;
 
 function write(level: LogLevel, message: string, meta?: LogMeta): void {
+  const devMessage =
+    meta && typeof meta.reason === 'string' && meta.reason
+      ? `${message}: ${meta.reason}`
+      : message;
+
   // Error always writes — the only sink when no remote error service
   if (level === 'error') {
     if (isDev) {
-      console.error(message, meta ?? '');
+      console.error(devMessage, meta ?? '');
     } else {
       console.error(JSON.stringify({ level, message, meta, timestamp: new Date().toISOString() }));
     }

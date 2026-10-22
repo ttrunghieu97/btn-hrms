@@ -3,10 +3,12 @@ import { hasAnyPermission } from '@project/permissions';
 import { canAccessRoute, matchRoute } from '@/features/authorization';
 import { routeRegistry } from '@/shared/authorization/route-registry/routes';
 import { decodePermissions } from '@/lib/server/permission-session-edge';
+import { getAccessCookieName, getRefreshCookieName } from '@/lib/env.server';
+import { envClient } from '@/lib/env.client';
 import { isDisabledModulePath, isProtectedPath } from '@/config/module-rollout';
 
-const ACCESS_COOKIE_NAME = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token';
-const REFRESH_COOKIE_NAME = process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token';
+const ACCESS_COOKIE_NAME = getAccessCookieName();
+const REFRESH_COOKIE_NAME = getRefreshCookieName();
 const REFRESH_ATTEMPT_PARAM = 'refreshAttempt';
 
 function requestOrigin(req: NextRequest): string {
@@ -38,9 +40,9 @@ export default async function middleware(req: NextRequest) {
   const arr = new Uint8Array(16);
   globalThis.crypto.getRandomValues(arr);
   const nonce = btoa(String.fromCharCode(...arr));
-  const isDev = process.env.NODE_ENV === 'development';
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ?? '';
-  const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN ?? '';
+  const isDev = envClient.isDevAppEnv;
+  const apiBaseUrl = envClient.apiBaseUrl.replace(/\/+$/, '');
+  const sentryDsn = envClient.sentryDsn ?? '';
 
   const csp = [
     `default-src 'self'`,
@@ -61,6 +63,21 @@ export default async function middleware(req: NextRequest) {
   // data, and <Script> tags). Setting it only on the response leaves Next's
   // inline scripts with an empty nonce -> CSP blocks them + hydration mismatch.
   const requestHeaders = new Headers(req.headers);
+  requestHeaders.delete('forwarded');
+  const hostHeader = req.headers.get('host');
+  if (hostHeader) {
+    requestHeaders.set('x-forwarded-host', hostHeader);
+  } else {
+    requestHeaders.delete('x-forwarded-host');
+  }
+  const rawProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase();
+  const forwardedProto =
+    rawProto === 'https' || rawProto === 'http'
+      ? rawProto
+      : req.nextUrl.protocol === 'https:'
+        ? 'https'
+        : 'http';
+  requestHeaders.set('x-forwarded-proto', forwardedProto);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-forwarded-path', req.nextUrl.pathname);
   requestHeaders.set('Content-Security-Policy', cspValue);
@@ -124,6 +141,10 @@ export default async function middleware(req: NextRequest) {
     const newPath = path.replace('/leave/my-requests', '/leave/requests');
     return NextResponse.redirect(new URL(newPath, req.url));
   }
+  if (path === '/approvals' || path.startsWith('/approvals/')) {
+    const newPath = path.replace('/approvals', '/administration/approval');
+    return NextResponse.redirect(new URL(newPath, req.url));
+  }
 
   // Auth guard for protected routes only
   if (isProtectedPath(req.nextUrl.pathname)) {
@@ -144,6 +165,9 @@ export default async function middleware(req: NextRequest) {
       // Permission enforcement at Edge. Route registry defined inline.
       const permErr = await checkRoutePermission(req.nextUrl.pathname, req);
       if (permErr) return permErr;
+      if (req.nextUrl.searchParams.has(REFRESH_ATTEMPT_PARAM)) {
+        return NextResponse.redirect(new URL(getNextPath(req), requestOrigin(req)));
+      }
       return response;
     }
 

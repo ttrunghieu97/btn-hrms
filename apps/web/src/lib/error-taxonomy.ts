@@ -321,12 +321,108 @@ export function getErrorObservabilityContext(error: unknown): AppErrorObservabil
   };
 }
 
+const csrfErrorCodes = new Set(['CSRF_ORIGIN_MISMATCH', 'CSRF_CROSS_SITE_BLOCKED']);
+const nonSessionAuthCodes = new Set([
+  'AUTH_INVALID_CREDENTIALS',
+  'AUTH_INVALID_MFA',
+  'AUTH_MFA_REQUIRED',
+  'INVALID_CREDENTIALS',
+  'INVALID_MFA_CODE',
+  'MFA_REQUIRED'
+]);
+const terminalRefreshAuthCodes = new Set([
+  'AUTH_REFRESH_INVALID',
+  'REFRESH_TOKEN_EXPIRED',
+  'AUTH_TOKEN_INVALID',
+  'AUTH_TOKEN_MISSING',
+  'AUTH_TOKEN_OUTDATED',
+  'AUTH_ACCOUNT_DISABLED',
+  'USER_NOT_AUTHENTICATED',
+  'USER_NOT_FOUND',
+  'UNAUTHORIZED',
+  'INVALID_REFRESH_TOKEN',
+  'INVALID_REFRESH_TOKEN_TYPE',
+  'TOKEN_EXPIRED',
+  'TOKEN_NOT_FOUND',
+  'TOKEN_MISMATCH',
+  'ACCOUNT_INACTIVE',
+  'INVALID_TOKEN',
+  'MISSING_TOKEN'
+]);
+
 export function isUnauthenticatedError(error: unknown): boolean {
   return resolveAppError(error).kind === 'unauthenticated';
 }
 
+export function isNonSessionAuthError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const candidate = error as ErrorLike & {
+    details?: { reason?: unknown };
+  };
+  const backendCode =
+    typeof candidate.backendCode === 'string' ? candidate.backendCode.toUpperCase() : undefined;
+  if (backendCode && nonSessionAuthCodes.has(backendCode)) {
+    return true;
+  }
+  const reason =
+    candidate.details && typeof candidate.details.reason === 'string'
+      ? candidate.details.reason.toUpperCase()
+      : undefined;
+  if (reason && nonSessionAuthCodes.has(reason)) {
+    return true;
+  }
+  return false;
+}
+
+export function isTerminalRefreshError(error: unknown): boolean {
+  if (!isUnauthenticatedError(error) || isNonSessionAuthError(error)) {
+    return false;
+  }
+  if (!(error instanceof Error)) return false;
+  const candidate = error as ErrorLike & {
+    details?: { reason?: unknown };
+  };
+  const backendCode =
+    typeof candidate.backendCode === 'string' ? candidate.backendCode.toUpperCase() : undefined;
+  const reason =
+    candidate.details && typeof candidate.details.reason === 'string'
+      ? candidate.details.reason.toUpperCase()
+      : undefined;
+  if (reason && terminalRefreshAuthCodes.has(reason)) {
+    return true;
+  }
+  if (backendCode) {
+    return terminalRefreshAuthCodes.has(backendCode);
+  }
+  return candidate.status === 401;
+}
+
 export function isForbiddenError(error: unknown): boolean {
   return resolveAppError(error).kind === 'forbidden';
+}
+
+export function isCsrfBlockedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const candidate = error as ErrorLike & {
+    details?: { reason?: unknown };
+  };
+  const backendCode =
+    typeof candidate.backendCode === 'string' ? candidate.backendCode.toUpperCase() : undefined;
+  if (backendCode && csrfErrorCodes.has(backendCode)) {
+    return true;
+  }
+  const reason =
+    candidate.details && typeof candidate.details.reason === 'string'
+      ? candidate.details.reason.toUpperCase()
+      : undefined;
+  if (reason && csrfErrorCodes.has(reason)) {
+    return true;
+  }
+  return false;
+}
+
+export function isRateLimitError(error: unknown): boolean {
+  return resolveAppError(error).kind === 'rate-limit';
 }
 
 export function isNotFoundError(error: unknown): boolean {

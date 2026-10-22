@@ -7,7 +7,9 @@
  *   - All formatting uses APP_TIMEZONE (Asia/Ho_Chi_Minh) unless explicitly overridden.
  */
 
-const APP_TIMEZONE: string = (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_TIMEZONE : undefined) ?? "Asia/Ho_Chi_Minh";
+import { envClient } from "./env.client";
+
+const APP_TIMEZONE: string = envClient.timezone;
 
 /**
  * Formats a Date/string to DD/MM/YYYY for display.

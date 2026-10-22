@@ -67,7 +67,11 @@ export interface AssetTypeRow {
 export interface AssetUnitRow {
   id: string;
   assetTypeId?: string;
+  code?: string;
+  name?: string;
   serialNumber?: string;
+  purchaseDate?: string | null;
+  purchaseCost?: string | null;
   status?: string;
   createdAt?: string;
 }

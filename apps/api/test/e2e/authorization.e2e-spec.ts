@@ -1,11 +1,11 @@
 import request from "supertest";
 import { eq } from "drizzle-orm";
-import { getApp, getDb, seedAdmin, seedRegularUser, cleanupUser } from "./helpers/test-app";
+import { getApp, getDb, seedAdmin, seedRegularUser, cleanupUser, type E2eDatabase } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
 
 describe("Authorization (e2e)", () => {
   const ctx: {
-    app?: any; db?: typeof schema;
+    app?: any; db?: E2eDatabase;
     admin?: any; regularUser?: any;
     adminToken?: string; regularToken?: string;
     employeeId?: string;

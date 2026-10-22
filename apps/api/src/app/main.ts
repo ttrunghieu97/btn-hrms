@@ -104,7 +104,13 @@ async function bootstrap() {
 
   app.getHttpAdapter().getInstance().disable("x-powered-by");
 
-  const rawFrontend = process.env.APP_URL || "";
+  const rawFrontend = [
+    process.env.APP_URL,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN,
+  ]
+    .filter(Boolean)
+    .join(",");
   const parsedOrigins = parseAllowedOrigins(rawFrontend);
   if (!parsedOrigins.length) {
     logger.error("APP_URL must be set to one or more origins for CORS");
@@ -198,7 +204,7 @@ async function bootstrap() {
   }
 
   const port = Number(process.env.PORT) || 3001;
-  const host = process.env.HOST || "0.0.0.0";
+  const host = process.env.HOST || process.env.HOSTNAME || "0.0.0.0";
   await app.listen(port, host);
 
   const t4 = performance.now();

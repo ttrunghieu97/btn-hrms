@@ -3,15 +3,12 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { showToast } from '@/lib/toast';
-import { Icons } from '@/components/icons';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   TableHeader,
   TableBody,
-  TableFooter,
   TableHead,
   TableRow,
-  TableCell,
 } from '@/components/ui/table';
 import type {
   PeriodStatus,
@@ -19,10 +16,6 @@ import type {
   TimesheetWorkspaceRecord,
 } from '../types';
 import {
-  DAY_LABELS,
-  fmtDuration,
-  fmtTime,
-  fmtWork,
   dayDate,
   detailHeaderRows,
   getDayOfWeek,
@@ -40,31 +33,37 @@ import {
   type DayCellUpdates,
   type DayPatch,
   type EditableField,
+  type NavigationDirection,
+  FIELD_BY_VISUAL_COL,
   FIELD_LABELS,
   ORDERED_FIELDS,
-  WEEKDAY_SHIFT_FIELDS,
+  VISUAL_COL_BY_FIELD,
   applyDayPatchToRecord,
   calculateWorkedMinutesFromPunches,
-  getRecordFieldDisplayValue,
+  getNextCell,
   getRecordFieldPatch,
+  getVisualColDisplayValue,
   isHeaderColActive,
+  normalizeEmployeeRecord,
   parseRawCellValueToUpdates,
   resolvePatchedAttendanceStatus,
 } from '../timesheet-calculations';
-import {
-  EditableNoteCell,
-  EditableNumberCell,
-  EditableTimeCell,
-} from './editable-cells';
+import type { NumberCellField, TimeCellField } from './editable-cells';
 import { PeriodWorkspaceHeader } from './period-workspace-header';
-import { EmployeeDirectorySidebar } from './employee-directory-sidebar';
-import { EmployeeAttendanceSummaryCard } from './employee-attendance-summary-card';
+import {
+  EmployeeDirectorySidebar,
+  type EmployeeVerificationFilter,
+} from './employee-directory-sidebar';
 import { TimesheetToolbar } from './timesheet-toolbar';
 import { AttendanceMobileAgenda } from './attendance-mobile-agenda';
+import { TimesheetDayRow } from './timesheet-day-row';
+import { TimesheetTableFooter } from './timesheet-table-footer';
+import { TimesheetPrintAllView } from './timesheet-print-all-view';
 
 export {
   applyDayPatchToRecord,
   calculateWorkedMinutesFromPunches,
+  normalizeEmployeeRecord,
   resolvePatchedAttendanceStatus,
 };
 
@@ -74,7 +73,6 @@ interface DetailSheetProps {
   records: TimesheetWorkspaceRecord[];
   canEdit: boolean;
   canTogglePeriodStatus?: boolean;
-  onAdjust: (employee: TimesheetWorkspaceEmployee, workDate: string) => void;
   onReload?: () => Promise<void>;
   navigatePeriod?: (delta: number) => void;
   onClosePeriod?: () => void;
@@ -83,10 +81,13 @@ interface DetailSheetProps {
 }
 
 interface HistorySnapshot {
-  records: TimesheetWorkspaceRecord[];
+  stagedByEmployee: Record<string, Record<string, TimesheetWorkspaceRecord>>;
   dirtyFieldsByDate: Record<string, EditableField[]>;
-  manualOverrideDates: string[];
 }
+
+const EMPTY_RECORD_MAP: ReadonlyMap<string, TimesheetWorkspaceRecord> = new Map();
+const EMPTY_VERIFICATION_MAP: Record<string, 'draft' | 'done'> = {};
+const VI_COLLATOR = new Intl.Collator('vi', { sensitivity: 'base' });
 
 export function DetailSheet({
   period,
@@ -94,7 +95,6 @@ export function DetailSheet({
   records,
   canEdit,
   canTogglePeriodStatus = canEdit,
-  onAdjust,
   onReload,
   navigatePeriod,
   onClosePeriod,
@@ -111,41 +111,222 @@ export function DetailSheet({
   const currentMode = modeOverride ?? (isMobile ? 'agenda' : 'matrix');
   const [search, setSearch] = React.useState('');
   const [dept, setDept] = React.useState('');
+  const [statusFilter, setStatusFilter] =
+    React.useState<EmployeeVerificationFilter>('all');
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
 
-  // Optimistic local state for records + staged dirty buffer + undo/redo stack
-  const [localRecords, setLocalRecords] = React.useState<TimesheetWorkspaceRecord[]>(records);
+  // Pre-index incoming server records by employeeId -> Map<workDate, record> in O(N) once per fetch,
+  // normalizing punch durations lazily per viewed employee so switching months with 1,500+ records is near-zero cost.
+  const rawRecordsByEmployee = React.useMemo(() => {
+    const byEmp = new Map<string, TimesheetWorkspaceRecord[]>();
+    for (const r of records) {
+      let list = byEmp.get(r.employeeId);
+      if (!list) {
+        list = [];
+        byEmp.set(r.employeeId, list);
+      }
+      list.push(r);
+    }
+    return byEmp;
+  }, [records]);
+
+  const normalizedCacheRef = React.useRef<{
+    records: TimesheetWorkspaceRecord[];
+    byEmp: Map<string, Map<string, TimesheetWorkspaceRecord>>;
+  }>({ records: [], byEmp: new Map() });
+
+  if (normalizedCacheRef.current.records !== records) {
+    normalizedCacheRef.current = { records, byEmp: new Map() };
+  }
+
+  const getEmployeeBaseRecords = React.useCallback(
+    (empId: string): Map<string, TimesheetWorkspaceRecord> | undefined => {
+      const cached = normalizedCacheRef.current.byEmp.get(empId);
+      if (cached) return cached;
+      const rawList = rawRecordsByEmployee.get(empId);
+      if (!rawList) return undefined;
+      const empMap = new Map<string, TimesheetWorkspaceRecord>();
+      for (const r of rawList) {
+        empMap.set(r.workDate, normalizeEmployeeRecord(r));
+      }
+      normalizedCacheRef.current.byEmp.set(empId, empMap);
+      return empMap;
+    },
+    [rawRecordsByEmployee],
+  );
+
+  // Optimistic local state for staged record overrides (scoped by employeeId -> workDate) + dirty buffer + undo/redo stack
+  const [stagedByEmployee, setStagedByEmployee] = React.useState<
+    Record<string, Record<string, TimesheetWorkspaceRecord>>
+  >({});
+  const committedByEmployeeRef = React.useRef<
+    Record<string, Record<string, TimesheetWorkspaceRecord>>
+  >({});
+  const savePromiseRef = React.useRef<Promise<boolean> | null>(null);
+  const navActionSeqRef = React.useRef(0);
   const [dirtyFieldsByDate, setDirtyFieldsByDate] = React.useState<Record<string, EditableField[]>>({});
-  const [manualOverrideDates, setManualOverrideDates] = React.useState<string[]>([]);
   const [undoStack, setUndoStack] = React.useState<HistorySnapshot[]>([]);
   const [redoStack, setRedoStack] = React.useState<HistorySnapshot[]>([]);
 
+  const prevRecordsRef = React.useRef(records);
+  const prevPeriodRef = React.useRef(period);
   React.useEffect(() => {
-    setLocalRecords(records);
-    setDirtyFieldsByDate({});
-    setManualOverrideDates([]);
-    setUndoStack([]);
-    setRedoStack([]);
+    const periodChanged = prevPeriodRef.current !== period;
+    const recordsChanged = prevRecordsRef.current !== records;
+    if (!periodChanged && !recordsChanged) {
+      return;
+    }
+    prevRecordsRef.current = records;
+    prevPeriodRef.current = period;
+
+    if (periodChanged) {
+      committedByEmployeeRef.current = {};
+      setStagedByEmployee((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
+      setDirtyFieldsByDate((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
+      setUndoStack((prev) => (prev.length === 0 ? prev : []));
+      setRedoStack((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+
+    // Same period, new server records (e.g. background refetch or post-save reload):
+    // Preserve any unsaved staged edits for the active employee so user work is never lost.
+    const curDirty = latestRef.current.dirtyFieldsByDate;
+    const activeDirtyDates = Object.keys(curDirty);
+    const selId = latestRef.current.selected?.id;
+    committedByEmployeeRef.current = {};
+    if (activeDirtyDates.length === 0 || !selId) {
+      setStagedByEmployee((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
+    } else {
+      setStagedByEmployee((prev) => {
+        const empStaged = prev[selId];
+        if (!empStaged) return Object.keys(prev).length === 0 ? prev : {};
+        const preserved: Record<string, TimesheetWorkspaceRecord> = {};
+        for (const wd of activeDirtyDates) {
+          if (empStaged[wd]) {
+            preserved[wd] = empStaged[wd]!;
+          }
+        }
+        return { [selId]: preserved };
+      });
+    }
   }, [records, period]);
 
-  // Active cell coordinate for Excel keyboard navigation & Fill Handle drag state
-  const [activeCell, setActiveCell] = React.useState<ActiveCell | null>(null);
-  const [isEditing, setIsEditing] = React.useState<boolean>(false);
+  // Active cell coordinate, visual range selection anchor/end (0..15), and Fill Handle drag state
+  const [activeCell, setActiveCellState] = React.useState<ActiveCell | null>(
+    null,
+  );
+  const [selAnchor, setSelAnchor] = React.useState<{
+    day: number;
+    col: number;
+  } | null>(null);
+  const [selEnd, setSelEnd] = React.useState<{
+    day: number;
+    col: number;
+  } | null>(null);
+  const setActiveCell = React.useCallback((cell: ActiveCell | null) => {
+    const anchor = cell
+      ? { day: cell.day, col: VISUAL_COL_BY_FIELD[cell.field] }
+      : null;
+    latestRef.current.activeCell = cell;
+    latestRef.current.selAnchor = anchor;
+    latestRef.current.selEnd = null;
+    setActiveCellState(cell);
+    setSelAnchor(anchor);
+    setSelEnd(null);
+  }, []);
   const [fillDrag, setFillDrag] = React.useState<{
-    field: EditableField;
     startDay: number;
+    endSourceDay: number;
+    startColIdx: number;
+    endColIdx: number;
     currentDay: number;
   } | null>(null);
+  const isSelectingRef = React.useRef(false);
+  const isRowHeaderSelectingRef = React.useRef(false);
+  const dragStartRef = React.useRef<{ day: number; col: number } | null>(null);
+  const didDragSelectRef = React.useRef(false);
+  const [printAllActive, setPrintAllActive] = React.useState(false);
 
   React.useEffect(() => {
-    setActiveCell(null);
-    setIsEditing(false);
-    setFillDrag(null);
+    const onAfterPrint = () => {
+      setPrintAllActive(false);
+    };
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => window.removeEventListener('afterprint', onAfterPrint);
+  }, []);
+
+  const selBounds = React.useMemo(() => {
+    if (!selAnchor) return null;
+    const end = selEnd ?? selAnchor;
+    const minDay = Math.min(selAnchor.day, end.day);
+    const maxDay = Math.max(selAnchor.day, end.day);
+    const minCol = Math.min(selAnchor.col, end.col);
+    const maxCol = Math.max(selAnchor.col, end.col);
+    return {
+      minDay,
+      maxDay,
+      minCol,
+      maxCol,
+      isSingle: minDay === maxDay && minCol === maxCol,
+    };
+  }, [selAnchor, selEnd]);
+
+  React.useEffect(() => {
+    if (
+      latestRef.current.activeCell !== null ||
+      latestRef.current.selAnchor !== null
+    ) {
+      setActiveCellState(null);
+      setSelAnchor(null);
+      setSelEnd(null);
+    }
+    if (latestRef.current.fillDrag !== null) {
+      setFillDrag(null);
+    }
   }, [selected?.id, period]);
 
-  const selectedStats: MonthStats | null = selected
-    ? computeMonthStats(localRecords, period, selected)
-    : null;
+  const buildEmployeeRecordMap = React.useCallback(
+    (
+      empId: string | undefined,
+      stagedMapByEmp: Record<string, Record<string, TimesheetWorkspaceRecord>>,
+    ): ReadonlyMap<string, TimesheetWorkspaceRecord> => {
+      if (!empId) return EMPTY_RECORD_MAP;
+      const baseMap = getEmployeeBaseRecords(empId);
+      const empStaged = stagedMapByEmp[empId];
+      if (!empStaged) {
+        return baseMap ?? EMPTY_RECORD_MAP;
+      }
+      const stagedDates = Object.keys(empStaged);
+      if (stagedDates.length === 0) {
+        return baseMap ?? EMPTY_RECORD_MAP;
+      }
+      const merged = new Map<string, TimesheetWorkspaceRecord>(baseMap);
+      for (const wd of stagedDates) {
+        const rec = empStaged[wd];
+        if (rec) merged.set(wd, rec);
+      }
+      return merged;
+    },
+    [getEmployeeBaseRecords],
+  );
+
+  const recordByDate = React.useMemo<
+    ReadonlyMap<string, TimesheetWorkspaceRecord>
+  >(
+    () => buildEmployeeRecordMap(selected?.id, stagedByEmployee),
+    [buildEmployeeRecordMap, selected?.id, stagedByEmployee],
+  );
+
+  const selectedStats: MonthStats | null = React.useMemo(
+    () => (selected ? computeMonthStats(recordByDate, period, selected) : null),
+    [recordByDate, period, selected],
+  );
 
   const departments = React.useMemo(() => {
     const s = new Set<string>();
@@ -153,7 +334,22 @@ export function DetailSheet({
     return Array.from(s).sort();
   }, [employees]);
 
-  const filtered = React.useMemo(() => {
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [verificationMap, setVerificationMap] = React.useState<
+    Record<string, 'draft' | 'done'>
+  >(EMPTY_VERIFICATION_MAP);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+
+  const prevEmployeesRef = React.useRef(employees);
+  React.useEffect(() => {
+    if (prevEmployeesRef.current === employees) return;
+    prevEmployeesRef.current = employees;
+    setVerificationMap((prev) =>
+      Object.keys(prev).length === 0 ? prev : EMPTY_VERIFICATION_MAP,
+    );
+  }, [employees]);
+
+  const baseFiltered = React.useMemo(() => {
     let list = employees;
     if (search) {
       const q = search.toLowerCase();
@@ -164,20 +360,30 @@ export function DetailSheet({
       );
     }
     if (dept) list = list.filter((e) => e.departmentName === dept);
-    return [...list].sort((a, b) => a.fullName.localeCompare(b.fullName));
+    return [...list].sort((a, b) => VI_COLLATOR.compare(a.fullName, b.fullName));
   }, [employees, search, dept]);
 
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [verificationMap, setVerificationMap] = React.useState<Record<string, 'draft' | 'done'>>({});
-  const [isVerifying, setIsVerifying] = React.useState(false);
+  const baseVerifiedCount = React.useMemo(
+    () =>
+      baseFiltered.filter(
+        (emp) => (verificationMap[emp.id] ?? emp.verificationStatus) === 'done',
+      ).length,
+    [baseFiltered, verificationMap],
+  );
 
-  React.useEffect(() => {
-    const map: Record<string, 'draft' | 'done'> = {};
-    for (const emp of employees) {
-      map[emp.id] = emp.verificationStatus ?? 'draft';
+  const filtered = React.useMemo(() => {
+    if (statusFilter === 'verified') {
+      return baseFiltered.filter(
+        (e) => (verificationMap[e.id] ?? e.verificationStatus) === 'done',
+      );
     }
-    setVerificationMap(map);
-  }, [employees]);
+    if (statusFilter === 'unverified') {
+      return baseFiltered.filter(
+        (e) => (verificationMap[e.id] ?? e.verificationStatus) !== 'done',
+      );
+    }
+    return baseFiltered;
+  }, [baseFiltered, statusFilter, verificationMap]);
 
   const verifiedCount = React.useMemo(
     () =>
@@ -205,90 +411,143 @@ export function DetailSheet({
     [dirtyFieldsByDate],
   );
 
+  const totalDaysInMonth = selectedStats?.totalDays ?? 30;
+
+  const latestRef = React.useRef({
+    selected,
+    canEdit,
+    canTogglePeriodStatus,
+    isPeriodOpen,
+    isSaving,
+    isVerifying,
+    getEmployeeBaseRecords,
+    stagedByEmployee,
+    recordByDate,
+    dirtyDates,
+    dirtyFieldsByDate,
+    verificationMap,
+    filtered,
+    period,
+    totalDaysInMonth,
+    activeCell,
+    selAnchor,
+    selEnd,
+    selBounds,
+    dirtyDayCount,
+    undoStack,
+    redoStack,
+    fillDrag,
+    onReload,
+    navigatePeriod,
+    onClosePeriod,
+    onReopenPeriod,
+    selectEmployee,
+  });
+  latestRef.current = {
+    selected,
+    canEdit,
+    canTogglePeriodStatus,
+    isPeriodOpen,
+    isSaving,
+    isVerifying,
+    getEmployeeBaseRecords,
+    stagedByEmployee,
+    recordByDate,
+    dirtyDates,
+    dirtyFieldsByDate,
+    verificationMap,
+    filtered,
+    period,
+    totalDaysInMonth,
+    activeCell,
+    selAnchor,
+    selEnd,
+    selBounds,
+    dirtyDayCount,
+    undoStack,
+    redoStack,
+    fillDrag,
+    onReload,
+    navigatePeriod,
+    onClosePeriod,
+    onReopenPeriod,
+    selectEmployee,
+  };
+
   const stageDayPatches = React.useCallback(
     (patches: DayPatch[], toastMsg?: string) => {
-      if (!selected || !canEdit || patches.length === 0) return;
+      const {
+        selected: sel,
+        canEdit: editable,
+        getEmployeeBaseRecords: getBaseRecords,
+        stagedByEmployee: curStagedByEmp,
+        dirtyFieldsByDate: curDirty,
+        undoStack: curUndo,
+        period: curPeriod,
+      } = latestRef.current;
+      if (!sel || !editable || patches.length === 0) return;
 
-      setUndoStack((prev) => [
-        ...prev.slice(-29),
+      const nextUndo = [
+        ...curUndo.slice(-29),
         {
-          records: localRecords,
-          dirtyFieldsByDate,
-          manualOverrideDates,
+          stagedByEmployee: curStagedByEmp,
+          dirtyFieldsByDate: curDirty,
         },
-      ]);
+      ];
+
+      const empBaseMap = getBaseRecords(sel.id);
+      const empStaged = { ...(curStagedByEmp[sel.id] ?? {}) };
+      for (const patch of patches) {
+        const wd = dayDate(curPeriod, patch.day);
+        const isSun = getDayOfWeek(wd) === 0;
+        const currentRec = empStaged[wd] ?? empBaseMap?.get(wd);
+        empStaged[wd] = applyDayPatchToRecord(
+          currentRec,
+          sel.id,
+          wd,
+          isSun,
+          patch.updates,
+        );
+      }
+      const nextStagedByEmp = {
+        ...curStagedByEmp,
+        [sel.id]: empStaged,
+      };
+
+      const nextDirty = { ...curDirty };
+      for (const patch of patches) {
+        const wd = dayDate(curPeriod, patch.day);
+        const existing = nextDirty[wd] ?? [];
+        nextDirty[wd] = Array.from(new Set([...existing, ...patch.fields]));
+      }
+      const nextDirtyDates = Object.keys(nextDirty);
+
+      const nextRecordByDate = new Map<string, TimesheetWorkspaceRecord>(
+        empBaseMap,
+      );
+      for (const [wd, rec] of Object.entries(empStaged)) {
+        nextRecordByDate.set(wd, rec);
+      }
+
+      // Synchronously update latestRef so blur -> click in the same interaction tick sees all staged changes
+      latestRef.current.undoStack = nextUndo;
+      latestRef.current.redoStack = [];
+      latestRef.current.stagedByEmployee = nextStagedByEmp;
+      latestRef.current.dirtyFieldsByDate = nextDirty;
+      latestRef.current.dirtyDates = nextDirtyDates;
+      latestRef.current.dirtyDayCount = nextDirtyDates.length;
+      latestRef.current.recordByDate = nextRecordByDate;
+
+      setUndoStack(nextUndo);
       setRedoStack([]);
-
-      setLocalRecords((prev) => {
-        const next = [...prev];
-        for (const patch of patches) {
-          const wd = dayDate(period, patch.day);
-          const isSun = getDayOfWeek(wd) === 0;
-          const idx = next.findIndex(
-            (r) => r.employeeId === selected.id && r.workDate === wd,
-          );
-          const updatedRec = applyDayPatchToRecord(
-            idx >= 0 ? next[idx] : undefined,
-            selected.id,
-            wd,
-            isSun,
-            patch.updates,
-          );
-          if (idx >= 0) {
-            next[idx] = updatedRec;
-          } else {
-            next.push(updatedRec);
-          }
-        }
-        return next;
-      });
-
-      setDirtyFieldsByDate((prev) => {
-        const next = { ...prev };
-        for (const patch of patches) {
-          const wd = dayDate(period, patch.day);
-          const existing = next[wd] ?? [];
-          next[wd] = Array.from(new Set([...existing, ...patch.fields]));
-        }
-        return next;
-      });
-
-      setManualOverrideDates((prev) => {
-        const set = new Set(prev);
-        for (const patch of patches) {
-          const wd = dayDate(period, patch.day);
-          if (
-            patch.fields.includes('workedHours') ||
-            patch.fields.includes('congChinh')
-          ) {
-            set.add(wd);
-          } else if (
-            patch.fields.some(
-              (f) =>
-                f === 'checkInMorning' ||
-                f === 'checkOutMorning' ||
-                f === 'checkInAfternoon' ||
-                f === 'checkOutAfternoon',
-            )
-          ) {
-            set.delete(wd);
-          }
-        }
-        return Array.from(set);
-      });
+      setStagedByEmployee(nextStagedByEmp);
+      setDirtyFieldsByDate(nextDirty);
 
       if (toastMsg) {
         showToast.info(toastMsg);
       }
     },
-    [
-      selected,
-      canEdit,
-      localRecords,
-      dirtyFieldsByDate,
-      manualOverrideDates,
-      period,
-    ],
+    [],
   );
 
   const stageSingleCell = React.useCallback(
@@ -298,219 +557,404 @@ export function DetailSheet({
     [stageDayPatches],
   );
 
+  const handleCommitTime = React.useCallback(
+    (day: number, field: TimeCellField, timeVal: string | null) => {
+      stageSingleCell(day, field, { [field]: timeVal });
+    },
+    [stageSingleCell],
+  );
+
+  const handleCommitNumber = React.useCallback(
+    (day: number, field: NumberCellField, num: number) => {
+      switch (field) {
+        case 'breakHours':
+          stageSingleCell(day, field, { breakMinutes: Math.round(num * 60) });
+          break;
+        case 'personalBreakHours':
+          stageSingleCell(day, field, {
+            personalBreakMinutes: Math.round(num * 60),
+          });
+          break;
+        case 'lunchDutyHours':
+          stageSingleCell(day, field, {
+            lunchDutyMinutes: Math.round(num * 60),
+          });
+          break;
+        case 'duty30kHours':
+          stageSingleCell(day, field, { duty30kMinutes: Math.round(num * 60) });
+          break;
+        case 'nightShift':
+          stageSingleCell(day, field, { nightShiftDutyCount: Math.round(num) });
+          break;
+        case 'waterBooth':
+          stageSingleCell(day, field, { waterBoothDutyCount: Math.round(num) });
+          break;
+      }
+    },
+    [stageSingleCell],
+  );
+
+  const handleCommitNote = React.useCallback(
+    (day: number, str: string) => {
+      stageSingleCell(day, 'note', { note: str });
+    },
+    [stageSingleCell],
+  );
+
   const handleUndo = React.useCallback(() => {
-    if (undoStack.length === 0) return;
-    const last = undoStack[undoStack.length - 1]!;
-    setRedoStack((prev) => [
-      ...prev,
-      { records: localRecords, dirtyFieldsByDate, manualOverrideDates },
-    ]);
-    setUndoStack((prev) => prev.slice(0, -1));
-    setLocalRecords(last.records);
+    const {
+      selected: sel,
+      undoStack: curUndo,
+      redoStack: curRedo,
+      stagedByEmployee: curStagedByEmp,
+      dirtyFieldsByDate: curDirty,
+    } = latestRef.current;
+    if (curUndo.length === 0) return;
+    const last = curUndo[curUndo.length - 1]!;
+    const nextRedo = [
+      ...curRedo,
+      {
+        stagedByEmployee: curStagedByEmp,
+        dirtyFieldsByDate: curDirty,
+      },
+    ];
+    const nextUndo = curUndo.slice(0, -1);
+    const nextDirtyDates = Object.keys(last.dirtyFieldsByDate);
+
+    latestRef.current.undoStack = nextUndo;
+    latestRef.current.redoStack = nextRedo;
+    latestRef.current.stagedByEmployee = last.stagedByEmployee;
+    latestRef.current.dirtyFieldsByDate = last.dirtyFieldsByDate;
+    latestRef.current.dirtyDates = nextDirtyDates;
+    latestRef.current.dirtyDayCount = nextDirtyDates.length;
+    latestRef.current.recordByDate = buildEmployeeRecordMap(
+      sel?.id,
+      last.stagedByEmployee,
+    );
+
+    setRedoStack(nextRedo);
+    setUndoStack(nextUndo);
+    setStagedByEmployee(last.stagedByEmployee);
     setDirtyFieldsByDate(last.dirtyFieldsByDate);
-    setManualOverrideDates(last.manualOverrideDates);
-  }, [undoStack, localRecords, dirtyFieldsByDate, manualOverrideDates]);
+  }, [buildEmployeeRecordMap]);
 
   const handleRedo = React.useCallback(() => {
-    if (redoStack.length === 0) return;
-    const next = redoStack[redoStack.length - 1]!;
-    setUndoStack((prev) => [
-      ...prev,
-      { records: localRecords, dirtyFieldsByDate, manualOverrideDates },
-    ]);
-    setRedoStack((prev) => prev.slice(0, -1));
-    setLocalRecords(next.records);
+    const {
+      selected: sel,
+      undoStack: curUndo,
+      redoStack: curRedo,
+      stagedByEmployee: curStagedByEmp,
+      dirtyFieldsByDate: curDirty,
+    } = latestRef.current;
+    if (curRedo.length === 0) return;
+    const next = curRedo[curRedo.length - 1]!;
+    const nextUndo = [
+      ...curUndo,
+      {
+        stagedByEmployee: curStagedByEmp,
+        dirtyFieldsByDate: curDirty,
+      },
+    ];
+    const nextRedo = curRedo.slice(0, -1);
+    const nextDirtyDates = Object.keys(next.dirtyFieldsByDate);
+
+    latestRef.current.undoStack = nextUndo;
+    latestRef.current.redoStack = nextRedo;
+    latestRef.current.stagedByEmployee = next.stagedByEmployee;
+    latestRef.current.dirtyFieldsByDate = next.dirtyFieldsByDate;
+    latestRef.current.dirtyDates = nextDirtyDates;
+    latestRef.current.dirtyDayCount = nextDirtyDates.length;
+    latestRef.current.recordByDate = buildEmployeeRecordMap(
+      sel?.id,
+      next.stagedByEmployee,
+    );
+
+    setUndoStack(nextUndo);
+    setRedoStack(nextRedo);
+    setStagedByEmployee(next.stagedByEmployee);
     setDirtyFieldsByDate(next.dirtyFieldsByDate);
-    setManualOverrideDates(next.manualOverrideDates);
-  }, [redoStack, localRecords, dirtyFieldsByDate, manualOverrideDates]);
+  }, [buildEmployeeRecordMap]);
 
   const handleDiscardDirty = React.useCallback(() => {
-    setLocalRecords(records);
+    const restoredStaged = committedByEmployeeRef.current;
+    latestRef.current.stagedByEmployee = restoredStaged;
+    latestRef.current.dirtyFieldsByDate = {};
+    latestRef.current.dirtyDates = [];
+    latestRef.current.dirtyDayCount = 0;
+    latestRef.current.undoStack = [];
+    latestRef.current.redoStack = [];
+    latestRef.current.recordByDate = buildEmployeeRecordMap(
+      latestRef.current.selected?.id,
+      restoredStaged,
+    );
+
+    setStagedByEmployee(restoredStaged);
     setDirtyFieldsByDate({});
-    setManualOverrideDates([]);
     setUndoStack([]);
     setRedoStack([]);
     showToast.info('Đã hủy các thay đổi chưa lưu');
-  }, [records]);
+  }, [buildEmployeeRecordMap]);
 
-  const handleSaveDirty = React.useCallback(async (): Promise<boolean> => {
-    if (!selected || !canEdit || dirtyDates.length === 0 || isSaving)
-      return true;
-    setIsSaving(true);
-    try {
-      const payloads: OverrideAttendanceSummaryDto[] = [];
-      for (const wd of dirtyDates) {
-        const r = localRecords.find(
-          (rec) => rec.employeeId === selected.id && rec.workDate === wd,
-        );
-        if (!r) continue;
-        const isSun = getDayOfWeek(wd) === 0;
-        const worked = Number(r.workedMinutes) || 0;
-        const payload: OverrideAttendanceSummaryDto = {
-          employeeId: selected.id,
-          workDate: wd,
-          reason: 'manual_correction',
-          checkInMorning: (r.checkInMorning ??
-            null) as unknown as OverrideAttendanceSummaryDto['checkInMorning'],
-          checkOutMorning: (r.checkOutMorning ??
-            null) as unknown as OverrideAttendanceSummaryDto['checkOutMorning'],
-          checkInAfternoon: (r.checkInAfternoon ??
-            null) as unknown as OverrideAttendanceSummaryDto['checkInAfternoon'],
-          checkOutAfternoon: (r.checkOutAfternoon ??
-            null) as unknown as OverrideAttendanceSummaryDto['checkOutAfternoon'],
-          breakMinutes: (r.breakMinutes ??
-            0) as unknown as OverrideAttendanceSummaryDto['breakMinutes'],
-          personalBreakMinutes: (r.personalBreakMinutes ??
-            0) as unknown as OverrideAttendanceSummaryDto['personalBreakMinutes'],
-          lunchDutyMinutes: (r.lunchDutyMinutes ??
-            0) as unknown as OverrideAttendanceSummaryDto['lunchDutyMinutes'],
-          duty30kMinutes: (r.duty30kMinutes ??
-            0) as unknown as OverrideAttendanceSummaryDto['duty30kMinutes'],
-          nightShiftDutyCount: (r.nightShiftDutyCount ??
-            0) as unknown as OverrideAttendanceSummaryDto['nightShiftDutyCount'],
-          waterBoothDutyCount: (r.waterBoothDutyCount ??
-            0) as unknown as OverrideAttendanceSummaryDto['waterBoothDutyCount'],
-          overriddenWorkedMinutes: worked,
-          overriddenOvertimeMinutes: Number(r.overtimeMinutes) || 0,
-          overriddenStatus: resolvePatchedAttendanceStatus({
-            currentStatus: r.status,
-            workedMinutes: worked,
-            isSun,
-          }) as OverrideAttendanceSummaryDto['overriddenStatus'],
-          note: r.note ?? '',
-        };
-        payloads.push(payload);
-      }
-
-      const chunkSize = 8;
-      for (let i = 0; i < payloads.length; i += chunkSize) {
-        const chunk = payloads.slice(i, i + chunkSize);
-        await Promise.all(
-          chunk.map((p) => timekeepingControllerOverrideAttendanceSummary(p)),
-        );
-      }
-
-      if (
-        (verificationMap[selected.id] ?? selected.verificationStatus) === 'done'
-      ) {
-        setVerificationMap((prev) => ({ ...prev, [selected.id]: 'draft' }));
-      }
-      setDirtyFieldsByDate({});
-      setUndoStack([]);
-      setRedoStack([]);
-      showToast.success(
-        `Đã lưu ${payloads.length} ngày công của ${selected.fullName}`,
-      );
-      if (onReload) {
-        await onReload();
-      }
-      return true;
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Lưu chấm công thất bại';
-      showToast.error(msg);
-      return false;
-    } finally {
-      setIsSaving(false);
+  const handleSaveDirty = React.useCallback((): Promise<boolean> => {
+    if (
+      typeof document !== 'undefined' &&
+      document.activeElement instanceof HTMLInputElement &&
+      document.activeElement.closest('.timesheet-grid-table')
+    ) {
+      document.activeElement.blur();
     }
-  }, [
-    selected,
-    canEdit,
-    dirtyDates,
-    isSaving,
-    localRecords,
-    verificationMap,
-    onReload,
-  ]);
+    if (savePromiseRef.current) {
+      return savePromiseRef.current;
+    }
+    const {
+      selected: sel,
+      canEdit: editable,
+      dirtyDates: curDirtyDates,
+      dirtyFieldsByDate: curDirtyMap,
+      recordByDate: curRecordByDate,
+      stagedByEmployee: curStagedByEmp,
+      verificationMap: curVerificationMap,
+      onReload: reloadFn,
+    } = latestRef.current;
+    if (!sel || !editable || curDirtyDates.length === 0) {
+      return Promise.resolve(true);
+    }
+
+    const runSave = async (): Promise<boolean> => {
+      setIsSaving(true);
+      latestRef.current.isSaving = true;
+      const savedDates = new Set<string>();
+      try {
+        const payloads: OverrideAttendanceSummaryDto[] = [];
+        for (const wd of curDirtyDates) {
+          const r = curRecordByDate.get(wd);
+          if (!r) continue;
+          const isSun = getDayOfWeek(wd) === 0;
+          const worked = Number(r.workedMinutes) || 0;
+          const payload: OverrideAttendanceSummaryDto = {
+            employeeId: sel.id,
+            workDate: wd,
+            reason: 'manual_correction',
+            checkInMorning: (r.checkInMorning ??
+              null) as unknown as OverrideAttendanceSummaryDto['checkInMorning'],
+            checkOutMorning: (r.checkOutMorning ??
+              null) as unknown as OverrideAttendanceSummaryDto['checkOutMorning'],
+            checkInAfternoon: (r.checkInAfternoon ??
+              null) as unknown as OverrideAttendanceSummaryDto['checkInAfternoon'],
+            checkOutAfternoon: (r.checkOutAfternoon ??
+              null) as unknown as OverrideAttendanceSummaryDto['checkOutAfternoon'],
+            breakMinutes: (r.breakMinutes ??
+              0) as unknown as OverrideAttendanceSummaryDto['breakMinutes'],
+            personalBreakMinutes: (r.personalBreakMinutes ??
+              0) as unknown as OverrideAttendanceSummaryDto['personalBreakMinutes'],
+            lunchDutyMinutes: (r.lunchDutyMinutes ??
+              0) as unknown as OverrideAttendanceSummaryDto['lunchDutyMinutes'],
+            duty30kMinutes: (r.duty30kMinutes ??
+              0) as unknown as OverrideAttendanceSummaryDto['duty30kMinutes'],
+            nightShiftDutyCount: (r.nightShiftDutyCount ??
+              0) as unknown as OverrideAttendanceSummaryDto['nightShiftDutyCount'],
+            waterBoothDutyCount: (r.waterBoothDutyCount ??
+              0) as unknown as OverrideAttendanceSummaryDto['waterBoothDutyCount'],
+            overriddenWorkedMinutes: worked,
+            overriddenOvertimeMinutes: Number(r.overtimeMinutes) || 0,
+            overriddenStatus: resolvePatchedAttendanceStatus({
+              currentStatus: r.status,
+              workedMinutes: worked,
+              isSun,
+            }) as OverrideAttendanceSummaryDto['overriddenStatus'],
+            note: r.note ?? '',
+          };
+          payloads.push(payload);
+        }
+
+        const chunkSize = 8;
+        for (let i = 0; i < payloads.length; i += chunkSize) {
+          const chunk = payloads.slice(i, i + chunkSize);
+          await Promise.all(
+            chunk.map(async (p) => {
+              await timekeepingControllerOverrideAttendanceSummary(p);
+              savedDates.add(p.workDate);
+            }),
+          );
+        }
+
+        if (
+          (curVerificationMap[sel.id] ?? sel.verificationStatus) === 'done'
+        ) {
+          setVerificationMap((prev) => ({ ...prev, [sel.id]: 'draft' }));
+        }
+        committedByEmployeeRef.current = curStagedByEmp;
+        latestRef.current.dirtyFieldsByDate = {};
+        latestRef.current.dirtyDates = [];
+        latestRef.current.dirtyDayCount = 0;
+        latestRef.current.undoStack = [];
+        latestRef.current.redoStack = [];
+        setDirtyFieldsByDate({});
+        setUndoStack([]);
+        setRedoStack([]);
+        showToast.success(
+          `Đã lưu ${payloads.length} ngày công của ${sel.fullName}`,
+        );
+        if (reloadFn) {
+          await reloadFn();
+        }
+        return true;
+      } catch (err: unknown) {
+        if (savedDates.size > 0) {
+          const remainingDirty: Record<string, EditableField[]> = {};
+          for (const [wd, fields] of Object.entries(curDirtyMap)) {
+            if (!savedDates.has(wd)) {
+              remainingDirty[wd] = fields;
+            }
+          }
+          const prevCommittedEmp =
+            committedByEmployeeRef.current[sel.id] ?? {};
+          const curEmpStaged = curStagedByEmp[sel.id] ?? {};
+          const nextCommittedEmp = { ...prevCommittedEmp };
+          savedDates.forEach((wd) => {
+            if (curEmpStaged[wd]) {
+              nextCommittedEmp[wd] = curEmpStaged[wd]!;
+            }
+          });
+          committedByEmployeeRef.current = {
+            ...committedByEmployeeRef.current,
+            [sel.id]: nextCommittedEmp,
+          };
+          const remainingDates = Object.keys(remainingDirty);
+          latestRef.current.dirtyFieldsByDate = remainingDirty;
+          latestRef.current.dirtyDates = remainingDates;
+          latestRef.current.dirtyDayCount = remainingDates.length;
+          setDirtyFieldsByDate(remainingDirty);
+        }
+        const msg =
+          err instanceof Error ? err.message : 'Lưu chấm công thất bại';
+        showToast.error(msg);
+        return false;
+      } finally {
+        savePromiseRef.current = null;
+        latestRef.current.isSaving = false;
+        setIsSaving(false);
+      }
+    };
+
+    const promise = runSave();
+    savePromiseRef.current = promise;
+    return promise;
+  }, []);
 
   const handleSelectEmployeeWithSaveCheck = React.useCallback(
-    async (emp: TimesheetWorkspaceEmployee) => {
-      if (emp.id === selected?.id) return;
-      if (dirtyDayCount > 0) {
+    async (emp: TimesheetWorkspaceEmployee): Promise<boolean> => {
+      const {
+        selected: sel,
+        dirtyDayCount: curDirtyCount,
+        selectEmployee: selectEmpFn,
+      } = latestRef.current;
+      if (emp.id === sel?.id && !savePromiseRef.current) return true;
+      const seq = ++navActionSeqRef.current;
+      if (curDirtyCount > 0 || savePromiseRef.current) {
         const ok = await handleSaveDirty();
-        if (!ok) return;
+        if (!ok || seq !== navActionSeqRef.current) return false;
       }
-      selectEmployee(emp);
+      selectEmpFn(emp);
+      return true;
     },
-    [selected?.id, dirtyDayCount, handleSaveDirty, selectEmployee],
+    [handleSaveDirty],
   );
 
   const handleNavigatePeriodWithSaveCheck = React.useCallback(
     async (delta: number) => {
-      if (!navigatePeriod) return;
-      if (dirtyDayCount > 0) {
+      const { navigatePeriod: navFn, dirtyDayCount: curDirtyCount } =
+        latestRef.current;
+      if (!navFn) return;
+      const seq = ++navActionSeqRef.current;
+      if (curDirtyCount > 0 || savePromiseRef.current) {
         const ok = await handleSaveDirty();
-        if (!ok) return;
+        if (!ok || seq !== navActionSeqRef.current) return;
       }
-      navigatePeriod(delta);
+      navFn(delta);
     },
-    [navigatePeriod, dirtyDayCount, handleSaveDirty],
+    [handleSaveDirty],
   );
 
   const handleTogglePeriodStatus = React.useCallback(async () => {
-    if (!canTogglePeriodStatus) return;
-    if (dirtyDayCount > 0) {
+    const {
+      canTogglePeriodStatus: canToggle,
+      dirtyDayCount: curDirtyCount,
+      isPeriodOpen: curIsOpen,
+      onClosePeriod: closeFn,
+      onReopenPeriod: reopenFn,
+    } = latestRef.current;
+    if (!canToggle) return;
+    const seq = ++navActionSeqRef.current;
+    if (curDirtyCount > 0 || savePromiseRef.current) {
       const ok = await handleSaveDirty();
-      if (!ok) return;
+      if (!ok || seq !== navActionSeqRef.current) return;
     }
-    if (isPeriodOpen) {
-      if (onClosePeriod) onClosePeriod();
+    if (curIsOpen) {
+      if (closeFn) closeFn();
     } else {
-      if (onReopenPeriod) onReopenPeriod();
+      if (reopenFn) reopenFn();
     }
-  }, [
-    canTogglePeriodStatus,
-    dirtyDayCount,
-    handleSaveDirty,
-    isPeriodOpen,
-    onClosePeriod,
-    onReopenPeriod,
-  ]);
+  }, [handleSaveDirty]);
 
   const handleEmployeeKeyDown = React.useCallback(
     (event: React.KeyboardEvent, index: number) => {
+      const curFiltered = latestRef.current.filtered;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        const next = filtered[index + 1];
+        const next = curFiltered[index + 1];
         if (next) {
-          void handleSelectEmployeeWithSaveCheck(next);
-          const nextEl = document.getElementById(`emp-item-${next.id}`);
-          nextEl?.focus();
+          void handleSelectEmployeeWithSaveCheck(next).then((switched) => {
+            if (switched) {
+              document.getElementById(`emp-item-${next.id}`)?.focus();
+            }
+          });
         }
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        const prev = filtered[index - 1];
+        const prev = curFiltered[index - 1];
         if (prev) {
-          void handleSelectEmployeeWithSaveCheck(prev);
-          const prevEl = document.getElementById(`emp-item-${prev.id}`);
-          prevEl?.focus();
+          void handleSelectEmployeeWithSaveCheck(prev).then((switched) => {
+            if (switched) {
+              document.getElementById(`emp-item-${prev.id}`)?.focus();
+            }
+          });
         }
       }
     },
-    [filtered, handleSelectEmployeeWithSaveCheck],
+    [handleSelectEmployeeWithSaveCheck],
   );
 
   const handleToggleVerifyEmployee = React.useCallback(async () => {
-    if (!selected || !canEdit || isVerifying) return;
-    if (dirtyDayCount > 0) {
+    const {
+      selected: sel,
+      canEdit: editable,
+      isVerifying: curIsVerifying,
+      dirtyDayCount: curDirtyCount,
+      verificationMap: curVerificationMap,
+      period: curPeriod,
+      onReload: reloadFn,
+    } = latestRef.current;
+    if (!sel || !editable || curIsVerifying) return;
+    if (curDirtyCount > 0) {
       const saved = await handleSaveDirty();
       if (!saved) return;
     }
     const isVerified =
-      (verificationMap[selected.id] ?? selected.verificationStatus) === 'done';
+      (curVerificationMap[sel.id] ?? sel.verificationStatus) === 'done';
     setIsVerifying(true);
     try {
       if (isVerified) {
-        await timekeepingControllerUnverifyEmployee(period, selected.id);
-        setVerificationMap((prev) => ({ ...prev, [selected.id]: 'draft' }));
-        showToast.success(`Đã mở chốt bảng công cho ${selected.fullName}`);
+        await timekeepingControllerUnverifyEmployee(curPeriod, sel.id);
+        setVerificationMap((prev) => ({ ...prev, [sel.id]: 'draft' }));
+        showToast.success(`Đã mở chốt bảng công cho ${sel.fullName}`);
       } else {
-        await timekeepingControllerVerifyEmployee(period, selected.id);
-        setVerificationMap((prev) => ({ ...prev, [selected.id]: 'done' }));
-        showToast.success(`Đã chốt bảng công cho ${selected.fullName}`);
+        await timekeepingControllerVerifyEmployee(curPeriod, sel.id);
+        setVerificationMap((prev) => ({ ...prev, [sel.id]: 'done' }));
+        showToast.success(`Đã chốt bảng công cho ${sel.fullName}`);
       }
-      if (onReload) {
-        await onReload();
+      if (reloadFn) {
+        await reloadFn();
       }
     } catch (err: unknown) {
       const msg =
@@ -521,55 +965,69 @@ export function DetailSheet({
     } finally {
       setIsVerifying(false);
     }
-  }, [
-    selected,
-    canEdit,
-    isVerifying,
-    dirtyDayCount,
-    handleSaveDirty,
-    verificationMap,
-    period,
-    onReload,
-  ]);
+  }, [handleSaveDirty]);
 
   const handlePrintIndividual = React.useCallback(() => {
+    setPrintAllActive(false);
     window.print();
   }, []);
 
   const handlePrintAll = React.useCallback(() => {
+    setPrintAllActive(true);
     showToast.info('Đang chuẩn bị in bảng công toàn bộ nhân viên…');
     setTimeout(() => {
       window.print();
     }, 300);
   }, []);
 
-  const totalDaysInMonth = selectedStats?.totalDays ?? 30;
+  const handleToggleSidebar = React.useCallback(() => {
+    setSidebarCollapsed((prev) => !prev);
+  }, []);
 
   const handlePasteBlock = React.useCallback(
     (startDay: number, startField: EditableField, rawText: string) => {
-      if (!selected || !canEdit) return;
+      const {
+        selected: sel,
+        canEdit: editable,
+        totalDaysInMonth: maxDays,
+        selBounds: curBounds,
+      } = latestRef.current;
+      if (!sel || !editable) return;
       const cleaned = rawText
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
         .replace(/\n$/, '');
-      const rows = cleaned.split('\n');
-      if (rows.length === 0) return;
+      const rawRows = cleaned.split('\n');
+      if (rawRows.length === 0) return;
 
-      const startColIdx = ORDERED_FIELDS.indexOf(startField);
-      if (startColIdx < 0) return;
+      const startVisualCol = VISUAL_COL_BY_FIELD[startField];
+      if (startVisualCol === undefined) return;
+
+      // If 1 row was copied and a multi-row selection is active, repeat that row across the selected days
+      const rows =
+        rawRows.length === 1 &&
+        curBounds &&
+        curBounds.maxDay > curBounds.minDay &&
+        startDay === curBounds.minDay
+          ? Array.from(
+              { length: curBounds.maxDay - curBounds.minDay + 1 },
+              () => rawRows[0]!,
+            )
+          : rawRows;
 
       const patches: DayPatch[] = [];
       let cellCount = 0;
 
       for (let rIdx = 0; rIdx < rows.length; rIdx++) {
         const day = startDay + rIdx;
-        if (day > totalDaysInMonth) break;
+        if (day > maxDays) break;
         const cols = (rows[rIdx] ?? '').split('\t');
         const dayFields: EditableField[] = [];
         const dayUpdates: DayCellUpdates = {};
 
         for (let cIdx = 0; cIdx < cols.length; cIdx++) {
-          const targetField = ORDERED_FIELDS[startColIdx + cIdx];
+          const targetVisualCol = startVisualCol + cIdx;
+          const targetField = FIELD_BY_VISUAL_COL[targetVisualCol];
           if (!targetField) continue;
           const parsed = parseRawCellValueToUpdates(
             targetField,
@@ -594,266 +1052,557 @@ export function DetailSheet({
         );
       }
     },
-    [selected, canEdit, totalDaysInMonth, stageDayPatches],
+    [stageDayPatches],
   );
+
+  const handleRowHeaderMouseDown = React.useCallback(
+    (day: number, shiftKey: boolean) => {
+      isSelectingRef.current = true;
+      isRowHeaderSelectingRef.current = true;
+      didDragSelectRef.current = true;
+      if (document.activeElement instanceof HTMLInputElement) {
+        document.activeElement.blur();
+      }
+      const curAnchor = latestRef.current.selAnchor;
+      const startDay = shiftKey && curAnchor ? curAnchor.day : day;
+      const nextActive: ActiveCell = { day: startDay, field: 'checkInMorning' };
+      const nextAnchor = { day: startDay, col: 0 };
+      const nextEnd = { day, col: 15 };
+      dragStartRef.current = nextAnchor;
+      latestRef.current.activeCell = nextActive;
+      latestRef.current.selAnchor = nextAnchor;
+      latestRef.current.selEnd = nextEnd;
+      setActiveCellState(nextActive);
+      setSelAnchor(nextAnchor);
+      setSelEnd(nextEnd);
+    },
+    [],
+  );
+
+  const handleHoverDay = React.useCallback((day: number) => {
+    const curFill = latestRef.current.fillDrag;
+    if (curFill && curFill.currentDay !== day) {
+      if (day < curFill.startDay || day > curFill.endSourceDay) {
+        didDragSelectRef.current = true;
+      }
+      const nextFill = { ...curFill, currentDay: day };
+      latestRef.current.fillDrag = nextFill;
+      setFillDrag(nextFill);
+    }
+  }, []);
+
+  const handleCellMouseDown = React.useCallback(
+    (
+      day: number,
+      visualCol: number,
+      shiftKey: boolean,
+      isTargetInput: boolean,
+    ) => {
+      isRowHeaderSelectingRef.current = false;
+      didDragSelectRef.current = false;
+      if (isTargetInput) {
+        isSelectingRef.current = true;
+        dragStartRef.current = { day, col: visualCol };
+        return;
+      }
+      if (document.activeElement instanceof HTMLInputElement) {
+        document.activeElement.blur();
+      }
+
+      isSelectingRef.current = true;
+      const curAnchor = latestRef.current.selAnchor;
+      if (shiftKey && curAnchor) {
+        didDragSelectRef.current = true;
+        dragStartRef.current = curAnchor;
+        const nextEnd = { day, col: visualCol };
+        latestRef.current.selEnd = nextEnd;
+        setSelEnd(nextEnd);
+      } else {
+        const nextAnchor = { day, col: visualCol };
+        const field = FIELD_BY_VISUAL_COL[visualCol];
+        const nextActive: ActiveCell | null = field ? { day, field } : null;
+        dragStartRef.current = nextAnchor;
+        latestRef.current.activeCell = nextActive;
+        latestRef.current.selAnchor = nextAnchor;
+        latestRef.current.selEnd = null;
+        setActiveCellState(nextActive);
+        setSelAnchor(nextAnchor);
+        setSelEnd(null);
+      }
+    },
+    [],
+  );
+
+  const handleCellMouseEnter = React.useCallback(
+    (day: number, visualCol: number) => {
+      if (latestRef.current.fillDrag) {
+        handleHoverDay(day);
+        return;
+      }
+      if (!isSelectingRef.current) return;
+      const start = dragStartRef.current;
+      if (!start) return;
+      const targetCol = isRowHeaderSelectingRef.current ? 15 : visualCol;
+      if (
+        day !== start.day ||
+        targetCol !== start.col ||
+        didDragSelectRef.current
+      ) {
+        didDragSelectRef.current = true;
+        if (document.activeElement instanceof HTMLInputElement) {
+          document.activeElement.blur();
+        }
+        window.getSelection()?.removeAllRanges();
+        const nextEnd = { day, col: targetCol };
+        latestRef.current.selAnchor = start;
+        latestRef.current.selEnd = nextEnd;
+        setSelAnchor((prev) =>
+          prev?.day === start.day && prev?.col === start.col ? prev : start,
+        );
+        setSelEnd((prev) =>
+          prev?.day === day && prev?.col === targetCol ? prev : nextEnd,
+        );
+      }
+    },
+    [handleHoverDay],
+  );
+
+  React.useEffect(() => {
+    const onMouseUp = () => {
+      if (isSelectingRef.current) {
+        isSelectingRef.current = false;
+        isRowHeaderSelectingRef.current = false;
+      }
+      if (didDragSelectRef.current) {
+        setTimeout(() => {
+          didDragSelectRef.current = false;
+        }, 0);
+      }
+    };
+    window.addEventListener('mouseup', onMouseUp);
+    return () => window.removeEventListener('mouseup', onMouseUp);
+  }, []);
 
   const handleStartFillDrag = React.useCallback(
     (day: number, field: EditableField) => {
-      if (!canEdit) return;
-      setActiveCell({ day, field });
-      setIsEditing(false);
-      setFillDrag({ field, startDay: day, currentDay: day });
+      if (!latestRef.current.canEdit) return;
+      isSelectingRef.current = false;
+      didDragSelectRef.current = true;
+      const curBounds = latestRef.current.selBounds;
+      if (curBounds) {
+        const nextFill = {
+          startDay: curBounds.minDay,
+          endSourceDay: curBounds.maxDay,
+          startColIdx: curBounds.minCol,
+          endColIdx: curBounds.maxCol,
+          currentDay: curBounds.maxDay,
+        };
+        latestRef.current.fillDrag = nextFill;
+        setFillDrag(nextFill);
+      } else {
+        const colIdx = VISUAL_COL_BY_FIELD[field];
+        const anchor = { day, col: colIdx };
+        const nextFill = {
+          startDay: day,
+          endSourceDay: day,
+          startColIdx: colIdx,
+          endColIdx: colIdx,
+          currentDay: day,
+        };
+        latestRef.current.activeCell = { day, field };
+        latestRef.current.selAnchor = anchor;
+        latestRef.current.selEnd = null;
+        latestRef.current.fillDrag = nextFill;
+        setActiveCellState({ day, field });
+        setSelAnchor(anchor);
+        setSelEnd(null);
+        setFillDrag(nextFill);
+      }
     },
-    [canEdit],
+    [],
   );
 
   React.useEffect(() => {
     if (!fillDrag) return;
     const handleMouseUp = () => {
-      if (fillDrag.currentDay !== fillDrag.startDay && selected && canEdit) {
-        const minDay = Math.min(fillDrag.startDay, fillDrag.currentDay);
-        const maxDay = Math.max(fillDrag.startDay, fillDrag.currentDay);
-        const sourceWd = dayDate(period, fillDrag.startDay);
-        const sourceIsSun = getDayOfWeek(sourceWd) === 0;
-        const sourceRec = localRecords.find(
-          (r) => r.employeeId === selected.id && r.workDate === sourceWd,
+      const curFill = latestRef.current.fillDrag;
+      if (!curFill) return;
+      const {
+        selected: sel,
+        canEdit: editable,
+        period: curPeriod,
+        recordByDate: curRecordByDate,
+      } = latestRef.current;
+      const isDraggingDown = curFill.currentDay > curFill.endSourceDay;
+      const isDraggingUp = curFill.currentDay < curFill.startDay;
+      if ((isDraggingDown || isDraggingUp) && sel && editable) {
+        didDragSelectRef.current = true;
+        const minDay = Math.min(curFill.startDay, curFill.currentDay);
+        const maxDay = Math.max(curFill.endSourceDay, curFill.currentDay);
+        const sourceSpan = Math.max(
+          1,
+          curFill.endSourceDay - curFill.startDay + 1,
         );
-        const sourceUpdates = getRecordFieldPatch(sourceRec, fillDrag.field);
+        const fieldsToCopy = ORDERED_FIELDS.filter((f) => {
+          const vc = VISUAL_COL_BY_FIELD[f];
+          return vc >= curFill.startColIdx && vc <= curFill.endColIdx;
+        });
 
         const patches: DayPatch[] = [];
         for (let d = minDay; d <= maxDay; d++) {
-          if (d === fillDrag.startDay) continue;
-          const targetWd = dayDate(period, d);
-          const targetIsSun = getDayOfWeek(targetWd) === 0;
-          if (
-            !sourceIsSun &&
-            targetIsSun &&
-            WEEKDAY_SHIFT_FIELDS.has(fillDrag.field)
-          ) {
-            continue;
+          if (d >= curFill.startDay && d <= curFill.endSourceDay) continue;
+          const offset =
+            (((d - curFill.startDay) % sourceSpan) + sourceSpan) % sourceSpan;
+          const srcDay = curFill.startDay + offset;
+          const sourceWd = dayDate(curPeriod, srcDay);
+          const sourceRec = curRecordByDate.get(sourceWd);
+
+          const dayUpdates: DayCellUpdates = {};
+          const dayFields: EditableField[] = [];
+          for (const f of fieldsToCopy) {
+            Object.assign(dayUpdates, getRecordFieldPatch(sourceRec, f));
+            dayFields.push(f);
           }
-          patches.push({
-            day: d,
-            fields: [fillDrag.field],
-            updates: sourceUpdates,
-          });
+
+          if (dayFields.length > 0) {
+            patches.push({
+              day: d,
+              fields: dayFields,
+              updates: dayUpdates,
+            });
+          }
         }
         if (patches.length > 0) {
+          const label =
+            fieldsToCopy.length === 1
+              ? FIELD_LABELS[fieldsToCopy[0]!]
+              : `${fieldsToCopy.length} cột`;
           stageDayPatches(
             patches,
-            `Đã kéo sao chép ${FIELD_LABELS[fillDrag.field]} cho ${patches.length} ngày`,
+            `Đã kéo sao chép ${label} cho ${patches.length} ngày`,
           );
+          const firstField = fieldsToCopy[0];
+          const nextActive = firstField
+            ? { day: minDay, field: firstField }
+            : null;
+          const nextAnchor = { day: minDay, col: curFill.startColIdx };
+          const nextEnd =
+            minDay === maxDay && curFill.startColIdx === curFill.endColIdx
+              ? null
+              : { day: maxDay, col: curFill.endColIdx };
+          latestRef.current.activeCell = nextActive;
+          latestRef.current.selAnchor = nextAnchor;
+          latestRef.current.selEnd = nextEnd;
+          setActiveCellState(nextActive);
+          setSelAnchor(nextAnchor);
+          setSelEnd(nextEnd);
         }
       }
+      latestRef.current.fillDrag = null;
       setFillDrag(null);
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [fillDrag, selected, canEdit, period, localRecords, stageDayPatches]);
+  }, [fillDrag, stageDayPatches]);
 
-  const handleQuickFillStandardMonth = React.useCallback(() => {
-    if (!selected || !canEdit) return;
-    const empRecords = localRecords.filter((r) => r.employeeId === selected.id);
-    const sample = empRecords.find(
-      (r) =>
-        r.checkInMorning &&
-        r.checkOutMorning &&
-        r.checkInAfternoon &&
-        r.checkOutAfternoon,
-    );
-    const inM = sample ? fmtTime(sample.checkInMorning) : '08:00';
-    const outM = sample ? fmtTime(sample.checkOutMorning) : '12:00';
-    const inA = sample ? fmtTime(sample.checkInAfternoon) : '13:30';
-    const outA = sample ? fmtTime(sample.checkOutAfternoon) : '17:30';
+  const saveDirtyRef = React.useRef(handleSaveDirty);
+  saveDirtyRef.current = handleSaveDirty;
 
-    const patches: DayPatch[] = [];
-    for (let d = 1; d <= totalDaysInMonth; d++) {
-      const wd = dayDate(period, d);
-      const isSun = getDayOfWeek(wd) === 0;
-      if (isSun) continue;
-      const curr = empRecords.find((r) => r.workDate === wd);
-      const hasData =
-        Boolean(curr?.checkInMorning) ||
-        Boolean(curr?.checkOutAfternoon) ||
-        (Number(curr?.workedMinutes) || 0) > 0;
-      if (!hasData) {
-        patches.push({
-          day: d,
-          fields: [
-            'checkInMorning',
-            'checkOutMorning',
-            'checkInAfternoon',
-            'checkOutAfternoon',
-          ],
-          updates: {
-            checkInMorning: inM === '-' ? '08:00' : inM,
-            checkOutMorning: outM === '-' ? '12:00' : outM,
-            checkInAfternoon: inA === '-' ? '13:30' : inA,
-            checkOutAfternoon: outA === '-' ? '17:30' : outA,
-          },
-        });
-      }
-    }
-
-    if (patches.length === 0) {
-      showToast.info('Tất cả ngày T2–T7 trong tháng đã có dữ liệu công');
-      return;
-    }
-
-    stageDayPatches(
-      patches,
-      `Đã điền ca chuẩn (${inM}–${outM}, ${inA}–${outA}) cho ${patches.length} ngày trống`,
-    );
-  }, [
-    selected,
-    canEdit,
-    localRecords,
-    totalDaysInMonth,
-    period,
-    stageDayPatches,
-  ]);
-
-  const handleQuickFillActiveDay = React.useCallback(() => {
-    if (!selected || !canEdit) return;
-    const targetDay = activeCell?.day ?? 1;
-    stageDayPatches(
-      [
-        {
-          day: targetDay,
-          fields: [
-            'checkInMorning',
-            'checkOutMorning',
-            'checkInAfternoon',
-            'checkOutAfternoon',
-          ],
-          updates: {
-            checkInMorning: '08:00',
-            checkOutMorning: '12:00',
-            checkInAfternoon: '13:30',
-            checkOutAfternoon: '17:30',
-          },
-        },
-      ],
-      `Đã điền đủ công ngày ${String(targetDay).padStart(2, '0')}`,
-    );
-  }, [selected, canEdit, activeCell?.day, stageDayPatches]);
-
-  const handleClearActiveDay = React.useCallback(() => {
-    if (!selected || !canEdit || !activeCell) return;
-    stageDayPatches(
-      [
-        {
-          day: activeCell.day,
-          fields: [
-            'checkInMorning',
-            'checkOutMorning',
-            'checkInAfternoon',
-            'checkOutAfternoon',
-            'breakHours',
-            'personalBreakHours',
-            'lunchDutyHours',
-            'duty30kHours',
-            'workedHours',
-            'otHours',
-            'nightShift',
-            'waterBooth',
-          ],
-          updates: {
-            checkInMorning: null,
-            checkOutMorning: null,
-            checkInAfternoon: null,
-            checkOutAfternoon: null,
-            breakMinutes: 0,
-            personalBreakMinutes: 0,
-            lunchDutyMinutes: 0,
-            duty30kMinutes: 0,
-            workedMinutes: 0,
-            overtimeMinutes: 0,
-            nightShiftDutyCount: 0,
-            waterBoothDutyCount: 0,
-          },
-        },
-      ],
-      `Đã xóa dữ liệu công ngày ${String(activeCell.day).padStart(2, '0')}`,
-    );
-  }, [selected, canEdit, activeCell, stageDayPatches]);
+  React.useEffect(() => {
+    if (dirtyDayCount === 0) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirtyDayCount]);
 
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-      if (key === 's') {
-        e.preventDefault();
-        if (dirtyDayCount > 0) {
-          void handleSaveDirty();
+      if (mod) {
+        const key = e.key.toLowerCase();
+        if (key === 's') {
+          e.preventDefault();
+          if (
+            document.activeElement instanceof HTMLInputElement &&
+            document.activeElement.closest('.timesheet-grid-table')
+          ) {
+            document.activeElement.blur();
+          }
+          if (latestRef.current.dirtyDayCount > 0) {
+            void saveDirtyRef.current();
+          }
+          return;
+        }
+        const tag = (document.activeElement as HTMLElement | null)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+        if (key === 'z' && !e.shiftKey) {
+          if (latestRef.current.undoStack.length > 0) {
+            e.preventDefault();
+            handleUndo();
+          }
+        } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+          if (latestRef.current.redoStack.length > 0) {
+            e.preventDefault();
+            handleRedo();
+          }
         }
         return;
       }
-      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+
+      const activeEl = document.activeElement as HTMLElement | null;
+      const tag = activeEl?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
-      if (key === 'z' && !e.shiftKey) {
-        if (undoStack.length > 0) {
-          e.preventDefault();
-          handleUndo();
+      // Shift + Arrow extends/shrinks multi-cell range selection like Excel
+      if (
+        e.shiftKey &&
+        !e.altKey &&
+        (e.key === 'ArrowUp' ||
+          e.key === 'ArrowDown' ||
+          e.key === 'ArrowLeft' ||
+          e.key === 'ArrowRight')
+      ) {
+        const curAnchor = latestRef.current.selAnchor;
+        if (!curAnchor) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const curEnd = latestRef.current.selEnd ?? curAnchor;
+        const maxDays = latestRef.current.totalDaysInMonth;
+        let nextDay = curEnd.day;
+        let nextCol = curEnd.col;
+        if (e.key === 'ArrowUp') nextDay = Math.max(1, curEnd.day - 1);
+        else if (e.key === 'ArrowDown')
+          nextDay = Math.min(maxDays, curEnd.day + 1);
+        else if (e.key === 'ArrowLeft') nextCol = Math.max(0, curEnd.col - 1);
+        else if (e.key === 'ArrowRight') nextCol = Math.min(15, curEnd.col + 1);
+        if (nextDay !== curEnd.day || nextCol !== curEnd.col) {
+          const nextEnd = { day: nextDay, col: nextCol };
+          latestRef.current.selEnd = nextEnd;
+          setSelEnd(nextEnd);
         }
-      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
-        if (redoStack.length > 0) {
+        return;
+      }
+
+      // Delete / Backspace on a multi-cell range clears all selected cells at once
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.altKey) {
+        const curBounds = latestRef.current.selBounds;
+        if (curBounds && !curBounds.isSingle && latestRef.current.canEdit) {
           e.preventDefault();
-          handleRedo();
+          e.stopPropagation();
+          const fieldsToClear = ORDERED_FIELDS.filter((f) => {
+            const vc = VISUAL_COL_BY_FIELD[f];
+            return vc >= curBounds.minCol && vc <= curBounds.maxCol;
+          });
+          if (fieldsToClear.length === 0) return;
+          const patches: DayPatch[] = [];
+          for (let d = curBounds.minDay; d <= curBounds.maxDay; d++) {
+            const dayUpdates: DayCellUpdates = {};
+            for (const f of fieldsToClear) {
+              Object.assign(dayUpdates, parseRawCellValueToUpdates(f, '') ?? {});
+            }
+            patches.push({
+              day: d,
+              fields: fieldsToClear,
+              updates: dayUpdates,
+            });
+          }
+          if (patches.length > 0) {
+            stageDayPatches(patches);
+          }
+          return;
+        }
+      }
+
+      // Fallback navigation when DOM focus was lost (e.g. after row-header click, drag selection, or clicking a formula column)
+      const isCellButtonFocused = Boolean(
+        activeEl &&
+          activeEl.getAttribute('role') === 'button' &&
+          activeEl.closest('.timesheet-grid-table'),
+      );
+      if (
+        !isCellButtonFocused &&
+        tag !== 'SELECT' &&
+        tag !== 'BUTTON' &&
+        !activeEl?.isContentEditable &&
+        latestRef.current.selAnchor &&
+        !e.altKey
+      ) {
+        const curAnchor = latestRef.current.selAnchor;
+        const curActive = latestRef.current.activeCell;
+        const maxDays = latestRef.current.totalDaysInMonth;
+
+        if (
+          (e.key === 'Delete' || e.key === 'Backspace') &&
+          curActive &&
+          latestRef.current.canEdit
+        ) {
+          e.preventDefault();
+          const parsed = parseRawCellValueToUpdates(curActive.field, '');
+          if (parsed) {
+            stageSingleCell(curActive.day, curActive.field, parsed);
+          }
+          return;
+        }
+
+        let navDir: NavigationDirection | null = null;
+        if (e.key === 'ArrowDown') navDir = 'down';
+        else if (e.key === 'ArrowUp') navDir = 'up';
+        else if (e.key === 'ArrowRight') navDir = 'right';
+        else if (e.key === 'ArrowLeft') navDir = 'left';
+        else if (e.key === 'Tab') navDir = e.shiftKey ? 'prev' : 'next';
+        else if (e.key === 'Enter')
+          navDir = e.shiftKey ? 'enter-up' : 'enter-down';
+
+        if (navDir) {
+          e.preventDefault();
+          if (curActive) {
+            const next = getNextCell(curActive, navDir, maxDays);
+            if (next) {
+              setActiveCell(next);
+            }
+          } else {
+            // Currently on a formula column (8..12)
+            let nextDay = curAnchor.day;
+            let nextCol = curAnchor.col;
+            if (navDir === 'up' || navDir === 'enter-up') {
+              nextDay = Math.max(1, curAnchor.day - 1);
+            } else if (navDir === 'down' || navDir === 'enter-down') {
+              nextDay = Math.min(maxDays, curAnchor.day + 1);
+            } else if (navDir === 'left' || navDir === 'prev') {
+              nextCol = Math.max(0, curAnchor.col - 1);
+            } else if (navDir === 'right' || navDir === 'next') {
+              nextCol = Math.min(15, curAnchor.col + 1);
+            }
+            const nextField = FIELD_BY_VISUAL_COL[nextCol];
+            if (nextField) {
+              setActiveCell({ day: nextDay, field: nextField });
+            } else {
+              const nextAnchor = { day: nextDay, col: nextCol };
+              latestRef.current.selAnchor = nextAnchor;
+              latestRef.current.selEnd = null;
+              setSelAnchor(nextAnchor);
+              setSelEnd(null);
+            }
+          }
         }
       }
     };
 
     const onCopy = (e: ClipboardEvent) => {
-      if (isEditing || !activeCell || !selected) return;
+      const {
+        selBounds: curBounds,
+        selected: sel,
+        period: curPeriod,
+        recordByDate: curRecordByDate,
+      } = latestRef.current;
+      if (!curBounds || !sel) return;
       const tag = (document.activeElement as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (window.getSelection()?.toString()) return;
 
-      const wd = dayDate(period, activeCell.day);
-      const rec = localRecords.find(
-        (r) => r.employeeId === selected.id && r.workDate === wd,
-      );
-      const val = getRecordFieldDisplayValue(rec, activeCell.field);
-      e.clipboardData?.setData('text/plain', val);
+      const lines: string[] = [];
+      for (let d = curBounds.minDay; d <= curBounds.maxDay; d++) {
+        const wd = dayDate(curPeriod, d);
+        const rec = curRecordByDate.get(wd);
+        const cols: string[] = [];
+        for (let vc = curBounds.minCol; vc <= curBounds.maxCol; vc++) {
+          cols.push(getVisualColDisplayValue(rec, vc));
+        }
+        lines.push(cols.join('\t'));
+      }
+      e.clipboardData?.setData('text/plain', lines.join('\n'));
       e.preventDefault();
     };
 
     const onPaste = (e: ClipboardEvent) => {
-      if (isEditing || !activeCell || !selected || !canEdit) return;
+      const {
+        selBounds: curBounds,
+        activeCell: curActive,
+        selected: sel,
+        canEdit: editable,
+      } = latestRef.current;
+      if ((!curBounds && !curActive) || !sel || !editable) return;
       const tag = (document.activeElement as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const pasted = e.clipboardData?.getData('text/plain') ?? '';
       if (!pasted) return;
+      const startDay = curBounds ? curBounds.minDay : curActive!.day;
+      const startVisualCol = curBounds
+        ? curBounds.minCol
+        : curActive
+          ? VISUAL_COL_BY_FIELD[curActive.field]
+          : -1;
+      if (startVisualCol < 0) return;
+      const startField = FIELD_BY_VISUAL_COL[startVisualCol];
+      if (!startField) {
+        e.preventDefault();
+        showToast.warning('Cột công thức chỉ đọc, không thể dán dữ liệu');
+        return;
+      }
       e.preventDefault();
-      handlePasteBlock(activeCell.day, activeCell.field, pasted);
+      handlePasteBlock(startDay, startField, pasted);
     };
 
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('copy', onCopy);
     window.addEventListener('paste', onPaste);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('copy', onCopy);
       window.removeEventListener('paste', onPaste);
     };
   }, [
-    dirtyDayCount,
-    handleSaveDirty,
-    undoStack.length,
-    redoStack.length,
     handleUndo,
     handleRedo,
-    isEditing,
-    activeCell,
-    selected,
-    canEdit,
-    period,
-    localRecords,
     handlePasteBlock,
+    setActiveCell,
+    stageDayPatches,
+    stageSingleCell,
   ]);
+
+  const headerRows = React.useMemo(() => detailHeaderRows(), []);
+  const detailDays = React.useMemo(
+    () => Array.from({ length: totalDaysInMonth }, (_, i) => i + 1),
+    [totalDaysInMonth],
+  );
+  const selectedRecords = React.useMemo(
+    () => (currentMode === 'agenda' ? Array.from(recordByDate.values()) : []),
+    [currentMode, recordByDate],
+  );
+  const employeesForSidebar = React.useMemo(() => {
+    return filtered.map((emp) => {
+      if (emp.id === selected?.id && selectedStats) {
+        if (emp.workingDays === selectedStats.presentDays) return emp;
+        return { ...emp, workingDays: selectedStats.presentDays };
+      }
+      const empStaged = stagedByEmployee[emp.id];
+      if (empStaged && Object.keys(empStaged).length > 0) {
+        const stats = computeMonthStats(
+          buildEmployeeRecordMap(emp.id, stagedByEmployee),
+          period,
+          emp,
+        );
+        if (emp.workingDays === stats.presentDays) return emp;
+        return { ...emp, workingDays: stats.presentDays };
+      }
+      return emp;
+    });
+  }, [
+    buildEmployeeRecordMap,
+    filtered,
+    period,
+    selected?.id,
+    selectedStats,
+    stagedByEmployee,
+  ]);
+  const getPrintEmployeeRecords = React.useCallback(
+    (empId: string) => buildEmployeeRecordMap(empId, stagedByEmployee),
+    [buildEmployeeRecordMap, stagedByEmployee],
+  );
 
   if (!selected || !selectedStats) {
     return (
@@ -863,16 +1612,10 @@ export function DetailSheet({
           periodStatus={periodStatus}
           totalEmployees={employees.length}
           verifiedCount={verifiedCount}
-          currentMode={currentMode}
-          onModeChange={setModeOverride}
-          onNavigatePeriod={(delta) => {
-            void handleNavigatePeriodWithSaveCheck(delta);
-          }}
+          onNavigatePeriod={handleNavigatePeriodWithSaveCheck}
           canTogglePeriodStatus={canTogglePeriodStatus}
           isPeriodOpen={isPeriodOpen}
-          onTogglePeriodStatus={() => {
-            void handleTogglePeriodStatus();
-          }}
+          onTogglePeriodStatus={handleTogglePeriodStatus}
         />
         <div className="flex min-h-[300px] items-center justify-center rounded-xl border bg-card text-sm text-muted-foreground">
           Không có nhân viên nào trong kỳ công {period}
@@ -882,12 +1625,6 @@ export function DetailSheet({
   }
 
   const s = selectedStats;
-  const detailDays = Array.from({ length: s.totalDays }, (_, i) => i + 1);
-  const recordByDate = new Map(
-    localRecords
-      .filter((r) => r.employeeId === selected.id)
-      .map((r) => [r.workDate, r]),
-  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -897,37 +1634,55 @@ export function DetailSheet({
         periodStatus={periodStatus}
         totalEmployees={employees.length}
         verifiedCount={verifiedCount}
-        currentMode={currentMode}
-        onModeChange={setModeOverride}
-        onNavigatePeriod={(delta) => {
-          void handleNavigatePeriodWithSaveCheck(delta);
-        }}
+        onNavigatePeriod={handleNavigatePeriodWithSaveCheck}
         canTogglePeriodStatus={canTogglePeriodStatus}
         isPeriodOpen={isPeriodOpen}
-        onTogglePeriodStatus={() => {
-          void handleTogglePeriodStatus();
-        }}
+        onTogglePeriodStatus={handleTogglePeriodStatus}
       />
 
+      {printAllActive && (
+        <TimesheetPrintAllView
+          period={period}
+          employees={filtered}
+          getEmployeeRecords={getPrintEmployeeRecords}
+        />
+      )}
+
       {currentMode === 'agenda' ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-0.5 pb-6">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col overflow-y-auto px-0.5 pb-6',
+            printAllActive && 'print:hidden',
+          )}
+        >
           <AttendanceMobileAgenda
             period={period}
             employees={employees}
             selectedEmployee={selected}
-            records={localRecords}
+            records={selectedRecords}
+            verificationMap={verificationMap}
             canEdit={canEdit}
-            onSelectEmployee={(emp) => {
-              void handleSelectEmployeeWithSaveCheck(emp);
-            }}
-            onAdjust={onAdjust}
+            isVerifying={isVerifying}
+            onToggleVerifyEmployee={handleToggleVerifyEmployee}
+            onSwitchToMatrix={() => setModeOverride('matrix')}
+            onSelectEmployee={handleSelectEmployeeWithSaveCheck}
           />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 overflow-hidden',
+            printAllActive && 'print:hidden',
+          )}
+        >
           {/* Left Employee Directory Sidebar */}
           <EmployeeDirectorySidebar
-            employees={filtered}
+            employees={employeesForSidebar}
+            totalCount={baseFiltered.length}
+            unverifiedCount={baseFiltered.length - baseVerifiedCount}
+            verifiedCount={baseVerifiedCount}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
             selectedId={selected.id}
             search={search}
             onSearchChange={setSearch}
@@ -936,55 +1691,39 @@ export function DetailSheet({
             onDeptChange={setDept}
             verificationMap={verificationMap}
             collapsed={sidebarCollapsed}
-            onSelectEmployee={(emp) => {
-              void handleSelectEmployeeWithSaveCheck(emp);
-            }}
+            onSelectEmployee={handleSelectEmployeeWithSaveCheck}
             onEmployeeKeyDown={handleEmployeeKeyDown}
           />
 
-          {/* Right Workspace: Employee Attendance Summary + 31-day Timesheet Grid */}
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 transition-all duration-300 ease-in-out">
-            <EmployeeAttendanceSummaryCard
-              employee={selected}
-              stats={s}
-              verificationMap={verificationMap}
-              isSelectedVerified={isSelectedVerified}
-              isVerifying={isVerifying}
-              canEdit={canEdit}
-              periodStatus={periodStatus}
-              sidebarCollapsed={sidebarCollapsed}
-              onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
-              onToggleVerifyEmployee={() => {
-                void handleToggleVerifyEmployee();
-              }}
-              onPrintIndividual={handlePrintIndividual}
-              onPrintAll={handlePrintAll}
-            />
-
+          {/* Right Workspace: 31-day Timesheet Grid */}
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* Detail Table Container */}
             <div className="bg-card border-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border shadow-xs">
-              {canEdit && periodStatus !== 'closed' && (
-                <TimesheetToolbar
-                  activeCell={activeCell}
-                  dirtyDayCount={dirtyDayCount}
-                  dirtyCellCount={dirtyCellCount}
-                  undoCount={undoStack.length}
-                  redoCount={redoStack.length}
-                  isSaving={isSaving}
-                  onQuickFillStandardMonth={handleQuickFillStandardMonth}
-                  onQuickFillActiveDay={handleQuickFillActiveDay}
-                  onClearActiveDay={handleClearActiveDay}
-                  onUndo={handleUndo}
-                  onRedo={handleRedo}
-                  onDiscardDirty={handleDiscardDirty}
-                  onSaveDirty={() => {
-                    void handleSaveDirty();
-                  }}
-                />
-              )}
+              <TimesheetToolbar
+                employee={selected}
+                verificationMap={verificationMap}
+                isSelectedVerified={isSelectedVerified}
+                isVerifying={isVerifying}
+                canEdit={canEdit}
+                periodStatus={periodStatus}
+                sidebarCollapsed={sidebarCollapsed}
+                dirtyDayCount={dirtyDayCount}
+                dirtyCellCount={dirtyCellCount}
+                undoCount={undoStack.length}
+                redoCount={redoStack.length}
+                isSaving={isSaving}
+                onToggleSidebar={handleToggleSidebar}
+                onToggleVerifyEmployee={handleToggleVerifyEmployee}
+                onPrintIndividual={handlePrintIndividual}
+                onPrintAll={handlePrintAll}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onDiscardDirty={handleDiscardDirty}
+                onSaveDirty={handleSaveDirty}
+              />
 
               <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto [scrollbar-width:thin]">
-                <table className="timesheet-grid-table w-full min-w-[1130px] table-fixed border-separate border-spacing-0">
+                <table className="timesheet-grid-table w-full min-w-[1080px] table-fixed border-separate border-spacing-0">
                   <colgroup>
                     <col style={{ width: 44 }} />
                     <col style={{ width: 44 }} />
@@ -1003,10 +1742,10 @@ export function DetailSheet({
                     <col style={{ width: 68 }} />
                     <col style={{ width: 62 }} />
                     <col style={{ width: 66 }} />
-                    <col style={{ width: 160 }} />
+                    <col style={{ width: 110 }} />
                   </colgroup>
                   <TableHeader>
-                    {detailHeaderRows().map((row) => (
+                    {headerRows.map((row) => (
                       <TableRow
                         key={row.isRow2 ? 'r2' : 'r1'}
                         className="border-0 hover:bg-transparent"
@@ -1018,6 +1757,8 @@ export function DetailSheet({
                             row.isRow2,
                             i,
                             activeCell?.field,
+                            selBounds?.minCol ?? -1,
+                            selBounds?.maxCol ?? -1,
                           );
 
                           return (
@@ -1028,8 +1769,8 @@ export function DetailSheet({
                               className={cn(
                                 'border-border/50 text-muted-foreground border-r border-b px-1 text-xs font-medium tracking-normal normal-case select-none',
                                 row.isRow2
-                                  ? 'bg-muted/30 sticky top-[30px] z-20 h-[28px] text-[11px] backdrop-blur-xs'
-                                  : 'bg-muted/30 sticky top-0 z-20 h-[30px] backdrop-blur-xs',
+                                  ? 'bg-muted sticky top-[30px] z-20 h-[28px] text-[11px]'
+                                  : 'bg-muted sticky top-0 z-20 h-[30px]',
                                 isStickyDate &&
                                   'bg-card text-muted-foreground border-border/50 sticky top-0 left-0 z-30 border-r border-b font-medium',
                                 isStickyDay &&
@@ -1063,796 +1804,106 @@ export function DetailSheet({
                       </TableRow>
                     ))}
                   </TableHeader>
-                  <TableBody>
+                  <TableBody
+                    onClickCapture={(e) => {
+                      if (didDragSelectRef.current) {
+                        e.stopPropagation();
+                        didDragSelectRef.current = false;
+                      }
+                    }}
+                  >
                     {detailDays.map((day) => {
                       const wd = dayDate(period, day);
                       const dow = getDayOfWeek(wd);
                       const r = recordByDate.get(wd);
-                      const worked = Number(r?.workedMinutes) || 0;
-                      const isSun = dow === 0;
-                      const cong =
-                        worked < 240 ? 0 : worked < 480 ? 0.5 : 1.0;
-                      const deficit =
-                        worked < 240
-                          ? worked
-                          : worked < 480
-                            ? worked - 240
-                            : 0;
-                      const otMinutes =
-                        (Number(r?.overtimeMinutes) || 0) > 0
-                          ? Number(r?.overtimeMinutes)
-                          : worked >= 480
-                            ? worked - 480
-                            : 0;
-                      const isRowActive = activeCell?.day === day;
-                      const activeField = activeCell?.field;
-                      const dayDirtyFields = dirtyFieldsByDate[wd] ?? [];
-                      const isManualOverrideDay =
-                        manualOverrideDates.includes(wd);
+                      const rowActiveField =
+                        activeCell?.day === day ? activeCell.field : null;
+                      const rowAnchorCol =
+                        selAnchor?.day === day ? selAnchor.col : -1;
+                      const isRowInSel =
+                        selBounds !== null &&
+                        day >= selBounds.minDay &&
+                        day <= selBounds.maxDay;
+                      const selMinCol = isRowInSel ? selBounds.minCol : -1;
+                      const selMaxCol = isRowInSel ? selBounds.maxCol : -1;
+                      const selRowEdge = isRowInSel
+                        ? selBounds.minDay === selBounds.maxDay
+                          ? 'single'
+                          : day === selBounds.minDay
+                            ? 'top'
+                            : day === selBounds.maxDay
+                              ? 'bottom'
+                              : 'middle'
+                        : null;
+                      const showFillHandle =
+                        isRowInSel && day === selBounds.maxDay;
 
-                      const isInFillRange = (f: EditableField) => {
-                        if (
-                          !fillDrag ||
-                          fillDrag.field !== f ||
-                          fillDrag.startDay === fillDrag.currentDay
-                        ) {
-                          return false;
-                        }
-                        const minD = Math.min(
-                          fillDrag.startDay,
-                          fillDrag.currentDay,
-                        );
-                        const maxD = Math.max(
-                          fillDrag.startDay,
-                          fillDrag.currentDay,
-                        );
-                        return day >= minD && day <= maxD;
-                      };
-
-                      const cellStateCls = (
-                        f: EditableField,
-                        isFormula = false,
-                      ) =>
-                        cn(
-                          isFormula && 'excel-col-formula',
-                          activeField === f && 'excel-col-active',
-                          activeCell?.day === day &&
-                            activeCell?.field === f &&
-                            'excel-active-cell',
-                          dayDirtyFields.includes(f) && 'excel-cell-dirty',
-                          isFormula &&
-                            isManualOverrideDay &&
-                            'excel-cell-override',
-                          isInFillRange(f) && 'excel-fill-range',
-                        );
+                      const dayDirtyFields = dirtyFieldsByDate[wd];
+                      const isDraggingDown =
+                        fillDrag !== null &&
+                        fillDrag.currentDay > fillDrag.endSourceDay;
+                      const isDraggingUp =
+                        fillDrag !== null &&
+                        fillDrag.currentDay < fillDrag.startDay;
+                      const minDragDay = fillDrag
+                        ? Math.min(fillDrag.startDay, fillDrag.currentDay)
+                        : 0;
+                      const maxDragDay = fillDrag
+                        ? Math.max(fillDrag.endSourceDay, fillDrag.currentDay)
+                        : 0;
+                      const isInFillRange =
+                        (isDraggingDown || isDraggingUp) &&
+                        day >= minDragDay &&
+                        day <= maxDragDay;
+                      const fillMinCol =
+                        isInFillRange && fillDrag ? fillDrag.startColIdx : -1;
+                      const fillMaxCol =
+                        isInFillRange && fillDrag ? fillDrag.endColIdx : -1;
+                      const fillDragEdge = isInFillRange
+                        ? minDragDay === maxDragDay
+                          ? 'single'
+                          : day === minDragDay
+                            ? 'top'
+                            : day === maxDragDay
+                              ? 'bottom'
+                              : 'middle'
+                        : null;
 
                       return (
-                        <TableRow
-                          key={wd}
-                          onMouseEnter={() => {
-                            if (fillDrag && fillDrag.currentDay !== day) {
-                              setFillDrag((prev) =>
-                                prev ? { ...prev, currentDay: day } : null,
-                              );
-                            }
-                          }}
-                          onClick={() => {
-                            setActiveCell((prev) =>
-                              prev?.day === day
-                                ? prev
-                                : {
-                                    day,
-                                    field: prev?.field ?? 'checkInMorning',
-                                  },
-                            );
-                            setIsEditing(false);
-                          }}
-                          className={cn(
-                            'group h-8 transition-none',
-                            isRowActive && 'row-active',
-                            isSun && 'row-sunday',
-                          )}
-                        >
-                          {/* 0 Ngày (Frozen) */}
-                          <TableCell
-                            className={cn(
-                              'group/date col-sticky-date border-border/50 sticky left-0 z-10 h-8 w-[44px] min-w-[44px] max-w-[44px] border-r border-b p-0 text-center text-xs tabular-nums select-none',
-                              isSun ? 'font-bold' : 'font-medium',
-                            )}
-                            onDoubleClick={() =>
-                              canEdit && onAdjust(selected, wd)
-                            }
-                            title={
-                              canEdit
-                                ? 'Nhấp đúp để mở hộp thoại giải trình'
-                                : undefined
-                            }
-                          >
-                            <div className="flex h-full w-full items-center justify-center gap-0.5">
-                              <span>{String(day).padStart(2, '0')}</span>
-                              {canEdit && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAdjust(selected, wd);
-                                  }}
-                                  title="Mở giải trình / điều chỉnh audit"
-                                  className="text-muted-foreground hover:text-primary opacity-0 transition-opacity group-hover/date:opacity-100"
-                                >
-                                  <Icons.edit className="size-2.5" />
-                                </button>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* 1 Thứ (Frozen) */}
-                          <TableCell className="col-sticky-day border-border/50 sticky left-[44px] z-10 h-8 w-[44px] min-w-[44px] max-w-[44px] border-r border-b p-0 text-center text-xs select-none">
-                            <div className="flex h-full w-full items-center justify-center">
-                              {isSun ? (
-                                <span className="font-semibold text-rose-600 dark:text-rose-400">
-                                  CN
-                                </span>
-                              ) : dow === 6 ? (
-                                <span className="text-foreground/85 font-medium">
-                                  T7
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  {DAY_LABELS[dow]}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* 2-5 AM/PM times */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('checkInMorning'),
-                            )}
-                          >
-                            <EditableTimeCell
-                              day={day}
-                              field="checkInMorning"
-                              value={r?.checkInMorning ?? r?.checkIn}
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(timeVal) => {
-                                stageSingleCell(day, 'checkInMorning', {
-                                  checkInMorning: timeVal,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('checkOutMorning'),
-                            )}
-                          >
-                            <EditableTimeCell
-                              day={day}
-                              field="checkOutMorning"
-                              value={r?.checkOutMorning}
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(timeVal) => {
-                                stageSingleCell(day, 'checkOutMorning', {
-                                  checkOutMorning: timeVal,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('checkInAfternoon'),
-                            )}
-                          >
-                            <EditableTimeCell
-                              day={day}
-                              field="checkInAfternoon"
-                              value={r?.checkInAfternoon}
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(timeVal) => {
-                                stageSingleCell(day, 'checkInAfternoon', {
-                                  checkInAfternoon: timeVal,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('checkOutAfternoon'),
-                            )}
-                          >
-                            <EditableTimeCell
-                              day={day}
-                              field="checkOutAfternoon"
-                              value={r?.checkOutAfternoon ?? r?.checkOut}
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(timeVal) => {
-                                stageSingleCell(day, 'checkOutAfternoon', {
-                                  checkOutAfternoon: timeVal,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 6-9 Lunch / Personal / Noon duties */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[62px] min-w-[62px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('breakHours'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="breakHours"
-                              rawNum={
-                                r?.breakMinutes
-                                  ? Number((r.breakMinutes / 60).toFixed(1))
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={
-                                    r?.breakMinutes
-                                      ? 'text-foreground font-medium'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {r?.breakMinutes
-                                    ? (Number(r.breakMinutes) / 60).toFixed(1)
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'breakHours', {
-                                  breakMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[62px] min-w-[62px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('personalBreakHours'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="personalBreakHours"
-                              rawNum={
-                                r?.personalBreakMinutes
-                                  ? Number(
-                                      (r.personalBreakMinutes / 60).toFixed(1),
-                                    )
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={
-                                    r?.personalBreakMinutes
-                                      ? 'text-foreground font-medium'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {r?.personalBreakMinutes
-                                    ? (
-                                        Number(r.personalBreakMinutes) / 60
-                                      ).toFixed(1)
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'personalBreakHours', {
-                                  personalBreakMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[62px] min-w-[62px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('lunchDutyHours'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="lunchDutyHours"
-                              rawNum={
-                                r?.lunchDutyMinutes
-                                  ? Number(
-                                      (r.lunchDutyMinutes / 60).toFixed(1),
-                                    )
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={
-                                    r?.lunchDutyMinutes
-                                      ? 'text-foreground font-medium'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {r?.lunchDutyMinutes
-                                    ? (Number(r.lunchDutyMinutes) / 60).toFixed(
-                                        1,
-                                      )
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'lunchDutyHours', {
-                                  lunchDutyMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[62px] min-w-[62px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('duty30kHours'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="duty30kHours"
-                              rawNum={
-                                r?.duty30kMinutes
-                                  ? Number((r.duty30kMinutes / 60).toFixed(1))
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={
-                                    r?.duty30kMinutes
-                                      ? 'text-foreground font-medium'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {r?.duty30kMinutes
-                                    ? (Number(r.duty30kMinutes) / 60).toFixed(1)
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'duty30kHours', {
-                                  duty30kMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 10-11 Tổng giờ làm (Giờ, Phút) - Formula column */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 text-foreground h-8 w-[44px] min-w-[44px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('workedHours', true),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="workedHours"
-                              rawNum={
-                                worked > 0
-                                  ? Number((worked / 60).toFixed(1))
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={cn(
-                                    'font-semibold',
-                                    worked > 0
-                                      ? 'text-foreground'
-                                      : 'text-muted-foreground/30',
-                                  )}
-                                >
-                                  {worked > 0 ? Math.floor(worked / 60) : '—'}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'workedHours', {
-                                  workedMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'border-border/50 excel-col-formula h-8 w-[44px] min-w-[44px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              activeField === 'workedHours' &&
-                                'excel-col-active',
-                            )}
-                          >
-                            <div className="flex h-full w-full items-center justify-center">
-                              {worked > 0 ? (
-                                <span className="text-foreground font-semibold">
-                                  {String(worked % 60).padStart(2, '0')}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground/30">
-                                  —
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* 12 Công chính - Formula column */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[70px] min-w-[70px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('congChinh', true),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="congChinh"
-                              rawNum={cong}
-                              displayNode={
-                                <span
-                                  className={
-                                    cong >= 1
-                                      ? 'font-semibold text-emerald-600 dark:text-emerald-400'
-                                      : cong > 0
-                                        ? 'text-foreground font-semibold'
-                                        : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {fmtWork(worked)}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(val) => {
-                                const mins = Math.round(val * 480);
-                                stageSingleCell(day, 'congChinh', {
-                                  workedMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 13 Giờ tăng ca */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('otHours'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="otHours"
-                              rawNum={
-                                otMinutes > 0
-                                  ? Number((otMinutes / 60).toFixed(1))
-                                  : 0
-                              }
-                              displayNode={
-                                <span
-                                  className={
-                                    otMinutes > 0
-                                      ? 'font-semibold text-sky-600 dark:text-sky-400'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {otMinutes > 0
-                                    ? fmtDuration(otMinutes)
-                                    : '—'}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(hours) => {
-                                const mins = Math.round(hours * 60);
-                                stageSingleCell(day, 'otHours', {
-                                  overtimeMinutes: mins,
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 14 Không đủ công - Formula column */}
-                          <TableCell className="border-border/50 excel-col-formula h-8 w-[64px] min-w-[64px] border-r border-b p-0 text-center text-xs tabular-nums">
-                            <div className="flex h-full w-full items-center justify-center">
-                              {deficit > 0 ? (
-                                <span className="inline-block rounded bg-amber-500/10 px-1 py-0 text-[11px] leading-tight font-semibold text-amber-700 tabular-nums dark:text-amber-400">
-                                  {fmtDuration(deficit)}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground/30">
-                                  —
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* 15 Trực đêm (lần) */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('nightShift'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="nightShift"
-                              rawNum={Number(r?.nightShiftDutyCount) || 0}
-                              displayNode={
-                                <span
-                                  className={
-                                    Number(r?.nightShiftDutyCount) > 0
-                                      ? 'text-foreground font-semibold'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {Number(r?.nightShiftDutyCount) > 0
-                                    ? r?.nightShiftDutyCount
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(count) => {
-                                stageSingleCell(day, 'nightShift', {
-                                  nightShiftDutyCount: Math.round(count),
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 16 Đứng nước (lần) */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[56px] min-w-[56px] border-r border-b p-0 text-center text-xs tabular-nums',
-                              cellStateCls('waterBooth'),
-                            )}
-                          >
-                            <EditableNumberCell
-                              day={day}
-                              field="waterBooth"
-                              rawNum={Number(r?.waterBoothDutyCount) || 0}
-                              displayNode={
-                                <span
-                                  className={
-                                    Number(r?.waterBoothDutyCount) > 0
-                                      ? 'text-foreground font-semibold'
-                                      : 'text-muted-foreground/30'
-                                  }
-                                >
-                                  {Number(r?.waterBoothDutyCount) > 0
-                                    ? r?.waterBoothDutyCount
-                                    : ''}
-                                </span>
-                              }
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(count) => {
-                                stageSingleCell(day, 'waterBooth', {
-                                  waterBoothDutyCount: Math.round(count),
-                                });
-                              }}
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                            />
-                          </TableCell>
-
-                          {/* 17 Ghi chú */}
-                          <TableCell
-                            className={cn(
-                              'border-border/50 h-8 w-[180px] min-w-[180px] border-b p-0 align-middle',
-                              cellStateCls('note'),
-                            )}
-                          >
-                            <EditableNoteCell
-                              day={day}
-                              value={r?.note || ''}
-                              canEdit={canEdit}
-                              activeCell={activeCell}
-                              setActiveCell={setActiveCell}
-                              isEditing={isEditing}
-                              setIsEditing={setIsEditing}
-                              onCommitValue={(str) =>
-                                stageSingleCell(day, 'note', { note: str })
-                              }
-                              onPasteBlock={handlePasteBlock}
-                              onStartFillDrag={handleStartFillDrag}
-                              totalDays={s.totalDays}
-                              isSun={isSun}
-                            />
-                          </TableCell>
-                        </TableRow>
+                        <TimesheetDayRow
+                          key={day}
+                          day={day}
+                          wd={wd}
+                          dow={dow}
+                          record={r}
+                          canEdit={canEdit}
+                          totalDays={s.totalDays}
+                          rowActiveField={rowActiveField}
+                          rowAnchorCol={rowAnchorCol}
+                          selMinCol={selMinCol}
+                          selMaxCol={selMaxCol}
+                          selRowEdge={selRowEdge}
+                          showFillHandle={showFillHandle}
+                          dayDirtyFields={dayDirtyFields}
+                          fillMinCol={fillMinCol}
+                          fillMaxCol={fillMaxCol}
+                          fillDragEdge={fillDragEdge}
+                          setActiveCell={setActiveCell}
+                          onHoverDay={handleHoverDay}
+                          onRowHeaderMouseDown={handleRowHeaderMouseDown}
+                          onCellMouseDown={handleCellMouseDown}
+                          onCellMouseEnter={handleCellMouseEnter}
+                          onCommitTime={handleCommitTime}
+                          onCommitNumber={handleCommitNumber}
+                          onCommitNote={handleCommitNote}
+                          onPasteBlock={handlePasteBlock}
+                          onStartFillDrag={handleStartFillDrag}
+                        />
                       );
                     })}
                   </TableBody>
 
-                  {/* Monthly Totals Footer */}
-                  <TableFooter className="border-border bg-muted/40 sticky bottom-0 z-20 border-t">
-                    <TableRow className="font-semibold hover:bg-transparent">
-                      <TableCell className="bg-card border-border/50 sticky bottom-0 left-0 z-30 w-[44px] min-w-[44px] max-w-[44px] border-r px-1 text-center text-xs">
-                        Tổng
-                      </TableCell>
-                      <TableCell className="bg-card border-border/50 sticky bottom-0 left-[44px] z-30 w-[44px] min-w-[44px] max-w-[44px] border-r px-1 text-center text-xs">
-                        cộng
-                      </TableCell>
-
-                      {/* 4 AM/PM cols */}
-                      <TableCell className="border-border/50 text-muted-foreground/40 w-[56px] min-w-[56px] border-r px-1 text-center text-xs">
-                        —
-                      </TableCell>
-                      <TableCell className="border-border/50 text-muted-foreground/40 w-[56px] min-w-[56px] border-r px-1 text-center text-xs">
-                        —
-                      </TableCell>
-                      <TableCell className="border-border/50 text-muted-foreground/40 w-[56px] min-w-[56px] border-r px-1 text-center text-xs">
-                        —
-                      </TableCell>
-                      <TableCell className="border-border/50 text-muted-foreground/40 w-[56px] min-w-[56px] border-r px-1 text-center text-xs">
-                        —
-                      </TableCell>
-
-                      {/* 4 Break/Duty cols */}
-                      <TableCell className="border-border/50 text-foreground w-[62px] min-w-[62px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.breakHours > 0 ? s.breakHours.toFixed(1) : '—'}
-                      </TableCell>
-                      <TableCell className="border-border/50 text-foreground w-[62px] min-w-[62px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.personalBreakHours > 0
-                          ? s.personalBreakHours.toFixed(1)
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="border-border/50 text-foreground w-[62px] min-w-[62px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.lunchDutyHours > 0
-                          ? s.lunchDutyHours.toFixed(1)
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="border-border/50 text-foreground w-[62px] min-w-[62px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.duty35kHours > 0 ? s.duty35kHours.toFixed(1) : '—'}
-                      </TableCell>
-
-                      {/* 2 Total Hours cols: Giờ / Phút */}
-                      <TableCell className="border-border/50 text-foreground w-[44px] min-w-[44px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {Math.floor(s.totHours)}
-                      </TableCell>
-                      <TableCell className="border-border/50 text-foreground w-[44px] min-w-[44px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {String(Math.round((s.totHours % 1) * 60)).padStart(
-                          2,
-                          '0',
-                        )}
-                      </TableCell>
-
-                      {/* Công chính */}
-                      <TableCell className="border-border/50 w-[70px] min-w-[70px] border-r bg-emerald-500/10 px-1 text-center text-xs font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
-                        {s.mainWork.toFixed(1)}
-                      </TableCell>
-
-                      {/* Tăng ca */}
-                      <TableCell className="border-border/50 w-[56px] min-w-[56px] border-r bg-sky-500/10 px-1 text-center text-xs font-semibold text-sky-600 tabular-nums dark:text-sky-400">
-                        {s.otHours > 0 ? s.otHours.toFixed(1) : '—'}
-                      </TableCell>
-
-                      {/* Thiếu công */}
-                      <TableCell
-                        className={cn(
-                          'border-border/50 w-[64px] min-w-[64px] border-r px-1 text-center text-xs font-semibold tabular-nums',
-                          s.deficitHours > 0
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            : 'text-muted-foreground/40',
-                        )}
-                      >
-                        {s.deficitHours > 0 ? s.deficitHours.toFixed(1) : '—'}
-                      </TableCell>
-
-                      {/* Trực đêm */}
-                      <TableCell className="border-border/50 text-foreground w-[56px] min-w-[56px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.night > 0 ? s.night : '—'}
-                      </TableCell>
-
-                      {/* Đứng nước */}
-                      <TableCell className="border-border/50 text-foreground w-[56px] min-w-[56px] border-r px-1 text-center text-xs font-semibold tabular-nums">
-                        {s.water > 0 ? s.water : '—'}
-                      </TableCell>
-
-                      {/* Ghi chú */}
-                      <TableCell className="border-border/50 text-muted-foreground w-[180px] min-w-[180px] px-3 text-xs font-normal tabular-nums">
-                        {s.presentDays}/{s.totalDays} ngày đi làm
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
+                  <TimesheetTableFooter stats={s} />
                 </table>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import type { StatusMap } from '@/components/ui/status-badge';
 import type { TimesheetWorkspaceEmployee, TimesheetWorkspaceRecord } from './types';
-import { fmtTime, fmtWork } from './detail-columns';
+import { fmtDuration, fmtTime, fmtWork } from './detail-columns';
 
 export const statusMap: StatusMap = {
   verified: {
@@ -51,9 +51,6 @@ export type EditableField =
   | 'personalBreakHours'
   | 'lunchDutyHours'
   | 'duty30kHours'
-  | 'workedHours'
-  | 'congChinh'
-  | 'otHours'
   | 'nightShift'
   | 'waterBooth'
   | 'note';
@@ -67,13 +64,39 @@ export const ORDERED_FIELDS: EditableField[] = [
   'personalBreakHours',
   'lunchDutyHours',
   'duty30kHours',
-  'workedHours',
-  'congChinh',
-  'otHours',
   'nightShift',
   'waterBooth',
   'note',
 ];
+
+/** Visual column index (0..15) across all 16 data columns of the 18-column grid */
+export const VISUAL_COL_BY_FIELD: Record<EditableField, number> = {
+  checkInMorning: 0,
+  checkOutMorning: 1,
+  checkInAfternoon: 2,
+  checkOutAfternoon: 3,
+  breakHours: 4,
+  personalBreakHours: 5,
+  lunchDutyHours: 6,
+  duty30kHours: 7,
+  nightShift: 13,
+  waterBooth: 14,
+  note: 15,
+};
+
+export const FIELD_BY_VISUAL_COL: Record<number, EditableField | undefined> = {
+  0: 'checkInMorning',
+  1: 'checkOutMorning',
+  2: 'checkInAfternoon',
+  3: 'checkOutAfternoon',
+  4: 'breakHours',
+  5: 'personalBreakHours',
+  6: 'lunchDutyHours',
+  7: 'duty30kHours',
+  13: 'nightShift',
+  14: 'waterBooth',
+  15: 'note',
+};
 
 export const FIELD_LABELS: Record<EditableField, string> = {
   checkInMorning: 'Ca sáng · Vào',
@@ -84,23 +107,10 @@ export const FIELD_LABELS: Record<EditableField, string> = {
   personalBreakHours: 'Việc riêng (giờ)',
   lunchDutyHours: 'Trực trưa 25k (giờ)',
   duty30kHours: 'Trực 35k (giờ)',
-  workedHours: 'Tổng giờ (fx)',
-  congChinh: 'Công chính (fx)',
-  otHours: 'Tăng ca (giờ)',
   nightShift: 'Trực đêm (lần)',
   waterBooth: 'Đứng nước (lần)',
   note: 'Ghi chú',
 };
-
-export const WEEKDAY_SHIFT_FIELDS = new Set<EditableField>([
-  'checkInMorning',
-  'checkOutMorning',
-  'checkInAfternoon',
-  'checkOutAfternoon',
-  'workedHours',
-  'congChinh',
-  'breakHours',
-]);
 
 export interface ActiveCell {
   day: number;
@@ -174,9 +184,14 @@ export function getNextCell(
 export function normalizeTimeString(raw: string): string | null {
   const s = raw.trim();
   if (!s || s === '-' || s === '—' || s === '0') return null;
+  if (s.includes('T')) {
+    const formatted = fmtTime(s);
+    return formatted === '-' ? null : formatted;
+  }
   if (/^\d{1,2}$/.test(s)) {
     const h = parseInt(s, 10);
     if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
+    return null;
   }
   if (/^\d{3,4}$/.test(s)) {
     const padded = s.padStart(4, '0');
@@ -185,16 +200,19 @@ export function normalizeTimeString(raw: string): string | null {
     if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
+    return null;
   }
-  if (/^\d{1,2}:\d{1,2}$/.test(s)) {
-    const [hStr, mStr] = s.split(':');
-    const h = parseInt(hStr!, 10);
-    const m = parseInt(mStr!, 10);
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+  const colonMatch = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/.exec(s);
+  if (colonMatch) {
+    const h = parseInt(colonMatch[1]!, 10);
+    const m = parseInt(colonMatch[2]!, 10);
+    const sec = colonMatch[3] !== undefined ? parseInt(colonMatch[3], 10) : 0;
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59 && sec >= 0 && sec <= 59) {
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
+    return null;
   }
-  return s;
+  return null;
 }
 
 export function calculateWorkedMinutesFromPunches(params: {
@@ -212,6 +230,7 @@ export function calculateWorkedMinutesFromPunches(params: {
     const norm = normalizeTimeString(t);
     if (!norm || !norm.includes(':')) return null;
     const [h, m] = norm.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
     return (h ?? 0) * 60 + (m ?? 0);
   };
 
@@ -226,7 +245,6 @@ export function calculateWorkedMinutesFromPunches(params: {
 
   let total = 0;
   let hasAny = false;
-  let breakAlreadyDeducted = false;
 
   if (inM != null && outM != null && outM > inM) {
     total += outM - inM;
@@ -239,16 +257,12 @@ export function calculateWorkedMinutesFromPunches(params: {
 
   // If user only provided single full day: inM to outA
   if (inM != null && outA != null && outM == null && inA == null && outA > inM) {
-    const fullSpan = outA - inM;
-    const defaultLunch = params.breakMinutes != null ? params.breakMinutes : 90;
-    total = Math.max(0, fullSpan - defaultLunch);
+    total = outA - inM;
     hasAny = true;
-    breakAlreadyDeducted = true;
   }
 
   if (!hasAny) return null;
-  const remainingBreak = breakAlreadyDeducted ? 0 : breakMins;
-  return Math.max(0, total - personal - remainingBreak - lunchDuty - duty35k);
+  return Math.max(0, total - personal - breakMins - lunchDuty - duty35k);
 }
 
 const PRESERVED_ZERO_WORK_STATUSES = new Set([
@@ -263,7 +277,7 @@ export function resolvePatchedAttendanceStatus(params: {
   explicitStatus?: string;
   currentStatus?: string | null;
   workedMinutes: number;
-  isSun: boolean;
+  isSun?: boolean;
 }): string {
   if (params.explicitStatus !== undefined) {
     return params.explicitStatus;
@@ -277,7 +291,7 @@ export function resolvePatchedAttendanceStatus(params: {
   if (params.currentStatus && PRESERVED_ZERO_WORK_STATUSES.has(params.currentStatus)) {
     return params.currentStatus;
   }
-  return params.isSun ? 'off' : 'absent';
+  return 'absent';
 }
 
 export interface DayCellUpdates {
@@ -303,6 +317,29 @@ export interface DayPatch {
   updates: DayCellUpdates;
 }
 
+export function normalizeEmployeeRecord(
+  r: TimesheetWorkspaceRecord,
+): TimesheetWorkspaceRecord {
+  const autoWorked = calculateWorkedMinutesFromPunches({
+    checkInMorning: r.checkInMorning,
+    checkOutMorning: r.checkOutMorning,
+    checkInAfternoon: r.checkInAfternoon,
+    checkOutAfternoon: r.checkOutAfternoon,
+    personalBreakMinutes: r.personalBreakMinutes,
+    breakMinutes: r.breakMinutes,
+    lunchDutyMinutes: r.lunchDutyMinutes,
+    duty30kMinutes: r.duty30kMinutes,
+  });
+  if (autoWorked !== null && autoWorked !== r.workedMinutes) {
+    return {
+      ...r,
+      workedMinutes: autoWorked,
+      overtimeMinutes: autoWorked >= 480 ? autoWorked - 480 : 0,
+    };
+  }
+  return r;
+}
+
 export function applyDayPatchToRecord(
   curr: TimesheetWorkspaceRecord | undefined,
   employeeId: string,
@@ -310,18 +347,23 @@ export function applyDayPatchToRecord(
   isSun: boolean,
   updates: DayCellUpdates,
 ): TimesheetWorkspaceRecord {
-  const nextInM =
+  const rawInM =
     updates.checkInMorning !== undefined
       ? updates.checkInMorning
-      : (curr?.checkInMorning ?? curr?.checkIn ?? null);
-  const nextOutM =
+      : (curr?.checkInMorning ?? null);
+  const rawOutM =
     updates.checkOutMorning !== undefined ? updates.checkOutMorning : (curr?.checkOutMorning ?? null);
-  const nextInA =
+  const rawInA =
     updates.checkInAfternoon !== undefined ? updates.checkInAfternoon : (curr?.checkInAfternoon ?? null);
-  const nextOutA =
+  const rawOutA =
     updates.checkOutAfternoon !== undefined
       ? updates.checkOutAfternoon
-      : (curr?.checkOutAfternoon ?? curr?.checkOut ?? null);
+      : (curr?.checkOutAfternoon ?? null);
+
+  const nextInM = rawInM ? normalizeTimeString(rawInM) : null;
+  const nextOutM = rawOutM ? normalizeTimeString(rawOutM) : null;
+  const nextInA = rawInA ? normalizeTimeString(rawInA) : null;
+  const nextOutA = rawOutA ? normalizeTimeString(rawOutA) : null;
   const nextPersonal =
     updates.personalBreakMinutes !== undefined
       ? updates.personalBreakMinutes
@@ -335,15 +377,11 @@ export function applyDayPatchToRecord(
   const nextDuty35k =
     updates.duty30kMinutes !== undefined ? updates.duty30kMinutes : (curr?.duty30kMinutes ?? null);
 
-  const hasPunchChange =
+  const hasTimePunchChange =
     updates.checkInMorning !== undefined ||
     updates.checkOutMorning !== undefined ||
     updates.checkInAfternoon !== undefined ||
-    updates.checkOutAfternoon !== undefined ||
-    updates.personalBreakMinutes !== undefined ||
-    updates.breakMinutes !== undefined ||
-    updates.lunchDutyMinutes !== undefined ||
-    updates.duty30kMinutes !== undefined;
+    updates.checkOutAfternoon !== undefined;
 
   const autoWorked = calculateWorkedMinutesFromPunches({
     checkInMorning: nextInM,
@@ -359,10 +397,10 @@ export function applyDayPatchToRecord(
   const nextWorked =
     updates.workedMinutes !== undefined
       ? updates.workedMinutes
-      : hasPunchChange
-        ? (autoWorked ?? 0)
-        : autoWorked !== null
-          ? autoWorked
+      : autoWorked !== null
+        ? autoWorked
+        : hasTimePunchChange
+          ? 0
           : (curr?.workedMinutes ?? 0);
 
   const nextOt =
@@ -383,8 +421,8 @@ export function applyDayPatchToRecord(
     employeeId,
     workDate: wd,
     status: nextStatus,
-    checkIn: nextInM ?? curr?.checkIn ?? null,
-    checkOut: nextOutA ?? nextOutM ?? curr?.checkOut ?? null,
+    checkIn: nextInM ?? nextInA ?? null,
+    checkOut: nextOutA ?? nextOutM ?? null,
     checkInMorning: nextInM,
     checkOutMorning: nextOutM,
     checkInAfternoon: nextInA,
@@ -406,7 +444,7 @@ export function applyDayPatchToRecord(
       updates.waterBoothDutyCount !== undefined
         ? updates.waterBoothDutyCount
         : (curr?.waterBoothDutyCount ?? null),
-    isHoliday: curr?.isHoliday ?? isSun,
+    isHoliday: curr?.isHoliday ?? false,
     note: updates.note !== undefined ? updates.note : (curr?.note ?? null),
   };
 }
@@ -421,7 +459,13 @@ export function parseRawCellValueToUpdates(
     field === 'checkInAfternoon' ||
     field === 'checkOutAfternoon'
   ) {
-    return { [field]: normalizeTimeString(rawStr) };
+    const trimmed = rawStr.trim();
+    if (!trimmed || trimmed === '-' || trimmed === '—' || trimmed === '0') {
+      return { [field]: null };
+    }
+    const normalized = normalizeTimeString(trimmed);
+    if (!normalized) return null;
+    return { [field]: normalized };
   }
   if (field === 'note') {
     return { note: rawStr.trim() };
@@ -431,24 +475,24 @@ export function parseRawCellValueToUpdates(
   if (isNaN(num) || num < 0) return null;
 
   switch (field) {
-    case 'workedHours':
-      return { workedMinutes: Math.min(1440, Math.round(num * 60)) };
-    case 'congChinh':
-      return { workedMinutes: Math.min(1440, Math.round(num * 480)) };
-    case 'otHours':
-      return { overtimeMinutes: Math.min(1440, Math.round(num * 60)) };
     case 'breakHours':
+      if (num > 24) return null;
       return { breakMinutes: Math.round(num * 60) };
     case 'personalBreakHours':
+      if (num > 24) return null;
       return { personalBreakMinutes: Math.round(num * 60) };
     case 'lunchDutyHours':
+      if (num > 24) return null;
       return { lunchDutyMinutes: Math.round(num * 60) };
     case 'duty30kHours':
+      if (num > 24) return null;
       return { duty30kMinutes: Math.round(num * 60) };
     case 'nightShift':
-      return { nightShiftDutyCount: Math.round(num) };
+      if (!Number.isInteger(num) || num > 10) return null;
+      return { nightShiftDutyCount: num };
     case 'waterBooth':
-      return { waterBoothDutyCount: Math.round(num) };
+      if (!Number.isInteger(num) || num > 10) return null;
+      return { waterBoothDutyCount: num };
     default:
       return null;
   }
@@ -461,7 +505,7 @@ export function getRecordFieldDisplayValue(
   if (!r) return '';
   switch (field) {
     case 'checkInMorning': {
-      const t = fmtTime(r.checkInMorning ?? r.checkIn);
+      const t = fmtTime(r.checkInMorning);
       return t === '-' ? '' : t;
     }
     case 'checkOutMorning': {
@@ -473,7 +517,7 @@ export function getRecordFieldDisplayValue(
       return t === '-' ? '' : t;
     }
     case 'checkOutAfternoon': {
-      const t = fmtTime(r.checkOutAfternoon ?? r.checkOut);
+      const t = fmtTime(r.checkOutAfternoon);
       return t === '-' ? '' : t;
     }
     case 'breakHours':
@@ -484,30 +528,48 @@ export function getRecordFieldDisplayValue(
       return r.lunchDutyMinutes ? (Number(r.lunchDutyMinutes) / 60).toFixed(1) : '';
     case 'duty30kHours':
       return r.duty30kMinutes ? (Number(r.duty30kMinutes) / 60).toFixed(1) : '';
-    case 'workedHours': {
-      const w = Number(r.workedMinutes) || 0;
-      return w > 0 ? String(Number((w / 60).toFixed(1))) : '';
-    }
-    case 'congChinh': {
-      const w = Number(r.workedMinutes) || 0;
-      return w >= 480 ? '1' : w >= 240 ? '0.5' : '';
-    }
-    case 'otHours': {
-      const w = Number(r.workedMinutes) || 0;
-      const ot =
-        (Number(r.overtimeMinutes) || 0) > 0
-          ? Number(r.overtimeMinutes)
-          : w >= 480
-            ? w - 480
-            : 0;
-      return ot > 0 ? String(Number((ot / 60).toFixed(1))) : '';
-    }
     case 'nightShift':
       return Number(r.nightShiftDutyCount) > 0 ? String(r.nightShiftDutyCount) : '';
     case 'waterBooth':
       return Number(r.waterBoothDutyCount) > 0 ? String(r.waterBoothDutyCount) : '';
     case 'note':
       return r.note || '';
+  }
+}
+
+export function getVisualColDisplayValue(
+  r: TimesheetWorkspaceRecord | undefined,
+  visualCol: number,
+): string {
+  const editableField = FIELD_BY_VISUAL_COL[visualCol];
+  if (editableField) {
+    return getRecordFieldDisplayValue(r, editableField);
+  }
+  const worked = Number(r?.workedMinutes) || 0;
+  switch (visualCol) {
+    case 8:
+      return worked > 0 ? String(Math.floor(worked / 60)) : '';
+    case 9:
+      return worked > 0 ? String(worked % 60).padStart(2, '0') : '';
+    case 10: {
+      const w = fmtWork(worked);
+      return w === '—' || w === '-' ? '' : w;
+    }
+    case 11: {
+      const otMinutes =
+        (Number(r?.overtimeMinutes) || 0) > 0
+          ? Number(r?.overtimeMinutes)
+          : worked >= 480
+            ? worked - 480
+            : 0;
+      return otMinutes > 0 ? fmtDuration(otMinutes) : '';
+    }
+    case 12: {
+      const deficit = worked < 240 ? worked : worked < 480 ? worked - 240 : 0;
+      return deficit > 0 ? fmtDuration(deficit) : '';
+    }
+    default:
+      return '';
   }
 }
 
@@ -519,35 +581,40 @@ export function getRecordFieldPatch(
   return parseRawCellValueToUpdates(field, disp) ?? {};
 }
 
-export function isHeaderColActive(isRow2: boolean, index: number, field?: string | null): boolean {
-  if (!field) return false;
+export function isHeaderColActive(
+  isRow2: boolean,
+  index: number,
+  field?: string | null,
+  minVisualCol = -1,
+  maxVisualCol = -1,
+): boolean {
+  const singleVisualCol =
+    field && field in VISUAL_COL_BY_FIELD
+      ? VISUAL_COL_BY_FIELD[field as EditableField]
+      : -1;
+  const lo = minVisualCol >= 0 ? minVisualCol : singleVisualCol;
+  const hi = maxVisualCol >= 0 ? maxVisualCol : singleVisualCol;
+  if (lo < 0 || hi < 0) return false;
+
+  const overlaps = (startCol: number, endCol: number) =>
+    lo <= endCol && hi >= startCol;
+
   if (!isRow2) {
-    if (index === 2) return field === 'checkInMorning' || field === 'checkOutMorning';
-    if (index === 3) return field === 'checkInAfternoon' || field === 'checkOutAfternoon';
-    if (index === 4)
-      return (
-        field === 'breakHours' ||
-        field === 'personalBreakHours' ||
-        field === 'lunchDutyHours' ||
-        field === 'duty30kHours'
-      );
-    if (index === 5) return field === 'workedHours';
-    if (index === 6) return field === 'congChinh';
-    if (index === 7) return field === 'otHours';
-    if (index === 9) return field === 'nightShift';
-    if (index === 10) return field === 'waterBooth';
-    if (index === 11) return field === 'note';
+    if (index === 2) return overlaps(0, 1);
+    if (index === 3) return overlaps(2, 3);
+    if (index === 4) return overlaps(4, 7);
+    if (index === 5) return overlaps(8, 9);
+    if (index === 6) return overlaps(10, 10);
+    if (index === 7) return overlaps(11, 11);
+    if (index === 8) return overlaps(12, 12);
+    if (index === 9) return overlaps(13, 13);
+    if (index === 10) return overlaps(14, 14);
+    if (index === 11) return overlaps(15, 15);
     return false;
   }
-  if (index === 0) return field === 'checkInMorning';
-  if (index === 1) return field === 'checkOutMorning';
-  if (index === 2) return field === 'checkInAfternoon';
-  if (index === 3) return field === 'checkOutAfternoon';
-  if (index === 4) return field === 'breakHours';
-  if (index === 5) return field === 'personalBreakHours';
-  if (index === 6) return field === 'lunchDutyHours';
-  if (index === 7) return field === 'duty30kHours';
-  if (index === 8) return field === 'workedHours';
+  if (index >= 0 && index <= 9) {
+    return overlaps(index, index);
+  }
   return false;
 }
 export { fmtWork };

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { performanceCyclesQueryOptions } from '../api/queries';
 import { useCreatePerformanceCycle, useTransitionCycle } from '../api/mutations';
 import { extractList, extractPagination } from '@/lib/api-extract';
@@ -55,6 +57,15 @@ const CYCLE_ACTIONS: Record<string, { action: string; label: string }[]> = {
 };
 
 export function PerformanceCyclesView() {
+  const user = useAuthStore((s) => s.user);
+  const canManagePerformance =
+    !user ||
+    Boolean(
+      user.isSuperAdmin ||
+        user.permissions?.includes('ALL') ||
+        user.permissions?.includes('sys:all') ||
+        hasAnyPermission(user.permissions, [permissions.performance.manage]),
+    );
   const [params, setParams] = useQueryStates({
     page: pageParser,
     status: parseAsString,
@@ -121,58 +132,60 @@ export function PerformanceCyclesView() {
           </p>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size='sm'>
-              <Icons.add className='mr-1.5 size-4' />
-              {copy.create}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{copy.create}</DialogTitle>
-              <DialogDescription>{performanceUiCopy.description}</DialogDescription>
-            </DialogHeader>
-            <div className='grid gap-4 py-4'>
-              <div className='grid gap-2'>
-                <Label htmlFor='cycle-name'>{commonUiCopy.name}</Label>
-                <Input
-                  id='cycle-name'
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='cycle-starts-on'>Ngày bắt đầu</Label>
-                <Input
-                  id='cycle-starts-on'
-                  type='date'
-                  value={form.startsOn}
-                  onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='cycle-ends-on'>Ngày kết thúc</Label>
-                <Input
-                  id='cycle-ends-on'
-                  type='date'
-                  value={form.endsOn}
-                  onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
-              <Button onClick={() => void handleCreate()} disabled={createCycle.isPending}>
-                {createCycle.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
-                {commonUiCopy.create}
+        {canManagePerformance ? (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size='sm'>
+                <Icons.add className='mr-1.5 size-4' />
+                {copy.create}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{copy.create}</DialogTitle>
+                <DialogDescription>{performanceUiCopy.description}</DialogDescription>
+              </DialogHeader>
+              <div className='grid gap-4 py-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='cycle-name'>{commonUiCopy.name}</Label>
+                  <Input
+                    id='cycle-name'
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='cycle-starts-on'>Ngày bắt đầu</Label>
+                  <Input
+                    id='cycle-starts-on'
+                    type='date'
+                    value={form.startsOn}
+                    onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='cycle-ends-on'>Ngày kết thúc</Label>
+                  <Input
+                    id='cycle-ends-on'
+                    type='date'
+                    value={form.endsOn}
+                    onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant='outline' onClick={() => setOpen(false)}>{commonUiCopy.cancel}</Button>
+                <Button onClick={() => void handleCreate()} disabled={createCycle.isPending}>
+                  {createCycle.isPending && <Icons.spinner className='mr-1.5 size-4 animate-spin' />}
+                  {commonUiCopy.create}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
       </div>
 
       {rows.length === 0 && !isLoading ? (
@@ -260,23 +273,25 @@ export function PerformanceCyclesView() {
                     <TableCell>{row.endsOn ? formatDateVN(row.endsOn) : '—'}</TableCell>
                     <TableCell>{row.createdAt ? formatDateVN(row.createdAt) : '—'}</TableCell>
                     <TableCell className='text-right'>
-                      <div className='flex justify-end gap-1.5'>
-                        {(CYCLE_ACTIONS[row.status ?? ''] ?? []).map((act) => (
-                          <Button
-                            key={act.action}
-                            variant='outline'
-                            size='sm'
-                            className='h-7 text-xs'
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              transitionCycle.mutate({ id: row.id, action: act.action });
-                            }}
-                            disabled={transitionCycle.isPending}
-                          >
-                            {act.label}
-                          </Button>
-                        ))}
-                      </div>
+                      {canManagePerformance ? (
+                        <div className='flex justify-end gap-1.5'>
+                          {(CYCLE_ACTIONS[row.status ?? ''] ?? []).map((act) => (
+                            <Button
+                              key={act.action}
+                              variant='outline'
+                              size='sm'
+                              className='h-7 text-xs'
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                transitionCycle.mutate({ id: row.id, action: act.action });
+                              }}
+                              disabled={transitionCycle.isPending}
+                            >
+                              {act.label}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}

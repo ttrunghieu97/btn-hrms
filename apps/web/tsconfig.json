@@ -20,9 +20,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "**/__tests__/**",
-    "**/*.spec.*",
-    "**/*.test.*"
+    "node_modules"
   ]
 }

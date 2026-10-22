@@ -4,9 +4,12 @@ import * as bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { v4 as uuid } from "uuid";
 import { eq } from "drizzle-orm";
+import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { AppModule } from "../../../src/app/app.module";
 import { DATABASE_CONNECTION } from "../../../src/infrastructure/database/database.provider";
 import * as schema from "../../../src/infrastructure/database/schema";
+
+export type E2eDatabase = PostgresJsDatabase<typeof schema>;
 
 let _app: INestApplication | null = null;
 
@@ -24,11 +27,11 @@ export async function closeApp(): Promise<void> {
   if (_app) { await _app.close(); _app = null; }
 }
 
-export async function getDb(app: INestApplication): Promise<typeof schema> {
+export async function getDb(app: INestApplication): Promise<E2eDatabase> {
   return app.get(DATABASE_CONNECTION);
 }
 
-export async function seedAdmin(db: typeof schema): Promise<{
+export async function seedAdmin(db: E2eDatabase): Promise<{
   username: string; password: string; userId: string; employeeId: string;
 }> {
   const nonce = randomUUID().replace(/-/g, "").substring(0, 8);
@@ -52,7 +55,7 @@ export async function seedAdmin(db: typeof schema): Promise<{
   return { username, password, userId, employeeId };
 }
 
-export async function seedRegularUser(db: typeof schema): Promise<{
+export async function seedRegularUser(db: E2eDatabase): Promise<{
   username: string; password: string; userId: string; employeeId: string;
 }> {
   const nonce = randomUUID().replace(/-/g, "").substring(0, 8);
@@ -77,7 +80,7 @@ export async function seedRegularUser(db: typeof schema): Promise<{
 }
 
 export async function cleanupUser(
-  db: typeof schema, username: string
+  db: E2eDatabase, username: string
 ): Promise<void> {
   await db.delete(schema.users).where(eq(schema.users.username, username));
 }

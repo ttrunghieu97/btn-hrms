@@ -14,11 +14,12 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsrs",
+    "dev": "tsrs --watch",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "tsrs": "^0.18.0-ts7.1.0-dev.20260929",
     "typescript": "^6.0.3"
   }
 }

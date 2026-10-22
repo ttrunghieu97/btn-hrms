@@ -8,6 +8,7 @@ import { extractList } from '@/lib/api-extract';
 import type { NotificationAction, NotificationStatus } from '@/components/ui/notification-card';
 import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
+import { useCanRunAuthenticatedQuery } from '@/stores/auth-store';
 
 export type NotificationItem = {
   id: string;
@@ -50,11 +51,14 @@ export function mapPlatformNotificationToItem(raw: RawPlatformNotification): Not
 export const notificationKeys = createKeyFactory('notifications');
 
 export function useNotificationsQuery() {
+  const canRun = useCanRunAuthenticatedQuery();
+
   return useQuery({
     queryKey: notificationKeys.list(),
     queryFn: ({ signal }) => platformNotificationsControllerGetMyNotifications({ signal }),
     select: (data) => extractList<RawPlatformNotification>(data).map(mapPlatformNotificationToItem),
-    ...queryPolicyPresets['fast-changing']
+    ...queryPolicyPresets['fast-changing'],
+    enabled: canRun
   });
 }
 
@@ -79,6 +83,8 @@ export function useMarkAllNotificationsReadMutation(queryClient: QueryClient) {
 }
 
 export function useNotificationsCountQuery() {
+  const canRun = useCanRunAuthenticatedQuery();
+
   return useQuery({
     queryKey: notificationKeys.detail('count'),
     queryFn: ({ signal }) => platformNotificationsControllerGetMyNotifications({ signal }),
@@ -90,5 +96,6 @@ export function useNotificationsCountQuery() {
       };
     },
     ...queryPolicyPresets['fast-changing'],
+    enabled: canRun,
   });
 }

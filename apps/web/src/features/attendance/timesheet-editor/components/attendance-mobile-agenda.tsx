@@ -32,9 +32,12 @@ interface AttendanceMobileAgendaProps {
   employees: TimesheetWorkspaceEmployee[];
   selectedEmployee: TimesheetWorkspaceEmployee;
   records: TimesheetWorkspaceRecord[];
-  canEdit: boolean;
+  verificationMap?: Record<string, 'draft' | 'done'>;
+  canEdit?: boolean;
+  isVerifying?: boolean;
+  onToggleVerifyEmployee?: () => void;
+  onSwitchToMatrix?: () => void;
   onSelectEmployee: (emp: TimesheetWorkspaceEmployee) => void;
-  onAdjust: (employee: TimesheetWorkspaceEmployee, workDate: string) => void;
 }
 
 function getInitials(name: string) {
@@ -45,15 +48,8 @@ function getInitials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-function getStatusBadge(status?: string | null, weekend?: boolean, hasHours?: boolean) {
+function getStatusBadge(status?: string | null) {
   if (!status) {
-    if (weekend && !hasHours) {
-      return (
-        <Badge variant='outline' className='text-xs text-muted-foreground border-border/80 bg-muted/30'>
-          Nghỉ tuần
-        </Badge>
-      );
-    }
     return (
       <Badge variant='outline' className='text-xs text-muted-foreground border-border/80 bg-muted/30'>
         Chưa có công
@@ -112,11 +108,17 @@ export function AttendanceMobileAgenda({
   employees,
   selectedEmployee,
   records,
-  canEdit,
+  verificationMap,
+  canEdit = false,
+  isVerifying = false,
+  onToggleVerifyEmployee,
+  onSwitchToMatrix,
   onSelectEmployee,
-  onAdjust,
 }: AttendanceMobileAgendaProps) {
   const [dayFilter, setDayFilter] = React.useState<'all' | 'work' | 'absence' | 'weekend'>('all');
+  const isSelectedVerified =
+    (verificationMap?.[selectedEmployee.id] ??
+      selectedEmployee.verificationStatus) === 'done';
 
   const totalDays = React.useMemo(() => daysInMonth(period), [period]);
 
@@ -188,17 +190,42 @@ export function AttendanceMobileAgenda({
           <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
             Nhân sự đang xem
           </span>
-          <Badge
-            variant='outline'
-            className={cn(
-              'text-[10px] font-mono font-medium',
-              selectedEmployee.verificationStatus === 'done'
-                ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                : 'border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10'
+          <div className='flex items-center gap-1.5'>
+            <Badge
+              variant='outline'
+              className={cn(
+                'text-[10px] font-mono font-medium',
+                isSelectedVerified
+                  ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                  : 'border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10'
+              )}
+            >
+              {isSelectedVerified ? 'Đã chốt công' : 'Chưa chốt'}
+            </Badge>
+            {canEdit && onToggleVerifyEmployee && (
+              <Button
+                type='button'
+                size='sm'
+                variant={isSelectedVerified ? 'outline' : 'default'}
+                disabled={isVerifying}
+                onClick={onToggleVerifyEmployee}
+                className='h-7 px-2 text-[11px] font-medium'
+              >
+                {isSelectedVerified ? 'Mở chốt' : 'Chốt công'}
+              </Button>
             )}
-          >
-            {selectedEmployee.verificationStatus === 'done' ? 'Đã chốt công' : 'Chưa chốt'}
-          </Badge>
+            {onSwitchToMatrix && (
+              <Button
+                type='button'
+                size='sm'
+                variant='outline'
+                onClick={onSwitchToMatrix}
+                className='h-7 px-2 text-[11px] font-medium'
+              >
+                Bảng chi tiết
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Selected Employee Info Card */}
@@ -324,7 +351,6 @@ export function AttendanceMobileAgenda({
       ) : (
         <div className='flex flex-col gap-4'>
           {filteredDays.map((d) => {
-            const hasHours = (d.rec?.workedMinutes ?? 0) > 0;
             const workedHours = d.rec?.workedMinutes
               ? (d.rec.workedMinutes / 60).toFixed(1)
               : '0.0';
@@ -353,10 +379,10 @@ export function AttendanceMobileAgenda({
                 <AgendaItem
                   title={
                     <span className='font-semibold text-sm'>
-                      {d.rec?.note || (d.weekend ? 'Ngày nghỉ tuần' : 'Ngày làm việc')}
+                      {d.rec?.note || 'Ngày làm việc'}
                     </span>
                   }
-                  badge={getStatusBadge(d.rec?.status, d.weekend, hasHours)}
+                  badge={getStatusBadge(d.rec?.status)}
                   timeRange={
                     hasTimeEntries
                       ? `Sáng: ${morningIn} - ${morningOut} · Chiều: ${afternoonIn} - ${afternoonOut}`
@@ -373,20 +399,6 @@ export function AttendanceMobileAgenda({
                         </span>
                       )}
                     </div>
-                  }
-                  actions={
-                    canEdit && (
-                      <Button
-                        type='button'
-                        variant='outline'
-                        size='sm'
-                        onClick={() => onAdjust(selectedEmployee, d.dateStr)}
-                        className='min-h-[44px] sm:min-h-[36px] w-full text-xs font-medium justify-center'
-                      >
-                        <Icons.edit className='mr-1.5 size-4 text-primary' />
-                        {d.rec ? 'Điều chỉnh công' : 'Chấm công bù'}
-                      </Button>
-                    )
                   }
                   aria-label={`Chi tiết công ngày ${d.day} tháng ${period} của ${selectedEmployee.fullName}`}
                 />

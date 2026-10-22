@@ -21,18 +21,33 @@ export interface MonthStats {
   otHours: number;            // tổng giờ tăng ca
   deficitHours: number;       // không đủ công: thời gian làm dở dang < 4h hoặc 4h-8h
   totHours: number;           // tổng giờ làm (workedMinutes)
+  totWorkedMinutes: number;   // tổng số phút làm nguyên (workedMinutes)
   workdays: number;           // mainWork
   chuyenCan: boolean;         // chuyên cần: đủ >= 26 ngày tròn 1 công
   fullCongDays: number;       // số ngày đạt tròn 1 công (>= 8h)
 }
 
 export function computeMonthStats(
-  records: TimesheetWorkspaceRecord[],
+  records:
+    | TimesheetWorkspaceRecord[]
+    | ReadonlyMap<string, TimesheetWorkspaceRecord>,
   period: string,
-  emp: TimesheetWorkspaceEmployee,
+  emp?: TimesheetWorkspaceEmployee,
 ): MonthStats {
   const totalDays = daysInPeriod(period);
-  const byDate = new Map(records.filter((r) => r.employeeId === emp.id).map((r) => [r.workDate, r]));
+  let byDate: ReadonlyMap<string, TimesheetWorkspaceRecord>;
+  if (Array.isArray(records)) {
+    const map = new Map<string, TimesheetWorkspaceRecord>();
+    for (let i = 0; i < records.length; i++) {
+      const rec = records[i]!;
+      if (!emp || rec.employeeId === emp.id) {
+        map.set(rec.workDate, rec);
+      }
+    }
+    byDate = map;
+  } else {
+    byDate = records;
+  }
 
   const s: MonthStats = {
     totalDays,
@@ -51,6 +66,7 @@ export function computeMonthStats(
     otHours: 0,
     deficitHours: 0,
     totHours: 0,
+    totWorkedMinutes: 0,
     workdays: 0,
     chuyenCan: false,
     fullCongDays: 0,
@@ -80,7 +96,8 @@ export function computeMonthStats(
     if (lunchMins > 0) s.noon35++;
     s.night += Number(r.nightShiftDutyCount) || 0;
     s.water += Number(r.waterBoothDutyCount) || 0;
-    s.totHours += workedMins / 60;
+    s.totWorkedMinutes += Math.round(workedMins);
+    s.totHours = s.totWorkedMinutes / 60;
 
     if (workedMins > 0) {
       s.presentDays++;

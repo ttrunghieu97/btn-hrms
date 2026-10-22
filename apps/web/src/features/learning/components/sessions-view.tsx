@@ -9,6 +9,7 @@ import {
   usePublishSession,
   useCancelSession,
   useRegisterSession,
+  useWithdrawSession,
   useCheckInSession,
   useCompleteSession,
 } from '../api/mutations';
@@ -27,6 +28,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatDateVN } from "@/lib/date";
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission } from '@project/permissions';
+import { permissions } from '@/lib/permissions';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +57,15 @@ import { createSessionSchema, type CreateSessionFormValues } from '../schemas/le
 const copy = learningUiCopy.sessions;
 
 export function SessionsView() {
+  const user = useAuthStore((s) => s.user);
+  const canManage =
+    !user ||
+    Boolean(
+      user.isSuperAdmin ||
+        user.permissions?.includes('ALL') ||
+        user.permissions?.includes('sys:all') ||
+        hasAnyPermission(user.permissions, [permissions.learning.manage]),
+    );
   const [params, setParams] = useQueryStates({ courseId: parseAsString });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateSessionFormValues>({ courseId: params.courseId ?? '', title: '', scheduledAt: '' });
@@ -68,6 +81,7 @@ export function SessionsView() {
   const publishSession = usePublishSession();
   const cancelSession = useCancelSession();
   const registerSession = useRegisterSession();
+  const withdrawSession = useWithdrawSession();
   const checkInSession = useCheckInSession();
   const completeSession = useCompleteSession();
 
@@ -106,6 +120,7 @@ export function SessionsView() {
             </Select>
           ) : null}
         </div>
+        {canManage ? (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size='sm'>
@@ -149,6 +164,7 @@ export function SessionsView() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        ) : null}
       </div>
 
       {!selectedCourse ? (
@@ -182,13 +198,23 @@ export function SessionsView() {
                           Đăng ký
                         </Button>
                         <Button
-                          variant='outline'
+                          variant='ghost'
                           size='sm'
-                          onClick={() => publishSession.mutate({ id: row.id })}
-                          disabled={publishSession.isPending}
+                          onClick={() => withdrawSession.mutate({ id: row.id })}
+                          disabled={withdrawSession.isPending}
                         >
-                          Công bố
+                          Hủy đăng ký
                         </Button>
+                        {canManage && (
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => publishSession.mutate({ id: row.id })}
+                            disabled={publishSession.isPending}
+                          >
+                            Công bố
+                          </Button>
+                        )}
                       </>
                     )}
                     <Button
@@ -199,22 +225,26 @@ export function SessionsView() {
                     >
                       Điểm danh
                     </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => completeSession.mutate({ id: row.id })}
-                      disabled={completeSession.isPending}
-                    >
-                      Hoàn thành
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => cancelSession.mutate({ id: row.id })}
-                      disabled={cancelSession.isPending}
-                    >
-                      Hủy
-                    </Button>
+                    {canManage && (
+                      <>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => completeSession.mutate({ id: row.id })}
+                          disabled={completeSession.isPending}
+                        >
+                          Hoàn thành
+                        </Button>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => cancelSession.mutate({ id: row.id })}
+                          disabled={cancelSession.isPending}
+                        >
+                          Hủy
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </Card>
@@ -253,13 +283,23 @@ export function SessionsView() {
                               Đăng ký
                             </Button>
                             <Button
-                              variant='outline'
+                              variant='ghost'
                               size='sm'
-                              onClick={() => publishSession.mutate({ id: row.id })}
-                              disabled={publishSession.isPending}
+                              onClick={() => withdrawSession.mutate({ id: row.id })}
+                              disabled={withdrawSession.isPending}
                             >
-                              Công bố
+                              Hủy đăng ký
                             </Button>
+                            {canManage ? (
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => publishSession.mutate({ id: row.id })}
+                                disabled={publishSession.isPending}
+                              >
+                                Công bố
+                              </Button>
+                            ) : null}
                           </>
                         ) : null}
                         {row.status === 'scheduled' || row.status === 'in_progress' ? (
@@ -272,22 +312,26 @@ export function SessionsView() {
                             >
                               Điểm danh
                             </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => completeSession.mutate({ id: row.id })}
-                              disabled={completeSession.isPending}
-                            >
-                              Hoàn thành
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => cancelSession.mutate({ id: row.id })}
-                              disabled={cancelSession.isPending}
-                            >
-                              Hủy
-                            </Button>
+                            {canManage ? (
+                              <>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() => completeSession.mutate({ id: row.id })}
+                                  disabled={completeSession.isPending}
+                                >
+                                  Hoàn thành
+                                </Button>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() => cancelSession.mutate({ id: row.id })}
+                                  disabled={cancelSession.isPending}
+                                >
+                                  Hủy
+                                </Button>
+                              </>
+                            ) : null}
                           </>
                         ) : null}
                       </div>

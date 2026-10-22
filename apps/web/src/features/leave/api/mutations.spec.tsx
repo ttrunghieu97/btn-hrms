@@ -64,7 +64,7 @@ describe('leave mutations', () => {
       const { result } = renderHook(() => useCreateLeaveRequest(), { wrapper: Wrapper });
 
       await act(async () => {
-        result.current.mutate({ data: { employeeId: 'emp-1', leaveTypeId: 'type-1', startDate: '2026-08-01', endDate: '2026-08-01', reason: 'Vacation' } });
+        result.current.mutate({ data: { employeeId: 'emp-1', leaveTypeId: 'type-1', startDate: '2026-08-01', endDate: '2026-08-01', startSession: 'full_day', endSession: 'full_day', totalUnits: '1', reason: 'Vacation' } });
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -84,7 +84,7 @@ describe('leave mutations', () => {
       const { result } = renderHook(() => useCancelLeaveRequest(), { wrapper: Wrapper });
 
       await act(async () => {
-        result.current.mutate({ data: { id: 'leave-1' } });
+        result.current.mutate({ id: 'leave-1' });
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));

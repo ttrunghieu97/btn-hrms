@@ -6,10 +6,12 @@ import {
   requestDetailQueryOptions,
   assetCatalogQueryOptions,
   assetUnitsQueryOptions,
+  assetSelectEmployeesQueryOptions,
 } from '../api/queries';
 import {
   useSubmitAssetRequest,
   useCancelAssetRequest,
+  useUpdateAssetRequest,
   useIssueAsset,
 } from '../api/mutations';
 import { extractList, unwrapData } from '@/lib/api-extract';
@@ -82,11 +84,36 @@ export function AssetRequestDetailDialog({
 
   const submitMutation = useSubmitAssetRequest();
   const cancelMutation = useCancelAssetRequest();
+  const updateMutation = useUpdateAssetRequest();
   const issueMutation = useIssueAsset();
+
+  const { data: employeesData } = useQuery(
+    assetSelectEmployeesQueryOptions({ limit: 500 }),
+  );
+  const employeeMap = React.useMemo(() => {
+    const list = extractList<{
+      id: string;
+      firstName?: string;
+      lastName?: string;
+      employeeCode?: string;
+    }>(employeesData);
+    const map = new Map<string, string>();
+    for (const emp of list) {
+      const fullName = [emp.lastName, emp.firstName].filter(Boolean).join(' ');
+      map.set(
+        emp.id,
+        emp.employeeCode ? `${fullName} (${emp.employeeCode})` : fullName,
+      );
+    }
+    return map;
+  }, [employeesData]);
 
   const [fulfillmentOpen, setFulfillmentOpen] = React.useState(false);
   const [selectedAssetId, setSelectedAssetId] = React.useState('');
   const [fulfillmentNote, setFulfillmentNote] = React.useState('');
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editReason, setEditReason] = React.useState('');
+  const [editNeededBy, setEditNeededBy] = React.useState('');
 
   const typeMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -118,6 +145,33 @@ export function AssetRequestDetailDialog({
           void refetch();
         },
         onError: (err) => notifyMutationError(err, 'Không thể hủy yêu cầu.'),
+      },
+    );
+  };
+
+  const handleOpenEdit = () => {
+    setEditReason(request?.reason ?? '');
+    setEditNeededBy(request?.neededBy ? String(request.neededBy).slice(0, 10) : '');
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMutation.mutate(
+      {
+        id: requestId,
+        dto: {
+          ...(editReason.trim() ? { reason: editReason.trim() } : {}),
+          ...(editNeededBy ? { neededBy: editNeededBy } : {}),
+        },
+      },
+      {
+        onSuccess: () => {
+          notifyMutationSuccess('Đã cập nhật yêu cầu cấp phát thiết bị.');
+          setEditOpen(false);
+          void refetch();
+        },
+        onError: (err) => notifyMutationError(err, 'Không thể cập nhật yêu cầu.'),
       },
     );
   };
@@ -234,17 +288,28 @@ export function AssetRequestDetailDialog({
               actions={
                 <div className='flex items-center gap-2'>
                   {status === 'draft' && (
-                    <Button
-                      size='sm'
-                      onClick={handleSubmit}
-                      disabled={submitMutation.isPending}
-                    >
-                      {submitMutation.isPending && (
-                        <Icons.spinner className='mr-2 size-4 animate-spin' />
-                      )}
-                      <Icons.check className='mr-1.5 size-4' />
-                      Nộp yêu cầu duyệt
-                    </Button>
+                    <>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={handleOpenEdit}
+                        disabled={updateMutation.isPending}
+                      >
+                        <Icons.edit className='mr-1.5 size-4' />
+                        Chỉnh sửa
+                      </Button>
+                      <Button
+                        size='sm'
+                        onClick={handleSubmit}
+                        disabled={submitMutation.isPending}
+                      >
+                        {submitMutation.isPending && (
+                          <Icons.spinner className='mr-2 size-4 animate-spin' />
+                        )}
+                        <Icons.check className='mr-1.5 size-4' />
+                        Nộp yêu cầu duyệt
+                      </Button>
+                    </>
                   )}
                   {status === 'approved' && (
                     <Button
@@ -310,7 +375,10 @@ export function AssetRequestDetailDialog({
                 <div className='grid grid-cols-2 gap-4 pt-2 text-xs border-t'>
                   <div>
                     <span className='text-muted-foreground'>Nhân viên yêu cầu: </span>
-                    <span className='font-medium'>{request.requesterEmployeeId}</span>
+                    <span className='font-medium'>
+                      {employeeMap.get(request.requesterEmployeeId) ??
+                        request.requesterEmployeeId}
+                    </span>
                   </div>
                   <div>
                     <span className='text-muted-foreground'>Hạn cần thiết bị: </span>
@@ -345,6 +413,59 @@ export function AssetRequestDetailDialog({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Edit Form for Draft Requests */}
+            {status === 'draft' && editOpen && (
+              <Card>
+                <CardHeader className='pb-2'>
+                  <CardTitle className='text-sm font-semibold'>
+                    Chỉnh sửa yêu cầu cấp phát
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSaveEdit} className='space-y-4'>
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='editReason' className='text-xs'>
+                        Lý do yêu cầu
+                      </Label>
+                      <Input
+                        id='editReason'
+                        value={editReason}
+                        onChange={(e) => setEditReason(e.target.value)}
+                      />
+                    </div>
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='editNeededBy' className='text-xs'>
+                        Hạn cần thiết bị
+                      </Label>
+                      <Input
+                        id='editNeededBy'
+                        type='date'
+                        value={editNeededBy}
+                        onChange={(e) => setEditNeededBy(e.target.value)}
+                      />
+                    </div>
+                    <div className='flex justify-end gap-2'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setEditOpen(false)}
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        type='submit'
+                        size='sm'
+                        disabled={updateMutation.isPending}
+                      >
+                        Lưu thay đổi
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Fulfillment Section for Approved Requests */}
             {status === 'approved' && fulfillmentOpen && (

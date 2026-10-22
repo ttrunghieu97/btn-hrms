@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { timekeepingControllerGetTimesheetWorkspace } from '@/api/generated/attendance-timekeeping/attendance-timekeeping';
 import { unwrapData } from '@/lib/api-extract';
 import {
@@ -9,6 +13,10 @@ import {
   type TimesheetWorkspaceResponse,
   type PeriodStatus,
 } from '../types';
+
+const EMPTY_EMPLOYEES: TimesheetWorkspaceEmployee[] = [];
+const EMPTY_RECORDS: TimesheetWorkspaceRecord[] = [];
+const EMPTY_ACTIONS: string[] = [];
 
 export interface TimesheetState {
   loading: boolean;
@@ -29,22 +37,31 @@ export const getTimesheetWorkspaceQueryKey = (period: string) =>
 
 export function useTimesheet(initialPeriod?: string): TimesheetState {
   const queryClient = useQueryClient();
-  const now = new Date();
-  const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const [period, setPeriod] = useState(initialPeriod ?? defaultPeriod);
+  const [period, setPeriod] = useState(() => {
+    if (initialPeriod) return initialPeriod;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [prevInitialPeriod, setPrevInitialPeriod] = useState(initialPeriod);
 
-  useEffect(() => {
+  if (initialPeriod !== prevInitialPeriod) {
+    setPrevInitialPeriod(initialPeriod);
     if (initialPeriod && initialPeriod !== period) {
       setPeriod(initialPeriod);
     }
-  }, [initialPeriod, period]);
+  }
 
   const query = useQuery({
     queryKey: getTimesheetWorkspaceQueryKey(period),
-    queryFn: async () => {
-      const res = await timekeepingControllerGetTimesheetWorkspace({ period });
+    queryFn: async ({ signal }) => {
+      const res = await timekeepingControllerGetTimesheetWorkspace(
+        { period },
+        { signal },
+      );
       return unwrapData<TimesheetWorkspaceResponse>(res);
     },
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
   const reload = useCallback(async () => {
@@ -54,6 +71,7 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
   }, [queryClient, period]);
 
   const data = query.data;
+  const isPlaceholder = query.isPlaceholderData;
   const errorMsg =
     query.error instanceof Error
       ? query.error.message
@@ -65,10 +83,10 @@ export function useTimesheet(initialPeriod?: string): TimesheetState {
     loading: query.isLoading,
     error: errorMsg,
     errorObject: query.error ?? null,
-    employees: data?.employees ?? [],
-    records: data?.records ?? [],
+    employees: data?.employees ?? EMPTY_EMPLOYEES,
+    records: isPlaceholder ? EMPTY_RECORDS : (data?.records ?? EMPTY_RECORDS),
     periodStatus: data?.periodStatus ?? null,
-    availableActions: data?.availableActions ?? [],
+    availableActions: data?.availableActions ?? EMPTY_ACTIONS,
     totals: data?.totals ?? null,
     period,
     reload,

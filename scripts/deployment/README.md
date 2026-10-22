@@ -19,12 +19,12 @@ pnpm deployment:check-env
 ## Smoke checks
 
 ```bash
-SMOKE_API_BASE_URL=https://api.example.com/api/v1 \
+SMOKE_API_URL=https://api.example.com/api/v1 \
 SMOKE_WEB_URL=https://hrms.example.com \
 pnpm deployment:smoke
 ```
 
-Checks API `/health`, API `/ready/strict`, and Web root URL.
+Checks API `/health`, API `/ready/strict`, and Web root URL (`SMOKE_API_BASE_URL` is also accepted as a legacy alias for `SMOKE_API_URL`).
 
 ## PostgreSQL backup
 

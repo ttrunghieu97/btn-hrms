@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-const apiBaseUrl = process.env.SMOKE_API_URL || process.env.NEXT_PUBLIC_API_URL;
+const apiBaseUrl =
+  process.env.SMOKE_API_URL ||
+  process.env.SMOKE_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL;
 const webUrl = process.env.SMOKE_WEB_URL || process.env.APP_URL;
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 10_000);
 

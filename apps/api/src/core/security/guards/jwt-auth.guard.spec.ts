@@ -1,4 +1,4 @@
-import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
@@ -163,5 +163,104 @@ describe("JwtAuthGuard — Authorization Version & Revocation", () => {
     const allowed = await wsGuard.canActivate(wsCtx);
     expect(allowed).toBe(false);
     expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  describe("cookie-authenticated mutation CSRF policy", () => {
+    beforeEach(() => {
+      jwtService.verifyAsync.mockResolvedValue({ sub: "u-1", azv: 1 });
+      authSessionReader.loadAuthSession.mockResolvedValue({
+        user: {
+          id: "u-1",
+          username: "user1",
+          isSuperAdmin: false,
+          isActive: true,
+          authorizationVersion: 1,
+        },
+        employee: null,
+      });
+      configService.get.mockImplementation((key: string) => {
+        if (key === "APP_URL") return "http://localhost:8080";
+        if (key === "TRUST_PROXY") return "1";
+        return undefined;
+      });
+    });
+
+    it.each(["POST", "PUT", "PATCH", "DELETE"])(
+      "allows cookie-authenticated %s via trusted reverse proxy when Origin matches X-Forwarded-Host",
+      async (method) => {
+        const req: any = {
+          method,
+          protocol: "http",
+          headers: {
+            cookie: "access_token=cookie.jwt.token",
+            origin: "http://192.168.1.88:8080",
+            host: "127.0.0.1:3001",
+            "x-forwarded-host": "192.168.1.88:8080",
+            "x-forwarded-proto": "http",
+          },
+          cookies: { access_token: "cookie.jwt.token" },
+          socket: { remoteAddress: "127.0.0.1" },
+          app: { get: (k: string) => (k === "trust proxy" ? 1 : undefined) },
+        };
+        const ctx = {
+          switchToHttp: () => ({ getRequest: () => req }),
+          getHandler: () => ({}),
+          getClass: () => ({}),
+        } as unknown as ExecutionContext;
+
+        await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      },
+    );
+
+    it.each(["POST", "PUT", "PATCH", "DELETE"])(
+      "blocks cookie-authenticated %s when Origin is untrusted or forged from untrusted peer",
+      async (method) => {
+        const req: any = {
+          method,
+          protocol: "http",
+          headers: {
+            cookie: "access_token=cookie.jwt.token",
+            origin: "https://evil.example.com",
+            host: "127.0.0.1:3001",
+            "x-forwarded-host": "evil.example.com",
+            "x-forwarded-proto": "https",
+          },
+          cookies: { access_token: "cookie.jwt.token" },
+          socket: { remoteAddress: "198.51.100.77" },
+          app: { get: (k: string) => (k === "trust proxy" ? 1 : undefined) },
+        };
+        const ctx = {
+          switchToHttp: () => ({ getRequest: () => req }),
+          getHandler: () => ({}),
+          getClass: () => ({}),
+        } as unknown as ExecutionContext;
+
+        await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+      },
+    );
+
+    it("blocks cookie-authenticated mutation from a non-proxy private LAN peer forging X-Forwarded-Host", async () => {
+      const req: any = {
+        method: "POST",
+        protocol: "http",
+        headers: {
+          cookie: "access_token=cookie.jwt.token",
+          origin: "http://192.168.1.88:8080",
+          host: "192.168.1.10:3001",
+          "x-forwarded-host": "192.168.1.88:8080",
+          "x-forwarded-proto": "http",
+        },
+        cookies: { access_token: "cookie.jwt.token" },
+        socket: { remoteAddress: "192.168.1.88" },
+        app: { get: (k: string) => (k === "trust proxy" ? 1 : undefined) },
+      };
+      const ctx = {
+        switchToHttp: () => ({ getRequest: () => req }),
+        getHandler: () => ({}),
+        getClass: () => ({}),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+    });
   });
 });

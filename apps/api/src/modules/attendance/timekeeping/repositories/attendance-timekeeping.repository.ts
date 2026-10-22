@@ -5,6 +5,7 @@ import type { AppDatabase } from "../../../../infrastructure/database/database-c
 import * as schema from "../../../../infrastructure/database/schema";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -17,6 +18,8 @@ import {
   sql,
   SQL,
 } from "drizzle-orm";
+import { ERROR_CODES } from "../../../../shared/constants/error-codes";
+import { throwBadRequest } from "../../../../shared/utils/http-error";
 import {
   type EmployeeShiftReaderPort,
   EMPLOYEE_SHIFT_READER_PORT,
@@ -289,6 +292,37 @@ export class AttendanceTimekeepingRepository
     timeStr: string | null;
   }) {
     const { employeeId, workDate, session, type, timeStr } = params;
+
+    let eventTime: Date | null = null;
+    if (timeStr && timeStr.trim() && timeStr.trim() !== "-") {
+      const t = timeStr.trim();
+      if (t.includes("T")) {
+        eventTime = new Date(t);
+      } else {
+        const match = /^(\d{1,2}):(\d{2})$/.exec(t);
+        if (!match) {
+          throwBadRequest(`Invalid clock time format: ${t}`, ERROR_CODES.INVALID_REQUEST, {
+            timeStr: t,
+          });
+        }
+        const h = Number(match[1]);
+        const m = Number(match[2]);
+        if (h < 0 || h > 23 || m < 0 || m > 59) {
+          throwBadRequest(`Clock time out of range (00:00-23:59): ${t}`, ERROR_CODES.INVALID_REQUEST, {
+            timeStr: t,
+          });
+        }
+        eventTime = new Date(
+          `${workDate}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`,
+        );
+      }
+      if (!eventTime || Number.isNaN(eventTime.getTime())) {
+        throwBadRequest(`Invalid clock timestamp: ${t}`, ERROR_CODES.INVALID_REQUEST, {
+          timeStr: t,
+        });
+      }
+    }
+
     await this.db.delete(schema.attendances).where(
       and(
         eq(schema.attendances.employeeId, employeeId),
@@ -298,19 +332,40 @@ export class AttendanceTimekeepingRepository
       ),
     );
 
-    if (!timeStr || !timeStr.trim() || timeStr.trim() === "-") {
-      return null;
+    const legacyNullSessionRows = await this.db
+      .select({
+        id: schema.attendances.id,
+        time: schema.attendances.time,
+      })
+      .from(schema.attendances)
+      .where(
+        and(
+          eq(schema.attendances.employeeId, employeeId),
+          eq(schema.attendances.date, workDate),
+          eq(schema.attendances.type, type),
+          isNull(schema.attendances.session),
+        ),
+      );
+
+    if (legacyNullSessionRows.length > 0) {
+      const cutoffHour = type === "check_in" ? 12 : 13;
+      const legacyIdsToDelete = legacyNullSessionRows
+        .filter((row) => {
+          if (!row.time) return false;
+          const h = new Date(row.time).getHours();
+          return session === "morning" ? h < cutoffHour : h >= cutoffHour;
+        })
+        .map((row) => row.id);
+
+      if (legacyIdsToDelete.length > 0) {
+        await this.db
+          .delete(schema.attendances)
+          .where(inArray(schema.attendances.id, legacyIdsToDelete));
+      }
     }
 
-    const t = timeStr.trim();
-    let eventTime: Date;
-    if (t.includes("T")) {
-      eventTime = new Date(t);
-    } else {
-      const parts = t.split(":");
-      const h = parseInt(parts[0] ?? "0", 10);
-      const m = parseInt(parts[1] ?? "0", 10);
-      eventTime = new Date(`${workDate}T${String(isNaN(h) ? 0 : h).padStart(2, "0")}:${String(isNaN(m) ? 0 : m).padStart(2, "0")}:00`);
+    if (!eventTime) {
+      return null;
     }
 
     const [row] = await this.db.insert(schema.attendances).values({
@@ -422,10 +477,29 @@ export class AttendanceTimekeepingRepository
       ),
     });
 
+    const mergedValues: Partial<typeof schema.attendanceDailySummaries.$inferInsert> = {
+      ...values,
+    };
+    if (values.sourceData !== undefined) {
+      const prevSource =
+        existing?.sourceData &&
+        typeof existing.sourceData === "object" &&
+        !Array.isArray(existing.sourceData)
+          ? (existing.sourceData as Record<string, unknown>)
+          : {};
+      const nextSource =
+        values.sourceData &&
+        typeof values.sourceData === "object" &&
+        !Array.isArray(values.sourceData)
+          ? (values.sourceData as Record<string, unknown>)
+          : {};
+      mergedValues.sourceData = { ...prevSource, ...nextSource };
+    }
+
     if (existing) {
       const [updated] = await db
         .update(schema.attendanceDailySummaries)
-        .set({ ...(values), updatedAt: new Date() })
+        .set({ ...mergedValues, updatedAt: new Date() })
         .where(eq(schema.attendanceDailySummaries.id, existing.id))
         .returning();
       return updated ?? null;
@@ -433,7 +507,7 @@ export class AttendanceTimekeepingRepository
 
     const [created] = await db
       .insert(schema.attendanceDailySummaries)
-      .values({ employeeId, workDate, ...(values) })
+      .values({ employeeId, workDate, ...mergedValues })
       .returning();
 
     return created ?? null;
@@ -823,6 +897,7 @@ export class AttendanceTimekeepingRepository
       overtimeMinutes: number | null;
       personalBreakMinutes: number | null;
       lunchDutyMinutes: number | null;
+      duty30kMinutes: number | null;
       nightShiftDutyCount: string | number | null;
       waterBoothDutyCount: string | number | null;
       isHoliday: boolean;
@@ -906,6 +981,7 @@ export class AttendanceTimekeepingRepository
           nightShiftDutyCount: schema.attendanceDailySummaries.nightShiftDutyCount,
           waterBoothDutyCount: schema.attendanceDailySummaries.waterBoothDutyCount,
           isHoliday: schema.attendanceDailySummaries.isHoliday,
+          sourceData: schema.attendanceDailySummaries.sourceData,
         })
         .from(schema.attendanceDailySummaries)
         .where(
@@ -930,7 +1006,8 @@ export class AttendanceTimekeepingRepository
             gte(schema.attendances.date, query.from),
             lte(schema.attendances.date, query.to),
           ),
-        ),
+        )
+        .orderBy(asc(schema.attendances.time), asc(schema.attendances.id)),
       this.db
         .select({
           employeeId: schema.allowances.employeeId,
@@ -981,6 +1058,7 @@ export class AttendanceTimekeepingRepository
       overtimeMinutes: number | null;
       personalBreakMinutes: number | null;
       lunchDutyMinutes: number | null;
+      duty30kMinutes: number | null;
       nightShiftDutyCount: string | number | null;
       waterBoothDutyCount: string | number | null;
       isHoliday: boolean;
@@ -988,7 +1066,33 @@ export class AttendanceTimekeepingRepository
     }>();
 
     for (const s of summaryRows) {
-      summaryMap.set(`${s.employeeId}_${s.workDate}`, { ...s, note: null });
+      const rawDuty30k =
+        s.sourceData &&
+        typeof s.sourceData === "object" &&
+        !Array.isArray(s.sourceData) &&
+        "duty30kMinutes" in s.sourceData
+          ? Number((s.sourceData as Record<string, unknown>).duty30kMinutes)
+          : null;
+      const duty30kMinutes =
+        rawDuty30k != null && Number.isFinite(rawDuty30k) ? rawDuty30k : null;
+      summaryMap.set(`${s.employeeId}_${s.workDate}`, {
+        employeeId: s.employeeId,
+        workDate: s.workDate,
+        status: s.status,
+        workedMinutes: s.workedMinutes,
+        scheduledMinutes: s.scheduledMinutes,
+        breakMinutes: s.breakMinutes,
+        lateMinutes: s.lateMinutes,
+        earlyLeaveMinutes: s.earlyLeaveMinutes,
+        overtimeMinutes: s.overtimeMinutes,
+        personalBreakMinutes: s.personalBreakMinutes,
+        lunchDutyMinutes: s.lunchDutyMinutes,
+        duty30kMinutes,
+        nightShiftDutyCount: s.nightShiftDutyCount,
+        waterBoothDutyCount: s.waterBoothDutyCount,
+        isHoliday: s.isHoliday,
+        note: null,
+      });
     }
 
     for (const ov of overrideRows) {
@@ -1017,6 +1121,7 @@ export class AttendanceTimekeepingRepository
           overtimeMinutes: ov.overriddenOvertimeMinutes ?? 0,
           personalBreakMinutes: null,
           lunchDutyMinutes: null,
+          duty30kMinutes: null,
           nightShiftDutyCount: null,
           waterBoothDutyCount: null,
           isHoliday: false,

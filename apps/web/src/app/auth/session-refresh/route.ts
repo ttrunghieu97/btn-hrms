@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import { appLogger } from '@/lib/logger';
-import { buildBackendUrl, createForwardHeaders, proxyJsonResponse } from '@/lib/server/backend-proxy';
+import { appendSetCookieHeaders, buildBackendUrl, createForwardHeaders } from '@/lib/server/backend-proxy';
 
 const MAX_ATTEMPTS = 1;
 
@@ -83,13 +83,7 @@ export async function GET(request: NextRequest) {
   });
 
   const redirectResponse = NextResponse.redirect(buildRetryUrl(request, nextPath, attempt + 1));
-  const proxiedRefreshResponse = await proxyJsonResponse(refreshResponse);
-
-  proxiedRefreshResponse.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'set-cookie') {
-      redirectResponse.headers.append(key, value);
-    }
-  });
+  appendSetCookieHeaders(redirectResponse.headers, refreshResponse.headers);
 
   return redirectResponse;
 }

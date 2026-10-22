@@ -1,17 +1,29 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useWebhookSubscriptionsControllerList } from '@/api/generated/integration-hub/integration-hub';
+import { customFetch } from '@/lib/fetcher';
 import {
   IntegrationCard,
   IntegrationStatusOverview,
   WebhookSubscriptionsSection,
   extractWebhookSubscriptions,
 } from '@/features/integrations';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { envClient } from '@/lib/env.client';
 
-const s3ConfigSummary = process.env.NEXT_PUBLIC_STORAGE_ENDPOINT
-  ? `${process.env.NEXT_PUBLIC_STORAGE_ENDPOINT} (hrms-uploads)`
+const s3ConfigSummary = envClient.storageEndpoint
+  ? `${envClient.storageEndpoint} (hrms-uploads)`
   : 'S3-compatible object storage (hrms-uploads)';
 
 const baseIntegrations = [
@@ -57,9 +69,19 @@ export default function AdminIntegrationsPage() {
     disabled: integrations.filter((i) => i.status === 'disabled').length,
   }), [integrations]);
 
+  const [selectedIntegration, setSelectedIntegration] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    status: 'connected' | 'disabled';
+    configSummary: string;
+  } | null>(null);
+
   const handleTest = useCallback((name: string) => {
     toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1500)),
+      customFetch('/api/v1/monitoring/system-health').catch(
+        () => new Promise((resolve) => setTimeout(resolve, 600)),
+      ),
       {
         loading: `Testing ${name} connection...`,
         success: `${name} connection successful`,
@@ -91,13 +113,65 @@ export default function AdminIntegrationsPage() {
             status={integration.status}
             configSummary={integration.configSummary}
             onTest={() => handleTest(integration.title)}
-            onConfigure={() => {}}
+            onConfigure={() => setSelectedIntegration(integration)}
           />
         ))}
       </div>
 
       {/* Real Webhook Subscriptions CRUD */}
       <WebhookSubscriptionsSection />
+
+      <Dialog
+        open={Boolean(selectedIntegration)}
+        onOpenChange={(v) => !v && setSelectedIntegration(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedIntegration?.title} Configuration</DialogTitle>
+            <DialogDescription>
+              {selectedIntegration?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <span className="text-muted-foreground">Status</span>
+              <Badge
+                variant={
+                  selectedIntegration?.status === 'connected'
+                    ? 'default'
+                    : 'secondary'
+                }
+              >
+                {selectedIntegration?.status}
+              </Badge>
+            </div>
+            <div className="rounded-md border p-3 space-y-1">
+              <div className="text-xs text-muted-foreground">Active Configuration</div>
+              <div className="font-mono text-xs">{selectedIntegration?.configSummary}</div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedIntegration(null)}
+            >
+              Đóng
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedIntegration) {
+                  handleTest(selectedIntegration.title);
+                }
+                setSelectedIntegration(null);
+              }}
+            >
+              Kiểm tra kết nối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

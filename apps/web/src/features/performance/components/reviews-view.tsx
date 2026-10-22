@@ -3,6 +3,9 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
+import { employeesQueryOptions } from '@/features/employees';
+import { useAuthStore } from '@/stores/auth-store';
+import { hasAnyPermission, permissions } from '@/lib/permissions';
 import { performanceReviewsQueryOptions, performanceCyclesQueryOptions } from '../api/queries';
 import { useAssignReviewer, useSubmitPerformanceReview } from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
@@ -45,6 +48,15 @@ import { commonUiCopy, performanceUiCopy } from '@/locales/vi/app-copy';
 const copy = performanceUiCopy.reviews;
 
 export function PerformanceReviewsView() {
+  const user = useAuthStore((s) => s.user);
+  const canManagePerformance =
+    !user ||
+    Boolean(
+      user.isSuperAdmin ||
+        user.permissions?.includes('ALL') ||
+        user.permissions?.includes('sys:all') ||
+        hasAnyPermission(user.permissions, [permissions.performance.manage]),
+    );
   const [params, setParams] = useQueryStates({ cycleId: parseAsString });
 
   const { data: cyclesData } = useQuery(performanceCyclesQueryOptions());
@@ -56,6 +68,12 @@ export function PerformanceReviewsView() {
     enabled: !!selectedCycle,
   });
   const rows = extractList<PerformanceReviewRow>(data);
+
+  const { data: employeesData } = useQuery({
+    ...employeesQueryOptions({ page: 1, limit: 200 }),
+    enabled: canManagePerformance,
+  });
+  const employees = employeesData?.employees ?? [];
 
   const assignMutation = useAssignReviewer();
   const submitReviewMutation = useSubmitPerformanceReview();
@@ -141,7 +159,7 @@ export function PerformanceReviewsView() {
           ) : null}
         </div>
 
-        {selectedCycle && (
+        {selectedCycle && canManagePerformance && (
           <Button size='sm' onClick={() => setAssignOpen(true)}>
             <Icons.add className='mr-1.5 h-4 w-4' />
             Phân công đánh giá
@@ -253,24 +271,74 @@ export function PerformanceReviewsView() {
           </DialogHeader>
           <form onSubmit={handleAssignSubmit} className='space-y-4'>
             <div className='space-y-1.5'>
-              <Label htmlFor='assign-emp-id'>ID Nhân viên được đánh giá *</Label>
-              <Input
-                id='assign-emp-id'
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder='Nhập UUID nhân viên...'
-                required
-              />
+              <Label htmlFor='assign-emp-id'>Nhân viên được đánh giá *</Label>
+              {employees.length > 0 ? (
+                <Select
+                  value={employeeId}
+                  onValueChange={(val) => {
+                    setEmployeeId(val);
+                    if (reviewType === 'self' || !reviewerId) {
+                      setReviewerId(val);
+                    }
+                  }}
+                >
+                  <SelectTrigger id='assign-emp-id'>
+                    <SelectValue placeholder='Chọn nhân viên được đánh giá...' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => {
+                      const fullName =
+                        [emp.lastName, emp.firstName].filter(Boolean).join(' ') ||
+                        emp.username ||
+                        emp.id;
+                      return (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {fullName} {emp.employeeCode ? `(${emp.employeeCode})` : ''}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id='assign-emp-id'
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  placeholder='Nhập UUID nhân viên...'
+                  required
+                />
+              )}
             </div>
             <div className='space-y-1.5'>
-              <Label htmlFor='assign-rev-id'>ID Người đánh giá *</Label>
-              <Input
-                id='assign-rev-id'
-                value={reviewerId}
-                onChange={(e) => setReviewerId(e.target.value)}
-                placeholder='Nhập UUID người đánh giá (trùng ID nếu tự đánh giá)...'
-                required
-              />
+              <Label htmlFor='assign-rev-id'>Người đánh giá *</Label>
+              {employees.length > 0 ? (
+                <Select value={reviewerId} onValueChange={setReviewerId}>
+                  <SelectTrigger id='assign-rev-id'>
+                    <SelectValue placeholder='Chọn người đánh giá...' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => {
+                      const fullName =
+                        [emp.lastName, emp.firstName].filter(Boolean).join(' ') ||
+                        emp.username ||
+                        emp.id;
+                      return (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {fullName} {emp.employeeCode ? `(${emp.employeeCode})` : ''}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id='assign-rev-id'
+                  value={reviewerId}
+                  onChange={(e) => setReviewerId(e.target.value)}
+                  placeholder='Nhập UUID người đánh giá (trùng ID nếu tự đánh giá)...'
+                  required
+                />
+              )}
             </div>
             <div className='grid grid-cols-2 gap-3'>
               <div className='space-y-1.5'>

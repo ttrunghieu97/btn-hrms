@@ -1,12 +1,12 @@
 import { v4 as uuid } from "uuid";
 import request from "supertest";
 import { eq } from "drizzle-orm";
-import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
+import { getApp, getDb, seedAdmin, cleanupUser, type E2eDatabase } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
 
 describe("Leave (e2e)", () => {
   const ctx: {
-    app?: any; db?: typeof schema;
+    app?: any; db?: E2eDatabase;
     admin?: any; token?: string;
     employeeId?: string; leaveId?: string; leaveTypeId?: string;
   } = {};

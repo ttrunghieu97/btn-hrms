@@ -21,6 +21,7 @@ export const ApiErrorCode = {
 export type ApiErrorCode = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];
 
 export interface ApiErrorDetails {
+  reason?: string;
   missingPermissions?: string[];
   requiredAnyOfPermissions?: string[];
   fields?: Record<string, string[]>;
@@ -33,6 +34,7 @@ export class ApiError extends Error {
   public readonly status?: number;
   public readonly details?: ApiErrorDetails;
   public readonly requestId?: string;
+  public readonly retryAfterMs?: number;
   public readonly cause?: unknown;
   public toastShown = false;
 
@@ -43,6 +45,7 @@ export class ApiError extends Error {
     status?: number;
     details?: ApiErrorDetails;
     requestId?: string;
+    retryAfterMs?: number;
     cause?: unknown;
   }) {
     super(args.message);
@@ -52,12 +55,28 @@ export class ApiError extends Error {
     this.status = args.status;
     this.details = args.details;
     this.requestId = args.requestId;
+    this.retryAfterMs = args.retryAfterMs;
     this.cause = args.cause;
   }
 
   get retryable(): boolean {
     return this.code === ApiErrorCode.NETWORK || this.code === ApiErrorCode.SERVER;
   }
+}
+
+export function parseRetryAfterMs(raw?: string | null): number | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number.parseInt(trimmed, 10);
+    return Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : undefined;
+  }
+  const timestamp = Date.parse(trimmed);
+  if (!Number.isNaN(timestamp)) {
+    return Math.max(0, timestamp - Date.now());
+  }
+  return undefined;
 }
 
 export function statusToCode(status?: number): ApiErrorCode {

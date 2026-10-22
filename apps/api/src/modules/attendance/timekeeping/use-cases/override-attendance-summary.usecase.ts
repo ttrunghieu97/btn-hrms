@@ -107,6 +107,9 @@ export class OverrideAttendanceSummaryUseCase {
     if (dto.breakMinutes !== undefined) summaryUpdates.breakMinutes = dto.breakMinutes;
     if (dto.personalBreakMinutes !== undefined) summaryUpdates.personalBreakMinutes = dto.personalBreakMinutes;
     if (dto.lunchDutyMinutes !== undefined) summaryUpdates.lunchDutyMinutes = dto.lunchDutyMinutes;
+    if (dto.duty30kMinutes !== undefined) {
+      summaryUpdates.sourceData = { duty30kMinutes: dto.duty30kMinutes };
+    }
     if (dto.nightShiftDutyCount !== undefined) summaryUpdates.nightShiftDutyCount = String(dto.nightShiftDutyCount ?? 0);
     if (dto.waterBoothDutyCount !== undefined) summaryUpdates.waterBoothDutyCount = String(dto.waterBoothDutyCount ?? 0);
 

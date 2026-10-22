@@ -39,6 +39,7 @@ export interface PerformanceCycleRow {
 export interface PerformanceGoalRow {
   id: string;
   title?: string;
+  description?: string | null;
   status?: string;
   employeeId?: string;
   employeeName?: string;

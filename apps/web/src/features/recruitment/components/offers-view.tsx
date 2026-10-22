@@ -133,7 +133,7 @@ function OfferActions({
   if (offer.status === 'pending_approval') {
     return (
       <Button asChild variant='ghost' size='sm' className='text-xs'>
-        <Link href='/approvals'>Hộp thư duyệt</Link>
+        <Link href='/administration/approval'>Hộp thư duyệt</Link>
       </Button>
     );
   }

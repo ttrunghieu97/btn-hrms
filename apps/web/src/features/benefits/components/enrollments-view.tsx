@@ -8,6 +8,7 @@ import {
   useApproveEnrollment,
   useCancelEnrollment,
   useEnrollEmployee,
+  useAddDependent,
 } from '../api/mutations';
 import type { BenefitEnrollmentListFilters } from '../queries/benefit-queries';
 import { employeesQueryOptions } from '@/features/employees';
@@ -141,6 +142,28 @@ export function BenefitEnrollmentsView() {
   const enrollMutation = useEnrollEmployee();
   const approveEnrollment = useApproveEnrollment();
   const cancelEnrollment = useCancelEnrollment();
+  const addDependentMutation = useAddDependent();
+
+  const [dependentEnrollmentId, setDependentEnrollmentId] = useState<string | null>(null);
+  const [depForm, setDepForm] = useState({
+    fullName: '',
+    relationship: 'Vợ/Chồng',
+    dateOfBirth: '',
+  });
+
+  const handleAddDependent = async () => {
+    if (!dependentEnrollmentId || !depForm.fullName.trim() || !depForm.relationship.trim()) {
+      return;
+    }
+    await addDependentMutation.mutateAsync({
+      enrollmentId: dependentEnrollmentId,
+      fullName: depForm.fullName.trim(),
+      relationship: depForm.relationship.trim(),
+      ...(depForm.dateOfBirth ? { dateOfBirth: depForm.dateOfBirth } : {}),
+    });
+    setDependentEnrollmentId(null);
+    setDepForm({ fullName: '', relationship: 'Vợ/Chồng', dateOfBirth: '' });
+  };
 
   const handleEnrollSubmit = async () => {
     const parsed = enrollEmployeeSchema.safeParse({
@@ -260,30 +283,41 @@ export function BenefitEnrollmentsView() {
                     <TableCell>{row.effectiveFrom ? formatDateVN(row.effectiveFrom) : '—'}</TableCell>
                     <TableCell>{row.enrolledAt ? formatDateVN(row.enrolledAt) : '—'}</TableCell>
                     <TableCell>
-                      {canManage ? (
-                        <div className='flex gap-1'>
-                          {row.status === 'pending' ? (
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => approveEnrollment.mutate({ id: row.id })}
-                              disabled={approveEnrollment.isPending}
-                            >
-                              Duyệt
-                            </Button>
-                          ) : null}
-                          {row.status === 'pending' || row.status === 'approved' ? (
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => cancelEnrollment.mutate({ id: row.id })}
-                              disabled={cancelEnrollment.isPending}
-                            >
-                              Hủy
-                            </Button>
-                          ) : null}
-                        </div>
-                      ) : null}
+                      <div className='flex justify-end gap-1'>
+                        {row.coverageType !== 'employee_only' && (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => setDependentEnrollmentId(row.id)}
+                          >
+                            + Người phụ thuộc
+                          </Button>
+                        )}
+                        {canManage ? (
+                          <>
+                            {row.status === 'pending' ? (
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => approveEnrollment.mutate({ id: row.id })}
+                                disabled={approveEnrollment.isPending}
+                              >
+                                Duyệt
+                              </Button>
+                            ) : null}
+                            {row.status === 'pending' || row.status === 'approved' ? (
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => cancelEnrollment.mutate({ id: row.id })}
+                                disabled={cancelEnrollment.isPending}
+                              >
+                                Hủy
+                              </Button>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -396,6 +430,70 @@ export function BenefitEnrollmentsView() {
               }
             >
               {enrollMutation.isPending ? 'Đang đăng ký...' : 'Đăng ký'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(dependentEnrollmentId)}
+        onOpenChange={(v) => !v && setDependentEnrollmentId(null)}
+      >
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Thêm người phụ thuộc</DialogTitle>
+            <DialogDescription>
+              Đăng ký thông tin người thân đi kèm gói phúc lợi bảo hiểm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-2'>
+            <div className='grid gap-1.5'>
+              <Label htmlFor='dep-fullname'>Họ và tên người phụ thuộc *</Label>
+              <Input
+                id='dep-fullname'
+                value={depForm.fullName}
+                onChange={(e) => setDepForm({ ...depForm, fullName: e.target.value })}
+                placeholder='Nguyễn Thị B'
+              />
+            </div>
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='grid gap-1.5'>
+                <Label htmlFor='dep-rel'>Mối quan hệ *</Label>
+                <Input
+                  id='dep-rel'
+                  value={depForm.relationship}
+                  onChange={(e) =>
+                    setDepForm({ ...depForm, relationship: e.target.value })
+                  }
+                  placeholder='Vợ/Chồng, Con...'
+                />
+              </div>
+              <div className='grid gap-1.5'>
+                <Label htmlFor='dep-dob'>Ngày sinh</Label>
+                <Input
+                  id='dep-dob'
+                  type='date'
+                  value={depForm.dateOfBirth}
+                  onChange={(e) =>
+                    setDepForm({ ...depForm, dateOfBirth: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setDependentEnrollmentId(null)}>
+              {commonUiCopy.cancel}
+            </Button>
+            <Button
+              onClick={() => void handleAddDependent()}
+              disabled={
+                !depForm.fullName.trim() ||
+                !depForm.relationship.trim() ||
+                addDependentMutation.isPending
+              }
+            >
+              {commonUiCopy.save}
             </Button>
           </DialogFooter>
         </DialogContent>

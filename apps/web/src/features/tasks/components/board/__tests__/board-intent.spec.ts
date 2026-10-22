@@ -12,7 +12,7 @@ import type { TaskActor } from '../../../workflow/machine';
 const assignee: TaskActor = { id: 'a1', role: 'assignee' };
 const creator: TaskActor = { id: 'c1', role: 'creator' };
 
-function makeTask(overrides: Partial<Task> & { id: string; status: string }): Task {
+function makeTask(overrides: Omit<Partial<Task>, 'status'> & { id: string; status: string }): Task {
   return { title: 'T', ...overrides } as Task;
 }
 

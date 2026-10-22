@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
-import { buildBackendUrl } from '@/lib/server/backend-proxy';
+import { appendSetCookieHeaders, buildBackendUrl } from '@/lib/server/backend-proxy';
 
 function requestOrigin(request: NextRequest): string {
   const host = request.headers.get('host') || 'localhost:8080';
@@ -43,14 +43,7 @@ export async function GET(request: NextRequest) {
   }
 
   const nextResponse = NextResponse.redirect(new URL(redirectTo, requestOrigin(request)));
-
-  const setCookies =
-    typeof response.headers.getSetCookie === 'function'
-      ? response.headers.getSetCookie()
-      : [];
-  for (const cookie of setCookies) {
-    nextResponse.headers.append('set-cookie', cookie);
-  }
+  appendSetCookieHeaders(nextResponse.headers, response.headers);
 
   return nextResponse;
 }

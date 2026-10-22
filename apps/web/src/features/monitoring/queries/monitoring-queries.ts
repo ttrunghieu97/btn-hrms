@@ -3,6 +3,7 @@ import { createKeyFactory } from '@/lib/query-keys';
 import { queryPolicyPresets } from '@/lib/query-client';
 import { customFetch } from '@/lib/fetcher';
 import { unwrapData, extractPagination } from '@/lib/api-extract';
+import { useCanRunAuthenticatedQuery } from '@/stores/auth-store';
 
 const monitoringKeys = createKeyFactory('monitoring');
 
@@ -32,6 +33,8 @@ export type DataIntegrityResult = {
 };
 
 export function useSystemHealthQuery() {
+  const canRun = useCanRunAuthenticatedQuery();
+
   return useQuery({
     queryKey: monitoringKeys.detail('system-health'),
     queryFn: async ({ signal }) => {
@@ -40,6 +43,7 @@ export function useSystemHealthQuery() {
     },
     ...queryPolicyPresets.monitoring,
     refetchInterval: 30_000,
+    enabled: canRun,
   });
 }
 

@@ -1,4 +1,5 @@
 import { encodePermissions, decodePermissions } from './permission-session-edge';
+import { getAuthCookieSecret, resolveInternalApiUrl } from '../env.server';
 
 describe('permission-session-edge', () => {
   const secret = 'super-secret-test-key-32-chars-long!!';
@@ -79,5 +80,29 @@ describe('permission-session-edge', () => {
     expect(await decodePermissions('ps_v2:', secret)).toBeNull();
     expect(await decodePermissions('ps_v2:not-a-dot', secret)).toBeNull();
     expect(await decodePermissions('ps_v2:...', secret)).toBeNull();
+  });
+
+  it('validates server env secret length in production and resolves INTERNAL_API_URL', () => {
+    const origNodeEnv = process.env.NODE_ENV;
+    const origCookieSecret = process.env.AUTH_COOKIE_SECRET;
+    const origJwtSecret = process.env.AUTH_JWT_SECRET;
+    const origInternalUrl = process.env.INTERNAL_API_URL;
+    try {
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+      process.env.AUTH_COOKIE_SECRET = 'short-secret';
+      delete process.env.AUTH_JWT_SECRET;
+      expect(() => getAuthCookieSecret()).toThrow(/at least 32 characters/);
+
+      process.env.INTERNAL_API_URL = 'http://btn-hrms-api:3001/';
+      expect(resolveInternalApiUrl()).toBe('http://btn-hrms-api:3001');
+
+      process.env.INTERNAL_API_URL = 'ftp://invalid-protocol';
+      expect(() => resolveInternalApiUrl()).toThrow(/http: or https:/);
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV = origNodeEnv;
+      process.env.AUTH_COOKIE_SECRET = origCookieSecret;
+      process.env.AUTH_JWT_SECRET = origJwtSecret;
+      process.env.INTERNAL_API_URL = origInternalUrl;
+    }
   });
 });

@@ -5,6 +5,7 @@ import { Icons } from '@/components/icons';
 import { motion } from 'motion/react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { chatUiCopy } from '@/lib/app-copy';
 import { cn } from '@/lib/utils';
@@ -31,9 +32,15 @@ interface ConversationListProps {
   conversations: DisplayConversation[];
   selectedId: string;
   onSelect: (id: string) => void;
+  onCreateClick?: () => void;
 }
 
-export function ConversationList({ conversations, selectedId, onSelect }: ConversationListProps) {
+export function ConversationList({
+  conversations,
+  selectedId,
+  onSelect,
+  onCreateClick,
+}: ConversationListProps) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -51,12 +58,27 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
           <p className='text-foreground text-sm font-semibold'>{chatUiCopy.title}</p>
           <p className='text-muted-foreground text-xs'>{chatUiCopy.conversationCount(conversations.length)}</p>
         </div>
-        <Badge
-          variant='outline'
-          className='bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary border-border/50 rounded-full border px-3 py-1 text-[0.7rem] tracking-[0.24em] uppercase'
-        >
-          {chatUiCopy.live}
-        </Badge>
+        <div className='flex items-center gap-2'>
+          {onCreateClick && (
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={onCreateClick}
+              aria-label='Tạo cuộc trò chuyện mới'
+              className='h-7 rounded-full px-2.5 text-xs'
+            >
+              <Icons.add className='mr-1 h-3.5 w-3.5' />
+              Tạo mới
+            </Button>
+          )}
+          <Badge
+            variant='outline'
+            className='bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary border-border/50 rounded-full border px-3 py-1 text-[0.7rem] tracking-[0.24em] uppercase'
+          >
+            {chatUiCopy.live}
+          </Badge>
+        </div>
       </div>
 
       <label htmlFor='messenger-search' className='sr-only'>

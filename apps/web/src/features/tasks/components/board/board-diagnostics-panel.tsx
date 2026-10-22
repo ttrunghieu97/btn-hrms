@@ -8,11 +8,12 @@
  */
 
 import { Icons } from '@/components/icons';
+import { envClient } from '@/lib/env.client';
 import type { BoardDiagnostics } from './board-validation';
 import { kanbanUiCopy } from '@/locales/vi/kanban';
 
 export function BoardDiagnosticsPanel({ diagnostics }: { diagnostics: BoardDiagnostics | null }) {
-  if (process.env.NEXT_PUBLIC_DEBUG !== 'true' || !diagnostics) return null;
+  if (!envClient.isDebug || !diagnostics) return null;
 
   return (
     <details className='group rounded-lg border border-dashed p-3 text-xs'>

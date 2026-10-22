@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useQueryStates, parseAsInteger, parseAsString } from 'nuqs';
+import { useQueryStates, parseAsString } from 'nuqs';
+import { useDepartmentsQuery } from '@/features/employees';
 import { requisitionsQueryOptions } from '../api/queries';
 import {
   useCreateRequisition,
+  useUpdateRequisition,
   useSubmitRequisition,
   useCloseRequisition,
 } from '../api/mutations';
@@ -21,6 +23,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +52,7 @@ import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { QueryErrorAlert } from '@/components/errors/query-error-alert';
 import { Icons } from '@/components/icons';
 import { commonUiCopy, recruitmentUiCopy } from '@/lib/app-copy';
-import { pageParser, perPageParser, limitParser } from '@/lib/pagination';
+import { pageParser } from '@/lib/pagination';
 
 const copy = recruitmentUiCopy.requisitions;
 
@@ -69,6 +78,11 @@ export function RequisitionsView() {
   const { data, error, isLoading, refetch } = useQuery(
     requisitionsQueryOptions(filters),
   );
+  const { data: departments = [] } = useDepartmentsQuery();
+  const departmentMap = useMemo(
+    () => new Map(departments.map((d) => [d.id, d.name])),
+    [departments],
+  );
   const rows = extractList<RequisitionRow>(data);
   const pagination = extractPagination(data);
 
@@ -85,8 +99,26 @@ export function RequisitionsView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
-      <div className='flex items-center justify-end gap-4'>
-        <CreateRequisitionDialog />
+      <div className='flex flex-wrap items-center justify-between gap-3'>
+        <Select
+          value={params.status ?? 'all'}
+          onValueChange={(value) =>
+            void setParams({ status: value === 'all' ? null : value, page: 1 })
+          }
+        >
+          <SelectTrigger className='h-9 w-52' aria-label='Lọc theo trạng thái'>
+            <SelectValue placeholder='Tất cả trạng thái' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+            {Object.entries(REQUISITION_STATUS_MAP).map(([key, meta]) => (
+              <SelectItem key={key} value={key}>
+                {meta.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <CreateRequisitionDialog departments={departments} />
       </div>
 
       {rows.length === 0 && !isLoading ? (
@@ -101,6 +133,7 @@ export function RequisitionsView() {
             <TableHeader>
               <TableRow>
                 <TableHead>{copy.columns.title}</TableHead>
+                <TableHead>{copy.columns.department}</TableHead>
                 <TableHead>{copy.columns.headcount}</TableHead>
                 <TableHead>{copy.columns.budget}</TableHead>
                 <TableHead>{copy.columns.status}</TableHead>
@@ -113,6 +146,11 @@ export function RequisitionsView() {
               {rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className='font-medium'>{row.title ?? '—'}</TableCell>
+                  <TableCell className='text-muted-foreground'>
+                    {(row.departmentId && departmentMap.get(row.departmentId)) ??
+                      row.departmentId ??
+                      '—'}
+                  </TableCell>
                   <TableCell>{row.headcount ?? '—'}</TableCell>
                   <TableCell>{formatBudget(row.budgetMin, row.budgetMax)}</TableCell>
                   <TableCell>
@@ -147,6 +185,36 @@ export function RequisitionsView() {
 function RequisitionRowActions({ row }: { row: RequisitionRow }) {
   const submit = useSubmitRequisition();
   const close = useCloseRequisition();
+  const update = useUpdateRequisition();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: row.title ?? '',
+    headcount: String(row.headcount ?? 1),
+    budgetMin: row.budgetMin ?? '',
+    budgetMax: row.budgetMax ?? '',
+    justification: (row as { justification?: string }).justification ?? '',
+  });
+
+  const onSaveEdit = async () => {
+    try {
+      await update.mutateAsync({
+        id: row.id,
+        dto: {
+          title: editForm.title.trim(),
+          headcount: Number(editForm.headcount) || 1,
+          ...(editForm.budgetMin ? { budgetMin: editForm.budgetMin } : {}),
+          ...(editForm.budgetMax ? { budgetMax: editForm.budgetMax } : {}),
+          ...(editForm.justification
+            ? { justification: editForm.justification }
+            : {}),
+        },
+      });
+      notifyMutationSuccess(commonUiCopy.saveChanges);
+      setEditOpen(false);
+    } catch (err) {
+      notifyMutationError(err, commonUiCopy.saveChanges);
+    }
+  };
 
   const onSubmit = async () => {
     try {
@@ -171,14 +239,109 @@ function RequisitionRowActions({ row }: { row: RequisitionRow }) {
   return (
     <div className='flex justify-end gap-2'>
       {row.status === 'draft' ? (
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => void onSubmit()}
-          disabled={submit.isPending}
-        >
-          {recruitmentUiCopy.offers.actions.submit}
-        </Button>
+        <>
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant='outline' size='sm'>
+                Chỉnh sửa
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Chỉnh sửa yêu cầu tuyển dụng</DialogTitle>
+                <DialogDescription>{row.title}</DialogDescription>
+              </DialogHeader>
+              <div className='grid gap-4 py-2'>
+                <div className='grid gap-2'>
+                  <Label htmlFor={`edit-req-title-${row.id}`}>
+                    {copy.columns.title}
+                  </Label>
+                  <Input
+                    id={`edit-req-title-${row.id}`}
+                    value={editForm.title}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, title: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor={`edit-req-hc-${row.id}`}>
+                    {copy.columns.headcount}
+                  </Label>
+                  <Input
+                    id={`edit-req-hc-${row.id}`}
+                    type='number'
+                    min={1}
+                    value={editForm.headcount}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, headcount: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className='grid grid-cols-2 gap-3'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor={`edit-req-bmin-${row.id}`}>
+                      {copy.fields.budgetMin}
+                    </Label>
+                    <Input
+                      id={`edit-req-bmin-${row.id}`}
+                      value={editForm.budgetMin}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, budgetMin: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor={`edit-req-bmax-${row.id}`}>
+                      {copy.fields.budgetMax}
+                    </Label>
+                    <Input
+                      id={`edit-req-bmax-${row.id}`}
+                      value={editForm.budgetMax}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, budgetMax: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor={`edit-req-just-${row.id}`}>
+                    {copy.fields.justification}
+                  </Label>
+                  <Textarea
+                    id={`edit-req-just-${row.id}`}
+                    value={editForm.justification}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        justification: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant='outline' onClick={() => setEditOpen(false)}>
+                  {commonUiCopy.cancel}
+                </Button>
+                <Button
+                  onClick={() => void onSaveEdit()}
+                  disabled={update.isPending}
+                >
+                  {commonUiCopy.saveChanges}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => void onSubmit()}
+            disabled={submit.isPending}
+          >
+            {recruitmentUiCopy.offers.actions.submit}
+          </Button>
+        </>
       ) : null}
       {!isTerminal ? (
         <Button
@@ -194,7 +357,11 @@ function RequisitionRowActions({ row }: { row: RequisitionRow }) {
   );
 }
 
-function CreateRequisitionDialog() {
+function CreateRequisitionDialog({
+  departments,
+}: {
+  departments: Array<{ id: string; name: string }>;
+}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     departmentId: '',
@@ -247,14 +414,34 @@ function CreateRequisitionDialog() {
         <div className='grid gap-4 py-2'>
           <div className='grid gap-2'>
             <Label htmlFor='req-department'>{copy.columns.department}</Label>
-            <Input
-              id='req-department'
-              value={form.departmentId}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, departmentId: e.target.value }))
-              }
-              placeholder={copy.placeholders.departmentUuid}
-            />
+            {departments.length > 0 ? (
+              <Select
+                value={form.departmentId}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, departmentId: value }))
+                }
+              >
+                <SelectTrigger id='req-department'>
+                  <SelectValue placeholder='Chọn phòng ban...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id='req-department'
+                value={form.departmentId}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, departmentId: e.target.value }))
+                }
+                placeholder={copy.placeholders.departmentUuid}
+              />
+            )}
           </div>
           <div className='grid gap-2'>
             <Label htmlFor='req-title'>{copy.columns.title}</Label>

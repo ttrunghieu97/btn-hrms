@@ -3,7 +3,12 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
-import { requestsQueryOptions, assetCatalogQueryOptions } from '../api/queries';
+import {
+  requestsQueryOptions,
+  assetCatalogQueryOptions,
+  assetSelectEmployeesQueryOptions,
+} from '../api/queries';
+import type { EmployeeResponseDto } from '@/api/generated/model';
 import { formatDateVN } from "@/lib/date";
 import {
   useCreateAssetRequest,
@@ -85,6 +90,21 @@ export function AssetRequestsView() {
     () => extractList<AssetTypeRow>(catalogData),
     [catalogData],
   );
+  const assetTypeMap = React.useMemo(
+    () => new Map(assetTypes.map((t) => [t.id, t])),
+    [assetTypes],
+  );
+
+  const employeesQuery = useQuery(assetSelectEmployeesQueryOptions({ limit: 500 }));
+  const employeeMap = React.useMemo(() => {
+    const list = extractList<EmployeeResponseDto>(employeesQuery.data);
+    return new Map(
+      list.map((e) => [
+        e.id,
+        [e.lastName, e.firstName].filter(Boolean).join(' ') || e.username || e.id,
+      ]),
+    );
+  }, [employeesQuery.data]);
 
   const createMutation = useCreateAssetRequest();
   const submitMutation = useSubmitAssetRequest();
@@ -212,9 +232,29 @@ export function AssetRequestsView() {
         </Card>
       </div>
 
-      <div className='flex items-center justify-between gap-2'>
-        <div className='text-sm text-muted-foreground'>
-          Nhấp vào bất kỳ hàng nào để kiểm tra tiến trình quy trình và xuất kho thiết bị.
+      <div className='flex flex-wrap items-center justify-between gap-2'>
+        <div className='flex flex-wrap items-center gap-3'>
+          <Select
+            value={params.status ?? 'all'}
+            onValueChange={(value) =>
+              void setParams({ status: value === 'all' ? null : value, page: 1 })
+            }
+          >
+            <SelectTrigger className='h-9 w-48' aria-label='Lọc theo trạng thái'>
+              <SelectValue placeholder='Tất cả trạng thái' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+              {Object.entries(REQUEST_STATUS_MAP).map(([key, meta]) => (
+                <SelectItem key={key} value={key}>
+                  {meta.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className='text-sm text-muted-foreground'>
+            Nhấp vào bất kỳ hàng nào để kiểm tra tiến trình quy trình và xuất kho thiết bị.
+          </span>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
@@ -342,7 +382,12 @@ export function AssetRequestsView() {
                     onClick={() => row.id && setSelectedRequestId(row.id)}
                   >
                     <TableCell className='font-medium'>
-                      <div>{row.requesterEmployeeId ?? '—'}</div>
+                      <div>
+                        {(row.requesterEmployeeId &&
+                          employeeMap.get(row.requesterEmployeeId)) ??
+                          row.requesterEmployeeId ??
+                          '—'}
+                      </div>
                       <div className='text-[11px] text-muted-foreground font-mono'>
                         #{row.id?.slice(0, 8)}
                       </div>
@@ -351,7 +396,9 @@ export function AssetRequestsView() {
                       <div className='flex flex-wrap gap-1 text-xs'>
                         {(row.lines ?? []).map((l) => (
                           <span key={l.id} className='inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5'>
-                            {(l.assetTypeId ? l.assetTypeId.slice(0, 8) : '—')}... × {l.quantity}
+                            {(l.assetTypeId && assetTypeMap.get(l.assetTypeId)?.name) ??
+                              (l.assetTypeId ? `${l.assetTypeId.slice(0, 8)}...` : '—')}{' '}
+                            × {l.quantity}
                           </span>
                         ))}
                       </div>

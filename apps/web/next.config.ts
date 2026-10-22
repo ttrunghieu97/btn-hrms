@@ -31,7 +31,7 @@ const baseConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl = (() => {
-      const internal = process.env.INTERNAL_API_URL?.replace(/\/+$/, '');
+      const internal = (process.env.INTERNAL_API_URL || process.env.API_URL)?.replace(/\/+$/, '');
       if (internal) return internal;
       const publicBase = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '');
       if (publicBase && (publicBase.startsWith('http://') || publicBase.startsWith('https://'))) {

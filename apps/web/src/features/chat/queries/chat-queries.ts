@@ -7,6 +7,7 @@ import {
   chatControllerMessages,
   chatControllerCreate
 } from '@/api/generated/chat/chat';
+import { employeesControllerFindAll } from '@/api/generated/employees-hr-management/employees-hr-management';
 import type { CreateConversationDto } from '@/api/generated/model';
 import type { Conversation, Message } from '../utils/types';
 
@@ -14,6 +15,7 @@ export const chatKeys = {
   ...createKeyFactory('chat'),
   messages: (conversationId: string) =>
     ['chat', 'messages', conversationId] as const,
+  participants: () => ['chat', 'participants'] as const,
 };
 
 export function useConversationsQuery() {
@@ -42,5 +44,23 @@ export function useCreateConversationMutation() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: chatKeys.all() });
     }
+  });
+}
+
+export interface ChatParticipantEmployee {
+  id: string;
+  userId?: string;
+  firstName?: string;
+  lastName?: string;
+  employeeCode?: string;
+}
+
+export function useChatParticipantsQuery(enabled = true) {
+  return useQuery({
+    queryKey: chatKeys.participants(),
+    queryFn: () => employeesControllerFindAll({ page: 1, limit: 200 }),
+    enabled,
+    select: (data) => extractList<ChatParticipantEmployee>(data),
+    ...queryPolicyPresets.employees,
   });
 }

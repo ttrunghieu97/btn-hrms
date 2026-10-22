@@ -166,7 +166,7 @@ describe('useCheckAttendanceMutation', () => {
     );
 
     result.current.mutate({
-      body: { date: '2026-07-22', session: 'MORNING', type: 'CHECK_IN' },
+      body: { date: '2026-07-22', session: 'morning', type: 'checkin' },
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -182,7 +182,7 @@ describe('useCheckAttendanceMutation', () => {
     );
 
     result.current.mutate({
-      body: { date: '2026-07-22', session: 'MORNING', type: 'CHECK_IN' },
+      body: { date: '2026-07-22', session: 'morning', type: 'checkin' },
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -203,7 +203,7 @@ describe('useCheckAttendanceMutation', () => {
     );
 
     result.current.mutate({
-      body: { date: '2026-07-22', session: 'MORNING', type: 'CHECK_IN' },
+      body: { date: '2026-07-22', session: 'morning', type: 'checkin' },
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

@@ -15,7 +15,7 @@
     "client:verify": "node ./scripts/verify-generated-client.cjs && pnpm error-contracts:verify",
     "error-contracts:generate": "node ./scripts/generate-error-contract-catalog.cjs",
     "error-contracts:verify": "node ./scripts/generate-error-contract-catalog.cjs --check",
-    "typecheck": "pnpm error-contracts:verify && tsc --noEmit",
+    "typecheck": "pnpm error-contracts:verify && tsrs --noEmit",
     "test": "jest --runInBand",
     "lint": "pnpm error-contracts:verify && oxlint -c ../../.oxlintrc.json src",
     "format": "oxfmt",
@@ -117,6 +117,7 @@
     "orval": "8.40.0",
     "playwright": "^1.63.0",
     "ts-jest": "^29.4.14",
+    "tsrs": "^0.18.0-ts7.1.0-dev.20260929",
     "tw-animate-css": "^1.4.0"
   },
   "overrides": {

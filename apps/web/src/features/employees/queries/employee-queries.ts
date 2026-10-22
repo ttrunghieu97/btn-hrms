@@ -80,6 +80,7 @@ import {
   type RequestTransferPayload,
   type RequestTransferResponse,
   type ScheduleTerminationRequest,
+  type ScheduleTerminationResponse,
 } from '../api/employee-lifecycle';
 
 export type Employee = EmployeeResponseDto;
@@ -878,7 +879,7 @@ export function useRehireEmployeeMutation(
 
 export function useScheduleTerminationMutation(
   queryClient: QueryClient,
-  options?: UseMutationOptions<unknown, Error, { id: string; data: ScheduleTerminationRequest }>
+  options?: UseMutationOptions<ScheduleTerminationResponse, Error, { id: string; data: ScheduleTerminationRequest }>
 ) {
   return useMutation({
     mutationFn: async ({ id, data }) => scheduleEmployeeTermination(id, data),
@@ -895,7 +896,7 @@ export function useScheduleTerminationMutation(
 
 export function useCancelScheduledTerminationMutation(
   queryClient: QueryClient,
-  options?: UseMutationOptions<unknown, Error, string>
+  options?: UseMutationOptions<{ success: boolean }, Error, string>
 ) {
   return useMutation({
     mutationFn: async (id) => cancelScheduledTermination(id),

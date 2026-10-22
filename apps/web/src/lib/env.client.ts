@@ -3,6 +3,8 @@ import { z } from 'zod';
 const rawClientEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().trim().optional(),
   NEXT_PUBLIC_TIMEZONE: z.string().trim().optional(),
+  NEXT_PUBLIC_ENABLED_MODULES: z.string().trim().optional(),
+  NEXT_PUBLIC_STORAGE_ENDPOINT: z.string().trim().optional(),
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().trim().optional(),
   NEXT_PUBLIC_DEMO_MODE: z.string().trim().optional(),
   NEXT_PUBLIC_DEBUG: z.string().trim().optional(),
@@ -24,6 +26,8 @@ const rawClientEnvSchema = z.object({
 const rawEnv = rawClientEnvSchema.parse({
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   NEXT_PUBLIC_TIMEZONE: process.env.NEXT_PUBLIC_TIMEZONE,
+  NEXT_PUBLIC_ENABLED_MODULES: process.env.NEXT_PUBLIC_ENABLED_MODULES,
+  NEXT_PUBLIC_STORAGE_ENDPOINT: process.env.NEXT_PUBLIC_STORAGE_ENDPOINT,
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE,
   NEXT_PUBLIC_DEBUG: process.env.NEXT_PUBLIC_DEBUG,
@@ -127,6 +131,17 @@ function normalizeOptionalUrlOrPath(name: string, value: string | undefined): st
   }
 }
 
+function normalizeTimezone(value: string | undefined, defaultTimezone = 'Asia/Ho_Chi_Minh'): string {
+  const trimmed = normalizeOptionalString(value);
+  if (!trimmed) return defaultTimezone;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: trimmed });
+    return trimmed;
+  } catch {
+    throw new Error(`NEXT_PUBLIC_TIMEZONE must be a valid IANA timezone (got "${trimmed}")`);
+  }
+}
+
 const appEnv: AppEnv = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
 
 export const envClient = Object.freeze({
@@ -134,10 +149,14 @@ export const envClient = Object.freeze({
   isDevAppEnv: appEnv === 'dev',
   isProdAppEnv: appEnv === 'prod',
   apiBaseUrl: normalizeApiBaseUrl(rawEnv.NEXT_PUBLIC_API_URL),
-  timezone: normalizeOptionalString(rawEnv.NEXT_PUBLIC_TIMEZONE) ?? 'Asia/Ho_Chi_Minh',
+  timezone: normalizeTimezone(rawEnv.NEXT_PUBLIC_TIMEZONE),
+  enabledModules: normalizeOptionalString(rawEnv.NEXT_PUBLIC_ENABLED_MODULES),
+  storageEndpoint: normalizeOptionalString(rawEnv.NEXT_PUBLIC_STORAGE_ENDPOINT),
   googleClientId: normalizeOptionalString(rawEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID),
   demoMode: normalizeOptionalString(rawEnv.NEXT_PUBLIC_DEMO_MODE),
+  isDemoMode: parseBooleanEnv('NEXT_PUBLIC_DEMO_MODE', rawEnv.NEXT_PUBLIC_DEMO_MODE, false),
   debug: normalizeOptionalString(rawEnv.NEXT_PUBLIC_DEBUG),
+  isDebug: parseBooleanEnv('NEXT_PUBLIC_DEBUG', rawEnv.NEXT_PUBLIC_DEBUG, false),
   sentryDsn: normalizeOptionalString(rawEnv.NEXT_PUBLIC_SENTRY_DSN),
   sentryOrg: normalizeOptionalString(rawEnv.NEXT_PUBLIC_SENTRY_ORG),
   sentryProject: normalizeOptionalString(rawEnv.NEXT_PUBLIC_SENTRY_PROJECT),

@@ -1,9 +1,8 @@
 import request from "supertest";
-import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
-import * as schema from "../../src/infrastructure/database/schema";
+import { getApp, getDb, seedAdmin, cleanupUser, type E2eDatabase } from "./helpers/test-app";
 
 describe("Auth (e2e)", () => {
-  const ctx: { app?: any; db?: typeof schema; admin?: any } = {};
+  const ctx: { app?: any; db?: E2eDatabase; admin?: any } = {};
 
   beforeAll(async () => {
     ctx.app = await getApp();
@@ -42,7 +41,12 @@ describe("Auth (e2e)", () => {
       .post("/auth/login")
       .send({ username: ctx.admin.username, password: ctx.admin.password });
     const refreshToken = loginRes.body.data.refresh_token;
-    const refreshCookie = loginRes.headers["set-cookie"];
+    const rawCookie = loginRes.headers["set-cookie"];
+    const refreshCookie: string[] = Array.isArray(rawCookie)
+      ? rawCookie
+      : rawCookie
+        ? [rawCookie]
+        : [];
 
     const res = await request(ctx.app!.getHttpServer())
       .post("/auth/refresh")

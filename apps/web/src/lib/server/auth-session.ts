@@ -7,13 +7,14 @@ import { unwrapData } from '@/lib/api-extract';
 import { sanitizeInternalRedirectPath } from '@/lib/auth-landing';
 import { appLogger } from '@/lib/logger';
 import { getErrorObservabilityContext, resolveAppError } from '@/lib/error-taxonomy';
+import { getAccessCookieName, getRefreshCookieName } from '@/lib/env.server';
 
 type ServerSessionResult =
   | { status: 'authenticated'; user: UserMeResponseDto }
   | { status: 'unauthenticated' };
 
-const ACCESS_COOKIE_NAME = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token';
-const REFRESH_COOKIE_NAME = process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token';
+const ACCESS_COOKIE_NAME = getAccessCookieName();
+const REFRESH_COOKIE_NAME = getRefreshCookieName();
 
 const SESSION_CACHE_TTL_MS = 30_000;
 const SESSION_CACHE_MAX_ENTRIES = 1_000;

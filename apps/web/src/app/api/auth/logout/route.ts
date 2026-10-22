@@ -2,11 +2,12 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { buildBackendUrl } from '@/lib/server/backend-proxy';
 import { evictServerSessionCache } from '@/lib/server/auth-session';
+import { getAccessCookieName, getRefreshCookieName } from '@/lib/env.server';
 
 export async function POST() {
   const cookieStore = await cookies();
-  const accessCookieName = process.env.AUTH_ACCESS_COOKIE_NAME ?? 'access_token';
-  const refreshCookieName = process.env.AUTH_REFRESH_COOKIE_NAME ?? 'refresh_token';
+  const accessCookieName = getAccessCookieName();
+  const refreshCookieName = getRefreshCookieName();
 
   const accessToken = cookieStore.get(accessCookieName)?.value;
   const refreshToken = cookieStore.get(refreshCookieName)?.value;

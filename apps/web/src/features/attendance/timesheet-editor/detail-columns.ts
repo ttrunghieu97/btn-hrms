@@ -5,8 +5,17 @@
 export const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
 export const DAY_FULL = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'] as const;
 
+const dayOfWeekCache = new Map<string, number>();
+
 export function getDayOfWeek(dateStr: string): number {
-  return new Date(dateStr + 'T00:00:00').getDay();
+  const cached = dayOfWeekCache.get(dateStr);
+  if (cached !== undefined) return cached;
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  if (dayOfWeekCache.size >= 512) {
+    dayOfWeekCache.clear();
+  }
+  dayOfWeekCache.set(dateStr, dow);
+  return dow;
 }
 
 export function isWeekend(dateStr: string): boolean {
@@ -18,6 +27,20 @@ export function isWeekend(dateStr: string): boolean {
 export function fmtTime(iso: string | null | undefined): string {
   if (!iso) return '-';
   const trimmed = iso.trim();
+  if (
+    trimmed.length === 5 &&
+    trimmed.charCodeAt(2) === 58 &&
+    trimmed.charCodeAt(0) >= 48 &&
+    trimmed.charCodeAt(0) <= 57 &&
+    trimmed.charCodeAt(1) >= 48 &&
+    trimmed.charCodeAt(1) <= 57 &&
+    trimmed.charCodeAt(3) >= 48 &&
+    trimmed.charCodeAt(3) <= 57 &&
+    trimmed.charCodeAt(4) >= 48 &&
+    trimmed.charCodeAt(4) <= 57
+  ) {
+    return trimmed;
+  }
   if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
     const [h, m] = trimmed.split(':');
     return `${h!.padStart(2, '0')}:${m}`;
@@ -84,7 +107,7 @@ const R1: DetailHeaderCell[] = [
   { label: 'Thiếu công', sub: '(giờ)', rowSpan: 2, align: 'center', width: 'w-[68px] min-w-[68px]' },
   { label: 'Trực đêm', sub: '(lần)', rowSpan: 2, align: 'center', width: 'w-[62px] min-w-[62px]' },
   { label: 'Đứng nước', sub: '(lần)', rowSpan: 2, align: 'center', width: 'w-[66px] min-w-[66px]' },
-  { label: 'Ghi chú', rowSpan: 2, align: 'left', width: 'w-[160px] min-w-[160px]' },
+  { label: 'Ghi chú', rowSpan: 2, align: 'left', width: 'w-[110px] min-w-[110px]' },
 ];
 
 /** Row 2: Sub-columns under the spanned category headers only */

@@ -50,6 +50,14 @@
 }
 
 /* ── Timesheet Table Interactive Grid ── */
+.timesheet-grid-table {
+  --excel-sel: #107c41;
+}
+
+.dark .timesheet-grid-table {
+  --excel-sel: #22c55e;
+}
+
 .timesheet-grid-table tbody tr {
   height: 32px !important;
 }
@@ -71,27 +79,23 @@
   background-color: color-mix(in oklab, var(--muted) 35%, var(--card));
 }
 
-/* ── Active Row Highlight ── */
-.timesheet-grid-table tbody tr.row-active > td {
-  background-color: color-mix(in oklab, var(--muted) 55%, var(--card));
-}
-
+/* ── Active Row Header Highlight (Excel style: only sticky row headers, not unselected cells) ── */
 .timesheet-grid-table tbody tr.row-active > td.col-sticky-date,
 .timesheet-grid-table tbody tr.row-active > td.col-sticky-day {
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
-  font-weight: 600 !important;
+  background-color: color-mix(in oklab, var(--excel-sel) 14%, var(--card)) !important;
+  color: var(--excel-sel) !important;
+  font-weight: 700 !important;
 }
 
-/* ── Active Column Highlight ── */
+/* ── Active Column Header Highlight ── */
 .timesheet-grid-table tbody td.excel-col-active {
   background-color: color-mix(in oklab, var(--muted) 45%, var(--card));
 }
 
 .timesheet-grid-table thead th.excel-col-active {
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
-  font-weight: 600 !important;
+  background-color: color-mix(in oklab, var(--excel-sel) 14%, var(--card)) !important;
+  color: var(--excel-sel) !important;
+  font-weight: 700 !important;
 }
 
 /* ── Intersection of Active Row & Active Column ── */
@@ -99,33 +103,123 @@
   background-color: var(--accent);
 }
 
-/* ── Active Cell Selection (Primary Theme Color) ── */
-.timesheet-grid-table tbody td.excel-active-cell {
+/* ── Active Cell Selection (Single Unified Excel Rectangle) ── */
+.timesheet-grid-table tbody td.excel-active-cell,
+.timesheet-grid-table tbody tr.row-sunday td.excel-active-cell,
+.timesheet-grid-table tbody tr.row-active > td.excel-active-cell {
   background-color: var(--card) !important;
-  outline: 2px solid var(--primary) !important;
-  outline-offset: -2px !important;
-  z-index: 25 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  z-index: 3 !important;
   position: relative !important;
 }
 
-.timesheet-grid-table tbody td.excel-active-cell .excel-fill-handle {
+.timesheet-grid-table tbody td.excel-active-cell::after {
+  content: '';
   position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 7px;
-  height: 7px;
-  background-color: var(--primary);
-  border: 1px solid var(--card);
-  z-index: 35;
+  inset: 0;
+  border: 2px solid var(--excel-sel);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Multi-Cell Range Selection (Unified Outer Excel Rectangle, all selected cells shaded) ── */
+.timesheet-grid-table tbody td.excel-range-cell {
+  box-shadow: none !important;
+  outline: none !important;
+  z-index: 2 !important;
+  position: relative !important;
+}
+
+.timesheet-grid-table tbody td.excel-range-anchor,
+.timesheet-grid-table tbody tr.row-sunday td.excel-range-anchor,
+.timesheet-grid-table tbody tr.row-active > td.excel-range-anchor,
+.timesheet-grid-table tbody td.excel-range-tinted,
+.timesheet-grid-table tbody tr.row-sunday td.excel-range-tinted,
+.timesheet-grid-table tbody tr.row-active > td.excel-range-tinted {
+  background-color: color-mix(in oklab, var(--excel-sel) 18%, var(--card)) !important;
+}
+
+.timesheet-grid-table tbody td.excel-range-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 0 solid var(--excel-sel);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.timesheet-grid-table tbody td.excel-range-cell.excel-range-top::after {
+  border-top-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-range-cell.excel-range-bottom::after {
+  border-bottom-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-range-cell.excel-range-left::after {
+  border-left-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-range-cell.excel-range-right::after {
+  border-right-width: 2px;
+}
+
+.timesheet-grid-table tbody td .excel-fill-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  background-color: var(--excel-sel);
+  border: 1.5px solid var(--card);
+  z-index: 7;
   cursor: crosshair;
 }
 
-/* ── Drag-to-Fill Target Range ── */
-.timesheet-grid-table tbody td.excel-fill-range {
-  background-color: color-mix(in oklab, var(--primary) 10%, var(--card)) !important;
-  outline: 1.5px dashed var(--primary) !important;
-  outline-offset: -1.5px !important;
-  z-index: 22 !important;
+.timesheet-grid-table tbody td .excel-fill-handle::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.timesheet-grid-table tbody td:last-child .excel-fill-handle {
+  right: 0;
+}
+
+/* ── Drag-to-Fill Target Range (Unified Single Outer Rectangle) ── */
+.timesheet-grid-table tbody td.excel-fill-range,
+.timesheet-grid-table tbody tr.row-sunday td.excel-fill-range {
+  background-color: color-mix(in oklab, var(--excel-sel) 14%, var(--card)) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  z-index: 3 !important;
+  position: relative !important;
+}
+
+.timesheet-grid-table tbody td.excel-fill-range::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 0 dashed var(--excel-sel);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.timesheet-grid-table tbody td.excel-fill-range.excel-fill-range-top::after {
+  border-top-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-fill-range.excel-fill-range-bottom::after {
+  border-bottom-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-fill-range.excel-fill-range-left::after {
+  border-left-width: 2px;
+}
+
+.timesheet-grid-table tbody td.excel-fill-range.excel-fill-range-right::after {
+  border-right-width: 2px;
 }
 
 /* ── Formula / Computed Columns subtle tint ── */
@@ -147,39 +241,23 @@
   height: 0;
   border-top: 5px solid #16a34a;
   border-right: 5px solid transparent;
-  z-index: 26;
+  z-index: 6;
   pointer-events: none;
 }
 
-/* ── Manual Override Indicator on Formula Cell (Top-Right Amber Triangle) ── */
-.timesheet-grid-table tbody td.excel-cell-override {
-  position: relative;
-}
-
-.timesheet-grid-table tbody td.excel-cell-override::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-top: 5px solid #d97706;
-  border-left: 5px solid transparent;
-  z-index: 26;
-  pointer-events: none;
-}
-
-/* Clean seamless input inside cell */
-.timesheet-grid-table tbody td input {
+/* Clean seamless input inside cell (transparent so td's single Excel box remains untouched) */
+.timesheet-grid-table tbody td input,
+.timesheet-grid-table tbody td input:focus,
+.timesheet-grid-table tbody td input:focus-visible {
   box-shadow: none !important;
   border: none !important;
   outline: none !important;
   border-radius: 0 !important;
   height: 100% !important;
   width: 100% !important;
-  background: var(--card) !important;
+  min-width: 0 !important;
+  background: transparent !important;
   color: var(--foreground) !important;
-  padding: 0 4px !important;
   line-height: 32px !important;
   margin: 0 !important;
 }
@@ -203,7 +281,6 @@
   flex-shrink: 0;
   overflow: hidden;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, margin-right 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
-  will-change: width, opacity, margin-right;
 }
 
 .employee-sidebar-panel.collapsed {
@@ -214,6 +291,7 @@
   margin-right: 0 !important;
   border-color: transparent !important;
   pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 .employee-sidebar-inner {

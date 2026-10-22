@@ -9,7 +9,13 @@ import { IAuthSessionReader } from "../../../contracts/ports/auth-session-reader
 import { CONTRACTS_TOKENS } from "../../../contracts/contracts.tokens";
 import { RolesRepository } from "../roles/roles.repository";
 import { PermissionHierarchyResolver } from "../permissions/permission-hierarchy.resolver";
-import { throwForbidden, throwUnauthorized } from "../../../shared/utils/http-error";
+import {
+  assertCookieCsrfSafeRequest,
+  type CsrfRequestLike,
+  normalizeOriginUrl,
+  parseHostHeaderValue,
+} from "../../../shared/utils/cookie-csrf.util";
+import { throwUnauthorized } from "../../../shared/utils/http-error";
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { ERROR_REASONS } from "../../../shared/constants/error-reasons";
 import { getScopeId } from "../../../shared/constants/system";
@@ -133,71 +139,84 @@ export class JwtAuthGuard implements CanActivate {
     return true;
   }
 
-  private assertCookieCsrfSafe(request: {
-    method?: string;
-    headers?: Record<string, string | string[] | undefined>;
-  }): void {
+  private assertCookieCsrfSafe(request: CsrfRequestLike): void {
     const method = String(request.method || "GET").toUpperCase();
     if (!STATE_CHANGING_METHODS.has(method)) {
       return;
     }
 
-    const headers = request.headers ?? {};
-    const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
-    if (secFetchSite === "cross-site") {
-      throwForbidden(
-        "Cross-site cookie-authenticated mutation blocked (CSRF protection)",
-        ERROR_CODES.FORBIDDEN,
-        { reason: "CSRF_CROSS_SITE_BLOCKED" },
-      );
-    }
+    const configuredOrigins = [
+      this.configService?.get<string>("APP_URL"),
+      this.configService?.get<string>("CORS_ORIGIN"),
+      this.configService?.get<string>("FRONTEND_URL"),
+      process.env.APP_URL,
+      process.env.CORS_ORIGIN,
+      process.env.FRONTEND_URL,
+    ];
 
-    const rawOrigin = headers.origin;
-    const origin = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
-    if (origin) {
-      const normalizedOrigin = origin.trim().replace(/\/+$/, "").toLowerCase();
-      const allowedOrigins = new Set<string>();
+    const allowedOrigins = new Set<string>();
+    const configuredPorts = new Set<string>(["8080", "3000"]);
 
-      const rawHost = headers.host;
-      const host = (Array.isArray(rawHost) ? rawHost[0] : rawHost)?.trim().toLowerCase();
-      if (host) {
-        allowedOrigins.add(`http://${host}`);
-        allowedOrigins.add(`https://${host}`);
-      }
-
-      const configuredOrigins = [
-        this.configService?.get<string>("APP_URL"),
-        this.configService?.get<string>("CORS_ORIGIN"),
-        this.configService?.get<string>("FRONTEND_URL"),
-        process.env.APP_URL,
-        process.env.CORS_ORIGIN,
-        process.env.FRONTEND_URL,
-      ];
-      for (const entry of configuredOrigins) {
-        if (!entry) continue;
-        for (const item of String(entry).split(",")) {
-          const cleaned = item.trim().replace(/\/+$/, "").toLowerCase();
-          if (cleaned && cleaned !== "*") {
-            allowedOrigins.add(cleaned);
+    for (const entry of configuredOrigins) {
+      if (!entry) continue;
+      for (const item of String(entry).split(",")) {
+        const cleaned = item.trim();
+        if (!cleaned || cleaned === "*") continue;
+        const normalized = normalizeOriginUrl(cleaned);
+        if (normalized) {
+          allowedOrigins.add(normalized);
+          try {
+            const parsed = new URL(normalized);
+            if (parsed.port) configuredPorts.add(parsed.port);
+          } catch {
+            // ignore
           }
         }
       }
-      for (const allowed of Array.from(allowedOrigins)) {
-        if (allowed.includes("://127.0.0.1:")) {
-          allowedOrigins.add(allowed.replace("://127.0.0.1:", "://localhost:"));
-        } else if (allowed.includes("://localhost:")) {
-          allowedOrigins.add(allowed.replace("://localhost:", "://127.0.0.1:"));
+    }
+
+    const nodeEnv = this.configService?.get<string>("NODE_ENV") ?? process.env.NODE_ENV;
+    if (nodeEnv !== "production") {
+      const rawDevOrigins =
+        this.configService?.get<string>("ALLOWED_DEV_ORIGINS") ??
+        process.env.ALLOWED_DEV_ORIGINS;
+      if (rawDevOrigins) {
+        for (const entry of String(rawDevOrigins).split(",")) {
+          const trimmed = entry.trim().replace(/\/+$/, "");
+          if (!trimmed) continue;
+          if (/^https?:\/\//i.test(trimmed)) {
+            const normalized = normalizeOriginUrl(trimmed);
+            if (normalized) allowedOrigins.add(normalized);
+            continue;
+          }
+          const parsedHost = parseHostHeaderValue(trimmed);
+          if (parsedHost) {
+            allowedOrigins.add(`http://${parsedHost.host}`);
+            allowedOrigins.add(`https://${parsedHost.host}`);
+            if (!parsedHost.port) {
+              for (const port of configuredPorts) {
+                allowedOrigins.add(`http://${parsedHost.hostname}:${port}`);
+                allowedOrigins.add(`https://${parsedHost.hostname}:${port}`);
+              }
+            }
+          }
         }
       }
-
-      if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin)) {
-        throwForbidden(
-          "Cross-origin cookie-authenticated mutation blocked (CSRF protection)",
-          ERROR_CODES.FORBIDDEN,
-          { reason: "CSRF_ORIGIN_MISMATCH", origin },
-        );
-      }
     }
+
+    const trustProxy =
+      this.configService?.get<string>("TRUST_PROXY") ?? process.env.TRUST_PROXY ?? 1;
+    const trustedProxyIps =
+      this.configService?.get<string>("TRUSTED_PROXY_IPS") ??
+      process.env.TRUSTED_PROXY_IPS;
+
+    assertCookieCsrfSafeRequest(request, {
+      allowedOrigins,
+      trustProxy,
+      trustedProxyIps,
+      allowDevLanSameOrigin: nodeEnv !== "production",
+      contextLabel: "mutation",
+    });
   }
 
   private getCookieValue(cookieHeader: string | undefined, name: string) {

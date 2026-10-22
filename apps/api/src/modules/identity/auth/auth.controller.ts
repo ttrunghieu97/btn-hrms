@@ -31,7 +31,8 @@ import { AuthenticatedOnlyPolicy } from "../../../core/security/policies/authent
 import { ERROR_CODES } from "../../../shared/constants/error-codes";
 import { ERROR_REASONS } from "../../../shared/constants/error-reasons";
 import { AuditLog } from "../../../shared/decorators/audit-log.decorator";
-import { throwForbidden, throwUnauthorized } from "../../../shared/utils/http-error";
+import { assertCookieCsrfSafeRequest } from "../../../shared/utils/cookie-csrf.util";
+import { throwUnauthorized } from "../../../shared/utils/http-error";
 import { GoogleAuthService } from "./services/google-auth.service";
 import { TotpService } from "./services/totp.service";
 import { AuthConfigService } from "./auth-config.service";
@@ -133,57 +134,14 @@ export class AuthController {
   }
 
   private assertCookieRefreshCsrfSafe(req: Request): void {
-    const headers = req.headers ?? {};
-    const secFetchSite = String(headers["sec-fetch-site"] || "").toLowerCase();
-    if (secFetchSite === "cross-site") {
-      throwForbidden(
-        "Cross-site cookie-authenticated refresh blocked (CSRF protection)",
-        ERROR_CODES.FORBIDDEN,
-        { reason: "CSRF_CROSS_SITE_BLOCKED" },
-      );
-    }
-
-    const rawOrigin = headers.origin;
-    const origin = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
-    if (!origin) return;
-
-    let normalizedOrigin: string;
-    try {
-      normalizedOrigin = new URL(origin).origin.replace(/\/+$/, "").toLowerCase();
-    } catch {
-      throwForbidden(
-        "Cross-origin cookie-authenticated refresh blocked (CSRF protection)",
-        ERROR_CODES.FORBIDDEN,
-        { reason: "CSRF_ORIGIN_MISMATCH", origin },
-      );
-    }
-
-    const allowedOrigins = new Set(
-      (this.authConfig.getAllowedFrontendOrigins?.() ?? []).map((o) =>
-        o.trim().replace(/\/+$/, "").toLowerCase(),
-      ),
-    );
-    const rawHost = headers.host;
-    const host = (Array.isArray(rawHost) ? rawHost[0] : rawHost)?.trim().toLowerCase();
-    if (host) {
-      allowedOrigins.add(`http://${host}`);
-      allowedOrigins.add(`https://${host}`);
-    }
-    for (const allowed of Array.from(allowedOrigins)) {
-      if (allowed.includes("://127.0.0.1:")) {
-        allowedOrigins.add(allowed.replace("://127.0.0.1:", "://localhost:"));
-      } else if (allowed.includes("://localhost:")) {
-        allowedOrigins.add(allowed.replace("://localhost:", "://127.0.0.1:"));
-      }
-    }
-
-    if (allowedOrigins.size > 0 && !allowedOrigins.has(normalizedOrigin!)) {
-      throwForbidden(
-        "Cross-origin cookie-authenticated refresh blocked (CSRF protection)",
-        ERROR_CODES.FORBIDDEN,
-        { reason: "CSRF_ORIGIN_MISMATCH", origin },
-      );
-    }
+    const isProd = this.authConfig.isProductionEnv?.() ?? false;
+    assertCookieCsrfSafeRequest(req, {
+      allowedOrigins: this.authConfig.getAllowedFrontendOrigins?.() ?? [],
+      trustProxy: this.authConfig.getTrustProxyConfig?.(),
+      trustedProxyIps: this.authConfig.getTrustedProxyIps?.(),
+      allowDevLanSameOrigin: !isProd,
+      contextLabel: "refresh",
+    });
   }
 
   @Post("refresh")
@@ -245,10 +203,22 @@ export class AuthController {
       }
 
       this.clearAuthCookies(res);
+      const rawResponse = err.getResponse();
+      const responseObj =
+        typeof rawResponse === "object" && rawResponse !== null
+          ? (rawResponse as { error?: string; details?: { reason?: string } })
+          : undefined;
+      const errorCode =
+        responseObj?.error === ERROR_CODES.AUTH_ACCOUNT_DISABLED
+          ? ERROR_CODES.AUTH_ACCOUNT_DISABLED
+          : ERROR_CODES.AUTH_REFRESH_INVALID;
+      const reason =
+        responseObj?.details?.reason ?? ERROR_REASONS.INVALID_REFRESH_TOKEN;
+
       throwUnauthorized(
         "Refresh token không hợp lệ hoặc đã hết hạn!",
-        ERROR_CODES.AUTH_REFRESH_INVALID,
-        { reason: ERROR_REASONS.INVALID_REFRESH_TOKEN },
+        errorCode,
+        { reason },
       );
     }
   }

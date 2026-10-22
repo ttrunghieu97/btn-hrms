@@ -2,16 +2,22 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { applicationsQueryOptions, applicationDetailQueryOptions } from '../api/queries';
+import {
+  applicationsQueryOptions,
+  applicationDetailQueryOptions,
+  postingsQueryOptions,
+} from '../api/queries';
 import {
   useAdvanceStage,
   useRejectApplication,
   useWithdrawApplication,
   useSubmitScorecard,
+  useSubmitApplication,
+  useAttachCv,
 } from '../api/mutations';
 import { extractList } from '@/lib/api-extract';
 import { unwrapData } from '@/lib/api-extract';
-import { STAGE_MAP, type ApplicationRow } from './status-maps';
+import { STAGE_MAP, type ApplicationRow, type PostingRow } from './status-maps';
 import type { AdvanceStageDtoToStage } from '@/api/generated/model';
 import {
   notifyMutationError,
@@ -27,9 +33,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -69,9 +77,18 @@ const ADVANCE_TARGETS: Record<string, AdvanceStageDtoToStage[]> = {
 };
 
 export function CandidatesView() {
+  const [postingFilter, setPostingFilter] = useState<string>('all');
   const { data, error, isLoading, refetch } = useQuery(
-    applicationsQueryOptions({ page: 1, limit: 100 }),
+    applicationsQueryOptions({
+      page: 1,
+      limit: 100,
+      ...(postingFilter !== 'all' ? { postingId: postingFilter } : {}),
+    }),
   );
+  const { data: postingsData } = useQuery(
+    postingsQueryOptions({ page: 1, limit: 100 }),
+  );
+  const postings = extractList<PostingRow>(postingsData);
   const applications = extractList<ApplicationRow>(data);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,16 +122,6 @@ export function CandidatesView() {
     );
   }
 
-  if (applications.length === 0) {
-    return (
-      <AppEmptyState
-        icon={<Icons.page className='size-10' />}
-        title={copy.empty}
-        compact
-      />
-    );
-  }
-
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredApplications = normalizedQuery
     ? applications.filter((app) => {
@@ -140,50 +147,78 @@ export function CandidatesView() {
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder='Tìm ứng viên theo tên, email, SĐT...'
-          className='h-9 w-full sm:w-72'
-        />
-        <Button
-          type='button'
-          variant={showClosedStages ? 'secondary' : 'outline'}
-          size='sm'
-          onClick={() => setShowClosedStages((prev) => !prev)}
-        >
-          {showClosedStages
-            ? 'Ẩn hồ sơ Từ chối / Rút lui'
-            : `Hiện Từ chối / Rút lui (${closedCount})`}
-        </Button>
+        <div className='flex flex-wrap items-center gap-2'>
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder='Tìm ứng viên theo tên, email, SĐT...'
+            className='h-9 w-full sm:w-72'
+          />
+          {postings.length > 0 ? (
+            <Select value={postingFilter} onValueChange={setPostingFilter}>
+              <SelectTrigger className='h-9 w-56' aria-label='Lọc theo tin tuyển dụng'>
+                <SelectValue placeholder='Tất cả tin tuyển dụng' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>Tất cả tin tuyển dụng</SelectItem>
+                {postings.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.title ?? p.id.slice(0, 8)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+        </div>
+        <div className='flex flex-wrap items-center gap-2'>
+          <Button
+            type='button'
+            variant={showClosedStages ? 'secondary' : 'outline'}
+            size='sm'
+            onClick={() => setShowClosedStages((prev) => !prev)}
+          >
+            {showClosedStages
+              ? 'Ẩn hồ sơ Từ chối / Rút lui'
+              : `Hiện Từ chối / Rút lui (${closedCount})`}
+          </Button>
+          <SubmitApplicationDialog postings={postings} />
+        </div>
       </div>
 
-      <div className='flex gap-4 overflow-x-auto pb-2'>
-        {visibleStages.map((stage) => {
-          const cards = filteredApplications.filter(
-            (a) => a.currentStage === stage.key,
-          );
-          return (
-            <div key={stage.key} className='flex w-64 shrink-0 flex-col gap-2'>
-              <div className='flex items-center justify-between px-1'>
-                <span className='text-sm font-medium'>{stage.label}</span>
-                <span className='text-xs text-muted-foreground'>
-                  {cards.length}
-                </span>
+      {applications.length === 0 ? (
+        <AppEmptyState
+          icon={<Icons.page className='size-10' />}
+          title={copy.empty}
+          compact
+        />
+      ) : (
+        <div className='flex gap-4 overflow-x-auto pb-2'>
+          {visibleStages.map((stage) => {
+            const cards = filteredApplications.filter(
+              (a) => a.currentStage === stage.key,
+            );
+            return (
+              <div key={stage.key} className='flex w-64 shrink-0 flex-col gap-2'>
+                <div className='flex items-center justify-between px-1'>
+                  <span className='text-sm font-medium'>{stage.label}</span>
+                  <span className='text-xs text-muted-foreground'>
+                    {cards.length}
+                  </span>
+                </div>
+                <div className='flex flex-col gap-2'>
+                  {cards.map((app) => (
+                    <ApplicationCard
+                      key={app.id}
+                      app={app}
+                      onOpen={() => setSelectedId(app.id)}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className='flex flex-col gap-2'>
-                {cards.map((app) => (
-                  <ApplicationCard
-                    key={app.id}
-                    app={app}
-                    onOpen={() => setSelectedId(app.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {selectedId ? (
         <ApplicationDetailDialog
@@ -304,7 +339,7 @@ function ApplicationDetailDialog({
             </section>
 
             {isActive ? (
-              <div className='flex gap-2'>
+              <div className='flex flex-wrap gap-2'>
                 <Button
                   variant='outline'
                   size='sm'
@@ -321,6 +356,7 @@ function ApplicationDetailDialog({
                 >
                   {copy.pipeline.withdraw}
                 </Button>
+                <AttachCvDialog applicationId={applicationId} hasCv={!!app.cvFileId} />
               </div>
             ) : null}
 
@@ -460,5 +496,218 @@ function ScorecardsSection({ app }: { app: ApplicationRow }) {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+function SubmitApplicationDialog({ postings }: { postings: PostingRow[] }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    postingId: '',
+    fullName: '',
+    email: '',
+    phone: '',
+    cvFileToken: '',
+  });
+  const submit = useSubmitApplication();
+
+  const onCreate = async () => {
+    try {
+      await submit.mutateAsync({
+        postingId: form.postingId.trim(),
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
+        ...(form.cvFileToken.trim() ? { cvFileToken: form.cvFileToken.trim() } : {}),
+      });
+      notifyMutationSuccess('Thêm ứng viên');
+      setOpen(false);
+      setForm({
+        postingId: '',
+        fullName: '',
+        email: '',
+        phone: '',
+        cvFileToken: '',
+      });
+    } catch (err) {
+      notifyMutationError(err, 'Thêm ứng viên');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size='sm'>
+          <Icons.plusCircle className='mr-2 size-4' />
+          Thêm ứng viên
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Thêm hồ sơ ứng viên</DialogTitle>
+          <DialogDescription>
+            Đăng ký ứng viên mới vào tin tuyển dụng đang mở.
+          </DialogDescription>
+        </DialogHeader>
+        <div className='grid gap-4 py-2'>
+          <div className='grid gap-2'>
+            <Label htmlFor='cand-posting'>Tin tuyển dụng</Label>
+            {postings.length > 0 ? (
+              <Select
+                value={form.postingId}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, postingId: value }))
+                }
+              >
+                <SelectTrigger id='cand-posting'>
+                  <SelectValue placeholder='Chọn tin tuyển dụng...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {postings.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title ?? p.id.slice(0, 8)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id='cand-posting'
+                value={form.postingId}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, postingId: e.target.value }))
+                }
+                placeholder='Nhập ID tin tuyển dụng'
+              />
+            )}
+          </div>
+          <div className='grid gap-2'>
+            <Label htmlFor='cand-name'>Họ và tên ứng viên</Label>
+            <Input
+              id='cand-name'
+              value={form.fullName}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, fullName: e.target.value }))
+              }
+              placeholder='Nguyễn Văn A'
+            />
+          </div>
+          <div className='grid grid-cols-2 gap-2'>
+            <div className='grid gap-2'>
+              <Label htmlFor='cand-email'>Email</Label>
+              <Input
+                id='cand-email'
+                type='email'
+                value={form.email}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
+                placeholder='ungvien@example.com'
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='cand-phone'>Số điện thoại</Label>
+              <Input
+                id='cand-phone'
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
+                placeholder='0901234567'
+              />
+            </div>
+          </div>
+          <div className='grid gap-2'>
+            <Label htmlFor='cand-cv'>Mã tệp CV / Đường dẫn hồ sơ (tùy chọn)</Label>
+            <Input
+              id='cand-cv'
+              value={form.cvFileToken}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, cvFileToken: e.target.value }))
+              }
+              placeholder='cv-token-hoac-link'
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant='outline' onClick={() => setOpen(false)}>
+            {commonUiCopy.cancel}
+          </Button>
+          <Button
+            onClick={() => void onCreate()}
+            disabled={
+              submit.isPending ||
+              !form.postingId.trim() ||
+              !form.fullName.trim() ||
+              !form.email.trim()
+            }
+          >
+            {commonUiCopy.create}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AttachCvDialog({
+  applicationId,
+  hasCv,
+}: {
+  applicationId: string;
+  hasCv: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [fileToken, setFileToken] = useState('');
+  const attach = useAttachCv();
+
+  const onAttach = async () => {
+    try {
+      await attach.mutateAsync({
+        id: applicationId,
+        dto: { fileToken: fileToken.trim() },
+      });
+      notifyMutationSuccess('Đính kèm CV');
+      setOpen(false);
+      setFileToken('');
+    } catch (err) {
+      notifyMutationError(err, 'Đính kèm CV');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant='outline' size='sm'>
+          {hasCv ? 'Cập nhật CV' : 'Đính kèm CV'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{hasCv ? 'Cập nhật CV' : 'Đính kèm CV ứng viên'}</DialogTitle>
+        </DialogHeader>
+        <div className='grid gap-4 py-2'>
+          <div className='grid gap-2'>
+            <Label htmlFor='attach-cv-token'>Mã tệp tải lên (File Token)</Label>
+            <Input
+              id='attach-cv-token'
+              value={fileToken}
+              onChange={(e) => setFileToken(e.target.value)}
+              placeholder='Nhập file token CV...'
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant='outline' onClick={() => setOpen(false)}>
+            {commonUiCopy.cancel}
+          </Button>
+          <Button
+            onClick={() => void onAttach()}
+            disabled={attach.isPending || !fileToken.trim()}
+          >
+            {commonUiCopy.save}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -9,6 +9,7 @@ import { loginSchema } from '@/features/auth/schemas/login.schema';
 import { getVietnameseApiErrorMessage } from '@/lib/api-error-message';
 import { isUnauthenticatedError } from '@/lib/error-taxonomy';
 import { appCopy } from '@/lib/app-copy';
+import { envClient } from '@/lib/env.client';
 import { useAuthStore } from '@/stores/auth-store';
 import { GoogleSsoButton } from './google-sso-button';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,7 +34,7 @@ export default function UserAuthForm() {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const isDemoMode = envClient.isDemoMode;
 
   const form = useAppForm({
     defaultValues: {

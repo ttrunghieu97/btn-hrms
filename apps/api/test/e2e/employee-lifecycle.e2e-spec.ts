@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
-import { getApp, getDb, seedAdmin, cleanupUser } from "./helpers/test-app";
+import { getApp, getDb, seedAdmin, cleanupUser, type E2eDatabase } from "./helpers/test-app";
 import * as schema from "../../src/infrastructure/database/schema";
 
 describe("Employee Lifecycle (e2e)", () => {
   const ctx: {
-    app?: any; db?: typeof schema;
+    app?: any; db?: E2eDatabase;
     admin?: { username: string; password: string };
     token?: string; employeeId?: string;
   } = {};

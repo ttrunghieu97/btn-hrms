@@ -3,8 +3,9 @@
 import { useMemo } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
-import { useQueryStates, parseAsInteger, parseAsString } from 'nuqs';
+import { useQueryStates, parseAsString } from 'nuqs';
 import { useOffboardingList } from '../queries';
+import { employeesQueryOptions } from '@/features/employees';
 import { StatusBadge, type StatusMap } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/table/data-table';
@@ -17,7 +18,7 @@ import { Icons } from '@/components/icons';
 import { commonUiCopy } from '@/lib/app-copy';
 import { formatDateVN } from '@/lib/date';
 import Link from 'next/link';
-import { pageParser, perPageParser, limitParser } from '@/lib/pagination';
+import { pageParser, limitParser } from '@/lib/pagination';
 
 const OFFBOARDING_STATUS_MAP: StatusMap = {
   initiated: { label: 'Khởi tạo', variant: 'outline' },
@@ -60,15 +61,35 @@ export function OffboardingView() {
     params.limit,
     params.status,
   );
+  const { data: employeesData } = useQuery(employeesQueryOptions({ page: 1, limit: 200 }));
+
+  const employeeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const emp of employeesData?.employees ?? []) {
+      const fullName = [emp.lastName, emp.firstName].filter(Boolean).join(' ');
+      map.set(emp.id, emp.employeeCode ? `${fullName} (${emp.employeeCode})` : fullName);
+    }
+    return map;
+  }, [employeesData]);
+
   const rows: OffboardingRow[] = data?.rows ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / params.limit));
 
   const columns = useMemo(() => [
-    columnHelper.accessor('employeeName', {
+    columnHelper.accessor((row) => row.employeeName ?? row.employeeId ?? '', {
       id: 'employee',
       header: commonUiCopy.employee ?? 'Nhân viên',
-      cell: ({ getValue }) => <span className='text-sm'>{getValue() ?? '—'}</span>,
+      cell: ({ row }) => {
+        const { employeeName, employeeId } = row.original;
+        const resolved = employeeName || (employeeId ? employeeMap.get(employeeId) : undefined);
+        if (resolved) {
+          return <span className='text-sm font-medium'>{resolved}</span>;
+        }
+        return (
+          <span className='font-mono text-xs'>{employeeId?.slice(0, 8) ?? '—'}</span>
+        );
+      },
     }),
     columnHelper.accessor('status', {
       id: 'status',
@@ -101,7 +122,7 @@ export function OffboardingView() {
         );
       },
     }),
-  ], []);
+  ], [employeeMap]);
 
   const { table } = useDataTable({
     data: rows,

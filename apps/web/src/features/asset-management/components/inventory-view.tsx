@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryStates, parseAsString } from 'nuqs';
-import { inventoryQueryOptions } from '../api/queries';
+import { inventoryQueryOptions, assetCatalogQueryOptions } from '../api/queries';
 import { useReceiveStock, useAdjustStock } from '../api/mutations';
 import type { AssetInventoryListFilters } from '../queries/asset-queries';
 import { extractList, extractPagination } from '@/lib/api-extract';
-import { type InventoryRow } from './status-maps';
+import { type InventoryRow, type AssetTypeRow } from './status-maps';
 import {
   notifyMutationError,
   notifyMutationSuccess,
@@ -16,6 +16,13 @@ import { Button } from '@/components/ui/button';
 import { DataTablePagination } from '@/components/ui/table/data-table-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +68,16 @@ export function InventoryView() {
   const rows = extractList<InventoryRow>(data);
   const pagination = extractPagination(data);
 
+  const { data: catalogData } = useQuery(assetCatalogQueryOptions({ limit: 500 }));
+  const assetTypes = React.useMemo(
+    () => extractList<AssetTypeRow>(catalogData),
+    [catalogData],
+  );
+  const assetTypeMap = React.useMemo(
+    () => new Map(assetTypes.map((t) => [t.id, t])),
+    [assetTypes],
+  );
+
   const receiveMutation = useReceiveStock();
   const adjustMutation = useAdjustStock();
 
@@ -73,7 +90,7 @@ export function InventoryView() {
 
   const handleReceive = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!action) return;
+    if (!action || !action.assetTypeId) return;
     receiveMutation.mutate(
       {
         assetTypeId: action.assetTypeId,
@@ -126,6 +143,23 @@ export function InventoryView() {
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-4'>
+      <div className='flex items-center justify-end gap-2'>
+        <Button
+          size='sm'
+          onClick={() => {
+            setAction({
+              mode: 'receive',
+              assetTypeId: assetTypes[0]?.id ?? '',
+            });
+            setQuantity('');
+            setNote('');
+          }}
+        >
+          <Icons.add className='mr-2 size-4' />
+          {copy.receive}
+        </Button>
+      </div>
+
       {rows.length === 0 && !isLoading ? (
         <AppEmptyState
           icon={<Icons.page className='size-10' />}
@@ -146,9 +180,18 @@ export function InventoryView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const assetType = assetTypeMap.get(row.assetTypeId);
+                return (
                 <TableRow key={row.assetTypeId}>
-                  <TableCell className='font-medium'>{row.assetTypeId ?? '—'}</TableCell>
+                  <TableCell className='font-medium'>
+                    <div>{assetType?.name ?? row.assetTypeId ?? '—'}</div>
+                    {assetType?.category ? (
+                      <div className='text-xs text-muted-foreground'>
+                        {assetType.category}
+                      </div>
+                    ) : null}
+                  </TableCell>
                   <TableCell>{row.quantityAvailable ?? 0}</TableCell>
                   <TableCell>{row.quantityAssigned ?? 0}</TableCell>
                   <TableCell>{row.quantityMaintenance ?? 0}</TableCell>
@@ -180,7 +223,8 @@ export function InventoryView() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -209,7 +253,37 @@ export function InventoryView() {
             </DialogHeader>
             <div className='flex flex-col gap-2'>
               <Label htmlFor='invAssetType'>{copy.columns.assetType}</Label>
-              <Input id='invAssetType' value={action?.assetTypeId ?? ''} disabled readOnly />
+              {assetTypes.length > 0 && action?.mode === 'receive' ? (
+                <Select
+                  value={action.assetTypeId}
+                  onValueChange={(value) =>
+                    setAction((prev) => (prev ? { ...prev, assetTypeId: value } : null))
+                  }
+                >
+                  <SelectTrigger id='invAssetType'>
+                    <SelectValue placeholder='Chọn loại thiết bị...' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name ?? t.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id='invAssetType'
+                  value={
+                    (action?.assetTypeId &&
+                      assetTypeMap.get(action.assetTypeId)?.name) ??
+                    action?.assetTypeId ??
+                    ''
+                  }
+                  disabled
+                  readOnly
+                />
+              )}
             </div>
             <div className='flex flex-col gap-2'>
               <Label htmlFor='invQty'>

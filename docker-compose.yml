@@ -42,7 +42,7 @@ services:
       # App
       NODE_ENV: production
       PORT: 3001
-      HOSTNAME: "0.0.0.0"
+      HOST: "0.0.0.0"
       APP_URL: ${APP_URL:?APP_URL required}
       APP_TIMEZONE: Asia/Ho_Chi_Minh
       TRUST_PROXY: 1
@@ -77,8 +77,7 @@ services:
       # Storage (MinIO S3)
       STORAGE_BACKEND: s3
       STORAGE_BUCKET: btn-hrms
-      STORAGE_S3_URL: http://${MINIO_ROOT_USER:?MINIO_ROOT_USER required}:${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD required}@btn-hrms-minio:9000?region=us-east-1
-      STORAGE_S3_FORCE_PATH_STYLE: "true"
+      STORAGE_S3_URL: http://${MINIO_ROOT_USER:?MINIO_ROOT_USER required}:${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD required}@btn-hrms-minio:9000?region=us-east-1&forcePathStyle=true
       STORAGE_SIGNED_URL_TTL_SEC: 300
       STORAGE_PUBLIC_CDN_ENABLED: "false"
 
@@ -88,11 +87,12 @@ services:
       OBSERVABILITY_OTEL_URL: ${OBSERVABILITY_OTEL_URL:-}
       OBSERVABILITY_OTEL_SERVICE_NAME: btn-hrms-api
 
-      # Features
+      # Features & Module Rollout
       FEATURE_SWAGGER: "false"
       FEATURE_DB_VERIFY: "true"
       FEATURE_VAULT: "false"
       FEATURE_REDIS_EVENT_BUS: "false"
+      ENABLED_NAV_GROUPS: "${ENABLED_NAV_GROUPS:-}"
       ATTENDANCE_STRICT_FACE_DETECTION: "${ATTENDANCE_STRICT_FACE_DETECTION:-false}"
       ATTENDANCE_FACE_VERIFICATION_MODE: "${ATTENDANCE_FACE_VERIFICATION_MODE:-flagged}"
 
@@ -109,16 +109,9 @@ services:
       ALLOW_REMOTE_DB_RESET: "false"
       SEED_PASSWORD: ${SEED_PASSWORD:-}
 
-      # Upload
+      # Upload & Outbox
       UPLOAD_MAX_MB: 10
       OUTBOX_MAX_CONCURRENT_PER_TYPE: 5
-
-      # Backup
-      BACKUP_DIR: ./backups
-      RESTORE_CONFIRM: ""
-      SMOKE_API_BASE_URL: ""
-      SMOKE_WEB_URL: ""
-      SMOKE_TIMEOUT_MS: 30000
 
     mem_limit: 1g
     cpus: "1.0"
@@ -149,11 +142,14 @@ services:
       PORT: 8080
       HOSTNAME: "0.0.0.0"
       TZ: Asia/Ho_Chi_Minh
-      # Server-side API calls (RSC / route handlers) go directly to the API container.
+      # Server-side API calls (RSC / route handlers / rewrites) go directly to the API container.
       # Browser calls use the relative /api/v1 path baked at build time -- Caddy proxies it.
-      APP_URL: http://btn-hrms-web:8080
-      API_URL: http://btn-hrms-api:3001
+      INTERNAL_API_URL: http://btn-hrms-api:3001
       AUTH_COOKIE_SECRET: ${AUTH_COOKIE_SECRET:-${AUTH_JWT_SECRET}}
+      AUTH_ACCESS_COOKIE_NAME: access_token
+      AUTH_REFRESH_COOKIE_NAME: refresh_token
+      ENABLED_NAV_GROUPS: "${ENABLED_NAV_GROUPS:-}"
+      NEXT_PUBLIC_ENABLED_MODULES: "${NEXT_PUBLIC_ENABLED_MODULES:-}"
     mem_limit: 512m
     cpus: "1.0"
     healthcheck:

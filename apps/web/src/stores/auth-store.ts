@@ -6,9 +6,16 @@
 
 import { create } from "zustand";
 import { toast } from "sonner";
-import { ApiError, ApiErrorCode } from "@/lib/api-error";
+import { ApiError } from "@/lib/api-error";
 import { getVietnameseApiErrorMessage } from "@/lib/api-error-message";
-import { isServiceUnavailableError, isUnauthenticatedError } from "@/lib/error-taxonomy";
+import {
+  isCsrfBlockedError,
+  isForbiddenError,
+  isRateLimitError,
+  isServiceUnavailableError,
+  isTerminalRefreshError,
+  isUnauthenticatedError,
+} from "@/lib/error-taxonomy";
 import { feedbackCopy } from "@/lib/feedback-copy";
 import { appLogger } from "@/lib/logger";
 import { tokenStore } from "@/lib/token-store";
@@ -28,19 +35,25 @@ export type User = UserMeResponseDto & {
   employeeId?: string | null;
 };
 
+export type RefreshCircuitState = "closed" | "open:csrf" | "open:rate-limit";
+
 interface AuthState {
   user: User | null;
   loading: boolean;
   initialized: boolean;
   refreshPromise: Promise<string | null> | null;
+  refreshCircuitState: RefreshCircuitState;
+  refreshCooldownUntil: number;
+  refreshFailureCount: number;
 
   signIn: (username: string, password: string) => Promise<User | null>;
   signInWithGoogle: (idToken: string) => Promise<User | null>;
   signOut: () => Promise<void>;
   fetchMe: () => Promise<void>;
   refresh: () => Promise<string | null>;
+  recoverSession: () => Promise<string | null>;
   bootstrapSession: () => Promise<User | null>;
-  hydrateFromServer: (user: User) => void;
+  hydrateFromServer: (user: User, expiresInSec?: number) => void;
   clearState: () => void;
   setInitialized: (val: boolean) => void;
 }
@@ -63,13 +76,68 @@ async function withNetworkRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promis
   throw lastError;
 }
 
+const PROACTIVE_REFRESH_RETRY_SEC = 60;
+const DEFAULT_SSR_PROACTIVE_REFRESH_SEC = 1800;
+const TAB_RESUME_REFRESH_THRESHOLD_MS = 60_000;
+const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 30_000;
+const CSRF_CIRCUIT_BASE_COOLDOWN_MS = 60_000;
+const CSRF_CIRCUIT_MAX_COOLDOWN_MS = 5 * 60_000;
+const MAX_CSRF_RECOVERY_PROBES = 3;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+let accessTokenExpiresAtMs = 0;
+let circuitRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
+let csrfBlockedError: Error | null = null;
+let rateLimitUntilMs = 0;
+let rateLimitError: Error | null = null;
+let isRedirectingToSignIn = false;
+let signInNavigator: (path: string) => void = (path) => {
+  window.location.assign(path);
+};
+
+function clearCircuitRecoveryTimer() {
+  if (circuitRecoveryTimer) {
+    clearTimeout(circuitRecoveryTimer);
+    circuitRecoveryTimer = null;
+  }
+}
+
+export function resetAuthStoreRuntimeForTesting(customNavigator?: (path: string) => void) {
+  clearProactiveRefresh();
+  clearCircuitRecoveryTimer();
+  accessTokenExpiresAtMs = 0;
+  csrfBlockedError = null;
+  rateLimitUntilMs = 0;
+  rateLimitError = null;
+  isRedirectingToSignIn = false;
+  signInNavigator =
+    customNavigator ??
+    ((path: string) => {
+      window.location.assign(path);
+    });
+}
+
+function redirectToSignInOnce() {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/auth/sign-in")) return;
+  if (isRedirectingToSignIn) return;
+  isRedirectingToSignIn = true;
+  signInNavigator("/auth/sign-in");
+}
 
 function scheduleProactiveRefresh(expiresInSec: number, refreshFn: () => Promise<unknown>) {
   clearProactiveRefresh();
+  accessTokenExpiresAtMs = Date.now() + expiresInSec * 1000;
   const delayMs = Math.max(expiresInSec * 0.8, 10) * 1000;
   refreshTimer = setTimeout(() => {
-    void refreshFn();
+    void refreshFn().catch((err) => {
+      if (useAuthStore.getState().user && !isCsrfBlockedError(err)) {
+        const retrySec =
+          err instanceof ApiError && typeof err.retryAfterMs === "number" && err.retryAfterMs > 0
+            ? Math.ceil(err.retryAfterMs / 1000)
+            : PROACTIVE_REFRESH_RETRY_SEC;
+        scheduleProactiveRefresh(retrySec, refreshFn);
+      }
+    });
   }, delayMs);
 }
 
@@ -82,10 +150,26 @@ function clearProactiveRefresh() {
 
 function applyAccessToken(token: string | null, expiresInSec?: number) {
   if (!token) return;
+  clearCircuitRecoveryTimer();
+  csrfBlockedError = null;
+  rateLimitUntilMs = 0;
+  rateLimitError = null;
+  isRedirectingToSignIn = false;
+  useAuthStore.setState({
+    refreshCircuitState: "closed",
+    refreshCooldownUntil: 0,
+    refreshFailureCount: 0,
+  });
   tokenStore.set(token);
   if (typeof expiresInSec === "number" && Number.isFinite(expiresInSec) && expiresInSec > 0) {
     scheduleProactiveRefresh(expiresInSec, () => useAuthStore.getState().refresh());
   }
+}
+
+export function useCanRunAuthenticatedQuery(): boolean {
+  return useAuthStore(
+    (state) => Boolean(state.user?.id) && state.refreshCircuitState === "closed",
+  );
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
@@ -98,11 +182,30 @@ export const useAuthStore = create<AuthState>((set, get) => {
     loading: false,
     initialized: false,
     refreshPromise: null,
+    refreshCircuitState: "closed",
+    refreshCooldownUntil: 0,
+    refreshFailureCount: 0,
 
     setInitialized: (val) => set({ initialized: val }),
 
-    hydrateFromServer: (user) => {
-      set({ user, initialized: true });
+    hydrateFromServer: (user, expiresInSec) => {
+      clearCircuitRecoveryTimer();
+      csrfBlockedError = null;
+      rateLimitUntilMs = 0;
+      rateLimitError = null;
+      isRedirectingToSignIn = false;
+      set({
+        user,
+        initialized: true,
+        refreshCircuitState: "closed",
+        refreshCooldownUntil: 0,
+        refreshFailureCount: 0,
+      });
+      const ttlSec =
+        typeof expiresInSec === "number" && Number.isFinite(expiresInSec) && expiresInSec > 0
+          ? expiresInSec
+          : DEFAULT_SSR_PROACTIVE_REFRESH_SEC;
+      scheduleProactiveRefresh(ttlSec, () => get().refresh());
       void setSentryUser({ id: user.id, username: user.username });
     },
 
@@ -111,14 +214,27 @@ export const useAuthStore = create<AuthState>((set, get) => {
         source: "auth-store",
       });
       clearProactiveRefresh();
+      clearCircuitRecoveryTimer();
+      accessTokenExpiresAtMs = 0;
+      csrfBlockedError = null;
+      rateLimitUntilMs = 0;
+      rateLimitError = null;
       void setSentryUser(null);
-      set({ user: null, loading: false, initialized: false });
+      set({
+        user: null,
+        loading: false,
+        initialized: false,
+        refreshCircuitState: "closed",
+        refreshCooldownUntil: 0,
+        refreshFailureCount: 0,
+      });
       tokenStore.clear();
       try {
         getQueryClient().clear();
       } catch {
         // Ignore if QueryClient is not initialized in test context
       }
+      redirectToSignInOnce();
     },
 
     signIn: async (username, password) => {
@@ -226,6 +342,27 @@ export const useAuthStore = create<AuthState>((set, get) => {
         return existing;
       }
 
+      const now = Date.now();
+      const { refreshCircuitState, refreshCooldownUntil, refreshFailureCount } = get();
+
+      if (refreshCircuitState === "open:csrf" && csrfBlockedError) {
+        const cooldownActive = refreshCooldownUntil > now;
+        const probesExhausted = refreshFailureCount >= MAX_CSRF_RECOVERY_PROBES;
+        if (cooldownActive || probesExhausted) {
+          throw csrfBlockedError;
+        }
+        // Cooldown elapsed and probe budget remains -> half-open single-flight probe
+      }
+
+      if (refreshCircuitState === "open:rate-limit" && rateLimitError) {
+        if (rateLimitUntilMs > now) {
+          throw rateLimitError;
+        }
+        rateLimitUntilMs = 0;
+        rateLimitError = null;
+        set({ refreshCircuitState: "closed", refreshCooldownUntil: 0 });
+      }
+
       appLogger.info("auth_refresh_started", {
         source: "auth-store",
       });
@@ -252,20 +389,96 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
           return token;
         } catch (err) {
-          if (isUnauthenticatedError(err)) {
+          const errorMeta = {
+            source: "auth-store",
+            reason: err instanceof Error ? err.message : "unknown_error",
+            errorCode: err instanceof ApiError ? err.code : undefined,
+            backendCode: err instanceof ApiError ? err.backendCode : undefined,
+            errorReason: err instanceof ApiError ? err.details?.reason : undefined,
+            status: err instanceof ApiError ? err.status : undefined,
+            requestId: err instanceof ApiError ? (err.requestId ?? null) : null,
+          };
+          if (isTerminalRefreshError(err)) {
             appLogger.warn("auth_refresh_failed", {
-              source: "auth-store",
+              ...errorMeta,
               reason: "unauthorized",
-              errorCode: err instanceof ApiError ? err.code : undefined,
-              requestId: err instanceof ApiError ? (err.requestId ?? null) : null,
             });
             get().clearState();
             return null;
           }
-          appLogger.error("auth_refresh_failed", {
-            source: "auth-store",
-            reason: err instanceof Error ? err.message : "unknown_error",
-          });
+          if (isCsrfBlockedError(err)) {
+            const nextCount = get().refreshFailureCount + 1;
+            const cooldownMs = Math.min(
+              CSRF_CIRCUIT_BASE_COOLDOWN_MS * 2 ** (nextCount - 1),
+              CSRF_CIRCUIT_MAX_COOLDOWN_MS,
+            );
+            csrfBlockedError = err instanceof Error ? err : new Error(String(err));
+            clearProactiveRefresh();
+            set({
+              refreshCircuitState: "open:csrf",
+              refreshCooldownUntil: Date.now() + cooldownMs,
+              refreshFailureCount: nextCount,
+            });
+            if (nextCount === 1) {
+              appLogger.warn("auth_refresh_failed", {
+                ...errorMeta,
+                reason: "csrf_blocked",
+              });
+            }
+            throw csrfBlockedError;
+          }
+          if (isForbiddenError(err)) {
+            appLogger.warn("auth_refresh_failed", {
+              ...errorMeta,
+              reason: "forbidden",
+            });
+            throw err;
+          }
+          if (isRateLimitError(err)) {
+            const cooldownMs =
+              err instanceof ApiError &&
+              typeof err.retryAfterMs === "number" &&
+              err.retryAfterMs > 0
+                ? err.retryAfterMs
+                : DEFAULT_RATE_LIMIT_COOLDOWN_MS;
+            const until = Date.now() + cooldownMs;
+            rateLimitUntilMs = until;
+            rateLimitError = err instanceof Error ? err : new Error(String(err));
+            set({
+              refreshCircuitState: "open:rate-limit",
+              refreshCooldownUntil: until,
+            });
+            clearCircuitRecoveryTimer();
+            circuitRecoveryTimer = setTimeout(() => {
+              circuitRecoveryTimer = null;
+              if (useAuthStore.getState().refreshCircuitState === "open:rate-limit") {
+                rateLimitUntilMs = 0;
+                rateLimitError = null;
+                useAuthStore.setState({
+                  refreshCircuitState: "closed",
+                  refreshCooldownUntil: 0,
+                });
+              }
+            }, cooldownMs);
+            appLogger.warn("auth_refresh_failed", {
+              ...errorMeta,
+              reason: "rate_limited",
+              retryAfterMs: cooldownMs,
+            });
+            throw rateLimitError;
+          }
+          if (isServiceUnavailableError(err)) {
+            appLogger.warn("auth_refresh_failed", errorMeta);
+            throw err;
+          }
+          if (isUnauthenticatedError(err)) {
+            appLogger.warn("auth_refresh_failed", {
+              ...errorMeta,
+              reason: "unauthenticated_non_terminal",
+            });
+            throw err;
+          }
+          appLogger.error("auth_refresh_failed", errorMeta);
           throw err;
         } finally {
           set({ refreshPromise: null });
@@ -276,6 +489,18 @@ export const useAuthStore = create<AuthState>((set, get) => {
       return promise;
     },
 
+    recoverSession: async () => {
+      clearCircuitRecoveryTimer();
+      csrfBlockedError = null;
+      rateLimitUntilMs = 0;
+      rateLimitError = null;
+      set({
+        refreshCooldownUntil: 0,
+        refreshFailureCount: 0,
+      });
+      return get().refresh();
+    },
+
     bootstrapSession: async () => {
       if (get().initialized && get().user) {
         return get().user;
@@ -283,38 +508,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
       try {
         set({ loading: true });
-        try {
-          const res = await usersControllerGetMe();
-          const user = res.status === 200 ? unwrapData<User | null>(res) : null;
-          set({ user, initialized: true, loading: false });
-          void setSentryUser(user ? { id: user.id, username: user.username } : null);
-          return user;
-        } catch (err) {
-          if (!isUnauthenticatedError(err)) {
-            throw err;
-          }
-        }
-
-        const token = await get().refresh();
-        if (!token) {
-          void setSentryUser(null);
-          set({ user: null, initialized: true, loading: false });
-          return null;
-        }
-
+        // customFetch automatically handles 401 via the wired refresh mutex and retries once
         const res = await usersControllerGetMe();
         const user = res.status === 200 ? unwrapData<User | null>(res) : null;
         set({ user, initialized: true, loading: false });
         void setSentryUser(user ? { id: user.id, username: user.username } : null);
         return user;
       } catch (err) {
-        tokenStore.clear();
-        void setSentryUser(null);
-        set({ user: null, initialized: true, loading: false });
-        // Network errors during bootstrap should NOT crash the app — treat as logged out
-        if (isUnauthenticatedError(err) || isServiceUnavailableError(err)) {
+        if (isTerminalRefreshError(err) && tokenStore.get() === null) {
+          get().clearState();
+          set({ initialized: true, loading: false });
           return null;
         }
+        // Network errors during bootstrap should NOT crash the app or broadcast logout
+        if (isServiceUnavailableError(err)) {
+          set({ initialized: true, loading: false });
+          return null;
+        }
+        set({ loading: false });
         throw err;
       }
     },
@@ -324,15 +535,40 @@ export const useAuthStore = create<AuthState>((set, get) => {
 if (typeof window !== "undefined") {
   tokenStore.subscribe((token) => {
     const state = useAuthStore.getState();
-    if (token === null) {
-      // If we are already on the sign-in page, no need to redirect
-      if (!window.location.pathname.startsWith("/auth/sign-in")) {
-        window.location.assign("/auth/sign-in");
+    if (token !== null) {
+      clearCircuitRecoveryTimer();
+      isRedirectingToSignIn = false;
+      csrfBlockedError = null;
+      rateLimitUntilMs = 0;
+      rateLimitError = null;
+      if (state.refreshCircuitState !== "closed") {
+        useAuthStore.setState({
+          refreshCircuitState: "closed",
+          refreshCooldownUntil: 0,
+          refreshFailureCount: 0,
+        });
       }
-      // If state is not cleared yet (e.g. broadcast from another tab), clear it now
-      if (state.user !== null) {
-        state.clearState();
-      }
+      return;
+    }
+    if (state.user !== null || state.initialized) {
+      state.clearState();
     }
   });
+
+  const maybeRefreshOnTabResume = () => {
+    if (document.visibilityState === "hidden") return;
+    const state = useAuthStore.getState();
+    if (!state.user || state.refreshPromise || state.refreshCircuitState !== "closed") {
+      return;
+    }
+    if (
+      accessTokenExpiresAtMs > 0 &&
+      Date.now() >= accessTokenExpiresAtMs - TAB_RESUME_REFRESH_THRESHOLD_MS
+    ) {
+      void state.refresh().catch(() => undefined);
+    }
+  };
+
+  window.addEventListener("focus", maybeRefreshOnTabResume);
+  document.addEventListener("visibilitychange", maybeRefreshOnTabResume);
 }
