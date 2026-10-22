@@ -6,9 +6,6 @@ import { EmployeeCreatePage } from './employee-create-page';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { DocumentsFormTab } from './tabs/documents-form-tab';
 
-const mutate = jest.fn();
-let uploadPending = false;
-
 jest.mock('@/lib/query-client', () => ({
   getQueryClient: () => ({})
 }));
@@ -29,15 +26,6 @@ jest.mock('../queries/employee-queries', () => ({
   useUpsertEmployeeEquipmentHandoverMutation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   checkEmployeeUsernameAvailability: jest.fn(),
   checkEmployeeCodeAvailability: jest.fn()
-}));
-
-jest.mock('@/features/uploads/hooks/use-temp-upload-field', () => ({
-  useTempUploadField: () => ({
-    isPending: uploadPending,
-    mutate
-  }),
-  validateTempUploadFile: jest.fn(),
-  buildUploadedFieldState: (data: unknown) => data
 }));
 
 jest.mock('@/features/uploads/api/upload-api', () => ({
@@ -62,9 +50,7 @@ function createLocalId(prefix: string) {
 
 describe('EmployeeCreatePage', () => {
   beforeEach(() => {
-    mutate.mockReset();
     (uploadTempFile as jest.Mock).mockClear();
-    uploadPending = false;
     mockSearchParams = new URLSearchParams();
     URL.createObjectURL = jest.fn(() => 'blob:preview');
     URL.revokeObjectURL = jest.fn();
@@ -115,8 +101,6 @@ describe('EmployeeCreatePage', () => {
   });
 
   it('keeps form fields editable while avatar upload is pending', () => {
-    uploadPending = true;
-
     render(<EmployeeCreatePage />);
 
     expect(screen.getAllByRole('textbox')[0]).toBeEnabled();

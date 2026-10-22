@@ -9,7 +9,3 @@ export * from './resolvers/permission.resolver';
 export * from './resolvers/route.resolver';
 export * from './resolvers/resource.resolver';
 export * from './resolvers/action.resolver';
-export * from './services/authorization.service';
-export * from './components/CanAccessRoute';
-export * from './components/ResourceGuard';
-export * from './components/ActionGuard';

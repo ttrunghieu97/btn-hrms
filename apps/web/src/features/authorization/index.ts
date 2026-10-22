@@ -1,5 +1,4 @@
 export { requirePagePermission } from './guards/page-permission';
-export { requireRouteAccess } from './guards/route-access';
 export {
   generateNav,
   getAllNavItems,
