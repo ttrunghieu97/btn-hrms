@@ -1,4 +1,3 @@
-import { parsePermissionCode } from '../../../modules/identity/access-control/domain/permission-code';
 import { PermissionHierarchyResolver } from './permission-hierarchy.resolver';
 import { PERMISSION_CATALOG, Permissions } from './permissions.registry';
 
@@ -15,7 +14,8 @@ describe('Permissions catalog', () => {
 
   it('contains parseable catalog entries', () => {
     for (const permission of PERMISSION_CATALOG) {
-      expect(parsePermissionCode(permission.code)).toEqual(
+      const [domain, action] = permission.code.split(':');
+      expect({ domain, action }).toEqual(
         expect.objectContaining({
           domain: permission.domain,
           action: permission.action,

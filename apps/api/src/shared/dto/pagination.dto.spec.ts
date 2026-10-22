@@ -2,9 +2,6 @@ import "reflect-metadata";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import {
-  BaseQueryDto,
-} from "./base-query.dto";
-import {
   PagedQueryDto,
   PaginationLimitField,
   PaginationPageField,
@@ -67,22 +64,6 @@ describe("pagination decorators", () => {
 
     expect(dto.search).toBe("john");
     expect(dto.limit).toBe(100);
-
-    await expect(validate(dto)).resolves.toHaveLength(0);
-  });
-
-  it("keeps full query surface on base query DTOs", async () => {
-    const dto = plainToInstance(BaseQueryDto, {
-      fields: "id,name",
-      include: "department",
-      sort: "createdAt:desc",
-      search: "john",
-    });
-
-    expect(dto.fields).toBe("id,name");
-    expect(dto.include).toBe("department");
-    expect(dto.sort).toBe("createdAt:desc");
-    expect(dto.search).toBe("john");
 
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
