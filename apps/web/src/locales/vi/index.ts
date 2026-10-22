@@ -1,7 +1,6 @@
 export * from './app-copy';
 export * from './attendance-camera';
 export * from './error-contracts';
-export * from './public-pages';
 export * from './system-ui';
 export * from './data-table';
 export * from './error-messages';
