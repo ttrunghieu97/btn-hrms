@@ -7,5 +7,3 @@ export * from './types/authorization.types';
 export * from './registry/authorization.registry';
 export * from './resolvers/permission.resolver';
 export * from './resolvers/route.resolver';
-export * from './resolvers/resource.resolver';
-export * from './resolvers/action.resolver';

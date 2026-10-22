@@ -51,9 +51,12 @@ module.exports = {
     {
       name: 'no-orphans',
       severity: 'error',
-      comment: 'Orphan module detected. Every source file must be reachable from an application entrypoint or test.',
+      comment: 'Unreachable module detected. Every source file must be reachable from an application entrypoint or test.',
       from: {
-        orphan: true,
+        path: '^(src/app/.*(page|layout|loading|error|not-found|global-error|route|template|default)\\.(ts|tsx)|src/(instrumentation|proxy|middleware)\\.(ts|tsx)|src/.*\\.(spec|test)\\.(ts|tsx))$'
+      },
+      to: {
+        reachable: false,
         pathNot: [
           '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts|json)$',
           '\\.d\\.ts$',
@@ -63,8 +66,7 @@ module.exports = {
           '^src/api/generated/',
           '\\.(spec|test)\\.(ts|tsx)$'
         ]
-      },
-      to: {}
+      }
     }
   ],
   options: {
