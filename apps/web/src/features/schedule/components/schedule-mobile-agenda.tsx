@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { format, addDays, isSameDay, isToday } from 'date-fns';
-import type { ScheduleRow } from '@/features/schedule/api/queries';
+import type { ShiftRosterRow as ScheduleRow } from '@/features/shifts';
 import { AgendaGroup, AgendaItem } from '@/components/ui/agenda';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

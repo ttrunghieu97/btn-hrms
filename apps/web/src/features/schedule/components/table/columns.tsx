@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
 import { commonUiCopy } from '@/lib/app-copy';
-import type { ScheduleRow } from '../../api/queries';
+import type { ShiftRosterRow as ScheduleRow } from '@/features/shifts';
 import { CellAction } from './cell-action';
 
 function getEmployeeName(row: ScheduleRow) {

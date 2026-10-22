@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/icons';
 import { commonUiCopy } from '@/lib/app-copy';
-import type { ScheduleRow } from '../../api/queries';
+import type { ShiftRosterRow as ScheduleRow } from '@/features/shifts';
 
 interface CellActionProps {
   data: ScheduleRow;
