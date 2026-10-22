@@ -2,15 +2,10 @@
   "name": "frontend",
   "version": "1.0.0",
   "private": true,
-  "author": {
-    "name": "Kiran",
-    "url": "https://github.com/Kiranism"
-  },
   "scripts": {
     "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev --hostname 0.0.0.0 --port 8080",
     "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start --hostname 0.0.0.0 --port 8080",
-    "lint:arch": "pnpm depcruise",
     "client:generate": "orval --config orval.config.ts && node ./scripts/postprocess-orval.cjs && node ./scripts/generate-error-contract-catalog.cjs && node ./scripts/verify-generated-client.cjs",
     "client:verify": "node ./scripts/verify-generated-client.cjs && pnpm error-contracts:verify",
     "error-contracts:generate": "node ./scripts/generate-error-contract-catalog.cjs",
