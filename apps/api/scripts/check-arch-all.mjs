@@ -76,6 +76,7 @@ const CHECKS = [
   { name: "Module Cycles",        cmd: "node", args: ["./scripts/check-module-cycles.mjs"],           severity: "fail" },
   { name: "Adapter DIP",          cmd: "node", args: ["./scripts/check-adapter-dip.mjs"],            severity: "fail" },
   { name: "Compatibility Debt",   cmd: "node", args: ["./scripts/check-compatibility-cleanup.mjs"],  severity: "fail" },
+  { name: "Orphan Files",         cmd: "node", args: ["./scripts/check-orphan-files.mjs"],           severity: "fail" },
 ];
 
 // --------------- run checks ---------------
